@@ -94,11 +94,4 @@ interface IRewardsDistributor {
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
-
-    function updateStrategyRewards(
-        address _strategy,
-        address _strategist,
-        address _reserveAsset,
-        uint256[] memory _data
-    ) external;
 }

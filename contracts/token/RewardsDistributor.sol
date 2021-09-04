@@ -72,11 +72,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Throws if the call is not from a valid strategy
      */
     modifier onlyStrategy {
-        _require(controller.isSystemContract(address(IStrategy(msg.sender).garden())), Errors.ONLY_STRATEGY);
-        _require(
-            IGarden(address(IStrategy(msg.sender).garden())).isGardenStrategy(msg.sender),
-            Errors.STRATEGY_GARDEN_MISMATCH
-        );
+        address garden = address(IStrategy(msg.sender).garden());
+        _require(controller.isSystemContract(garden), Errors.ONLY_STRATEGY);
+        _require(IGarden(garden).isGardenStrategy(msg.sender), Errors.STRATEGY_GARDEN_MISMATCH);
         _;
     }
     /**
@@ -159,31 +157,31 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ Structs ============ */
 
     struct ProtocolPerTimestamp {
-        // Protocol allocation checkpoints per timestamp along the time
-        uint256 principal; // Protocol principal allocation in normalized asset (DAI)
-        uint256 time; // Time of the checkpoint
-        uint256 quarterBelonging; // # Quarter checkpoint belonging since START_TIME
-        uint256 timeListPointer; // Pointer to the array of timestamps to enable the possibility of struct iteration
-        uint256 power; // Protocol power checkpoint (power is proportional to = principal * duration)
+        // DEPRECATED
+        uint256 principal;
+        uint256 time;
+        uint256 quarterBelonging;
+        uint256 timeListPointer;
+        uint256 power;
     }
 
     struct ProtocolPerQuarter {
         // Protocol allocation checkpoints per timestamp per each quarter along the time
-        uint256 quarterPrincipal; // Checkpoint to keep track on accumulated protocol principal per quarter in normalized asset (DAI)
-        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterPrincipal; // DEPRECATED
+        uint256 quarterNumber; // DEPRECATED
         uint256 quarterPower; //  Accumulated Protocol power for each quarter
-        uint96 supplyPerQuarter; // Supply per quarter
+        uint96 supplyPerQuarter; // DEPRECATED
     }
 
     struct GardenPowerByTimestamp {
-        // DEPRECATED
+        // DEPRECATED TODO Pending backward compatibility
         // Garden allocation checkpoints per timestamp per each garden
         uint256 supply; // Checkpoint to keep track on garden supply
         uint256 timestamp; // Checkpoint timestamps
         uint256 power; // Garden power checkpoint (power is proportional to = principal * duration)
     }
     struct ContributorPerGarden {
-        // DEPRECATED
+        // DEPRECATED TODO Pending backward compatibility
         // Checkpoints to keep track on the evolution of each contributor vs. each garden
         uint256 lastDepositAt; // Last deposit timestamp of each contributor in each garden
         uint256 initialDepositAt; // Checkpoint of the initial deposit
@@ -193,7 +191,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     struct TimestampContribution {
-        // DEPRECATED
+        // DEPRECATED TODO Pending backward compatibility
         // Sub-mapping with all checkpoints for deposits and withdrawals of garden users
         uint256 supply; // Garden token balance of user in each garden along the time
         uint256 timestamp; // Checkpoint time
@@ -201,6 +199,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 power; // Contributor power per checkpoint
     }
     struct Checkpoints {
+        // DEPRECATED
         // Checkpoints for contributor power calculations where a certain window (from -> to) is queried
         uint256 fromDepositAt; // First contributor checkpoint within the provided window
         uint256 lastDepositAt; // Last contributor checkpoint within the provided window
@@ -216,31 +215,30 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // BABL Token contract
     TimeLockedToken private babltoken;
 
-    // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all strategy pools.
-    uint256 private protocolPrincipal;
-    mapping(uint256 => ProtocolPerTimestamp) private protocolPerTimestamp; // Mapping of all protocol checkpoints
-    uint256[] private timeList; // Array of all protocol checkpoints
-    uint256 private pid; // Initialization of the ID assigning timeListPointer to the checkpoint number
+    // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all ongoing strategies during mining program.
+    uint256 private miningProtocolPrincipal; // Protocol principal (only related to mining program)
+    mapping(uint256 => ProtocolPerTimestamp) private protocolPerTimestamp; // DEPRECATED
+    uint256[] private timeList; // DEPRECATED
+    uint256 private miningProtocolPower; // Mining protocol power along the time
 
     mapping(uint256 => ProtocolPerQuarter) private protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter
     mapping(uint256 => bool) private isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
 
-    // Strategy overhead control. Only used if each strategy has power overhead due to changes overtime
     mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED
     // Contributor power control
-    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // Enable high level accuracy calculations
-    mapping(address => mapping(address => Checkpoints)) private checkpoints;
+    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // DEPRECATED
+    mapping(address => mapping(address => Checkpoints)) private checkpoints; // DEPRECATED
     // Garden power control
-    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp;
-    mapping(address => uint256[]) private gardenTimelist;
-    mapping(address => uint256) private gardenPid;
+    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp; // DEPRECATED
+    mapping(address => uint256[]) private gardenTimelist; // DEPRECATED
+    mapping(address => uint256) private gardenPid; // DEPRECATED
 
     struct StrategyPerQuarter {
         // Acumulated strategy power per each quarter along the time
-        uint256 quarterPrincipal;
-        uint256 quarterNumber; // # Quarter since START_TIME
+        uint256 quarterPrincipal; // DEPRECATED
+        uint256 quarterNumber; // DEPRECATED
         uint256 quarterPower; //  Accumulated strategy power for each quarter
-        bool initialized;
+        bool initialized; // True if the strategy has checkpoints in that quarter already
     }
     struct StrategyPricePerTokenUnit {
         // Take control over the price per token changes along the time when normalizing into DAI
@@ -258,17 +256,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => uint256[3]) private gardenProfitSharing;
     mapping(address => bool) private gardenCustomProfitSharing;
 
-    // Cache to speed up calculations during user claims
-    struct StrategyDetails {
-        address strategist;
-        uint256[20] strategyDetails;
-        uint256 strategyRewards;
-        bool profit;
-        uint256 profitValue;
-        bool distance;
-        uint256 distanceValue;
-    }
-    mapping(address => StrategyDetails) private strategyDetails;
+    uint256 private miningUpdatedAt; // Timestamp of last checkpoint update
+    mapping(address => uint256) private strategyPrincipal; // Last known strategy principal
 
     /* ============ Constructor ============ */
 
@@ -322,39 +311,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (rewards != 0) {
                 return Safe3296.safe96(rewards, 'overflow 96 bits');
             }
-            // IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            // str[0]: capitalAllocated, str[1]: capitalReturned
+            uint256[] memory str = new uint256[](2);
+            (, , , , , , , str[0], str[1], , , , , ) = strategy.getStrategyDetails();
+            // Normalized amount needed to calculate profit percentage that might impact rewards
             uint256 normalizeAmount =
                 IPriceOracle(IBabController(controller).priceOracle()).getPrice(
                     IGarden(strategy.garden()).reserveAsset(),
                     DAI
                 );
-            uint256 allocated = strategy.capitalAllocated().preciseMul(normalizeAmount);
-            uint256 returned = strategy.capitalReturned().preciseMul(normalizeAmount);
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
 
             for (uint256 i = 0; i < numQuarters; i++) {
-                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                // Initialization timestamp at the end of the first slot where the strategy starts its execution
+                uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
                 // We calculate each epoch
                 uint256 strategyPower = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
                 uint256 protocolPower = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
                 _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
                 if (i.add(1) == numQuarters) {
-                    // last quarter - we take proportional supply for that timeframe
+                    // last quarter - we need to take proportional supply for that timeframe despite the epoch has not finished yet
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                         slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                     );
                 }
-                uint256 powerRatioInQuarter =
+                uint256 rewardsPerQuarter =
                     strategyPower
                         .preciseDiv(protocolPower)
-                        .preciseMul(uint256(protocolPerQuarter[startingQuarter.add(i)].supplyPerQuarter))
+                        .preciseMul(uint256(_tokenSupplyPerQuarter(startingQuarter.add(i))))
                         .preciseMul(percentage);
-                rewards = rewards.add(powerRatioInQuarter);
+                rewards = rewards.add(rewardsPerQuarter);
             }
-            // Babl rewards will be proportional to the total return (profit) with a max cap of x2
-            uint256 percentageMul = returned.preciseDiv(allocated);
+            // Babl rewards will be proportional to the total return (profits) with a max cap of x2
+            uint256 percentageMul = (str[1].preciseMul(normalizeAmount)).preciseDiv(str[0].preciseMul(normalizeAmount));
             if (percentageMul > 2e18) percentageMul = 2e18;
             rewards = rewards.preciseMul(percentageMul);
             return Safe3296.safe96(rewards, 'overflow 96 bits');
@@ -375,6 +366,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         onlyMiningActive
         onlyUnpaused
     {
+        // TODO Make it more restrictive e.g. only Gardens and contributor part of the Garden
         _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
@@ -388,97 +380,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
         }
-    }
-
-    /**
-     * Function that set each contributor timestamp per garden
-     * @param _contributor           Address of the contributor
-     * @param _amount                Amount depositing
-     */
-    /**
-    function updateDepositInGarden(
-        address _contributor,
-        uint256 _amount
-        ) external override nonReentrant onlyActiveGarden() {
-        // ContributorPerGarden storage userGardenData = contributorPerGarden[msg.sender][_contributor];
-        // GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[msg.sender][block.timestamp];
-        DepositInfo memory newDeposit;
-
-        // Effects
-        newDeposit.amount = _amount;
-        newDeposit.blockNumber = block.number;
-        newDeposit.depositOrWithdraw = true;
-
-        // Garden deposit checkpoints
-        newDeposit.contributor = _contributor;
-        newDeposit.amount = _amount;
-        newDeposit.blockNumber = block.number;
-        newDeposit.depositOrWithdraw = true; // deposit
-        
-         // Add into storage either for contributor and principal
-        depositInfo[msg.sender].push(newDeposit);
-
-        // userGardenData.virtualAmount += _amount;
-        // gardenTimestamp.virtualTotalSupply += _amount;
-
-        // _updateGardenPower(msg.sender);
-        //_setContributorTimestampParams(msg.sender, _contributor, _previousBalance, _depositOrWithdraw);
-    }
-    */
-
-    /**
-     * Function that set each contributor timestamp per garden
-     * @param _contributor           Address of the contributor
-     * @param _amount                Amount depositing
-     */
-    /**
-    function updateCheckpointInGarden(
-        address _contributor,
-        uint256 _amount,
-        bool _depositOrWithdrawal
-    ) external override nonReentrant onlyActiveGarden() {
-        // ContributorPerGarden storage userGardenData = contributorPerGarden[msg.sender][_contributor];
-        // GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[msg.sender][block.timestamp];
-        DepositInfo memory newCheckpoint;
-
-        // Effects
-        newCheckpoint.contributor = _contributor;
-        newCheckpoint.amount = _amount;
-        newCheckpoint.timestamp = block.timestamp;
-        newCheckpoint.depositOrWithdraw = _depositOrWithdrawal == true ? true : false;
-
-        // Add into storage
-        depositInfo[msg.sender].push(newCheckpoint);
-
-        // userGardenData.virtualAmount -= _amount;
-        // gardenTimestamp.virtualTotalSupply -= _amount;
-
-        // _updateGardenPower(msg.sender);
-        //_setContributorTimestampParams(msg.sender, _contributor, _previousBalance, _depositOrWithdraw);
-    }
-     */
-
-    function updateStrategyRewards(
-        address _strategy,
-        address _strategist,
-        address _reserveAsset,
-        uint256[] memory _data
-    ) external override nonReentrant onlyStrategy {
-        _require(_strategy == msg.sender, Errors.ONLY_STRATEGY);
-        StrategyDetails storage strategyData = strategyDetails[_strategy];
-        strategyData.strategist = _strategist;
-        strategyData.strategyDetails[0] = _data[0]; // executedAt
-        strategyData.strategyDetails[1] = _data[1]; // exitedAt
-        strategyData.strategyDetails[2] = _data[2]; // updatedAt
-        strategyData.strategyDetails[3] = _data[3]; // enteredAt
-        strategyData.strategyDetails[4] = _data[4]; // totalPositiveVotes
-        strategyData.strategyDetails[5] = _data[5]; // totalNegativeVotes
-        strategyData.strategyDetails[6] = _data[6]; // capitalAllocated
-        strategyData.strategyDetails[7] = _data[7]; // capitalReturned
-        strategyData.strategyDetails[8] = _data[8]; // expectedReturn in absolute number
-        strategyData.strategyDetails[9] = _data[9]; // strategyRewards
-        strategyData.strategyDetails[10] = SafeDecimalMath.normalizeAmountTokens(_reserveAsset, DAI, _data[6]); // Normalized into DAI capitalAllocated
-        _setStrategyRewardsContext(_strategy);
     }
 
     /**
@@ -510,7 +411,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 initialDepositAt;
         uint256 claimedAt;
         uint256 contributorPower;
-        // GardenUser memory userData = gardenUser[_garden][_contributor];
         (, initialDepositAt, claimedAt, , , , , , contributorPower, ) = IGarden(_garden).getContributor(_contributor);
         // update contributor power
         contributorPower = _getContributorPower(_garden, _contributor, 0, block.timestamp);
@@ -661,66 +561,66 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _capital          Capital to update
      * @param _addOrSubstract   Adding (true) or removing (false)
      */
-
     function _updateProtocolPrincipal(
         address _strategy,
         uint256 _capital,
         bool _addOrSubstract
     ) internal {
-        // Take control of getPrice fluctuations along the time - normalizing into DAI
-        uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(_strategy, _capital, _addOrSubstract);
-        _capital = SafeDecimalMath.normalizeAmountTokens(
-            IGarden(IStrategy(_strategy).garden()).reserveAsset(),
-            DAI,
-            _capital.preciseMul(pricePerTokenUnit)
-        );
-        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[block.timestamp];
+        address reserveAsset = IGarden(IStrategy(_strategy).garden()).reserveAsset();
+        // To compare strategy power between all strategies we normalize their capital into DAI
+        // Then, we need to take control of getPrice fluctuations along the time
+        uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
+        _capital = SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, _capital.preciseMul(pricePerTokenUnit));
+        // Create or/and update the protocol quarter checkpoints if mining program is activated
+        _updateProtocolPowerPerQuarter();
+        // We update the strategy power per quarter normalized in DAI if mining program is activated
+        _updateStrategyPowerPerQuarter(_strategy);
+        // The following function call _updatePrincipal must be always executed after _updateProtocolPowerPerQuarter and _updateStrategyPowerPerQuarter
+        _updatePrincipal(_strategy, _capital, _addOrSubstract);
+        // The following time set should always be executed at the end
+        miningUpdatedAt = block.timestamp;
+    }
+
+    /**
+     * Update the principal considered part of the mining program either Protocol or Strategies
+     * @param _strategy         Strategy address
+     * @param _capital          Capital normalized into DAI to add or substract for accurate comparisons between strategies
+     * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy under mining
+     */
+
+    function _updatePrincipal(
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) private {
         if (_addOrSubstract == false) {
             // Substracting capital
-            protocolPrincipal = protocolPrincipal.sub(_capital);
+            miningProtocolPrincipal = miningProtocolPrincipal.sub(_capital);
+            strategyPrincipal[_strategy] = strategyPrincipal[_strategy].sub(_capital);
         } else {
             // Adding capital
-            protocolPrincipal = protocolPrincipal.add(_capital);
+            miningProtocolPrincipal = miningProtocolPrincipal.add(_capital);
+            strategyPrincipal[_strategy] = strategyPrincipal[_strategy].add(_capital);
         }
-        protocolCheckpoint.principal = protocolPrincipal;
-        protocolCheckpoint.time = block.timestamp;
-        protocolCheckpoint.quarterBelonging = _getQuarter(block.timestamp);
-        protocolCheckpoint.timeListPointer = pid;
-
-        if (pid == 0) {
-            // The very first strategy of all strategies in the mining program
-            protocolCheckpoint.power = 0;
-        } else {
-            // Any other strategy different from the very first one (will have an antecesor)
-            ProtocolPerTimestamp storage previousProtocolCheckpoint = protocolPerTimestamp[timeList[pid.sub(1)]];
-            protocolCheckpoint.power = previousProtocolCheckpoint.power.add(
-                protocolCheckpoint.time.sub(previousProtocolCheckpoint.time).mul(previousProtocolCheckpoint.principal)
-            );
-        }
-        timeList.push(block.timestamp); // Register of added strategies timestamps in the array for iteration
-        // Here we control the accumulated protocol power per each quarter
-        // Create or update the quarter checkpoint
-        _addProtocolPowerPerQuarter(block.timestamp);
-        // We update the strategy power per quarter normalized in DAI
-        _updateStrategyPowerPerQuarter(IStrategy(_strategy), _capital, _addOrSubstract);
-        pid++;
     }
 
     /**
      * Get the price per token to be used in the adding or substraction normalized to DAI (supports multiple asset)
+     * @param _reserveAsset     Garden reserve asset address
      * @param _strategy         Strategy address
      * @param _capital          Capital in reserve asset to add or substract
      * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy
      * @return pricePerToken value
      */
     function _getStrategyPricePerTokenUnit(
+        address _reserveAsset,
         address _strategy,
         uint256 _capital,
         bool _addOrSubstract
     ) private returns (uint256) {
         // Normalizing into DAI
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(IGarden(IStrategy(_strategy).garden()).reserveAsset(), DAI);
+        uint256 pricePerTokenUnit = oracle.getPrice(_reserveAsset, DAI);
         if (strategyPricePerTokenUnit[_strategy].preallocated == 0) {
             // First adding checkpoint
             strategyPricePerTokenUnit[_strategy].preallocated = _capital;
@@ -774,14 +674,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _claimedAt,
         uint256 _contributorPower
     ) private view returns (uint256[] memory) {
-        console.log('CHECK 1');
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
         uint256[] memory rewards = new uint256[](7);
-        (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
-            _getStrategyDetails(_strategy);
-        console.log('CHECK 2');
 
+        (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+            IStrategy(_strategy).getStrategyRewardsContext();
+        // In case of profits, the distribution of profits might substract the protocol fee beforehand:
+        strategyDetails[11] = profitData[0] == true
+            ? strategyDetails[11].sub(strategyDetails[11].multiplyDecimal(PROFIT_PROTOCOL_FEE))
+            : 0;
+        // strategyDetails array mapping:
         // strategyDetails[0]: executedAt
         // strategyDetails[1]: exitedAt
         // strategyDetails[2]: updatedAt
@@ -795,20 +698,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[10]: normalizedCapitalAllocated
         // strategyDetails[11]: profitValue
         // strategyDetails[12]: distanceValue
-
+        // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
 
         // Positive strategies not yet claimed
         if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
-            // Get strategist rewards in case the contributor is also the strategist of the strategy
+            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
+            // Get strategist profit rewards if profits
             rewards[1] = (strategist == _contributor && profitData[0] == true)
                 ? _getStrategyStrategistProfits(_garden, strategyDetails[11])
                 : 0;
 
             // Get steward rewards
             rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            // If not profits _getStrategyStewardsProfits should not execute
             rewards[3] = profitData[0] == true
                 ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
                 : 0;
@@ -821,105 +726,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
 
         return rewards;
-    }
-
-    function _getStrategyDetails(address _strategy)
-        private
-        view
-        returns (
-            address,
-            uint256[] memory,
-            bool[] memory
-        )
-    {
-        StrategyDetails storage strategyData = strategyDetails[_strategy];
-        uint256[] memory data = new uint256[](13);
-        bool[] memory boolData = new bool[](2);
-        data[0] = strategyData.strategyDetails[0];
-        data[1] = strategyData.strategyDetails[1];
-        data[2] = strategyData.strategyDetails[2];
-        data[3] = strategyData.strategyDetails[3];
-        data[4] = strategyData.strategyDetails[4];
-        data[5] = strategyData.strategyDetails[5];
-        data[6] = strategyData.strategyDetails[6];
-        data[7] = strategyData.strategyDetails[7];
-        data[8] = strategyData.strategyDetails[8];
-        data[9] = strategyData.strategyDetails[9];
-        data[10] = strategyData.strategyDetails[10];
-        data[11] = strategyData.profitValue;
-        data[12] = strategyData.distanceValue;
-        boolData[0] = strategyData.profit;
-        boolData[1] = strategyData.distance;
-        return (strategyData.strategist, data, boolData);
-    }
-
-    /**
-     * Get the context of a specific address depending on their expected returns, capital allocated and capital returned
-     * @param _strategy    Strategy address
-     */
-    function _setStrategyRewardsContext(address _strategy) private {
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[2]: updatedAt
-        // strategyDetails[3]: enteredAt
-        // strategyDetails[4]: totalPositiveVotes
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[6]: capitalAllocated
-        // strategyDetails[7]: capitalReturned
-        // strategyDetails[8]: expectedReturn
-        // strategyDetails[9]: strategyRewards
-        // strategyDetails[10]: normalizedCapitalAllocated
-        // strategyDetails[11]: profitValue
-        // strategyDetails[12]: distanceValue
-
-        // profitData[0]: profit
-        // profitData[1]: distance
-
-        StrategyDetails storage strategyData = strategyDetails[_strategy];
-
-        bool profit;
-        bool distance;
-        uint256 profitValue;
-        uint256 distanceValue;
-        if (
-            strategyData.strategyDetails[7] > strategyData.strategyDetails[6] &&
-            strategyData.strategyDetails[7] >= strategyData.strategyDetails[8]
-        ) {
-            // The strategy went equal or above expectations
-            profit = true; // positive
-            distance = true; // positive
-            profitValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[6]);
-            distanceValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[8]);
-        } else if (
-            strategyData.strategyDetails[7] >= strategyData.strategyDetails[6] &&
-            strategyData.strategyDetails[7] < strategyData.strategyDetails[8]
-        ) {
-            // The strategy went worse than expected but with some profits
-            profit = true; // positive or zero profits
-            distance = false; // negative vs expected return (got less than expected)
-            profitValue = strategyData.strategyDetails[7].sub(strategyData.strategyDetails[6]);
-            distanceValue = strategyData.strategyDetails[8].sub(strategyData.strategyDetails[7]);
-        } else if (
-            strategyData.strategyDetails[7] < strategyData.strategyDetails[6] &&
-            strategyData.strategyDetails[7] < strategyData.strategyDetails[8]
-        ) {
-            // Negative profits - bad investments has penalties
-            profit = false; // negative - loosing capital
-            distance = false; // negative vs expected return (got less than expected)
-            profitValue = strategyData.strategyDetails[6].sub(strategyData.strategyDetails[7]); // Negative number, there were no profits at all
-            distanceValue = strategyData.strategyDetails[8].sub(strategyData.strategyDetails[7]);
-        }
-
-        strategyData.profit = profit;
-        // If strategy returned money we give out the profits
-        if (strategyData.profit == true) {
-            // We reserve 5% of profits for performance fees
-            strategyData.profitValue = profitValue.sub(profitValue.multiplyDecimal(PROFIT_PROTOCOL_FEE));
-        } else {
-            strategyData.profitValue = profitValue;
-        }
-        strategyData.distance = distance;
-        strategyData.distanceValue = distanceValue;
     }
 
     /**
@@ -935,22 +741,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory _strategyDetails,
         bool[] memory _profitData
     ) private view returns (uint256) {
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[2]: updatedAt
-        // strategyDetails[3]: enteredAt
-        // strategyDetails[4]: totalPositiveVotes
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[6]: capitalAllocated
-        // strategyDetails[7]: capitalReturned
-        // strategyDetails[8]: expectedReturn
-        // strategyDetails[9]: strategyRewards
-        // strategyDetails[10]: normalizedCapitalAllocated
-        // strategyDetails[11]: profitValue
-        // strategyDetails[12]: distanceValue
-
-        // profitData[0]: profit
-        // profitData[1]: distance
+        // It executes in all cases as non profited strategies give BABL rewards to those who voted against
 
         int256 userVotes = IStrategy(_strategy).getUserVotes(_contributor);
         uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
@@ -1006,23 +797,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory _strategyDetails,
         bool[] memory _profitData
     ) private view returns (uint256) {
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[2]: updatedAt
-        // strategyDetails[3]: enteredAt
-        // strategyDetails[4]: totalPositiveVotes
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[6]: capitalAllocated
-        // strategyDetails[7]: capitalReturned
-        // strategyDetails[8]: expectedReturn
-        // strategyDetails[9]: strategyRewards
-        // strategyDetails[10]: normalizedCapitalAllocated
-        // strategyDetails[11]: profitValue
-        // strategyDetails[12]: distanceValue
-
-        // profitData[0]: profit
-        // profitData[1]: distance
-
+        // Assumption that the strategy got profits. Should not execute otherwise.
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         int256 userVotes = IStrategy(_strategy).getUserVotes(_contributor);
         uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
@@ -1053,23 +828,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         view
         returns (uint256)
     {
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[2]: updatedAt
-        // strategyDetails[3]: enteredAt
-        // strategyDetails[4]: totalPositiveVotes
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[6]: capitalAllocated
-        // strategyDetails[7]: capitalReturned
-        // strategyDetails[8]: expectedReturn
-        // strategyDetails[9]: strategyRewards
-        // strategyDetails[10]: normalizedCapitalAllocated
-        // strategyDetails[11]: profitValue
-        // strategyDetails[12]: distanceValue
-
-        // profitData[0]: profit
-        // profitData[1]: distance
-
+        // We assume that the contributor is the strategist. Should not execute otherwise.
         uint256 babl;
         uint256 bablCap;
         babl = _strategyDetails[9].multiplyDecimal(BABL_STRATEGIST_SHARE); // Standard calculation to be ponderated
@@ -1096,7 +855,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _profitValue      Strategy profit value
      */
     function _getStrategyStrategistProfits(address _garden, uint256 _profitValue) private view returns (uint256) {
+        // Assumptions:
         // Only executes if the contributor was the strategist of the strategy
+        // AND the strategy had profits
         uint256 profitShare =
             gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
         return _profitValue.multiplyDecimal(profitShare);
@@ -1113,24 +874,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _contributorPower,
         uint256 _normalizedAllocated
     ) private view returns (uint256) {
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[2]: updatedAt
-        // strategyDetails[3]: enteredAt
-        // strategyDetails[4]: totalPositiveVotes
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[6]: capitalAllocated
-        // strategyDetails[7]: capitalReturned
-        // strategyDetails[8]: expectedReturn
-        // strategyDetails[9]: strategyRewards
-        // strategyDetails[10]: normalizedCapitalAllocated
-        // strategyDetails[11]: profitValue
-        // strategyDetails[12]: distanceValue
-
-        // profitData[0]: profit
-        // profitData[1]: distance
         uint256 babl;
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
+        // This is due to BABL has 18 decimals
         babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
             _contributorPower.preciseDiv(_normalizedAllocated)
         );
@@ -1139,174 +885,116 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Add protocol power timestamps for each quarter
-     * @param _time         Timestamp
      */
-    function _addProtocolPowerPerQuarter(uint256 _time) private onlyMiningActive {
-        uint256 quarter = _getQuarter(_time);
-        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[quarter];
+    function _updateProtocolPowerPerQuarter() private {
+        uint256[] memory data = new uint256[](4);
+        // data[0]: prevQuarter, data[1]: current quarter, data[2]: timeDifference, data[3]: debtPower
+        data[0] = miningUpdatedAt == 0 ? 1 : _getQuarter(miningUpdatedAt);
+        data[1] = _getQuarter(block.timestamp);
+        data[2] = block.timestamp.sub(miningUpdatedAt);
+        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[data[1]];
+        data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal.mul(data[2]);
 
-        if (!isProtocolPerQuarter[quarter.sub(1)]) {
-            // The quarter is not yet initialized then we create it
-            protocolCheckpoint.quarterNumber = quarter;
-            if (pid == 0) {
-                // The first strategy added in the first epoch
-                protocolCheckpoint.quarterPower = 0;
-                protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
-            } else {
-                uint256 prevPid = pid.sub(1);
-                // Each time a new epoch starts with either a new strategy execution or finalization
-                // We just take the proportional power for this quarter from previous checkpoint
-                uint256 powerToSplit =
-                    protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[prevPid]].power);
-                if (protocolPerTimestamp[timeList[prevPid]].quarterBelonging == quarter.sub(1)) {
-                    // There were no intermediate epochs without checkpoints
-                    // We re-initialize the protocol power counting for this new quarter
-                    protocolCheckpoint.quarterPower = powerToSplit
-                        .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
-                        .div(_time.sub(protocolPerTimestamp[timeList[prevPid]].time));
-                    protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
-
-                    protocolPerQuarter[quarter.sub(1)].quarterPower = protocolPerQuarter[quarter.sub(1)]
+        if (!isProtocolPerQuarter[data[1].sub(1)]) {
+            // The quarter is not initialized yet, we then create it
+            if (miningUpdatedAt > 0) {
+                // A new epoch has started with either a new strategy execution or finalization checkpoint
+                if (data[0] == data[1].sub(1)) {
+                    // There were no intermediate epoch without checkpoints, we are in the next epoch
+                    // We need to divide the debtPower between previous epoch and current epoch
+                    // We re-initialize the protocol power in the new epoch adding only the corresponding to its duration
+                    protocolCheckpoint.quarterPower = data[3]
+                        .mul(block.timestamp.sub(START_TIME.add(data[1].mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
+                        .div(data[2]);
+                    // We now update the previous quarter with its proportional pending debtPower
+                    protocolPerQuarter[data[1].sub(1)].quarterPower = protocolPerQuarter[data[1].sub(1)]
                         .quarterPower
-                        .add(powerToSplit.sub(protocolCheckpoint.quarterPower));
+                        .add(data[3].sub(protocolCheckpoint.quarterPower));
                 } else {
-                    // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
-                    // We have to update all the quarters including where the previous checkpoint is and the one were we are now
-                    for (
-                        uint256 i = 0;
-                        i <= quarter.sub(protocolPerTimestamp[timeList[prevPid]].quarterBelonging);
-                        i++
-                    ) {
-                        ProtocolPerQuarter storage newCheckpoint =
-                            protocolPerQuarter[protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i)];
-                        uint256 slotEnding =
-                            START_TIME.add(
-                                protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i).mul(EPOCH_DURATION)
-                            );
+                    // There were some intermediate epochs without checkpoints - we need to create missing checkpoints and update the last (current) one
+                    // We have to update all the quarters since last update
+                    for (uint256 i = 0; i <= data[1].sub(data[0]); i++) {
+                        ProtocolPerQuarter storage newCheckpoint = protocolPerQuarter[data[0].add(i)];
+                        uint256 slotEnding = START_TIME.add(data[0].add(i).mul(EPOCH_DURATION));
                         if (i == 0) {
-                            // We are in the first quarter to update, we add the corresponding part
-
+                            // We are in the first quarter to update (corresponding to miningUpdatedAt timestamp)
+                            // We add the corresponding proportional part
                             newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
-                                powerToSplit.mul(slotEnding.sub(protocolPerTimestamp[timeList[prevPid]].time)).div(
-                                    _time.sub(protocolPerTimestamp[timeList[prevPid]].time)
-                                )
+                                data[3].mul(slotEnding.sub(miningUpdatedAt)).div(data[2])
                             );
-                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[prevPid]].principal;
-                        } else if (i < quarter.sub(protocolPerTimestamp[timeList[prevPid]].quarterBelonging)) {
-                            // We are in an intermediate quarter
-                            newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(
-                                _time.sub(protocolPerTimestamp[timeList[prevPid]].time)
-                            );
-                            newCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(
-                                protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(i)
-                            );
-                            newCheckpoint.quarterNumber = protocolPerTimestamp[timeList[prevPid]].quarterBelonging.add(
-                                i
-                            );
-                            newCheckpoint.quarterPrincipal = protocolPerTimestamp[timeList[prevPid]].principal;
+                        } else if (i < data[1].sub(data[0])) {
+                            // We are in an intermediate quarter without checkpoints - need to create and update it
+                            newCheckpoint.quarterPower = data[3].mul(EPOCH_DURATION).div(data[2]);
                         } else {
-                            // We are in the last quarter of the strategy
-                            protocolCheckpoint.quarterPower = powerToSplit
-                                .mul(_time.sub(START_TIME.add(quarter.mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
-                                .div(_time.sub(protocolPerTimestamp[timeList[prevPid]].time));
-                            protocolCheckpoint.supplyPerQuarter = _tokenSupplyPerQuarter(quarter);
-                            protocolCheckpoint.quarterNumber = quarter;
-                            protocolCheckpoint.quarterPrincipal = protocolPrincipal;
+                            // We are in the last (current) quarter
+                            // We update its proportional remaining debt power
+                            protocolCheckpoint.quarterPower = data[3]
+                                .mul(
+                                block.timestamp.sub(START_TIME.add(data[1].mul(EPOCH_DURATION).sub(EPOCH_DURATION)))
+                            )
+                                .div(data[2]);
                         }
                     }
                 }
             }
-            isProtocolPerQuarter[quarter.sub(1)] = true;
+            isProtocolPerQuarter[data[1].sub(1)] = true;
         } else {
-            // Quarter checkpoint already created, it must have been filled with general info
+            // Quarter checkpoint already created
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
-            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(
-                protocolPerTimestamp[_time].power.sub(protocolPerTimestamp[timeList[pid.sub(1)]].power)
-            );
+            protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(data[3]);
+            miningProtocolPower = miningProtocolPower.add(data[3]);
         }
-        protocolCheckpoint.quarterPrincipal = protocolPrincipal;
     }
 
     /**
      * Updates the strategy power per quarter for rewards calculations of each strategy out of the whole protocol
-     * @param _strategy      Strategy
-     * @param _capital       New capital normalized in DAI
+     * @param _strategy    Strategy address
      */
-    function _updateStrategyPowerPerQuarter(
-        IStrategy _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) private onlyMiningActive {
-        StrategyPerQuarter storage strategyCheckpoint =
-            strategyPerQuarter[address(_strategy)][_getQuarter(block.timestamp)];
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
-        uint256[] memory ts = new uint256[](3);
-        (, , , , ts[0], ts[1], ts[2]) = _strategy.getStrategyState();
+    function _updateStrategyPowerPerQuarter(address _strategy) private {
+        uint256[] memory data = new uint256[](5);
+        // data[0]: executedAt, data[1]: updatedAt, data[2]: time difference, data[3]: quarter, data[4]: debtPower
+        (, , , , data[0], , data[1]) = IStrategy(_strategy).getStrategyState();
+        data[2] = block.timestamp.sub(data[1]);
+        data[3] = _getQuarter(block.timestamp);
+        StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][data[3]];
+        // We calculate the debt Power since last checkpoint (if any)
+        data[4] = strategyPrincipal[_strategy].mul(data[2]);
         if (!strategyCheckpoint.initialized) {
             // The strategy quarter is not yet initialized then we create it
-            if (_getQuarter(block.timestamp) == _getQuarter(ts[0])) {
-                // The first checkpoint in the first executing epoch
-                strategyCheckpoint.quarterPower = 0;
-                strategyCheckpoint.quarterNumber = _getQuarter(block.timestamp);
-            } else {
-                // Each time a new epoch starts with either a new strategy execution or finalization
-                // We just take the proportional power for this quarter from previous checkpoint
-                uint256 powerToSplit =
-                    strategyPerQuarter[address(_strategy)][_getQuarter(ts[2])].quarterPrincipal.mul(
-                        block.timestamp.sub(ts[2])
-                    );
-                // We need to iterate since last update of the strategy capital
-                (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[2], block.timestamp);
+            // If it the first checkpoint in the first executing epoch - keep power 0
+            if (data[3] > _getQuarter(data[0])) {
+                // Each time a running strategy has a new checkpoint on a new (different) epoch than previous checkpoints
+                // debtPower is the proportional power of the strategy for this quarter from previous checkpoint
+                // We need to iterate since last checkpoint
+                (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(data[1], block.timestamp);
 
-                // There were intermediate epochs without checkpoints - we need to create their protocolPerQuarter's and update the last one
-                // We have to update all the quarters including where the previous checkpoint is and the one were we are now
+                // There were intermediate epochs without checkpoints - we need to create their corresponding checkpoints and update the last one
+                // We have to update all the quarters including where the previous checkpoint is and the one where we are now
                 for (uint256 i = 0; i < numQuarters; i++) {
-                    StrategyPerQuarter storage newCheckpoint =
-                        strategyPerQuarter[address(_strategy)][startingQuarter.add(i)];
+                    StrategyPerQuarter storage newCheckpoint = strategyPerQuarter[_strategy][startingQuarter.add(i)];
                     uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
                     if (i == 0) {
-                        // We are in the first quarter to update, we add the corresponding part
-
+                        // We are in the first quarter to update, we add the proportional pending part
                         newCheckpoint.quarterPower = newCheckpoint.quarterPower.add(
-                            powerToSplit.mul(slotEnding.sub(ts[2])).div(block.timestamp.sub(ts[2]))
+                            data[4].mul(slotEnding.sub(data[1])).div(data[2])
                         );
                     } else if (i > 0 && i.add(1) < numQuarters) {
-                        // We are in an intermediate quarter
-                        newCheckpoint.quarterPower = powerToSplit.mul(EPOCH_DURATION).div(block.timestamp.sub(ts[2]));
-                        newCheckpoint.quarterNumber = startingQuarter.add(i);
-                        newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
-                            .quarterPrincipal;
+                        // We are updating an intermediate quarter
+                        newCheckpoint.quarterPower = data[4].mul(EPOCH_DURATION).div(data[2]);
                         newCheckpoint.initialized = true;
                     } else {
-                        // We are in the last quarter of the strategy
-                        newCheckpoint.quarterPower = powerToSplit
-                            .mul(
-                            block.timestamp.sub(
-                                START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
-                            )
-                        )
-                            .div(block.timestamp.sub(ts[2]));
-                        newCheckpoint.quarterPrincipal = strategyPerQuarter[address(_strategy)][startingQuarter]
-                            .quarterPrincipal;
-                        newCheckpoint.quarterNumber = _getQuarter(block.timestamp);
+                        // We are updating the current quarter of this strategy checkpoint
+                        newCheckpoint.quarterPower = data[4]
+                            .mul(block.timestamp.sub(START_TIME.add(data[3].mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
+                            .div(data[2]);
                     }
                 }
             }
             strategyCheckpoint.initialized = true;
         } else {
-            // Quarter checkpoint already created, it must have been filled with general info
+            // We are in the same quarter than previous checkpoints for this strategy
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
-
-            strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(
-                strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(ts[2]))
-            );
-        }
-        if (_addOrSubstract == true) {
-            // Add
-            strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.add(_capital);
-        } else {
-            // Sub
-            strategyCheckpoint.quarterPrincipal = strategyCheckpoint.quarterPrincipal.sub(_capital);
+            strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(data[4]);
         }
     }
 

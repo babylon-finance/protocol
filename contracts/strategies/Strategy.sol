@@ -17,6 +17,8 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -381,29 +383,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
-        // update struct mapping to speed up end user claims
-        _updateStrategyDetailsForRewards();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
-    }
-
-    function _updateStrategyDetailsForRewards() private {
-        uint256[] memory data = new uint256[](10);
-        data[0] = executedAt;
-        data[1] = exitedAt;
-        data[2] = updatedAt;
-        data[3] = enteredAt;
-        data[4] = totalPositiveVotes;
-        data[5] = totalNegativeVotes;
-        data[6] = capitalAllocated;
-        data[7] = capitalReturned;
-        data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
-        data[9] = strategyRewards;
-        IRewardsDistributor(rewardsDistributor).updateStrategyRewards(
-            address(this),
-            strategist,
-            garden.reserveAsset(),
-            data
-        );
     }
 
     /**
@@ -616,6 +596,42 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             enteredAt,
             getNAV()
         );
+    }
+
+    /**
+     * Get mining context details of a Strategy
+     *
+     */
+    function getStrategyRewardsContext()
+        external
+        view
+        override
+        returns (
+            address,
+            uint256[] memory,
+            bool[] memory
+        )
+    {
+        uint256[] memory data = new uint256[](13);
+        bool[] memory boolData = new bool[](2);
+
+        data[0] = executedAt;
+        data[1] = exitedAt;
+        data[2] = updatedAt;
+        data[3] = enteredAt;
+        data[4] = totalPositiveVotes;
+        data[5] = totalNegativeVotes;
+        data[6] = capitalAllocated;
+        data[7] = capitalReturned;
+        data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
+        data[9] = strategyRewards;
+        boolData[0] = capitalReturned >= capitalAllocated ? true : false;
+        boolData[1] = capitalReturned >= data[8] ? true : false;
+        // Normalized into DAI capitalAllocated needed at Rewards Distributor
+        data[10] = SafeDecimalMath.normalizeAmountTokens(garden.reserveAsset(), DAI, data[6]);
+        data[11] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
+        data[12] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        return (strategist, data, boolData);
     }
 
     /**
