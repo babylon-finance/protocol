@@ -120,6 +120,18 @@ const tokens = [
     value: parse('0.000511684548459918'),
   },
   {
+    name: 'CRV 3 Pool',
+    tokenIn: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
+    tokenOut: addresses.tokens.DAI,
+    value: parse('1.0'),
+  },
+  {
+    name: 'CRV 3 Pool Inverse',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
+    value: parse('0.97'),
+  },
+  {
     name: 'WBTC to renBTC',
     tokenIn: addresses.tokens.WBTC,
     tokenOut: addresses.tokens.renBTC,

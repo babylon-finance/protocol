@@ -552,12 +552,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Curve LP tokens
-        // if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
-        //     // return getPrice(USDC, _tokenOut).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        // }
-        // if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
-        //     // return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenIn));
-        // }
+        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
+            return curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(USDC, _tokenOut));
+        }
+        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
+            return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+        }
 
         // Yearn vaults
         if (_isYearnVault(_tokenIn)) {

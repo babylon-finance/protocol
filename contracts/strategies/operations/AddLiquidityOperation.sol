@@ -105,7 +105,7 @@ contract AddLiquidityOperation is Operation {
             maxAmountsIn
         );
         return (
-            BytesLib.decodeOpDataAddress(_data),
+            _getLPTokenFromBytes(_integration, _data),
             IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
             0
         ); // liquid
