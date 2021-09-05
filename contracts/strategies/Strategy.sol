@@ -527,7 +527,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _isDeposit                    Whether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override {
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) public override {
         _onlyOperation();
         _onlyUnpaused();
         if (_isDeposit) {
@@ -772,6 +772,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 garden,
                 opIntegrations[i - 1]
             );
+        }
+        // Consolidate to reserve asset if needed
+        if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
+            if (assetFinalized == address(0)) {
+                handleWeth(true, address(msg.sender).balance);
+                assetFinalized = WETH;
+            }
+            if (assetFinalized != garden.reserveAsset()) {
+                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(msg.sender), garden.reserveAsset());
+            }
         }
     }
 

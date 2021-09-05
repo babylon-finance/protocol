@@ -159,20 +159,7 @@ contract DepositVaultOperation is Operation {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
-        if (vaultAsset != _garden.reserveAsset()) {
-            if (vaultAsset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-                vaultAsset = WETH;
-            }
-            if (vaultAsset != _garden.reserveAsset()) {
-                IStrategy(msg.sender).trade(
-                    vaultAsset,
-                    IERC20(vaultAsset).balanceOf(msg.sender),
-                    _garden.reserveAsset()
-                );
-            }
-        }
-        return (yieldVault, 0, 0);
+        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0);
     }
 
     /**

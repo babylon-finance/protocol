@@ -102,7 +102,6 @@ describe('MasterSwapper', function () {
           });
           await executeStrategy(strategyContract);
           let assetBalance = await assetContract.balanceOf(strategyContract.address);
-          console.log('after execute assetBalance', ethers.utils.formatEther(assetBalance));
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
 
           const assetDecimals = await assetContract.decimals();
@@ -119,23 +118,13 @@ describe('MasterSwapper', function () {
             .div(assetDecimalsDelta);
           // 5% slippage. Doesn't matter we just want to check that the trade can execute
           // univ3 doesn't have right prices for some of these
-          console.log(
-            'strategyBalance',
-            ethers.utils.formatEther(await tokenContract.balanceOf(strategyContract.address)),
-          );
           expect(assetBalance).to.be.gt(0);
           expect(assetBalance).to.be.closeTo(expectedBalance, expectedBalance.div(20));
-          console.log('FINALiZE');
           if (synth) {
             // Cannot test exiting synth without replacing oracle
             return;
           }
           await finalizeStrategy(strategyContract, 0);
-          console.log('assetBalance', ethers.utils.formatEther(assetBalance));
-          console.log(
-            'strategyBalance',
-            ethers.utils.formatEther(await tokenContract.balanceOf(strategyContract.address)),
-          );
           const assetBalanceAfter = await assetContract.balanceOf(strategyContract.address);
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0
         });

@@ -709,10 +709,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
         uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
         uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
-        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+        if (liquidityLow >= liquidityMedium && liquidityLow >= liquidityHigh) {
             return poolLow;
         }
-        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+        if (liquidityMedium >= liquidityLow && liquidityMedium >= liquidityHigh) {
             return poolMedium;
         }
         return poolHigh;
@@ -779,7 +779,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         return exchangeRateNormalized;
     }
 
-    function getPriceThroughCurve(
+    function _getPriceThroughCurve(
         address _curvePool,
         address _tokenIn,
         address _tokenOut
@@ -820,7 +820,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             curvePool = curveRegistry.find_pool_for_coins(_tokenIn, ETH_ADD_CURVE);
         }
         if (curvePool != address(0)) {
-            uint256 price = getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
+            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
             return price;
         }
         return 0;

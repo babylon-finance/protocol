@@ -141,7 +141,7 @@ contract LendOperation is Operation {
         return (
             assetToken,
             IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
-            1
+            0
         );
     }
 

@@ -119,11 +119,4 @@ contract UniswapV2TradeIntegration is TradeIntegration {
     }
 
     /* ============ Private Functions ============ */
-
-    // function pairInfo(address tokenA, address tokenB) internal view returns (uint reserveA, uint reserveB, uint totalSupply) {
-    //     // return IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
-    //     // totalSupply = pair.totalSupply();
-    //     // (uint reserves0, uint reserves1,) = pair.getReserves();
-    //     // (reserveA, reserveB) = tokenA == pair.token0() ? (reserves0, reserves1) : (reserves1, reserves0);
-    // }
 }
