@@ -292,7 +292,6 @@ contract AddLiquidityOperation is Operation {
         address[] memory rewards = IPoolIntegration(_integration).getRewardTokens(_data);
         for (uint256 i = 0; i < rewards.length; i++) {
             if (rewards[i] != address(0)) {
-                console.log('sell tokens', rewards[i]);
                 try
                     IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
                 {} catch {}
