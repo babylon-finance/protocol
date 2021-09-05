@@ -621,20 +621,26 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
+        // Direct UNI3
+        price = _getUNIV3Price(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
+        }
         // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            price = _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));
+            uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
             if (price != 0) {
-                return price;
+                return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
             }
         }
         // UniV3 through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
-            price = _getUNIV3Price(_tokenIn, DAI).preciseDiv(_getUNIV3Price(_tokenOut, DAI));
+            uint256 divisor = _getUNIV3Price(_tokenOut, DAI);
             if (price != 0) {
-                return price;
+                return _getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
             }
         }
+
         // Use only univ2 for UI
         if (_forNAV) {
             price = _getUNIV2Price(_tokenIn, _tokenOut);

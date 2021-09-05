@@ -370,7 +370,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         return _pool;
     }
 
-    function _getRewardTokens(address _pool) internal view virtual returns (address[] memory) {
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal view virtual returns (address[] memory) {
         return new address[](1);
     }
 }

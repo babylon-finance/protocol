@@ -494,7 +494,9 @@ contract CurvePoolIntegration is PoolIntegration {
         return curveRegistry.get_n_coins(_pool)[0];
     }
 
-    function _getRewardTokens(address _pool) internal view override returns (address[] memory) {
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal pure override returns (address[] memory) {
         address[] memory rewards = new address[](2);
         rewards[0] = CRV;
         rewards[1] = CVX;

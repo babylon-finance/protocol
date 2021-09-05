@@ -4,7 +4,7 @@ const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO } = require('lib/constants');
 
 describe('ConvexStakeIntegrationTest', function () {
   let convexStakeIntegration;
@@ -69,7 +69,7 @@ describe('ConvexStakeIntegrationTest', function () {
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gt(balanceBeforeExiting);
   }
 
-  async function tryDepositAndStakeStrategy(crvpool, cvxpool, token, errorcode) {
+  async function tryDepositAndStakeStrategy(crvpool, cvxpool, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
     await depositFunds(token, garden);
@@ -83,9 +83,7 @@ describe('ConvexStakeIntegrationTest', function () {
       false,
       [crvpool, 0, cvxpool, 0],
     );
-    await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.revertedWith(
-      errorcode,
-    );
+    await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.reverted;
   }
 
   beforeEach(async () => {
@@ -102,9 +100,9 @@ describe('ConvexStakeIntegrationTest', function () {
   describe('Convex Stake Multigarden multiasset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
-      // { token: addresses.tokens.DAI, name: 'DAI' },
-      // { token: addresses.tokens.USDC, name: 'USDC' },
-      // { token: addresses.tokens.WBTC, name: 'WBTC' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(({ token, name }) => {
       const pools = [
         {
@@ -118,6 +116,9 @@ describe('ConvexStakeIntegrationTest', function () {
           await depositAndStakeStrategy(crvpool, cvxpool, token);
         });
       });
+    });
+    it(`cannot enter an invalid pool`, async function () {
+      await expect(tryDepositAndStakeStrategy(ADDRESS_ZERO, ADDRESS_ZERO, addresses.tokens.WETH)).to.be.reverted;
     });
   });
 });

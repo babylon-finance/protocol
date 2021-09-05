@@ -223,6 +223,31 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ) {
             return;
         }
+        // Try Univ3 through WETH
+        if (_sendToken != WETH && _receiveToken != WETH) {
+            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+                try
+                    ITradeIntegration(univ3).trade(
+                        _strategy,
+                        WETH,
+                        _getTokenOrETHBalance(_strategy, WETH),
+                        _receiveToken,
+                        _minReceiveQuantity
+                    )
+                {
+                    return;
+                } catch {
+                    // Revert trade
+                    ITradeIntegration(univ3).trade(
+                        _strategy,
+                        WETH,
+                        _getTokenOrETHBalance(_strategy, WETH),
+                        _sendToken,
+                        1
+                    );
+                }
+            } catch {}
+        }
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
             ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
