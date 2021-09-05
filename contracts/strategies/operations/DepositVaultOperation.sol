@@ -156,7 +156,11 @@ contract DepositVaultOperation is Operation {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
-        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0);
+        return (
+            vaultAsset,
+            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            0
+        );
     }
 
     /**

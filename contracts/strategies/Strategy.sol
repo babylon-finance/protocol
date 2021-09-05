@@ -529,12 +529,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function handleWeth(bool _isDeposit, uint256 _wethAmount) public override {
         _onlyOperation();
-        _onlyUnpaused();
-        if (_isDeposit) {
-            IWETH(WETH).deposit{value: _wethAmount}();
-            return;
-        }
-        IWETH(WETH).withdraw(_wethAmount);
+        _handleWeth(_isDeposit, _wethAmount);
     }
 
     /* ============ External Getter Functions ============ */
@@ -776,11 +771,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
             if (assetFinalized == address(0)) {
-                handleWeth(true, address(msg.sender).balance);
+                _handleWeth(true, address(this).balance);
                 assetFinalized = WETH;
             }
             if (assetFinalized != garden.reserveAsset()) {
-                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(msg.sender), garden.reserveAsset());
+                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset());
             }
         }
     }
@@ -910,6 +905,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         bytes memory decodedData =
             opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
         return decodedData;
+    }
+
+    function _handleWeth(bool _isDeposit, uint256 _wethAmount) private {
+        _onlyUnpaused();
+        if (_isDeposit) {
+            IWETH(WETH).deposit{value: _wethAmount}();
+            return;
+        }
+        IWETH(WETH).withdraw(_wethAmount);
     }
 
     // solhint-disable-next-line
