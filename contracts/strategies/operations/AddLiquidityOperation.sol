@@ -163,6 +163,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
+        _sellRewardTokens(_integration, _data, reserveAsset);
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
 
@@ -275,5 +276,24 @@ contract AddLiquidityOperation is Operation {
 
     function _isETH(address _address) internal pure returns (bool) {
         return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
+    }
+
+    /**
+     * Sells the reward tokens obtained.
+     * @param _integration                    Address of the integration
+     * @param _data                           Calldata
+     * @param _reserveAsset                   Reserve Asset
+     */
+    function _sellRewardTokens(
+        address _integration,
+        bytes calldata _data,
+        address _reserveAsset
+    ) internal {
+        address[] memory rewards = IPoolIntegration(_integration).getRewardTokens(_data);
+        for (uint256 i = 0; i < rewards.length; i++) {
+            if (rewards[i] != address(0)) {
+                IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset);
+            }
+        }
     }
 }

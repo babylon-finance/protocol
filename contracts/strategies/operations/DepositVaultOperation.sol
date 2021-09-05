@@ -113,7 +113,8 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
+        vaultAsset = IPassiveIntegration(_integration).getResultAsset(yieldVault);
+        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
     function _getMinAmountExpected(
@@ -135,7 +136,7 @@ contract DepositVaultOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -159,6 +160,7 @@ contract DepositVaultOperation is Operation {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        amountVault = IERC20(IPassiveIntegration(_integration).getResultAsset(yieldVault)).balanceOf(msg.sender);
         return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0);
     }
 

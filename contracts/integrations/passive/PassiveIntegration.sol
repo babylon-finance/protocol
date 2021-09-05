@@ -279,7 +279,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      *
      * @param _investmentInfo               Struct containing investment information used in internal functions
      */
-    function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
+    function _validatePreExitInvestmentData(InvestmentInfo memory _investmentInfo) internal pure {
         require(
             _investmentInfo.investmentTokensInTransaction > 0,
             'Investment tokens to exchange must be greater than 0'

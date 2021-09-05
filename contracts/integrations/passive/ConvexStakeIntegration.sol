@@ -187,7 +187,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
         )
     {
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdrawAll(bool)', true);
+        bytes memory methodData = abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true);
         // Go through the reward pool instead of the booster
         return (_getRewardPool(_asset), 0, methodData);
     }
