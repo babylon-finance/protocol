@@ -138,11 +138,7 @@ contract LendOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden, _integration);
-        return (
-            assetToken,
-            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
-            0
-        );
+        return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
     /**
