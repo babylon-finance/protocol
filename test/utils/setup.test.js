@@ -4,7 +4,7 @@ const { increaseTime, increaseBlock, getTimestamp, mineInBlock } = require('util
 const { setup } = require('../../lib/scripts/setup');
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('setup', function () {
+describe('setup', function () {
   beforeEach(async () => {
     await setupTests()();
   });
