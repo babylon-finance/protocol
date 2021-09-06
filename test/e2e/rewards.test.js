@@ -158,7 +158,6 @@ describe('rewards', function () {
   }
 
   it('simulate mining rewards launch', async function () {
-    console.log('gardens');
     const gardens = [];
     for (let i = 0; i < gardenNum; i++) {
       const garden = await createGarden({ signer: users[0], params: [eth(1e4), ...GARDEN_PARAMS.slice(1)] });
@@ -173,7 +172,6 @@ describe('rewards', function () {
       );
     }
 
-    console.log('execute');
     let strategies = [];
     for (let i = 0; i < strategyNum; i++) {
       const newStrategies = await create(gardens);
@@ -187,15 +185,12 @@ describe('rewards', function () {
       strategies = [...strategies, ...newStrategies];
     }
 
-    console.log('finalize');
     await increaseTime(ONE_DAY_IN_SECONDS * 30);
     await finalize(strategies);
 
-    console.log('claim');
     await increaseTime(ONE_DAY_IN_SECONDS);
     await claim(gardens);
 
-    console.log('withdraw');
     await increaseTime(ONE_DAY_IN_SECONDS);
     await withdraw(gardens);
   });
