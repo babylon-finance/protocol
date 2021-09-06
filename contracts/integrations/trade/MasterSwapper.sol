@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-// import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -206,10 +205,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 require(false, 'Failed midway in out synth');
             }
         }
-        // Go through UNIv3 first
-        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
-            return;
-        } catch {}
         // Try Curve through reserve assets
         if (
             _checkCurveThroughReserves(
@@ -223,6 +218,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ) {
             return;
         }
+        // Go through UNIv3 first
+        uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
+        _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
+        // ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
+            return;
+        } catch {}
         // Try Univ3 through WETH
         if (_sendToken != WETH && _receiveToken != WETH) {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
@@ -250,6 +252,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 }
             } catch {}
         }
+        sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
+        _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
