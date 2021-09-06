@@ -254,6 +254,11 @@ contract AddLiquidityOperation is Operation {
                 ? normalizedTokenAmount
                 : IERC20(WETH).balanceOf(msg.sender);
             IStrategy(msg.sender).handleWeth(false, normalizedTokenAmount); // normalized WETH/ETH amount with 18 decimals
+        } else {
+          // Reserve asset
+          normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
+            ? normalizedTokenAmount
+            : IERC20(_poolToken).balanceOf(msg.sender);
         }
         return normalizedTokenAmount;
     }
