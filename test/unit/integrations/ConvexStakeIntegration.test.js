@@ -21,7 +21,6 @@ describe('ConvexStakeIntegrationTest', function () {
       token,
     );
     await depositFunds(token, garden);
-    console.log('after deposit');
     const crvAddressProvider = await ethers.getContractAt(
       'ICurveAddressProvider',
       '0x0000000022d53366457f9d5e68ec105046fc4383',
@@ -49,9 +48,7 @@ describe('ConvexStakeIntegrationTest', function () {
       [crvpool, 0, cvxpool, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token];
-    console.log('execute strategy');
     await executeStrategy(strategyContract, { amount });
-    console.log('after execute');
     // Check NAV
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
@@ -60,7 +57,6 @@ describe('ConvexStakeIntegrationTest', function () {
 
     // Check rewards
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
-    console.log('before finalize');
     await finalizeStrategy(strategyContract);
 
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
