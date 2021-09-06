@@ -53,8 +53,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
 
-    /* ============ State Variables ============ */
-
     /* ============ Constants ============ */
 
     // Address of Uniswap factory
@@ -73,6 +71,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    address private constant TRI_CURVE_POOL = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -84,6 +83,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     int24 private constant maxTwapDeviation = 100;
     uint160 private constant maxLiquidityDeviationFactor = 50;
     int24 private constant baseThreshold = 1000;
+
+    /* ============ State Variables ============ */
 
     // Mapping of cToken addresses
     mapping(address => address) public cTokenToAsset;
@@ -805,7 +806,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (_curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5) {
+        if (_curvePool == TRI_CURVE_POOL) {
             price = ICurvePoolV3(_curvePool).get_dy(
                 uint256(i),
                 uint256(j),
@@ -820,7 +821,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
-        if (price < uint(1e18).add(delta) && price > uint(1e18).sub(delta)) {
+        if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
             return price;
         }
         return 0;

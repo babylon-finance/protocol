@@ -534,7 +534,7 @@ describe('Garden', function () {
     });
   });
 
-  describe('contributor power', async function () {
+  describe.skip('contributor power', async function () {
     it('the contributor power is calculated correctly if _to is after its last deposit (1 deposit from user)', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
