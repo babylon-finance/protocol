@@ -34,7 +34,7 @@ describe('SynthetixTradeIntegration', function () {
         garden: garden,
         specificParams: [addresses.tokens.sUSD, 0],
       });
-      await expect(executeStrategy(strategyContract)).to.be.reverted;
+      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Syntetix needs synth or DAI or USDC');
     });
 
     // Synthetix from WETH garden
