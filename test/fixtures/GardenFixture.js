@@ -44,6 +44,10 @@ async function setUpFixture(
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
   const lidoIntegration = await getContract('LidoStakeIntegration');
+  const curveTradeIntegration = await getContract('CurveTradeIntegration');
+  const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
+  const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
+  const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -216,6 +220,7 @@ async function setUpFixture(
     treasury,
     rewardsDistributor,
     uniswapV3TradeIntegration,
+    curveTradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
@@ -225,12 +230,15 @@ async function setUpFixture(
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
+    synthetixTradeIntegration,
+    univ2TradeIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
     lidoIntegration,
     babViewer,
     timelockController,
     babGovernor,
+    masterSwapper,
 
     garden1,
     garden2,

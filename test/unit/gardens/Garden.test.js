@@ -901,7 +901,7 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       const start = NOW;
-      const end = start + 13236672;
+      let end = start + 10200000;
       await expect(
         (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 0, end)).toString(),
       ).to.be.closeTo((402715196105523546).toString(), ethers.utils.parseEther('0.005'));
@@ -931,14 +931,15 @@ describe('Garden', function () {
       });
       const start = NOW;
       const end = start + 13236672;
-      // TODO CHECK FAIL SIGNER1 BY THE NEW FIX IN MAIN
-      //await expect((await garden1.getContributorPower(signer1.address, 0, 1630602307)).toString()).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.0000005'));
+      await expect(
+        (await rewardsDistributor.getContributorPower(garden1.address, signer1.address, 0, end)).toString(),
+      ).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.005'));
       await expect(
         (await rewardsDistributor.getContributorPower(garden1.address, signer2.address, 0, end)).toString(),
-      ).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.0000005'));
+      ).to.be.closeTo((333333238251235557).toString(), ethers.utils.parseEther('0.005'));
       await expect(
         (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end)).toString(),
-      ).to.be.closeTo((333333202595448891).toString(), ethers.utils.parseEther('0.0000005'));
+      ).to.be.closeTo((333333202595448891).toString(), ethers.utils.parseEther('0.005'));
     });
     it('the contributor power is 0 if still not deposited in the garden', async function () {
       await expect(

@@ -34,10 +34,10 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 import {Operation} from './Operation.sol';
 
 /**
- * @title DepositVaultOperation
+ * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance
  *
- * Executes a deposit vault operation
+ * Executes a stake (deposit vault) operation
  */
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
@@ -156,20 +156,11 @@ contract DepositVaultOperation is Operation {
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
-        if (vaultAsset != _garden.reserveAsset()) {
-            if (vaultAsset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-                vaultAsset = WETH;
-            }
-            if (vaultAsset != _garden.reserveAsset()) {
-                IStrategy(msg.sender).trade(
-                    vaultAsset,
-                    IERC20(vaultAsset).balanceOf(msg.sender),
-                    _garden.reserveAsset()
-                );
-            }
-        }
-        return (yieldVault, 0, 0);
+        return (
+            vaultAsset,
+            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            0
+        );
     }
 
     /**

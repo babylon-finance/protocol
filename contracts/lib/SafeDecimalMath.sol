@@ -167,7 +167,7 @@ library SafeDecimalMath {
         return quantity.div(10**(tokenDecimals.sub(tokenDecimalsTarget)));
     }
 
-    function _isETH(address _address) internal view returns (bool) {
+    function _isETH(address _address) internal pure returns (bool) {
         return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

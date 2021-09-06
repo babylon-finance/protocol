@@ -22,20 +22,16 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-
-import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
-
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
 /**
- * @title BorrowIntetration
+ * @title TradeIntegration
  * @author Babylon Finance Protocol
  *
  * Base class for integration with trading protocols
@@ -111,23 +107,62 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_sendToken, _receiveToken, _sendQuantity);
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            if (_getPreApprovalSpender(targetAddressP) != address(0)) {
+                tradeInfo.strategy.invokeApprove(
+                    _getPreApprovalSpender(targetAddressP),
+                    tradeInfo.sendToken,
+                    tradeInfo.totalSendQuantity
+                );
+            }
+            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        tradeInfo.strategy.invokeApprove(_getSpender(), tradeInfo.sendToken, tradeInfo.totalSendQuantity);
         (address targetExchange, uint256 callValue, bytes memory methodData) =
             _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
-        tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
+        if (targetExchange != address(0)) {
+            // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+            tradeInfo.strategy.invokeApprove(
+                _getSpender(targetExchange),
+                tradeInfo.sendToken,
+                tradeInfo.totalSendQuantity
+            );
+            tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
+        }
+        // Post actions
+        uint256 receiveTokenAmount = _getTokenOrETHBalance(address(_strategy), _getPostActionToken(_receiveToken));
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _sendToken,
+            _receiveToken,
+            receiveTokenAmount
+        );
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            if (_getPostApprovalSpender(targetAddressP) != address(0)) {
+                tradeInfo.strategy.invokeApprove(
+                    _getPostApprovalSpender(targetAddressP),
+                    _getPostActionToken(_receiveToken),
+                    receiveTokenAmount
+                );
+            }
+            // Invoke protocol specific call
+            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
 
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 newAmountSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
-        uint256 newAmountReceiveTokens = tradeInfo.preTradeReceiveTokenBalance.add(exchangedQuantity);
+        uint256 newSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
             tradeInfo.strategy,
             _sendToken,
             _receiveToken,
             tradeInfo.exchangeName,
-            newAmountSendTokens,
-            newAmountReceiveTokens
+            newSendTokens,
+            exchangedQuantity
         );
     }
 
@@ -168,10 +203,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         tradeInfo.totalSendQuantity = _sendQuantity;
 
         tradeInfo.totalMinReceiveQuantity = _minReceiveQuantity;
-
         tradeInfo.preTradeSendTokenBalance = ERC20(_sendToken).balanceOf(_strategy);
         tradeInfo.preTradeReceiveTokenBalance = ERC20(_receiveToken).balanceOf(_strategy);
-
         return tradeInfo;
     }
 
@@ -179,49 +212,15 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * Validate pre trade data. Check exchange is valid, token quantity is valid.
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
+     * @param _sendQuantity         Amount of tokens sent
      */
     function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
         require(_tradeInfo.totalSendQuantity > 0, 'Token to sell must be nonzero');
-
-        address reserveAsset = _tradeInfo.garden.reserveAsset();
-        uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
-        uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
-        require(liquidityInReserve >= minLiquidityReserveAsset, 'Not enough liquidity');
-
         require(
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Strategy needs to have enough liquid tokens'
         );
-    }
-
-    function _getUniswapHighestLiquidity(TradeInfo memory _tradeInfo, address _reserveAsset)
-        internal
-        view
-        returns (uint256)
-    {
-        address sendToken = _getReserveAsWeth(_tradeInfo.sendToken, _reserveAsset);
-        address receiveToken = _getReserveAsWeth(_tradeInfo.receiveToken, _reserveAsset);
-        // Exit if going to weth from weth
-        if (sendToken == receiveToken) {
-            return _tradeInfo.garden.minLiquidityAsset();
-        }
-        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
-        uint256 poolLiquidity = uint256(pool.liquidity());
-        uint256 liquidityInReserve;
-        if (pool.token0() == WETH) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
-        }
-        if (pool.token1() == WETH) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
-        }
-        // Normalize to reserve asset
-        if (WETH != _reserveAsset) {
-            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(WETH, _reserveAsset);
-            liquidityInReserve = liquidityInReserve.preciseMul(price);
-        }
-        return liquidityInReserve;
+        require(_checkLiquidity(_tradeInfo, _sendQuantity), 'Not enough liquidity');
     }
 
     /**
@@ -267,34 +266,106 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         );
 
     /**
-     * Returns the address to approve source tokens to for trading. This is the TokenTaker address
+     * Checks liquidity of the trade. Reverts if not enough
      *
-     * @return address     Address of the contract to approve tokens to
+     * hparam _tradeInfo               Trade Info
+     * hparam _sendQuantity            Amount of send tokens to exchange
+     *
      */
-    function _getSpender() internal view virtual returns (address);
+    function _checkLiquidity(
+        TradeInfo memory, /* _tradeInfo */
+        uint256 /*_sendQuantity */
+    ) internal view virtual returns (bool);
 
-    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _sendToken               Address of the asset to send
+     * hparam  _receiveToken            Address of the asset to receive
+     * hparam  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _sendToken */
+        address, /* _receiveToken */
+        uint256 /* _sendQuantity */
+    )
         internal
         view
-        returns (IUniswapV3Pool pool, uint24 fee)
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
     {
-        IUniswapV3Pool poolLow = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_LOW));
-        IUniswapV3Pool poolMedium = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_MEDIUM));
-        IUniswapV3Pool poolHigh = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_HIGH));
-
-        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
-        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
-        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
-        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
-            return (poolLow, FEE_LOW);
-        }
-        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
-            return (poolMedium, FEE_MEDIUM);
-        }
-        return (poolHigh, FEE_HIGH);
+        return (address(0), 0, bytes(''));
     }
 
-    function _getReserveAsWeth(address _token, address _reserveAsset) private view returns (address) {
-        return _reserveAsset == _token ? WETH : _token;
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _sendToken               Address of the asset to send
+     * hparam  _receiveToken            Address of the asset to receive
+     * hparam  _sendQuantity            Amount of the asset to send
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address, /* _sendToken */
+        address, /* _receiveToken */
+        uint256 /* _sendQuantity */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Returns the address to approve source tokens to for trading. This is the TokenTaker address
+     *
+     * @param _swapTarget      Address of the contracts that executes the swap
+     * @return address         Address of the contract to approve tokens to
+     */
+    function _getSpender(address _swapTarget) internal view virtual returns (address);
+
+    /**
+     * Returns the address to approve the pre action. This is the TokenTaker address
+     *
+     * hparam _swapTarget      Address of the contracts that executes the swap
+     * @return address         Address of the contract to approve tokens to
+     */
+    function _getPreApprovalSpender(
+        address /* _swapTarget */
+    ) internal view virtual returns (address) {
+        return address(0);
+    }
+
+    /**
+     * Returns the address to approve the post action. This is the TokenTaker address
+     *
+     * hparam _swapTarget      Address of the contracts that executes the swap
+     * @return address         Address of the contract to approve tokens to
+     */
+    function _getPostApprovalSpender(
+        address /* _swapTarget */
+    ) internal view virtual returns (address) {
+        return address(0);
+    }
+
+    function _getPostActionToken(address _receiveToken) internal view virtual returns (address) {
+        return _receiveToken;
     }
 }

@@ -106,7 +106,6 @@ describe('AaveLendIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
       increaseTime(ONE_DAY_IN_SECONDS);
-      console.log('before NAV');
       const NAV = await strategyContract.getNAV();
       const aaveAccrued = await aaveLendIntegration.getRewardsAccrued(strategyContract.address);
       expect(NAV.sub(aaveAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));

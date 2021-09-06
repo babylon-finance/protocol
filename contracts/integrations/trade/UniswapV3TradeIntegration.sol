@@ -19,12 +19,15 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {ISwapRouter} from '../../interfaces/external/uniswap-v3/ISwapRouter.sol';
-
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
-
 import {TradeIntegration} from './TradeIntegration.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
 /**
  * @title UniswapV3TradeIntegration
@@ -34,6 +37,7 @@ import {TradeIntegration} from './TradeIntegration.sol';
  */
 contract UniswapV3TradeIntegration is TradeIntegration {
     using SafeMath for uint256;
+    using PreciseUnitMath for uint256;
 
     /* ============ Modifiers ============ */
 
@@ -51,27 +55,6 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) TradeIntegration('univ3', _controller) {}
-
-    /* ============ External Functions ============ */
-    /**
-     * Returns the conversion rate between the source token and the destination token
-     * in 18 decimals, regardless of component token's decimals
-     *
-     * hparam  _sourceToken        Address of source token to be sold
-     * hparam  _destinationToken   Address of destination token to buy
-     * hparam  _sourceQuantity     Amount of source token to sell
-     *
-     * @return uint256             Conversion rate in wei
-     * @return uint256             Slippage rate in wei
-     */
-    function getConversionRates(
-        address,
-        address,
-        uint256
-    ) external pure override returns (uint256, uint256) {
-        revert('not implemented');
-        return (0, 0);
-    }
 
     /* ============ Internal Functions ============ */
 
@@ -125,7 +108,81 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      *
      * @return address             Address of the contract to approve tokens to
      */
-    function _getSpender() internal view override returns (address) {
+    function _getSpender(
+        address /* _swapTarget */
+    ) internal pure override returns (address) {
         return address(swapRouter);
+    }
+
+    /**
+     * Checks liquidity of the trade
+     *
+     * @param _tradeInfo            Struct containing trade information used in internal functions
+     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
+     */
+    function _checkLiquidity(
+        TradeInfo memory _tradeInfo,
+        uint256 /* _sendQuantity */
+    ) internal view override returns (bool) {
+        address reserveAsset = _tradeInfo.garden.reserveAsset();
+        uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
+        uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
+        return liquidityInReserve >= minLiquidityReserveAsset;
+    }
+
+    /* ============ Private Functions ============ */
+
+    function _getUniswapHighestLiquidity(TradeInfo memory _tradeInfo, address _reserveAsset)
+        private
+        view
+        returns (uint256)
+    {
+        address sendToken = _getReserveAsWeth(_tradeInfo.sendToken, _reserveAsset);
+        address receiveToken = _getReserveAsWeth(_tradeInfo.receiveToken, _reserveAsset);
+        // Exit if going to weth from weth
+        if (sendToken == receiveToken) {
+            return _tradeInfo.garden.minLiquidityAsset();
+        }
+        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
+        uint256 poolLiquidity = uint256(pool.liquidity());
+        uint256 liquidityInReserve;
+        if (pool.token0() == WETH) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
+        }
+        if (pool.token1() == WETH) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+        }
+        // Normalize to reserve asset
+        if (WETH != _reserveAsset) {
+            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            uint256 price = oracle.getPrice(WETH, _reserveAsset);
+            liquidityInReserve = liquidityInReserve.preciseMul(price);
+        }
+        return liquidityInReserve;
+    }
+
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        private
+        view
+        returns (IUniswapV3Pool pool, uint24 fee)
+    {
+        IUniswapV3Pool poolLow = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(uniswapFactory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow > liquidityMedium && liquidityLow >= liquidityHigh) {
+            return (poolLow, FEE_LOW);
+        }
+        if (liquidityMedium > liquidityLow && liquidityMedium >= liquidityHigh) {
+            return (poolMedium, FEE_MEDIUM);
+        }
+        return (poolHigh, FEE_HIGH);
+    }
+
+    function _getReserveAsWeth(address _token, address _reserveAsset) internal pure returns (address) {
+        return _reserveAsset == _token ? WETH : _token;
     }
 }

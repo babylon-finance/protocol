@@ -527,14 +527,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _isDeposit                    Whether is a deposit or withdraw
      * @param _wethAmount                   Amount to deposit or withdraw
      */
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) external override {
+    function handleWeth(bool _isDeposit, uint256 _wethAmount) public override {
         _onlyOperation();
-        _onlyUnpaused();
-        if (_isDeposit) {
-            IWETH(WETH).deposit{value: _wethAmount}();
-            return;
-        }
-        IWETH(WETH).withdraw(_wethAmount);
+        _handleWeth(_isDeposit, _wethAmount);
     }
 
     /* ============ External Getter Functions ============ */
@@ -644,7 +639,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
-        bool positive;
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
@@ -774,6 +768,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 opIntegrations[i - 1]
             );
         }
+        // Consolidate to reserve asset if needed
+        if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
+            if (assetFinalized == address(0)) {
+                _handleWeth(true, address(this).balance);
+                assetFinalized = WETH;
+            }
+            if (assetFinalized != garden.reserveAsset()) {
+                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset());
+            }
+        }
     }
 
     /**
@@ -826,7 +830,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) private returns (uint256) {
-        address tradeIntegration = IBabController(controller).defaultTradeIntegration();
+        address tradeIntegration = IBabController(controller).masterSwapper();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
@@ -901,6 +905,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         bytes memory decodedData =
             opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
         return decodedData;
+    }
+
+    function _handleWeth(bool _isDeposit, uint256 _wethAmount) private {
+        _onlyUnpaused();
+        if (_isDeposit) {
+            IWETH(WETH).deposit{value: _wethAmount}();
+            return;
+        }
+        IWETH(WETH).withdraw(_wethAmount);
     }
 
     // solhint-disable-next-line

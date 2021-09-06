@@ -6,16 +6,64 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'WETH->renBTC',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.renBTC,
+    value: from('59727425183588800'),
+  },
+  {
+    name: 'WETH->rETH',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.rETH,
+    value: from('1000493000000000000'),
+  },
+  {
+    name: 'WETH->sAAVE',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.sAAVE,
+    value: from('7105665770955090427'),
+  },
+  {
+    name: 'DAI->sAAVE',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.sAAVE,
+    value: from('3668803175566764'),
+  },
+  {
+    name: 'DAI->USDC',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.USDC,
+    value: from('1000493000000000000'),
+  },
+  {
+    name: 'DAI->USDT',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: addresses.tokens.USDT,
+    value: from('1000493000000000000'),
+  },
+  {
+    name: 'WETH->TUSD',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.TUSD,
+    value: parse('2000.641321495927553985'),
+  },
+  {
+    name: 'TUSD->WETH',
+    tokenIn: addresses.tokens.TUSD,
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.000499455855342484'),
+  },
+  {
     name: 'YFI->DAI',
     tokenIn: addresses.tokens.YFI,
     tokenOut: addresses.tokens.DAI,
-    value: from('30475749367415192058580'),
+    value: from('32480025833025606637444'),
   },
   {
     name: 'SNX->USDT',
     tokenIn: addresses.tokens.SNX,
     tokenOut: addresses.tokens.USDT,
-    value: from('11105964116935941198'),
+    value: from('11336997603037515847'),
   },
   {
     name: 'WBTC->DAI',
@@ -33,7 +81,7 @@ const tokens = [
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.YFI,
-    value: parse('0.062816170908226538'),
+    value: parse('0.059561311075243854'),
   },
   {
     name: 'WBTC',
@@ -70,6 +118,24 @@ const tokens = [
     tokenIn: addresses.tokens.DAI,
     tokenOut: addresses.tokens.WETH,
     value: parse('0.000511684548459918'),
+  },
+  {
+    name: 'CRV 3 Pool',
+    tokenIn: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
+    tokenOut: addresses.tokens.DAI,
+    value: parse('1.0'),
+  },
+  {
+    name: 'CRV 3 Pool Inverse',
+    tokenIn: addresses.tokens.DAI,
+    tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
+    value: parse('0.97'),
+  },
+  {
+    name: 'WBTC to renBTC',
+    tokenIn: addresses.tokens.WBTC,
+    tokenOut: addresses.tokens.renBTC,
+    value: parse('0.996'),
   },
 ];
 
