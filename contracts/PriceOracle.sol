@@ -53,7 +53,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
 
-
     /* ============ Constants ============ */
 
     // Address of Uniswap factory
@@ -804,7 +803,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
-        if (price < uint(1e18).add(delta) && price > uint(1e18).sub(delta)) {
+        if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
             return price;
         }
         return 0;
