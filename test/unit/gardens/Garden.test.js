@@ -1296,7 +1296,10 @@ describe('Garden', function () {
       const toBurn = value2 * 1.75; // Quadratic penalty for bad strategists
       const finalStrategistBalance = await garden1.balanceOf(signer1.address);
       const finalReducedBalance = InitialStrategistBalance.toString() - toBurn.toString();
-      await expect(finalStrategistBalance).to.be.closeTo(finalReducedBalance.toString(), 200);
+      await expect(finalStrategistBalance).to.be.closeTo(
+        finalReducedBalance.toString(),
+        ethers.utils.parseEther('0.005'),
+      );
     });
 
     it('strategist or voters can withdraw garden tokens during strategy execution if they have enough unlocked amount in their balance and not trying to withdraw the equivalent votes associated to a running strategy', async function () {
