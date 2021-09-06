@@ -230,25 +230,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
                 sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-                try
-                    ITradeIntegration(univ3).trade(
-                        _strategy,
-                        WETH,
-                        sendBalance,
-                        _receiveToken,
-                        _minReceiveQuantity
-                    )
-                {
+                try ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
                 } catch {
                     // Revert trade
-                    ITradeIntegration(univ3).trade(
-                        _strategy,
-                        WETH,
-                        sendBalance,
-                        _sendToken,
-                        1
-                    );
+                    ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _sendToken, 1);
                 }
             } catch {}
         }
@@ -259,13 +245,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
             sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-            ITradeIntegration(univ2).trade(
-                _strategy,
-                WETH,
-                sendBalance,
-                _receiveToken,
-                _minReceiveQuantity
-            );
+            ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
         }
         require(false, 'Master swapper could not swap');
     }
