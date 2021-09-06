@@ -629,18 +629,17 @@ contract PriceOracle is Ownable, IPriceOracle {
         // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
             uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
-            if (price != 0) {
+            if (divisor != 0) {
                 return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
             }
         }
         // UniV3 through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
             uint256 divisor = _getUNIV3Price(_tokenOut, DAI);
-            if (price != 0) {
+            if (divisor != 0) {
                 return _getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
             }
         }
-
         // Use only univ2 for UI
         if (_forNAV) {
             price = _getUNIV2Price(_tokenIn, _tokenOut);
