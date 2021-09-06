@@ -185,7 +185,8 @@ contract AddLiquidityOperation is Operation {
         }
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         pool = IPoolIntegration(_integration).getPool(pool);
-        // IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
+        uint256 price = 0;
+        IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         // // Price lp token directly if possible
         // uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
         // console.log('lp token price', price, lpToken.balanceOf(msg.sender));
