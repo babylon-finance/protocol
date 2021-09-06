@@ -225,12 +225,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         // Try Univ3 through WETH
         if (_sendToken != WETH && _receiveToken != WETH) {
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+                sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
                 try
                     ITradeIntegration(univ3).trade(
                         _strategy,
                         WETH,
-                        _getTokenOrETHBalance(_strategy, WETH),
+                        sendBalance,
                         _receiveToken,
                         _minReceiveQuantity
                     )
@@ -241,7 +243,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     ITradeIntegration(univ3).trade(
                         _strategy,
                         WETH,
-                        _getTokenOrETHBalance(_strategy, WETH),
+                        sendBalance,
                         _sendToken,
                         1
                     );
@@ -250,11 +252,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
+            sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
             ITradeIntegration(univ2).trade(
                 _strategy,
                 WETH,
-                _getTokenOrETHBalance(_strategy, WETH),
+                sendBalance,
                 _receiveToken,
                 _minReceiveQuantity
             );
