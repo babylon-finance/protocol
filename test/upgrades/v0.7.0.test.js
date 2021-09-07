@@ -183,7 +183,7 @@ describe.only('v0.7.0', function () {
         ['Yearn - DAI Vault', '0x23E6E7B35E9E117176799cEF885B9D4a97D42df9'],
         ['ETHficient Stables', '0x3d4c6303E8E6ad9F4697a5c3deAe9827217439Ae'],
         ['long DAI', '0xB0147911b9d584618eB8F3BF63AD1AB858085101'],
-        ['RAI/ETH UNI LP', '0x884957Fd342993A748c82aC608043859F1482126'],
+        // ['RAI/ETH UNI LP', '0x884957Fd342993A748c82aC608043859F1482126'],
       ]) {
         it(name, async () => {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
