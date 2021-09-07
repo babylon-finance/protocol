@@ -1,9 +1,10 @@
 const { expect } = require('chai');
 const { deployments } = require('hardhat');
 
-const { impersonateAddress } = require('../../lib/rpc');
-const { ONE_DAY_IN_SECONDS } = require('../../lib/constants.js');
-const addresses = require('../../lib/addresses');
+const { impersonateAddress } = require('lib/rpc');
+const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
+const addresses = require('lib/addresses');
+const { fund } = require('lib/whale');
 const { increaseTime } = require('../utils/test-helpers');
 
 const { deploy } = deployments;
@@ -20,6 +21,16 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     'RewardsDistributor',
     '0x40154ad8014df019a53440a60ed351dfba47574e',
     owner,
+  );
+
+  await fund(
+    [
+      owner.address,
+      deployer.address,
+    ],
+    {
+      tokens: [addresses.tokens.ETH],
+    },
   );
 
   const signers = await ethers.getSigners();
