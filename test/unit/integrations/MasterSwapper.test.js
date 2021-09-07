@@ -60,7 +60,7 @@ describe('MasterSwapper', function () {
           { to: addresses.tokens.DAI, symbol: 'DAI' },
           { to: addresses.tokens.sUSD, symbol: 'sUSD' },
           { to: addresses.tokens.USDT, symbol: 'USDT' },
-          { to: addresses.tokens.aETHC, symbol: 'aETHc' },
+          // { to: addresses.tokens.aETHC, symbol: 'aETHc' },
           { to: addresses.tokens.sETH, symbol: 'sETH' },
           { to: addresses.tokens.stETH, symbol: 'stETH' },
           { to: addresses.tokens.renBTC, symbol: 'renBTC' },
