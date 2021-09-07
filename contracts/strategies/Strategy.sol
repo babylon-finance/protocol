@@ -920,4 +920,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV5 is Strategy {}
+contract StrategyV8 is Strategy {}
