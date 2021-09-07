@@ -487,6 +487,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _asset,
         uint256 _quantity
     ) external override {
+        IERC20(_asset).safeApprove(_spender, 0);
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
@@ -920,4 +921,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV5 is Strategy {}
+contract StrategyV8 is Strategy {}
