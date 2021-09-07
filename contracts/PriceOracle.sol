@@ -75,7 +75,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
-    uint256 private constant CURVE_SLIPPAGE = 3e16;
+    uint256 private constant CURVE_SLIPPAGE = 6e16;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;

@@ -87,7 +87,7 @@ const tokens = [
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.YFI,
-    value: parse('0.069622579431591801'),
+    value: parse('0.073949726839876428'),
   },
   {
     name: 'WBTC',
