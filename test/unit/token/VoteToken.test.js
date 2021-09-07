@@ -15,6 +15,41 @@ describe('VoteToken contract', function () {
   let bablToken;
   let MULTISIG;
 
+  async function delegateBySig(signer, delegatee, nonce, expiry) {
+    const DOMAIN_TYPEHASH = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes('EIP712Domain(string name,uint256 chainId,address verifyingContract)'),
+    );
+    const DELEGATION_TYPEHASH = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes('Delegation(address delegatee,uint256 nonce,uint256 expiry)'),
+    );
+    console.log('babl token address', bablToken.address);
+    const payload = ethers.utils.defaultAbiCoder.encode(
+      ['bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        DOMAIN_TYPEHASH,
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes(await bablToken.name())),
+        31337,
+        bablToken.address,
+      ],
+    );
+    const domainSeparator = ethers.utils.keccak256(payload);
+    const structHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ['bytes32', 'address', 'uint256', 'uint256'],
+        [DELEGATION_TYPEHASH, delegatee, nonce, expiry],
+      ),
+    );
+    const digest = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['string', 'bytes32', 'bytes32'], ['\x19\x01', domainSeparator, structHash]),
+    );
+    const metamaskSigned = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['string', 'bytes32'], ['\x19Ethereum Signed Message:\n32', digest]),
+    );
+    const signature = await signer.signMessage(ethers.utils.arrayify(metamaskSigned));
+
+    return ethers.utils.splitSignature(signature);
+  }
+
   beforeEach(async () => {
     ({ bablToken, owner, signer1, signer2, signer3 } = await setupTests()());
     await bablToken.connect(owner).enableTokensTransfers();
@@ -270,6 +305,8 @@ describe('VoteToken contract', function () {
       // NEW VoteToken address (address(this)): 0x809d550fca64d94Bd9F66E60752A544199cfAC3D
       // name(): "Babylon.Finance"
       // NEW first hash: 0x5d0c3e0c524bdef5470f03a1fe5e911b5210e5e03ddec33fbda09216630cec77
+      // NEW first hash: {
+      // "0": "bytes32: 0x59ee36f29bb4ed7588d3f7a96a70b918f0d1a25cdbf1848fcab5351c1f61fb6e"
       // expiration 1653729994 28 may 2022
       // nonce = 0
       // delegatee 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
@@ -297,16 +334,27 @@ describe('VoteToken contract', function () {
       // bytes32: r 0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4
       // bytes32: s 0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512
       // uint8: v 27
-      await bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('100')); // Let's give stake to have the possibility to delegate
+      await bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('100'));
+      // Let's give stake to have the possibility to delegate
       const signer1Balance = await bablToken.balanceOf(signer1.address);
 
       const delegatee = '0x232775eAD28F0C0c750A097bA77302E7d84efd3B';
       const nonce = 0; // It was signed using 0, it only works (and just once) with 0++ = 1
       const expiry = 1653729994; // 28 may 2022
+      //const sig = await delegateBySig(signer1, delegatee, nonce, expiry);
+      //console.log('sig', sig.r, sig.v, sig.s);
+      // new signature: 0xd961a2ca02d275ed2bc630429905e8f6b4bfff3a92ce38016c787180767abcf8604674566081714bd871966c9911caae3da7cfa66cfc1c171a3a096bc60604be1c
+
       // METAMASK:
+      //const v = '28';
+      //const r = '0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d';
+      //const s = '0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38';
+
+      // METAMASK:
+      // Signature to split: 0x1ec7af3d5ed9da6db5bb80b477cf33ad35e4e49b0faa9095239051ec962620330d57e99e176d642f7845dd3059794dcef6159358e14cf339ddbbd9408d1e18d01c
       const v = '28';
-      const r = '0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d';
-      const s = '0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38';
+      const r = '0x1ec7af3d5ed9da6db5bb80b477cf33ad35e4e49b0faa9095239051ec96262033';
+      const s = '0x0d57e99e176d642f7845dd3059794dcef6159358e14cf339ddbbd9408d1e18d0';
 
       // LEDGER + METAMASK
       //const v = '1';
@@ -317,6 +365,8 @@ describe('VoteToken contract', function () {
       //const r = '0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4';
       //const s = '0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512';
       await bablToken.delegateBySig(delegatee, nonce, expiry, v, r, s, true);
+      // await bablToken.delegateBySig(delegatee, nonce, expiry, sig.v, sig.r, sig.s, true);
+
       const walletDelegatee = await impersonateAddress(delegatee);
 
       const [, walletDelegateCheckpointVotes] = await bablToken.getCheckpoints(walletDelegatee.address, 0);
