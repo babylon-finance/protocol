@@ -118,7 +118,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * Checks liquidity of the trade
      *
      * @param _tradeInfo            Struct containing trade information used in internal functions
-     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
+     * hparam _sendQuantity         Units of token sent
      */
     function _checkLiquidity(
         TradeInfo memory _tradeInfo,
@@ -137,25 +137,32 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         view
         returns (uint256)
     {
-        address sendToken = _getReserveAsWeth(_tradeInfo.sendToken, _reserveAsset);
-        address receiveToken = _getReserveAsWeth(_tradeInfo.receiveToken, _reserveAsset);
-        // Exit if going to weth from weth
+        address sendToken = _tradeInfo.sendToken;
+        address receiveToken = _tradeInfo.receiveToken;
+        // Exit if going to same asset
         if (sendToken == receiveToken) {
             return _tradeInfo.garden.minLiquidityAsset();
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
-        if (pool.token0() == WETH) {
+        address denominator;
+
+        if (pool.token0() == DAI || pool.token0() == WETH || pool.token0() == USDC || pool.token0() == WBTC) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
-        }
-        if (pool.token1() == WETH) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+            denominator = pool.token0();
+        } else {
+            if (pool.token1() == DAI || pool.token1() == WETH || pool.token0() == USDC || pool.token0() == WBTC) {
+                liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(
+                    ERC20(pool.token0()).balanceOf(address(pool))
+                );
+                denominator = pool.token1();
+            }
         }
         // Normalize to reserve asset
-        if (WETH != _reserveAsset) {
+        if (denominator != _reserveAsset) {
             IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(WETH, _reserveAsset);
+            uint256 price = oracle.getPrice(denominator, _reserveAsset);
             liquidityInReserve = liquidityInReserve.preciseMul(price);
         }
         return liquidityInReserve;
