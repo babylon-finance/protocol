@@ -207,7 +207,7 @@ contract DepositVaultOperation is Operation {
         try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
             return _resultAsset;
         } catch {
-            return IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
+            return _yieldVault;
         }
     }
 }
