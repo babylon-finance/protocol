@@ -257,11 +257,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             if (_sendToken != WETH) {
-              ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2);
-              sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2);
+                sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
             }
             if (_receiveToken != WETH) {
-              ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
+                ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
             }
         }
         require(false, 'Master swapper could not swap');

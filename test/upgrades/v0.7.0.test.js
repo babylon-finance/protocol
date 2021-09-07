@@ -23,15 +23,9 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
     owner,
   );
 
-  await fund(
-    [
-      owner.address,
-      deployer.address,
-    ],
-    {
-      tokens: [addresses.tokens.ETH],
-    },
-  );
+  await fund([owner.address, deployer.address], {
+    tokens: [addresses.tokens.ETH],
+  });
 
   const signers = await ethers.getSigners();
   const signer = signers[0];
