@@ -188,7 +188,7 @@ describe.only('v0.7.0', function () {
         it(name, async () => {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
 
-          await increaseTime(ONE_DAY_IN_SECONDS * 120);
+          await increaseTime(ONE_DAY_IN_SECONDS * 360);
 
           await strategyContract.connect(keeper).finalizeStrategy(0, '');
           const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();

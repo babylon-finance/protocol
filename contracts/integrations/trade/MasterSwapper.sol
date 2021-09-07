@@ -238,14 +238,31 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 }
             } catch {}
         }
+        // Try Univ3 through DAI
+        if (_sendToken != DAI && _receiveToken != DAI) {
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, DAI);
+            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
+                sendBalance = _getTokenOrETHBalance(_strategy, DAI).sub(sendBalance);
+                try ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _receiveToken, _minReceiveQuantity) {
+                    return;
+                } catch {
+                    // Revert trade
+                    ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _sendToken, 1);
+                }
+            } catch {}
+        }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
-            ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
-            sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-            ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
+            if (_sendToken != WETH) {
+              ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2);
+              sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+            }
+            if (_receiveToken != WETH) {
+              ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
+            }
         }
         require(false, 'Master swapper could not swap');
     }
