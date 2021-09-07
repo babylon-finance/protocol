@@ -152,12 +152,8 @@ contract UniswapV3TradeIntegration is TradeIntegration {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
             denominator = pool.token0();
         } else {
-            if (pool.token1() == DAI || pool.token1() == WETH || pool.token0() == USDC || pool.token0() == WBTC) {
-                liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(
-                    ERC20(pool.token0()).balanceOf(address(pool))
-                );
-                denominator = pool.token1();
-            }
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+            denominator = pool.token1();
         }
         // Normalize to reserve asset
         if (denominator != _reserveAsset) {

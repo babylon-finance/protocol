@@ -352,7 +352,7 @@ contract BabylonViewer {
 
     function _getUniswapHighestLiquidity(address _sendToken, address _reserveAsset) private view returns (uint256) {
         // Exit if going to same asset
-        if (sendToken == receiveToken) {
+        if (_sendToken == _reserveAsset) {
             return 1e30;
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(_sendToken, _reserveAsset);
