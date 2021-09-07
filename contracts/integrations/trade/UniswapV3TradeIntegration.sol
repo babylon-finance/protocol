@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -54,7 +53,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) TradeIntegration('univ3', _controller) {}
+    constructor(IBabController _controller) TradeIntegration('univ3_2', _controller) {}
 
     /* ============ Internal Functions ============ */
 
