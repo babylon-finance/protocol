@@ -152,9 +152,7 @@ contract DepositVaultOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
-            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(
-                _percentage
-            );
+            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
             IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
@@ -206,10 +204,10 @@ contract DepositVaultOperation is Operation {
 
     // Function to provide backward compatibility
     function _getResultAsset(address _integration, address _yieldVault) private view returns (address) {
-      try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
-        return _resultAsset;
-      } catch {
-        return IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
-      }
+        try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
+            return _resultAsset;
+        } catch {
+            return IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
+        }
     }
 }

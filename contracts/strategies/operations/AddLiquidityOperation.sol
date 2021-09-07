@@ -299,14 +299,14 @@ contract AddLiquidityOperation is Operation {
         bytes calldata _data,
         address _reserveAsset
     ) internal {
-      try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
-        for (uint256 i = 0; i < rewards.length; i++) {
-            if (rewards[i] != address(0)) {
-                try
-                    IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
-                {} catch {}
+        try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
+            for (uint256 i = 0; i < rewards.length; i++) {
+                if (rewards[i] != address(0)) {
+                    try
+                        IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
+                    {} catch {}
+                }
             }
-        }
-      } catch {}
+        } catch {}
     }
 }
