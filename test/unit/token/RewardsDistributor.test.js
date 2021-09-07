@@ -37,7 +37,10 @@ async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, pr
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
   const obj = { principal, time, quarterBelonging, timeListPointer, power };
 
-  expect(obj.principal).to.eq(protocolPerTimestamp.principal);
+  expect(obj.principal).to.be.closeTo(
+    ethers.BigNumber.from(protocolPerTimestamp.principal),
+    ethers.BigNumber.from(protocolPerTimestamp.principal).div(100),
+  ); // 1% slippage
   expect(obj.time).to.eq(protocolPerTimestamp.time);
   expect(obj.quarterBelonging).to.eq(protocolPerTimestamp.quarterBelonging);
   expect(obj.timeListPointer).to.eq(protocolPerTimestamp.timeListPointer);
@@ -53,7 +56,10 @@ async function getAndValidateQuarter(rewardsDistributor, quarter, quarterObj) {
   );
   const obj = { quarterPrincipal, quarterNumber, quarterPower, supplyPerQuarter };
 
-  expect(obj.quarterPrincipal).to.eq(quarterObj.quarterPrincipal);
+  expect(obj.quarterPrincipal).to.be.closeTo(
+    ethers.BigNumber.from(quarterObj.quarterPrincipal),
+    ethers.BigNumber.from(quarterObj.quarterPrincipal).div(100),
+  ); // 1% slippage
   expect(obj.quarterNumber).to.eq(quarterObj.quarterNumber);
   // TODO: Check for power
   // expect(obj.quarterPower).to.eq(quarterObj.quarterPower);
