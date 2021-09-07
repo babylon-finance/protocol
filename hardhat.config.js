@@ -69,6 +69,7 @@ module.exports = {
       },
       saveDeployments: true,
       gas: 9e6,
+      initialBaseFeePerGas: 0,
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
