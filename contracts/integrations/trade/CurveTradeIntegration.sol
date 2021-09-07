@@ -43,9 +43,9 @@ contract CurveTradeIntegration is TradeIntegration {
 
     /* ============ Constants ============ */
 
-    address private constant TRI_CURVE_POOL = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
+    address private constant tricurvePool = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
     // Address of Curve Registry
-    ICurveAddressProvider internal constant CURVE_ADDRESS_PROVIDER =
+    ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
     /* ============ Constructor ============ */
@@ -82,7 +82,7 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        ICurveRegistry curveRegistry = ICurveRegistry(CURVE_ADDRESS_PROVIDER.get_registry());
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (address curvePool, address realSendToken, address realReceiveToken) =
             _getPoolAndTokens(_sendToken, _receiveToken);
         require(curvePool != address(0), 'No curve pool to trade the pair');
@@ -90,7 +90,7 @@ contract CurveTradeIntegration is TradeIntegration {
             curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
         bytes memory methodData =
             abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
-        if (TRI_CURVE_POOL == curvePool) {
+        if (tricurvePool == curvePool) {
             if (realSendToken == ETH_ADD_CURVE) {
                 methodData = abi.encodeWithSignature(
                     'exchange(uint256,uint256,uint256,uint256,bool)',
@@ -230,7 +230,7 @@ contract CurveTradeIntegration is TradeIntegration {
             address
         )
     {
-        ICurveRegistry curveRegistry = ICurveRegistry(CURVE_ADDRESS_PROVIDER.get_registry());
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address curvePool = curveRegistry.find_pool_for_coins(_sendToken, _receiveToken, 0);
         if (_sendToken == WETH && curvePool == address(0)) {
             _sendToken = ETH_ADD_CURVE;

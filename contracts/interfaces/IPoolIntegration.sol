@@ -64,4 +64,6 @@ interface IPoolIntegration {
         returns (uint256[] memory _minAmountsOut);
 
     function isPool(bytes calldata _pool) external view returns (bool);
+
+    function getRewardTokens(bytes calldata _pool) external view returns (address[] memory);
 }

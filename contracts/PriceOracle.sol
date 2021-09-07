@@ -75,7 +75,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
-    uint256 private constant CURVE_SLIPPAGE = 3e16;
+    uint256 private constant CURVE_SLIPPAGE = 6e16;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
@@ -562,12 +562,25 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // Yearn vaults
         if (_isYearnVault(_tokenIn)) {
-            return IYearnVault(_tokenIn).pricePerShare().preciseDiv(getPrice(IYearnVault(_tokenIn).token(), _tokenOut));
+            price = IYearnVault(_tokenIn).pricePerShare().preciseDiv(
+                getPrice(IYearnVault(_tokenIn).token(), _tokenOut)
+            );
+            uint256 yvDecimals = ERC20(_tokenIn).decimals();
+            if (yvDecimals < 18) {
+                price = price * 10**(18 - yvDecimals);
+            }
+            return price;
         }
 
         if (_isYearnVault(_tokenOut)) {
-            return
-                getPrice(_tokenIn, IYearnVault(_tokenOut).token()).preciseMul(IYearnVault(_tokenOut).pricePerShare());
+            price = getPrice(_tokenIn, IYearnVault(_tokenOut).token()).preciseMul(
+                IYearnVault(_tokenOut).pricePerShare()
+            );
+            uint256 yvDecimals = ERC20(_tokenOut).decimals();
+            if (yvDecimals < 18) {
+                price = price * 10**(18 - yvDecimals);
+            }
+            return price;
         }
 
         uint256 uniPrice = 0;
@@ -622,18 +635,23 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
+        // Direct UNI3
+        price = _getUNIV3Price(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
+        }
         // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            price = _getUNIV3Price(_tokenIn, WETH).preciseDiv(_getUNIV3Price(_tokenOut, WETH));
-            if (price != 0) {
-                return price;
+            uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
+            if (divisor != 0) {
+                return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
             }
         }
         // UniV3 through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
-            price = _getUNIV3Price(_tokenIn, DAI).preciseDiv(_getUNIV3Price(_tokenOut, DAI));
-            if (price != 0) {
-                return price;
+            uint256 divisor = _getUNIV3Price(_tokenOut, DAI);
+            if (divisor != 0) {
+                return _getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
             }
         }
         // Use only univ2 for UI

@@ -163,6 +163,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
+        _sellRewardTokens(_integration, _data, reserveAsset);
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
 
@@ -184,8 +185,21 @@ contract AddLiquidityOperation is Operation {
         }
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         pool = IPoolIntegration(_integration).getPool(pool);
-        IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         uint256 price = 0;
+        IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
+        // // Price lp token directly if possible
+        // uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
+        // console.log('lp token price', price, lpToken.balanceOf(msg.sender));
+        // if (price != 0) {
+        //     return (
+        //         SafeDecimalMath.normalizeAmountTokens(
+        //             address(lpToken),
+        //             _garden.reserveAsset(),
+        //             lpToken.balanceOf(msg.sender).preciseMul(price)
+        //         ),
+        //         true
+        //     );
+        // }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         for (uint256 i = 0; i < poolTokens.length; i++) {
@@ -228,7 +242,10 @@ contract AddLiquidityOperation is Operation {
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
-            return IERC20(_poolToken).balanceOf(msg.sender);
+            normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
+                ? normalizedTokenAmount
+                : IERC20(_poolToken).balanceOf(msg.sender);
+            return normalizedTokenAmount;
         }
         if (_isETH(_poolToken)) {
             if (_asset != WETH) {
@@ -240,6 +257,11 @@ contract AddLiquidityOperation is Operation {
                 ? normalizedTokenAmount
                 : IERC20(WETH).balanceOf(msg.sender);
             IStrategy(msg.sender).handleWeth(false, normalizedTokenAmount); // normalized WETH/ETH amount with 18 decimals
+        } else {
+            // Reserve asset
+            normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
+                ? normalizedTokenAmount
+                : IERC20(_poolToken).balanceOf(msg.sender);
         }
         return normalizedTokenAmount;
     }
@@ -264,5 +286,27 @@ contract AddLiquidityOperation is Operation {
 
     function _isETH(address _address) internal pure returns (bool) {
         return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
+    }
+
+    /**
+     * Sells the reward tokens obtained.
+     * @param _integration                    Address of the integration
+     * @param _data                           Calldata
+     * @param _reserveAsset                   Reserve Asset
+     */
+    function _sellRewardTokens(
+        address _integration,
+        bytes calldata _data,
+        address _reserveAsset
+    ) internal {
+        try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
+            for (uint256 i = 0; i < rewards.length; i++) {
+                if (rewards[i] != address(0)) {
+                    try
+                        IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
+                    {} catch {}
+                }
+            }
+        } catch {}
     }
 }

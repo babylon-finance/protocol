@@ -202,6 +202,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         bytes calldata /*_pool */
     ) external view virtual override returns (uint256[] memory);
 
+    function getRewardTokens(bytes calldata _pool) external view virtual override returns (address[] memory) {
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        return _getRewardTokens(poolAddress);
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -363,5 +368,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     function _getPool(address _pool) internal view virtual returns (address) {
         return _pool;
+    }
+
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal view virtual returns (address[] memory) {
+        return new address[](1);
     }
 }

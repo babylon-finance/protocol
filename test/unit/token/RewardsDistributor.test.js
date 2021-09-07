@@ -1332,7 +1332,7 @@ describe('RewardsDistributor', function () {
         uniswapV3TradeIntegration.address,
         usdcGarden,
         USDC_STRATEGY_PARAMS,
-        [weth.address, 0],
+        [dai.address, 0],
       );
 
       const long2 = await createStrategy(
@@ -1350,10 +1350,11 @@ describe('RewardsDistributor', function () {
       // Execute DAI Garden strategy long2
       await executeStrategy(long2, { amount: ethers.utils.parseEther('1000') });
 
-      await injectFakeProfits(long1, ethers.utils.parseEther('0.1')); // Using fake 18 decimals during the strategy execution
-      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // Dai has 18 decimals, we add usdc (6 decimals) during strategy execution
+      await injectFakeProfits(long1, ethers.utils.parseEther('200')); // We inject Dai with 18 decimals during strategy execution
 
-      // Finalize both strategies (long 2 has higher duration -> more rewardss)
+      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // We inject usdc (6 decimals) during strategy execution
+
+      // Finalize both strategies (long 2 has higher duration -> more rewards)
       await finalizeStrategyAfterQuarter(long1);
       await finalizeStrategyImmediate(long2);
 
@@ -1867,7 +1868,7 @@ describe('RewardsDistributor', function () {
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
@@ -1880,7 +1881,7 @@ describe('RewardsDistributor', function () {
       const signer1Profit = signer1Rewards[6];
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
-      expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -1913,7 +1914,7 @@ describe('RewardsDistributor', function () {
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -1925,7 +1926,7 @@ describe('RewardsDistributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
 
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -1952,10 +1953,10 @@ describe('RewardsDistributor', function () {
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -1988,18 +1989,18 @@ describe('RewardsDistributor', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await injectFakeProfits(long1, ONE_ETH.mul(100));
+      await injectFakeProfits(long1, ONE_ETH.mul(120));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfter2Quarters(long2);
 
-      await injectFakeProfits(long3, ONE_ETH.mul(100));
+      await injectFakeProfits(long3, ONE_ETH.mul(120));
       await finalizeStrategyAfter2Years(long3);
 
-      await injectFakeProfits(long4, ONE_ETH.mul(122));
+      await injectFakeProfits(long4, ONE_ETH.mul(142));
       await finalizeStrategyAfter2Quarters(long4);
 
-      await injectFakeProfits(long5, ONE_ETH.mul(122));
+      await injectFakeProfits(long5, ONE_ETH.mul(142));
       await finalizeStrategyAfter3Quarters(long5);
 
       // We claim our tokens and check that they are received properly
@@ -2044,9 +2045,8 @@ describe('RewardsDistributor', function () {
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL2.add(signer1BABL));
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL2.add(signer2BABL));
-
-      expect(signer1Profit2.toString()).to.be.closeTo('19132336437560088', ethers.utils.parseEther('0.0005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('3135337489180200', ethers.utils.parseEther('0.0005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('18631980811820870', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('3371866001761542', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {

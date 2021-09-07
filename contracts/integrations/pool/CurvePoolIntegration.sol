@@ -44,6 +44,8 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ Constant ============ */
     address private constant TRICRYPTO = 0x331aF2E331bd619DefAa5DAc6c038f53FCF9F785; // Pool only takes ETH
     address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
+    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
     // Address of Curve Registry
     ICurveAddressProvider internal constant curveAddressProvider =
@@ -490,5 +492,14 @@ contract CurvePoolIntegration is PoolIntegration {
     function _getNCoins(address _pool) private view returns (uint256) {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         return curveRegistry.get_n_coins(_pool)[0];
+    }
+
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal pure override returns (address[] memory) {
+        address[] memory rewards = new address[](2);
+        rewards[0] = CRV;
+        rewards[1] = CVX;
+        return rewards;
     }
 }

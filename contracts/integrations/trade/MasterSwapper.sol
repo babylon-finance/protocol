@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-// import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -223,16 +222,30 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ) {
             return;
         }
+        // Update balance in case we tried some curve paths but had to revert
+        uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
+        _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
+        // Try Univ3 through WETH
+        if (_sendToken != WETH && _receiveToken != WETH) {
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
+            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+                sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                try ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
+                    return;
+                } catch {
+                    // Revert trade
+                    ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _sendToken, 1);
+                }
+            } catch {}
+        }
+        sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
+        _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
             // Try on univ2 (only direct trade) through WETH
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 1);
-            ITradeIntegration(univ2).trade(
-                _strategy,
-                WETH,
-                _getTokenOrETHBalance(_strategy, WETH),
-                _receiveToken,
-                _minReceiveQuantity
-            );
+            sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+            ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
         }
         require(false, 'Master swapper could not swap');
     }
@@ -333,7 +346,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     // TODO: check that there is uni3 liquidity instead
                     // require(false, 'Uni Swap failed midway');
                     // Revert
-                    _curveSwap(_strategy, _reserve, _sendToken, _getTokenOrETHBalance(_strategy, _reserve), 1);
+                    _curveSwap(_strategy, _reserve, _sendToken, diff, 1);
                 }
             }
         }

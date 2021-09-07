@@ -27,13 +27,13 @@ describe('HarvestVaultIntegrationTest', function () {
 
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
-      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1053071965952518439');
+      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1054750458858720348');
     });
   });
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('949602716938234987');
+      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('948091552462596315');
     });
   });
   describe('getInvestmentAsset', function () {
