@@ -113,7 +113,7 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        vaultAsset = IPassiveIntegration(_integration).getResultAsset(yieldVault);
+        vaultAsset = _getResultAsset(_integration, yieldVault);
         return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
@@ -152,7 +152,7 @@ contract DepositVaultOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
-            IERC20(IPassiveIntegration(_integration).getResultAsset(yieldVault)).balanceOf(msg.sender).preciseMul(
+            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(
                 _percentage
             );
         uint256 minAmount =
@@ -184,7 +184,7 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getResultAsset(vault);
+        address vaultAsset = _getResultAsset(_integration, vault);
         uint256 balance = IERC20(vaultAsset).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         // If we cannot price the result asset, we'll use the investment one as a floor
@@ -202,5 +202,14 @@ contract DepositVaultOperation is Operation {
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
+    }
+
+    // Function to provide backward compatibility
+    function _getResultAsset(address _integration, address _yieldVault) private view returns (address) {
+      try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
+        return _resultAsset;
+      } catch {
+        return IPassiveIntegration(_integration).getInvestmentAsset(_yieldVault);
+      }
     }
 }

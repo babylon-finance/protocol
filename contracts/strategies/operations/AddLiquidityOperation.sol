@@ -299,7 +299,7 @@ contract AddLiquidityOperation is Operation {
         bytes calldata _data,
         address _reserveAsset
     ) internal {
-        address[] memory rewards = IPoolIntegration(_integration).getRewardTokens(_data);
+      try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
         for (uint256 i = 0; i < rewards.length; i++) {
             if (rewards[i] != address(0)) {
                 try
@@ -307,5 +307,6 @@ contract AddLiquidityOperation is Operation {
                 {} catch {}
             }
         }
+      } catch {}
     }
 }

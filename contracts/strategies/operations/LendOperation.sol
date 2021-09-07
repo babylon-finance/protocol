@@ -237,12 +237,13 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
-        address rewardsToken = ILendIntegration(_integration).getRewardToken();
-        uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
-        // Add rewards
-        if (rewardsBalance > 1e16) {
-            IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
-        }
+        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+            uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
+            // Add rewards
+            if (rewardsBalance > 1e16) {
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+            }
+        } catch {}
     }
 
     function _getRemainingDebt(
