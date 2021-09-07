@@ -242,7 +242,10 @@ contract AddLiquidityOperation is Operation {
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
-            return IERC20(_poolToken).balanceOf(msg.sender);
+            normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
+                ? normalizedTokenAmount
+                : IERC20(_poolToken).balanceOf(msg.sender);
+            return normalizedTokenAmount;
         }
         if (_isETH(_poolToken)) {
             if (_asset != WETH) {

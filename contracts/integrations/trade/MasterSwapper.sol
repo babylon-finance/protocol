@@ -205,6 +205,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 require(false, 'Failed midway in out synth');
             }
         }
+        // Go through UNIv3 first
+        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
+            return;
+        } catch {}
         // Try Curve through reserve assets
         if (
             _checkCurveThroughReserves(
@@ -218,13 +222,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ) {
             return;
         }
-        // Go through UNIv3 first
+        // Update balance in case we tried some curve paths but had to revert
         uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
-        // ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
-        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
-            return;
-        } catch {}
         // Try Univ3 through WETH
         if (_sendToken != WETH && _receiveToken != WETH) {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
@@ -346,7 +346,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     // TODO: check that there is uni3 liquidity instead
                     // require(false, 'Uni Swap failed midway');
                     // Revert
-                    _curveSwap(_strategy, _reserve, _sendToken, _getTokenOrETHBalance(_strategy, _reserve), 1);
+                    _curveSwap(_strategy, _reserve, _sendToken, diff, 1);
                 }
             }
         }
