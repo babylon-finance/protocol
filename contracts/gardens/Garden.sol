@@ -914,7 +914,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
-            _require(liquidReserve() <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
