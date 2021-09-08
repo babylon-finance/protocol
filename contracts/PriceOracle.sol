@@ -554,18 +554,20 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // Curve LP tokens
         if (_tokenIn != TRI_CURVE_POOL) {
-          address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-          if (crvPool != address(0)) {
-              address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
-              return curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(coins[0], _tokenOut));
-          }
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+            if (crvPool != address(0)) {
+                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                return
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(coins[0], _tokenOut));
+            }
         }
         if (_tokenOut != TRI_CURVE_POOL) {
-          address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
-          if (crvPool != address(0)) {
-              address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
-              return getPrice(_tokenIn, coins[0]).preciseMul(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
-          }
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+            if (crvPool != address(0)) {
+                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                return
+                    getPrice(_tokenIn, coins[0]).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+            }
         }
 
         // Yearn vaults

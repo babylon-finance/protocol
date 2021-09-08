@@ -9,7 +9,13 @@ const tokens = [
     name: 'WETH->tripool direct',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
-    value: from('4015691011949554638338'),
+    value: parse('3900.0'),
+  },
+  {
+    name: 'tripool->WETH',
+    tokenIn: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.000258450245600938'),
   },
   {
     name: 'WETH->renBTC',

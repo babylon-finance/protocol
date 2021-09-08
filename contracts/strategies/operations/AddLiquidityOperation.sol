@@ -188,7 +188,6 @@ contract AddLiquidityOperation is Operation {
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         // Price lp token directly if possible
         uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
-        console.log('lp token price', price, lpToken.balanceOf(msg.sender));
         if (price != 0) {
             return (
                 SafeDecimalMath.normalizeAmountTokens(
