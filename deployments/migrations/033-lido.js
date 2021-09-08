@@ -24,6 +24,8 @@ module.exports = async ({
   });
 
   if (network.live && deployment.newlyDeployed) {
+    console.log(`Adding lido stake integration ${contract}(${deployment.address})`);
+
     await tenderly.push(await getTenderlyContract(contract));
   }
 };

@@ -25,11 +25,6 @@ module.exports = async ({
     gasPrice,
   });
 
-  if (deployment.newlyDeployed) {
-    console.log('Setting default trade integration', deployment.address);
-    await (await controllerContract.setDefaultTradeIntegration(deployment.address, { gasPrice })).wait();
-  }
-
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }

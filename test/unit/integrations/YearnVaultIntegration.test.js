@@ -35,13 +35,13 @@ describe('YearnVaultIntegrationTest', function () {
 
     describe('getPricePerShare', function () {
       it('get price per share', async function () {
-        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1053972283161872856');
+        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1056122171832869405');
       });
     });
 
     describe('getExpectedShares', function () {
       it('get expected shares', async function () {
-        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('948791553607123083');
+        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('946860151855849211');
       });
     });
 
@@ -83,7 +83,7 @@ describe('YearnVaultIntegrationTest', function () {
             let amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV
-            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(10));
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
             const assetContract = await ethers.getContractAt(

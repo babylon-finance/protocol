@@ -34,10 +34,10 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 import {Operation} from './Operation.sol';
 
 /**
- * @title DepositVaultOperation
+ * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance
  *
- * Executes a deposit vault operation
+ * Executes a stake (deposit vault) operation
  */
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
@@ -113,7 +113,8 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
+        vaultAsset = _getResultAsset(_integration, yieldVault);
+        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
     function _getMinAmountExpected(
@@ -135,7 +136,7 @@ contract DepositVaultOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -150,26 +151,18 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        uint256 amountVault =
+            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
             IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
-        if (vaultAsset != _garden.reserveAsset()) {
-            if (vaultAsset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-                vaultAsset = WETH;
-            }
-            if (vaultAsset != _garden.reserveAsset()) {
-                IStrategy(msg.sender).trade(
-                    vaultAsset,
-                    IERC20(vaultAsset).balanceOf(msg.sender),
-                    _garden.reserveAsset()
-                );
-            }
-        }
-        return (yieldVault, 0, 0);
+        return (
+            vaultAsset,
+            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            0
+        );
     }
 
     /**
@@ -189,18 +182,32 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        address vaultAsset = _getResultAsset(_integration, vault);
+        uint256 balance = IERC20(vaultAsset).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
+        // If we cannot price the result asset, we'll use the investment one as a floor
+        if (price == 0) {
+            vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+            price = _getPrice(_garden.reserveAsset(), vaultAsset);
+        }
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(
             10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
         );
-        uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
+    }
+
+    // Function to provide backward compatibility
+    function _getResultAsset(address _integration, address _yieldVault) private view returns (address) {
+        try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
+            return _resultAsset;
+        } catch {
+            return _yieldVault;
+        }
     }
 }
