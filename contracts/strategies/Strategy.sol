@@ -643,12 +643,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
-            // If next operation is a stake, only count the value of the last one
-            if (opTypes.length > i + 1) {
-                if (opTypes[i] < 3 && opTypes[i + 1] == 2) {
-                    continue;
-                }
-            }
             // _getOpDecodedData guarantee backward compatibility with OpData
             try operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]) returns (
                 uint256 opNAV,
