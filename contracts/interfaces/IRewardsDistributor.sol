@@ -69,17 +69,20 @@ interface IRewardsDistributor {
             uint256 timeListPointer,
             uint256 power
         );
+    */
+    function checkQuarterPower(uint256 _num) external view returns (uint256 quarterPower);
 
-    function checkQuarter(uint256 _num)
+    function checkStrategy(uint256 _num, address _strategy)
         external
         view
         returns (
-            uint256 quarterPrincipal,
-            uint256 quarterNumber,
-            uint256 quarterPower,
-            uint96 supplyPerQuarter
+            uint256,
+            bool,
+            uint256,
+            uint256,
+            uint256
         );
-    */
+
     /* ============ External Functions ============ */
 
     function startBABLRewards() external;

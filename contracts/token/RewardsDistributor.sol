@@ -257,7 +257,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => bool) private gardenCustomProfitSharing;
 
     uint256 private miningUpdatedAt; // Timestamp of last checkpoint update
-    mapping(address => uint256) private strategyPrincipal; // Last known strategy principal
+    mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
 
     /* ============ Constructor ============ */
 
@@ -313,13 +313,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             // str[0]: capitalAllocated, str[1]: capitalReturned
             uint256[] memory str = new uint256[](2);
-            (, , , , , , , str[0], str[1], , , , , ) = strategy.getStrategyDetails();
-            // Normalized amount needed to calculate profit percentage that might impact rewards
-            uint256 normalizeAmount =
-                IPriceOracle(IBabController(controller).priceOracle()).getPrice(
-                    IGarden(strategy.garden()).reserveAsset(),
-                    DAI
-                );
+            (, , , , , , str[0], str[1], , , , , , ) = strategy.getStrategyDetails();
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
@@ -344,10 +338,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                         .preciseMul(percentage);
                 rewards = rewards.add(rewardsPerQuarter);
             }
+            uint256 mantissa = uint256(18).sub(ERC20(IGarden(strategy.garden()).reserveAsset()).decimals());
             // Babl rewards will be proportional to the total return (profits) with a max cap of x2
-            uint256 percentageMul = (str[1].preciseMul(normalizeAmount)).preciseDiv(str[0].preciseMul(normalizeAmount));
+            // PercentageMul must always have 18 decimals
+            uint256 percentageMul = str[1].mul(10**mantissa).preciseDiv(str[0].mul(10**mantissa));
+
+            console.log('---CHECK STRATEGY percentageMul---', _strategy, percentageMul);
+            console.log('---CHECK STRATEGY rewards before---', _strategy, rewards);
+
             if (percentageMul > 2e18) percentageMul = 2e18;
             rewards = rewards.preciseMul(percentageMul);
+            console.log('---CHECK STRATEGY rewards after---', _strategy, rewards);
             return Safe3296.safe96(rewards, 'overflow 96 bits');
         } else {
             return 0;
@@ -410,10 +411,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory totalRewards = new uint256[](7);
         uint256 initialDepositAt;
         uint256 claimedAt;
-        uint256 contributorPower;
-        (, initialDepositAt, claimedAt, , , , , , contributorPower, ) = IGarden(_garden).getContributor(_contributor);
+        // uint256 contributorPower;
+        (, initialDepositAt, claimedAt, , , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         // update contributor power
-        contributorPower = _getContributorPower(_garden, _contributor, 0, block.timestamp);
+        // contributorPower = _getContributorPower(_garden, _contributor, 0, block.timestamp);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
 
@@ -424,8 +425,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _finalizedStrategies[i],
                 _contributor,
                 initialDepositAt,
-                claimedAt,
-                contributorPower
+                claimedAt
             );
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
@@ -509,31 +509,40 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
     */
     /**
-     * Check the quarter state for a specific quarter
+     * Check the quarter power for a specific quarter
      * @param _num     Number of quarter
      */
+
+    function checkQuarterPower(uint256 _num) external view override returns (uint256 quarterPower) {
+        return (protocolPerQuarter[_num].quarterPower);
+    }
+
     /**
-    function checkQuarter(uint256 _num)
+     * Check the strategy data for a specific quarter
+     * @param _num     Number of quarter
+     */
+
+    function checkStrategy(uint256 _num, address _strategy)
         external
         view
         override
         returns (
-            uint256 quarterPrincipal,
-            uint256 quarterNumber,
             uint256 quarterPower,
-            uint96 supplyPerQuarter
+            bool initialized,
+            uint256 principal,
+            uint256 preallocated,
+            uint256 pricePerTokenUnit
         )
     {
-        ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[_num];
-
         return (
-            protocolCheckpoint.quarterPrincipal,
-            protocolCheckpoint.quarterNumber,
-            protocolCheckpoint.quarterPower,
-            protocolCheckpoint.supplyPerQuarter
+            strategyPerQuarter[_strategy][_num].quarterPower,
+            strategyPerQuarter[_strategy][_num].initialized,
+            strategyPrincipal[_strategy],
+            strategyPricePerTokenUnit[_strategy].preallocated,
+            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit
         );
     }
-    */
+
     /**
      * Check the garden profit sharing % if different from default
      * @param _garden     Address of the garden
@@ -548,10 +557,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     function getStrategyPricePerTokenUnit(address _strategy) external view override returns (uint256, uint256) {
-        return (
-            strategyPricePerTokenUnit[_strategy].preallocated,
-            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit
-        );
+        StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
+        return (strPpt.preallocated, strPpt.pricePerTokenUnit);
     }
 
     /* ============ Internal Functions ============ */
@@ -621,36 +628,25 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Normalizing into DAI
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(_reserveAsset, DAI);
-        if (strategyPricePerTokenUnit[_strategy].preallocated == 0) {
+        StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
+        if (strPpt.preallocated == 0) {
             // First adding checkpoint
-            strategyPricePerTokenUnit[_strategy].preallocated = _capital;
-            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = pricePerTokenUnit;
+            strPpt.preallocated = _capital;
+            strPpt.pricePerTokenUnit = pricePerTokenUnit;
             return pricePerTokenUnit;
         } else {
             // We are controlling pair reserveAsset-DAI fluctuations along the time
             if (_addOrSubstract) {
-                strategyPricePerTokenUnit[_strategy].pricePerTokenUnit = (
-                    (
-                        (
-                            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit.mul(
-                                strategyPricePerTokenUnit[_strategy].preallocated
-                            )
-                        )
-                            .add(_capital.mul(pricePerTokenUnit))
-                    )
-                        .div(1e18)
+                strPpt.pricePerTokenUnit = (
+                    ((strPpt.pricePerTokenUnit.mul(strPpt.preallocated)).add(_capital.mul(pricePerTokenUnit))).div(1e18)
                 )
-                    .preciseDiv(strategyPricePerTokenUnit[_strategy].preallocated.add(_capital));
-                strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
-                    .preallocated
-                    .add(_capital);
+                    .preciseDiv(strPpt.preallocated.add(_capital));
+                strPpt.preallocated = strPpt.preallocated.add(_capital);
             } else {
                 //We use the previous pricePerToken in a substract instead of a new price (as allocated capital used previous prices not the current one)
-                strategyPricePerTokenUnit[_strategy].preallocated = strategyPricePerTokenUnit[_strategy]
-                    .preallocated
-                    .sub(_capital);
+                strPpt.preallocated = strPpt.preallocated.sub(_capital);
             }
-            return strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
+            return strPpt.pricePerTokenUnit;
         }
     }
 
@@ -661,7 +657,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor          Contributor address
      * @param _initialDepositAt     User initial deposit timestamp
      * @param _claimedAt            User last claim timestamp
-     * @param _contributorPower     User contributor power timestamp
 
      * @return Array of size 7 with the following distribution:
      * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
@@ -671,8 +666,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         uint256 _initialDepositAt,
-        uint256 _claimedAt,
-        uint256 _contributorPower
+        uint256 _claimedAt
     ) private view returns (uint256[] memory) {
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
@@ -680,10 +674,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
         (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
             IStrategy(_strategy).getStrategyRewardsContext();
-        // In case of profits, the distribution of profits might substract the protocol fee beforehand:
-        strategyDetails[11] = profitData[0] == true
-            ? strategyDetails[11].sub(strategyDetails[11].multiplyDecimal(PROFIT_PROTOCOL_FEE))
-            : 0;
+
         // strategyDetails array mapping:
         // strategyDetails[0]: executedAt
         // strategyDetails[1]: exitedAt
@@ -704,6 +695,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
         // Positive strategies not yet claimed
         if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
+            // In case of profits, the distribution of profits might substract the protocol fee beforehand:
+            strategyDetails[11] = profitData[0] == true
+                ? strategyDetails[11].sub(strategyDetails[11].multiplyDecimal(PROFIT_PROTOCOL_FEE))
+                : 0;
+            // Get the contributor power until the the strategy exit timestamp
+            uint256 contributorPower = _getContributorPower(_garden, _contributor, 0, strategyDetails[1]);
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
             // Get strategist profit rewards if profits
@@ -719,7 +716,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 : 0;
 
             // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], _contributorPower, strategyDetails[10]);
+            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower, strategyDetails[10]);
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
@@ -1027,30 +1024,64 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _from,
         uint256 _to
     ) private view returns (uint256) {
-        // Out of bounds
-        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
-        (uint256 lastDepositAt, uint256 initialDepositAt, , , , , , , uint256 power, ) =
-            IGarden(_garden).getContributor(_contributor);
+        // Check to avoid out of bounds
+        _require(
+            _to >= IGarden(_garden).gardenInitializedAt() && _to >= _from && _to <= block.timestamp,
+            Errors.CONTRIBUTOR_POWER_CHECK_WINDOW
+        );
+        uint256[] memory powerData = new uint256[](9);
+        // powerData[0]: lastDepositAt (contributor)
+        // powerData[1]: initialDepositAt (contributor)
+        // powerData[2]: balance (contributor)
+        // powerData[3]: power (contributor)
+        // powerData[4]: avgBalance (contributor)
+        // powerData[5]: lastDepositAt (garden)
+        // powerData[6]: accGardenPower (garden)
+        // powerData[7]: avgGardenBalance (garden)
+        // powerData[8]: totalSupply (garden)
+        (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
+            .getContributor(_contributor);
 
-        if (initialDepositAt == 0 || initialDepositAt > _to) {
+        if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
-            console.log('CHECK balance', IERC20(_garden).balanceOf(_contributor));
-            console.log('CHECK Total Supply', IERC20(_garden).totalSupply());
-            console.log('CHECK user power', power);
-            uint256 updatedPower =
-                power.add(block.timestamp.sub(lastDepositAt).mul(IERC20(_garden).balanceOf(_contributor)));
-            console.log('CHECK updated user power', power);
-            console.log('CHECK garden power', IGarden(_garden).accGardenPower());
-            uint256 updatedGardenPower =
-                IGarden(_garden).accGardenPower().add(
-                    (block.timestamp.sub(IGarden(_garden).lastDepositAt())).mul(IERC20(_garden).totalSupply())
-                );
-            console.log('CHECK updated garden power', updatedGardenPower);
-            uint256 balancePower = IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply());
+            (powerData[5], powerData[6], powerData[7], powerData[8]) = IGarden(_garden).getGardenPower();
+            // First we update contributor and garden power as of block.timestamp values
+            // We then time travel back to when the strategy exitedAt
+            // TODO
+            // a) CALCULATE UPDATED VALUES FOR EITHER CONTRIBUTOR AND GARDEN (GARDEN DATA COULD BE RETRIEVED FROM getContributor if needed to avoid more remote calls)
+            // b) check time window
+            // c) if needed, calculate new time.
+            // First we need to get an updatedValue of user and garden power since lastDeposits
+            // console.log('CHECK user power', powerData[3]);
+            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
+            // console.log('CHECK updated user power', powerData[3]);
+            // console.log('CHECK garden power', powerData[6]);
+            // console.log('BOOLEAN time check _to', _to == block.timestamp);
+            // console.log('---CHECK time',block.timestamp.sub(powerData[5]));
+            // console.log('---CHECK time',block.timestamp, powerData[5]);
+
+            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
+            // console.log('CHECK updated garden power', updatedGardenPower);
+
+            // Calculate the power at "_to" timestamp
+            uint256 timeDiff = block.timestamp.sub(_to);
+            uint256 userPowerDiff = powerData[4].mul(timeDiff);
+            uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
+            // console.log('timeDiff', timeDiff);
+            // console.log('SUBSTRACT CONTRIBUTOR', powerData[4], powerData[4].mul(timeDiff));
+            // console.log('SUBSTRACT GARDEN', powerData[7], powerData[7].mul(timeDiff));
+            // Avoid underflow conditions
+            updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
+            updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
+
+            // console.log('--- BACK TO THE POWER CONTRIBUTOR ---', updatedPower);
+            // console.log('--- BACK TO THE POWER GARDEN ---', updatedGardenPower);
+
+            uint256 balancePower = powerData[2].preciseDiv(powerData[8]);
             uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            console.log('CHECK balance Power', balancePower);
-            console.log('CHECK virtual Power', virtualPower);
+            // console.log('CHECK balance Power', balancePower);
+            // console.log('CHECK virtual Power', virtualPower);
             return virtualPower;
         }
     }
