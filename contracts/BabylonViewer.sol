@@ -71,36 +71,29 @@ contract BabylonViewer {
      * @param _garden            Address of the garden to fetch
      * @return                   Garden principal
      */
-    function getGardenPrincipal(address _garden)
-        public
-        view
-        returns (
-            uint256
-        )
-    {
+    function getGardenPrincipal(address _garden) public view returns (uint256) {
         IGarden garden = IGarden(_garden);
         IERC20 reserveAsset = IERC20(garden.reserveAsset());
-        uint256 principal =
-          reserveAsset.balanceOf(address(garden)).sub(garden.reserveAssetRewardsSetAside());
+        uint256 principal = reserveAsset.balanceOf(address(garden)).sub(garden.reserveAssetRewardsSetAside());
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee();
         address[] memory strategies = garden.getStrategies();
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            principal =
-              principal.add(strategy.capitalAllocated()).add(protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
+            principal = principal.add(strategy.capitalAllocated()).add(
+                protocolMgmtFee.preciseMul(strategy.capitalAllocated())
+            );
         }
         address[] memory finalizedStrategies = garden.getFinalizedStrategies();
         for (uint256 i = 0; i < finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(finalizedStrategies[i]);
-            principal =
-              principal.add(protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
+            principal = principal.add(protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
         }
         principal = principal.add(garden.totalKeeperFees());
         int256 absoluteReturns = garden.absoluteReturns();
-        if(absoluteReturns > 0) {
-          principal = principal.sub(uint256(absoluteReturns));
+        if (absoluteReturns > 0) {
+            principal = principal.sub(uint256(absoluteReturns));
         } else {
-          principal = principal.add(uint256(-absoluteReturns));
+            principal = principal.add(uint256(-absoluteReturns));
         }
         return principal;
     }
