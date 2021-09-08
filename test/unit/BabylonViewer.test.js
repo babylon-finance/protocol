@@ -8,7 +8,7 @@ const { from, eth, parse } = require('lib/helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
 
-describeo('Babylon Viewer', function () {
+describe('Babylon Viewer', function () {
   let garden1;
   let signer1;
   let signer2;

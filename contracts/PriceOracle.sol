@@ -553,11 +553,21 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Curve LP tokens
-        if (curveRegistry.get_pool_from_lp_token(_tokenIn) != address(0)) {
-            return curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(USDC, _tokenOut));
+        if (_tokenIn != TRI_CURVE_POOL) {
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+            if (crvPool != address(0)) {
+                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                return
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(coins[0], _tokenOut));
+            }
         }
-        if (curveRegistry.get_pool_from_lp_token(_tokenOut) != address(0)) {
-            return getPrice(_tokenIn, USDC).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+        if (_tokenOut != TRI_CURVE_POOL) {
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+            if (crvPool != address(0)) {
+                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                return
+                    getPrice(_tokenIn, coins[0]).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+            }
         }
 
         // Yearn vaults
