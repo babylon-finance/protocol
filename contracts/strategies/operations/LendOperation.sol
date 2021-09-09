@@ -240,10 +240,12 @@ contract LendOperation is Operation {
             );
         }
         address rewardsToken = _getRewardToken(_integration);
-        uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
-        // Add rewards
-        if (rewardsBalance > 1e16) {
-            IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+        if (rewardsToken != address(0)) {
+          uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
+          // Add rewards
+          if (rewardsBalance > 1e16) {
+              IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+          }
         }
     }
 
