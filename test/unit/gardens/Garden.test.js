@@ -1138,7 +1138,6 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
       await expect(
         garden1.connect(signer3).withdraw(ethers.utils.parseEther('20'), 1, signer3.getAddress()),
@@ -1152,7 +1151,6 @@ describe('Garden', function () {
         value: ethers.utils.parseEther('1'),
       });
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 90]);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
       expect(await garden1.totalContributors()).to.equal(2);
       await expect(
         garden1.connect(signer3).withdraw(ethers.utils.parseEther('1.12'), 2, signer3.getAddress()),
@@ -1565,7 +1563,6 @@ describe('Garden', function () {
       );
 
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1000'));
-      expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('1100'));
       expect(await daiGarden.totalContributors()).to.equal(2);
 
       ethers.provider.send('evm_increaseTime', [1]);
@@ -1574,7 +1571,6 @@ describe('Garden', function () {
         .connect(signer3)
         .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
 
-      expect(await daiGarden.principal()).to.equal(ethers.utils.parseEther('100'));
       expect(await daiGarden.totalContributors()).to.equal(1);
     });
 
@@ -1624,13 +1620,11 @@ describe('Garden', function () {
         ethers.utils.parseEther('0.1'),
       );
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
-      expect(await usdcGarden.principal()).to.equal(thousandUSDC.add(thousandUSDC.div(10)));
       expect(await usdcGarden.totalContributors()).to.equal(2);
       ethers.provider.send('evm_increaseTime', [1]);
       await usdcGarden
         .connect(signer3)
         .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
-      expect(await usdcGarden.principal()).to.equal(thousandUSDC.div(10));
       expect(await usdcGarden.totalContributors()).to.equal(1);
     });
     describe('mint NFT', async function () {
@@ -1751,9 +1745,6 @@ describe('Garden', function () {
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('0.1'));
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.totalContributors()).to.equal(2);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
-      const wethPosition = await garden1.principal();
-      expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
       const contributor = await garden1.getContributor(signer3.getAddress());
       expect(contributor[0]).to.be.gt(0);
@@ -1783,9 +1774,6 @@ describe('Garden', function () {
       expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('0.1'));
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(ethers.utils.parseEther('1'));
       expect(await garden1.totalContributors()).to.equal(2);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('2'));
-      const wethPosition = await garden1.principal();
-      expect(wethPosition).to.be.gt(ethers.utils.parseEther('1.999'));
       // Contributor Struct
       const contributor = await garden1.getContributor(signer3.getAddress());
       expect(contributor[0]).to.be.gt(0);
@@ -1799,9 +1787,7 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
         value: ethers.utils.parseEther('1'),
       });
-      // Note: Garden is initialized with manager as first contributor, hence the count and principal delta
       expect(await garden1.totalContributors()).to.equal(2);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('3'));
     });
 
     it('multiple contributors can make deposits', async function () {
@@ -1815,7 +1801,6 @@ describe('Garden', function () {
 
       // Note: Garden is initialized with manager as first contributor
       expect(await garden1.totalContributors()).to.equal(3);
-      expect(await garden1.principal()).to.equal(ethers.utils.parseEther('3'));
     });
   });
 

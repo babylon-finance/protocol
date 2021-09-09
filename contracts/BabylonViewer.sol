@@ -24,10 +24,10 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
+import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
@@ -66,6 +66,39 @@ contract BabylonViewer {
     /* ============ External Getter Functions ============ */
 
     /**
+     * Gets garden principal
+     *
+     * @param _garden            Address of the garden to fetch
+     * @return                   Garden principal
+     */
+    function getGardenPrincipal(address _garden) public view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        IERC20 reserveAsset = IERC20(garden.reserveAsset());
+        uint256 principal = reserveAsset.balanceOf(address(garden)).sub(garden.reserveAssetRewardsSetAside());
+        uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee();
+        address[] memory strategies = garden.getStrategies();
+        for (uint256 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            principal = principal.add(strategy.capitalAllocated()).add(
+                protocolMgmtFee.preciseMul(strategy.capitalAllocated())
+            );
+        }
+        address[] memory finalizedStrategies = garden.getFinalizedStrategies();
+        for (uint256 i = 0; i < finalizedStrategies.length; i++) {
+            IStrategy strategy = IStrategy(finalizedStrategies[i]);
+            principal = principal.add(protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
+        }
+        principal = principal.add(garden.totalKeeperFees());
+        int256 absoluteReturns = garden.absoluteReturns();
+        if (absoluteReturns > 0) {
+            principal = principal.sub(uint256(absoluteReturns));
+        } else {
+            principal = principal.add(uint256(-absoluteReturns));
+        }
+        return principal;
+    }
+
+    /**
      * Gets garden details
      *
      * @param _garden            Address of the garden to fetch
@@ -88,6 +121,7 @@ contract BabylonViewer {
         )
     {
         IGarden garden = IGarden(_garden);
+        uint256 principal = getGardenPrincipal(_garden);
         uint256[] memory totalSupplyValuationAndSeed = new uint256[](3);
         totalSupplyValuationAndSeed[0] = IERC20(_garden).totalSupply();
         totalSupplyValuationAndSeed[1] = totalSupplyValuationAndSeed[0] > 0
@@ -123,7 +157,7 @@ contract BabylonViewer {
                 garden.totalKeeperFees().add(garden.keeperDebt())
             ],
             [
-                garden.principal(),
+                principal,
                 garden.reserveAssetRewardsSetAside(),
                 uint256(garden.absoluteReturns()),
                 garden.gardenInitializedAt(),
@@ -350,27 +384,21 @@ contract BabylonViewer {
         return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
     }
 
-    function _getUniswapHighestLiquidity(address _tokenIn, address _reserveAsset) internal view returns (uint256) {
-        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(_tokenIn, WETH);
+    function _getUniswapHighestLiquidity(address _sendToken, address _reserveAsset) private view returns (uint256) {
+        // Exit if going to same asset
+        if (_sendToken == _reserveAsset) {
+            return 1e30;
+        }
+        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(_sendToken, _reserveAsset);
         uint256 poolLiquidity = uint256(pool.liquidity());
-        uint256 liquidityInReserve;
-        if (pool.token0() == WETH) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
-        }
-        if (pool.token1() == WETH) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
-        }
-        // Normalize to reserve asset
-        if (WETH != _reserveAsset) {
-            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(WETH, _reserveAsset);
-            liquidityInReserve = liquidityInReserve.preciseMul(price);
-        }
+        uint256 liquidityInReserve =
+            poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+
         return liquidityInReserve;
     }
 
     function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
-        internal
+        private
         view
         returns (IUniswapV3Pool pool, uint24 fee)
     {

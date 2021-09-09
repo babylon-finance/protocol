@@ -28,7 +28,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting marduk gate on controller ${deployment.address}`);
-    await (await controllerContract.editMardukGate(deployment.address, { gasPrice })).wait();
+    //await (await controllerContract.editMardukGate(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

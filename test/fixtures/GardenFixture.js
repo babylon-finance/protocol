@@ -192,26 +192,6 @@ async function setUpFixture(
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
   const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
 
-  if (fund) {
-    for (const signer of signers.slice(3, 10)) {
-      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
-        gasPrice: 0,
-      });
-
-      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
-        gasPrice: 0,
-      });
-
-      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
-        gasPrice: 0,
-      });
-
-      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
-        gasPrice: 0,
-      });
-    }
-  }
-
   console.log('end garden fixture');
 
   return {
