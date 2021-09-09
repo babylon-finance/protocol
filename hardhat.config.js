@@ -21,6 +21,7 @@ require('./lib/plugins/utils');
 
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
+require('./lib/tasks/export-token-list');
 require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
