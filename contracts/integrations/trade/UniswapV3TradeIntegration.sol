@@ -144,7 +144,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
         if (address(pool) == address(0)) {
-          return 0;
+            return 0;
         }
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
