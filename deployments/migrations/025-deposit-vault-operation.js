@@ -25,7 +25,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Adding operation ${contract}(${deployment.address}) to BabController`);
-    // await (await controllerContract.setOperation(2, deployment.address, { gasPrice })).wait();
+    await (await controllerContract.setOperation(2, deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
