@@ -572,7 +572,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // Yearn vaults
         if (_isYearnVault(_tokenIn)) {
-            price = IYearnVault(_tokenIn).pricePerShare().preciseDiv(
+            price = IYearnVault(_tokenIn).pricePerShare().preciseMul(
                 getPrice(IYearnVault(_tokenIn).token(), _tokenOut)
             );
             uint256 yvDecimals = ERC20(_tokenIn).decimals();
@@ -583,9 +583,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         if (_isYearnVault(_tokenOut)) {
-            price = getPrice(_tokenIn, IYearnVault(_tokenOut).token()).preciseMul(
+            price = getPrice(_tokenIn, IYearnVault(_tokenOut).token()).preciseDiv(
                 IYearnVault(_tokenOut).pricePerShare()
             );
+
             uint256 yvDecimals = ERC20(_tokenOut).decimals();
             if (yvDecimals < 18) {
                 price = price * 10**(18 - yvDecimals);
