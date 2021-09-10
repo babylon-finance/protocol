@@ -302,38 +302,21 @@ describe('VoteToken contract', function () {
     it('Should admit a delegation vote by a valid signature', async function () {
       // Signature (signed by signer1.address) 0x90F79bf6EB2c4f870365E785982E1f101E93b906
       // getChainId: 31337
-      // NEW VoteToken address (address(this)): 0x809d550fca64d94Bd9F66E60752A544199cfAC3D
+      // NEW VoteToken address (address(this)): 0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f
       // name(): "Babylon.Finance"
-      // NEW first hash: 0x5d0c3e0c524bdef5470f03a1fe5e911b5210e5e03ddec33fbda09216630cec77
-      // NEW first hash: {
-      // "0": "bytes32: 0x59ee36f29bb4ed7588d3f7a96a70b918f0d1a25cdbf1848fcab5351c1f61fb6e"
+      // NEW first hash: bytes32: "0x5d0c3e0c524bdef5470f03a1fe5e911b5210e5e03ddec33fbda09216630cec77"
       // expiration 1653729994 28 may 2022
       // nonce = 0
       // delegatee 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
       // second hash : 0xd7ead66ff6bda9784088e2deae972d920c55438e8a76149605393615ba546a29
-      // NEW Digest 0x627795d6dc266ed0a64c14deb4674cf0f4eb9912c7f97e45d35b8443dc9d99aa
+      // NEW Digest 0x8fc57573708a378fdb36f5b41d4290f7ad837fe0fd053ae5a3607768698a78c3
       // ethSignedMessageHash (digestHash): 0x59a7630a466378d7251a819c0577205d19cb5a5c11e0b3a296ef058eb0b7370d
       // METAMASK:
-      // NEW signed message by Metamask = 0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc381c
+      // NEW signed message by Metamask = 0xf771e0dccf7287a7fbb97574829c07883d07bebdfd021bb8752a7a11e29f20662ed9c8789be1fb0d41ee6feabb98d8ad1cc29a501b1f8409b74ebaac906d5abe1c
       // Then splitting the signed message: Metamask
       // const v = '28';
-      // const r = "0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d";
-      // const s = "0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38";
-      // LEDGER + METAMASK:
-      // LEDGER signed: 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b0901
-      // LEDGER signer: 0x232775eAD28F0C0c750A097bA77302E7d84efd3B
-      // LEDGER message hash: 764B2DA7FCBD5AD5F4EF2F1E5AAE23944EC984FD9AAEE7338237255EE96758D7
-      // LEDGER message hash website: 47CCC7A49206F6F21AEEC9928F4AD5F7513304B08180BE46BBD46B65941D0F8F
-      // LEDGER signed split:
-      // bytes32: r 0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af
-      // bytes32: s 0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09
-      // uint8: v 1
-      // TREZOR:
-      // Signer: 0x4632F4120DC68F225e7d24d973Ee57478389e9Fd
-      // Signed message: dbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d44e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f77631915121b
-      // bytes32: r 0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4
-      // bytes32: s 0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512
-      // uint8: v 27
+      // const r = '0xf771e0dccf7287a7fbb97574829c07883d07bebdfd021bb8752a7a11e29f2066';
+      // const s = '0x2ed9c8789be1fb0d41ee6feabb98d8ad1cc29a501b1f8409b74ebaac906d5abe';
       await bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('100'));
       // Let's give stake to have the possibility to delegate
       const signer1Balance = await bablToken.balanceOf(signer1.address);
@@ -346,24 +329,10 @@ describe('VoteToken contract', function () {
       // new signature: 0xd961a2ca02d275ed2bc630429905e8f6b4bfff3a92ce38016c787180767abcf8604674566081714bd871966c9911caae3da7cfa66cfc1c171a3a096bc60604be1c
 
       // METAMASK:
-      //const v = '28';
-      //const r = '0x2c957a96a5f511fa74efa7f6f261718439309e1b763b1e5ee7f3c27f524f711d';
-      //const s = '0x20b36a779f1ead53e3de10ccbcae8d30290cb68558189ecf34ba8d03ab52fc38';
-
-      // METAMASK:
-      // Signature to split: 0x1ec7af3d5ed9da6db5bb80b477cf33ad35e4e49b0faa9095239051ec962620330d57e99e176d642f7845dd3059794dcef6159358e14cf339ddbbd9408d1e18d01c
       const v = '28';
-      const r = '0x1ec7af3d5ed9da6db5bb80b477cf33ad35e4e49b0faa9095239051ec96262033';
-      const s = '0x0d57e99e176d642f7845dd3059794dcef6159358e14cf339ddbbd9408d1e18d0';
-
-      // LEDGER + METAMASK
-      //const v = '1';
-      //const r = '0x3e9140970233a167713ba23429c8ecc48272a60dd6e422cf6f1cead2bbee87af';
-      //const s = '0x27ca269d6b4e98d3220f62d9f5b99caf75003e7b88d66ab77000a48537fd9b09';
-      // TREZOR
-      //const v = '27';
-      //const r = '0xdbf6a54764d0aa63a21c5ca49aed69195c3531dde0755490817db0764e1a76d4';
-      //const s = '0x4e32366a19416b58cedbb014c4cc67c76294e51f03443f89ae958f7763191512';
+      const r = '0xf771e0dccf7287a7fbb97574829c07883d07bebdfd021bb8752a7a11e29f2066';
+      const s = '0x2ed9c8789be1fb0d41ee6feabb98d8ad1cc29a501b1f8409b74ebaac906d5abe';
+      // console.log('vote token address', bablToken.address);
       await bablToken.delegateBySig(delegatee, nonce, expiry, v, r, s, true);
       // await bablToken.delegateBySig(delegatee, nonce, expiry, sig.v, sig.r, sig.s, true);
 
