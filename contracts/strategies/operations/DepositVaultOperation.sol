@@ -182,14 +182,9 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = _getResultAsset(_integration, vault);
-        uint256 balance = IERC20(vaultAsset).balanceOf(msg.sender);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        // If we cannot price the result asset, we'll use the investment one as a floor
-        if (price == 0) {
-            vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
-            price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        }
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(
