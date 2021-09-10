@@ -1,22 +1,16 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
-const { createStrategy, executeStrategy, finalizeStrategy, DAI_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
+const { createStrategy, executeStrategy, DAI_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
-const addresses = require('lib/addresses');
 const { ADDRESS_ZERO } = require('lib/constants');
-const { from, eth, parse } = require('lib/helpers');
+const { eth } = require('lib/helpers');
 
 describe('ComplexIntegrationsTest', function () {
   let aaveBorrowIntegration;
   let aaveLendIntegration;
-  let uniswapV3TradeIntegration;
-<<<<<<< Updated upstream
-=======
   let compoundBorrowIntegration;
   let compoundLendIntegration;
   let masterSwapper;
->>>>>>> Stashed changes
   let signer1;
   let signer2;
   let signer3;
@@ -27,7 +21,6 @@ describe('ComplexIntegrationsTest', function () {
   beforeEach(async () => {
     ({
       aaveBorrowIntegration,
-      uniswapV3TradeIntegration,
       aaveLendIntegration,
       compoundBorrowIntegration,
       compoundLendIntegration,
