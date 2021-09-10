@@ -18,6 +18,8 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
@@ -579,6 +581,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (yvDecimals < 18) {
                 price = price * 10**(18 - yvDecimals);
             }
+            console.log('VAULT tokenIn', price);
             return price;
         }
 
@@ -586,10 +589,17 @@ contract PriceOracle is Ownable, IPriceOracle {
             price = getPrice(_tokenIn, IYearnVault(_tokenOut).token()).preciseMul(
                 IYearnVault(_tokenOut).pricePerShare()
             );
+            console.log('---token out token---', IYearnVault(_tokenOut).token());
+            console.log('---token out price per share---', IYearnVault(_tokenOut).pricePerShare());
+            console.log('---token getPrice in out token---', getPrice(_tokenIn, IYearnVault(_tokenOut).token()));
+            console.log('---INITIAL PRICE---', price);
+
             uint256 yvDecimals = ERC20(_tokenOut).decimals();
             if (yvDecimals < 18) {
                 price = price * 10**(18 - yvDecimals);
+                console.log('---NORMALIZED PRICE---', price);
             }
+            console.log('VAULT tokenOut price', price);
             return price;
         }
 

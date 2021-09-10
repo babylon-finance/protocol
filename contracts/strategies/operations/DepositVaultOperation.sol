@@ -185,6 +185,7 @@ contract DepositVaultOperation is Operation {
         (address vaultAsset, bool assetOrVault) = _getResultAsset(_integration, vault);
         uint256 balance = IERC20(vaultAsset).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
+        console.log('price', price);
         // If we cannot price the result asset, we'll use the investment one as a floor
         if (price == 0) {
             vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
@@ -198,6 +199,8 @@ contract DepositVaultOperation is Operation {
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = assetOrVault ? pricePerShare.preciseMul(balance).preciseDiv(price) : balance.preciseMul(price);
+        // uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -205,8 +208,10 @@ contract DepositVaultOperation is Operation {
     // Function to provide backward compatibility
     function _getResultAsset(address _integration, address _yieldVault) private view returns (address, bool) {
         try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
+            console.log('TRY');
             return (_resultAsset, true);
         } catch {
+            console.log('CATCH', _integration);
             return (_yieldVault, false);
         }
     }
