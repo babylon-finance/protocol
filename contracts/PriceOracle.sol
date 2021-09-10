@@ -598,14 +598,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn != WBTC && _tokenOut != WBTC) {
             price = _checkPairThroughCurve(WBTC, _tokenOut);
             if (price != 0) {
-                uniPrice = getUNIV3Price(_tokenIn, WBTC);
+                uniPrice = _getUNIV3Price(_tokenIn, WBTC);
                 if (uniPrice != 0) {
                     return uniPrice.preciseMul(price);
                 }
             }
             price = _checkPairThroughCurve(_tokenIn, WBTC);
             if (price != 0) {
-                uniPrice = getUNIV3Price(WBTC, _tokenOut);
+                uniPrice = _getUNIV3Price(WBTC, _tokenOut);
                 if (uniPrice != 0) {
                     return price.preciseMul(uniPrice);
                 }
@@ -615,14 +615,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn != DAI && _tokenOut != DAI) {
             price = _checkPairThroughCurve(DAI, _tokenOut);
             if (price != 0) {
-                uniPrice = getUNIV3Price(_tokenIn, DAI);
+                uniPrice = _getUNIV3Price(_tokenIn, DAI);
                 if (uniPrice != 0) {
                     return uniPrice.preciseMul(price);
                 }
             }
             price = _checkPairThroughCurve(_tokenIn, DAI);
             if (price != 0) {
-                uniPrice = getUNIV3Price(DAI, _tokenOut);
+                uniPrice = _getUNIV3Price(DAI, _tokenOut);
                 if (uniPrice != 0) {
                     return price.preciseMul(uniPrice);
                 }
@@ -632,41 +632,41 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn != WETH && _tokenOut != WETH) {
             price = _checkPairThroughCurve(WETH, _tokenOut);
             if (price != 0) {
-                uniPrice = getUNIV3Price(_tokenIn, WETH);
+                uniPrice = _getUNIV3Price(_tokenIn, WETH);
                 if (uniPrice != 0) {
                     return uniPrice.preciseMul(price);
                 }
             }
             price = _checkPairThroughCurve(_tokenIn, WETH);
             if (price != 0) {
-                uniPrice = getUNIV3Price(WETH, _tokenOut);
+                uniPrice = _getUNIV3Price(WETH, _tokenOut);
                 if (uniPrice != 0) {
                     return price.preciseMul(uniPrice);
                 }
             }
         }
         // Direct UNI3
-        price = getUNIV3Price(_tokenIn, _tokenOut);
+        price = _getUNIV3Price(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }
         // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            uint256 divisor = getUNIV3Price(_tokenOut, WETH);
+            uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
             if (divisor != 0) {
-                return getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
+                return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
             }
         }
         // UniV3 through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
-            uint256 divisor = getUNIV3Price(_tokenOut, DAI);
+            uint256 divisor = _getUNIV3Price(_tokenOut, DAI);
             if (divisor != 0) {
-                return getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
+                return _getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
             }
         }
         // Use only univ2 for UI
         if (_forNAV) {
-            price = getUNIV2Price(_tokenIn, _tokenOut);
+            price = _getUNIV2Price(_tokenIn, _tokenOut);
         }
         // No valid price
         require(price != 0, 'Price not found');
@@ -677,14 +677,14 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     // Susceptible to flash loans.
     // Only use for UI and getNAV
-    function getUNIV2Price(address _tokenIn, address _tokenOut) public view returns (uint256) {
+    function _getUNIV2Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
         address[] memory path = new address[](2);
         path[0] = _tokenIn;
         path[1] = _tokenOut;
         return uniRouterV2.getAmountsOut(ERC20(_tokenIn).decimals(), path)[1];
     }
 
-    function getUNIV3Price(address _tokenIn, address _tokenOut) public view returns (uint256) {
+    function _getUNIV3Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
         bool found;
         int24 tick;
         IUniswapV3Pool pool;
@@ -715,7 +715,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         )
     {
         int24 tick;
-        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
+        IUniswapV3Pool pool = getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) != address(0)) {
             uint256 poolLiquidity = uint256(pool.liquidity());
             if (poolLiquidity > 0) {
@@ -726,8 +726,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         return (false, IUniswapV3Pool(0), 0);
     }
 
-    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
-        private
+    function getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        public
         view
         returns (IUniswapV3Pool pool)
     {
