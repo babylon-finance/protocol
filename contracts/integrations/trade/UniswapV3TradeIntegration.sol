@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
+
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -126,6 +128,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         address reserveAsset = _tradeInfo.garden.reserveAsset();
         uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
         uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
+        console.log('require liquidityInReserve >= minLiquidityReserveAsset', liquidityInReserve >= minLiquidityReserveAsset );
         return liquidityInReserve >= minLiquidityReserveAsset;
     }
 
@@ -144,6 +147,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
         if (address(pool) == address(0)) {
+            console.log('POOL ZERO ADDRESS');
             return 0;
         }
         uint256 poolLiquidity = uint256(pool.liquidity());

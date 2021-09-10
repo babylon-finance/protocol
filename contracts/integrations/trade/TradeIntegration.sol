@@ -18,6 +18,8 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -220,7 +222,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Strategy needs to have enough liquid tokens'
         );
+        console.log('VALIDATE PRE TRADE DATA BEFORE', _checkLiquidity(_tradeInfo, _sendQuantity));
         require(_checkLiquidity(_tradeInfo, _sendQuantity), 'Not enough liquidity');
+        console.log('THERE IS LIQUIDITY');
     }
 
     /**

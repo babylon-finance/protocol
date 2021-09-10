@@ -17,6 +17,8 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -707,10 +709,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
             Errors.STRATEGY_IN_COOLDOWN
         );
+        console.log('---CHECK 1---');
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
+        console.log('---CHECK 2---');
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
+        console.log('---CHECK 3---');
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
@@ -719,7 +724,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // The Mining program has not started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
+        console.log('---CHECK 4---');
         garden.payKeeper(_keeper, _fee);
+        console.log('---CHECK 5---');
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
     }
@@ -735,6 +742,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint8 assetStatus; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
+            console.log('OPERATION i, integration', i, opIntegrations[i]);
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 assetAccumulated,

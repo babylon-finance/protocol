@@ -18,6 +18,8 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -88,7 +90,8 @@ contract BuyOperation is Operation {
             uint256,
             uint8
         )
-    {
+    {   
+        console.log('BUY OPERATION asset, integration', _asset, _integration);
         _trade(_data, _integration, _asset, _capital);
         address token = BytesLib.decodeOpDataAddress(_data);
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
