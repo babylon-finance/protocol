@@ -152,12 +152,13 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
 describe('v0.7.0', function () {
   let owner;
   let keeper;
+  let priceOracle;
 
   beforeEach(async () => {
-    ({ owner, keeper } = await upgradeFixture());
+    ({ owner, keeper, priceOracle } = await upgradeFixture());
   });
 
-  describe('after upgrade', function () {
+  describe.skip('after upgrade', function () {
     describe('can finalizeStrategy', function () {
       for (const [name, strategy] of [
         ['Leverage long ETH', '0x49567812f97369a05e8D92462d744EFd00d7Ea42'],
@@ -183,7 +184,8 @@ describe('v0.7.0', function () {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
 
           await increaseTime(ONE_DAY_IN_SECONDS * 360);
-
+          console.log('NAV', (await strategyContract.getNAV()).toString());
+          console.log('CAPITAL ALLOCATED', (await strategyContract.capitalAllocated()).toString());
           await strategyContract.connect(keeper).finalizeStrategy(0, '');
           const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
