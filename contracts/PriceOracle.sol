@@ -577,7 +577,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             );
             uint256 yvDecimals = ERC20(_tokenIn).decimals();
             if (yvDecimals < 18) {
-                price = price * 10**(18 - yvDecimals);
+                price = price.mul(10**(18 - yvDecimals));
             }
             return price;
         }
