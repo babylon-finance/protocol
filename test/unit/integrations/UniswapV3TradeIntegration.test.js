@@ -2,19 +2,12 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { from, parse, eth } = require('lib/helpers');
+const { eth } = require('lib/helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
-const {
-  getStrategy,
-  createStrategy,
-  DEFAULT_STRATEGY_PARAMS,
-  executeStrategy,
-  finalizeStrategy,
-} = require('fixtures/StrategyHelper');
+const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO } = require('../../../lib/constants');
 
 describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
@@ -29,7 +22,7 @@ describe('UniswapV3TradeIntegration', function () {
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
-  describe.only('exchange', function () {
+  describe('exchange', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       { token: addresses.tokens.DAI, name: 'DAI' },
@@ -46,7 +39,7 @@ describe('UniswapV3TradeIntegration', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
-          const garden = await createGarden({ reserveAsset: token });
+          const garden1 = await createGarden({ reserveAsset: token });
           const tokenContract = await ethers.getContractAt(
             '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
             token,
@@ -60,6 +53,7 @@ describe('UniswapV3TradeIntegration', function () {
             state: 'vote',
             integration: uniswapV3TradeIntegration.address,
             specificParams: [asset, 0],
+            garden: garden1,
           });
           // Workaround for a pool DAI/WBTC which has no liquidity at this block
           if (
