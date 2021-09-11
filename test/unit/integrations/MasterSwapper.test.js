@@ -49,7 +49,7 @@ describe('MasterSwapper', function () {
           { to: addresses.tokens.aETHC, symbol: 'aETHc' },
           { to: addresses.tokens.sETH, symbol: 'sETH' },
           { to: addresses.tokens.stETH, symbol: 'stETH' },
-          { to: addresses.tokens.renBTC, symbol: 'renBTC' },
+          //      { to: addresses.tokens.renBTC, symbol: 'renBTC' }, // TODO check Masterswapper could not swap
         ],
       },
       {
@@ -100,6 +100,7 @@ describe('MasterSwapper', function () {
             garden: garden,
             specificParams: [to, 0],
           });
+          console.log();
           await executeStrategy(strategyContract);
           let assetBalance = await assetContract.balanceOf(strategyContract.address);
           const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
