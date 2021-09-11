@@ -61,7 +61,7 @@ describe('ComplexIntegrationsTest', function () {
       expect(nav).to.be.closeTo(eth(1000), eth(20));
     });
 
-    it.only(`DAI Garden (CompLend WETH->CompBorrow DAI->BuyOp DPI)`, async function () {
+    it(`DAI Garden (CompLend WETH->CompBorrow DAI->BuyOp DPI)`, async function () {
       await transferFunds(dai.address);
 
       const garden = await createGarden({ reserveAsset: dai.address });
@@ -79,12 +79,12 @@ describe('ComplexIntegrationsTest', function () {
       );
       await executeStrategy(strategyContract);
 
-      const nav = await strategyContract.getNAV();
+      // const nav = await strategyContract.getNAV();
       // TODO Fix NAV calculations it returns 40% less value than capital allocated
       // expect(nav).to.be.closeTo(eth(1000), eth(20));
     });
 
-    it.only(`DAI Garden (AaveLend WETH->AaveBorrow DAI->BuyOp DPI)`, async function () {
+    it(`DAI Garden (AaveLend WETH->AaveBorrow DAI->BuyOp DPI)`, async function () {
       await transferFunds(dai.address);
 
       const garden = await createGarden({ reserveAsset: dai.address });
@@ -102,12 +102,11 @@ describe('ComplexIntegrationsTest', function () {
       );
       await executeStrategy(strategyContract);
 
-      const nav = await strategyContract.getNAV();
+      // const nav = await strategyContract.getNAV();
       // TODO Fix NAV calculations it returns 40% less value than capital allocated
       // expect(nav).to.be.closeTo(eth(1000), eth(20));
     });
-    it.skip(`DAI Garden (CompLend WETH->CompBorrow USDC->BuyOp DPI)`, async function () {
-      // TODO FIX "Master swapper could not swap" when borrowing USDC
+    it(`DAI Garden (CompLend WETH->CompBorrow USDC->BuyOp DPI)`, async function () {
       await transferFunds(dai.address);
 
       const garden = await createGarden({ reserveAsset: dai.address });
@@ -125,7 +124,7 @@ describe('ComplexIntegrationsTest', function () {
       );
       await executeStrategy(strategyContract);
 
-      const nav = await strategyContract.getNAV();
+      // const nav = await strategyContract.getNAV();
       // TODO Fix NAV calculations it returns 40% less value than capital allocated
       // expect(nav).to.be.closeTo(eth(1000), eth(20));
     });
