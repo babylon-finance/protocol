@@ -52,7 +52,7 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pools.forEach(({ name, pool }) => {
-      it.only(`can enter and exit the ${name} pool`, async function () {
+      it(`can enter and exit the ${name} pool`, async function () {
         const strategyContract = await createStrategy(
           'lp',
           'vote',
@@ -74,7 +74,7 @@ describe('CurvePoolIntegrationTest', function () {
         expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
       });
 
-      it.only(`can get the NAV of the ${name} pool`, async function () {
+      it(`can get the NAV of the ${name} pool`, async function () {
         const strategyContract = await createStrategy(
           'lp',
           'vote',
@@ -92,7 +92,7 @@ describe('CurvePoolIntegrationTest', function () {
           lpToken,
         );
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        // TODO tricrypto NAV is wrong
+        // TODO tricrypto NAV is wrong > 40% difference
         // Workaround set meanwhile
         if (name !== 'tricrypto') {
           expect(await strategyContract.getNAV()).to.be.closeTo(
