@@ -258,12 +258,15 @@ contract BabylonViewer {
             bool
         )
     {
-        IMardukGate gate = IMardukGate(controller.ishtarGate());
+        IMardukGate gate = IMardukGate(controller.mardukGate());
         bool accessBeta = gate.canAccessBeta(_user);
         return (
-            gate.canJoinAGarden(_garden, _user) || (accessBeta && !IGarden(_garden).privateGarden()),
-            gate.canVoteInAGarden(_garden, _user) || (accessBeta && IGarden(_garden).publicStewards()),
-            gate.canAddStrategiesInAGarden(_garden, _user) || (accessBeta && IGarden(_garden).publicStrategists())
+            gate.canJoinAGarden(_garden, _user) ||
+                (accessBeta && !IGarden(_garden).privateGarden()),
+            gate.canVoteInAGarden(_garden, _user) ||
+                (accessBeta && IGarden(_garden).publicStewards()),
+            gate.canAddStrategiesInAGarden(_garden, _user) ||
+                (accessBeta && IGarden(_garden).publicStrategists())
         );
     }
 
