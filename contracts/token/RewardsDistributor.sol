@@ -577,7 +577,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // To compare strategy power between all strategies we normalize their capital into DAI
         // Then, we need to take control of getPrice fluctuations along the time
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
-        _capital = SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, _capital.preciseMul(pricePerTokenUnit));
+        _capital = _capital.preciseMul(pricePerTokenUnit).mul(10**uint256(18).sub(ERC20(reserveAsset).decimals()));
+
         // Create or/and update the protocol quarter checkpoints if mining program is activated
         _updateProtocolPowerPerQuarter();
         // We update the strategy power per quarter normalized in DAI if mining program is activated
@@ -765,8 +766,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else if (userVotes < 0 && _profitData[1] == false) {
             // Voting against a strategy that got results below expected return provides rewards
             // to the voter (helping the protocol to only have good strategies)
+            // If no profit at all, the whole steward benefit goes to those voting against
+            uint256 votesAccounting = _profitData[0] ? totalVotes : _strategyDetails[5];
             babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(Math.abs(userVotes)).preciseDiv(totalVotes)
+                uint256(Math.abs(userVotes)).preciseDiv(votesAccounting)
             );
 
             bablCap = babl.mul(2); // Max cap
