@@ -22,7 +22,7 @@ module.exports = async ({
   });
 
   if (deployment.newlyDeployed) {
-    console.log(`Deployed Babylon Viewer on controller ${deployment.address}`);
+    console.log(`Deployed Babylon Viewer ${deployment.address}`);
   }
 
   if (network.live && deployment.newlyDeployed) {
