@@ -2,16 +2,10 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { from, parse, eth } = require('lib/helpers');
+const { eth } = require('lib/helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
-const {
-  getStrategy,
-  createStrategy,
-  DEFAULT_STRATEGY_PARAMS,
-  executeStrategy,
-  finalizeStrategy,
-} = require('fixtures/StrategyHelper');
+const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
@@ -45,7 +39,7 @@ describe('UniswapV3TradeIntegration', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
-          const garden = await createGarden({ reserveAsset: token });
+          const garden1 = await createGarden({ reserveAsset: token });
           const tokenContract = await ethers.getContractAt(
             '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
             token,
@@ -54,36 +48,43 @@ describe('UniswapV3TradeIntegration', function () {
             '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
             asset,
           );
-
           const strategyContract = await getStrategy({
             kind: 'buy',
             state: 'vote',
             integration: uniswapV3TradeIntegration.address,
             specificParams: [asset, 0],
+            garden: garden1,
           });
+          // Workaround for a pool DAI/WBTC which has no liquidity at this block
+          if (
+            (token === addresses.tokens.DAI || token === addresses.tokens.WBTC) &&
+            (asset === addresses.tokens.DAI || asset === addresses.tokens.WBTC)
+          ) {
+            // Not enough liquidity at pool https://info.uniswap.org/#/pools/0x391e8501b626c623d39474afca6f9e46c2686649
+            await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
+          } else {
+            await executeStrategy(strategyContract);
+            const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
-          await executeStrategy(strategyContract);
+            const assetDecimals = await assetContract.decimals();
+            const assetDecimalsDelta = 10 ** (18 - assetDecimals);
 
-          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
+            const tokenDecimals = await tokenContract.decimals();
+            const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
 
-          const assetDecimals = await assetContract.decimals();
-          const assetDecimalsDelta = 10 ** (18 - assetDecimals);
+            const assetBalance = await assetContract.balanceOf(strategyContract.address);
+            const expectedBalance = tokenPriceInAsset
+              .mul(tokenDecimalsDelta)
+              .mul(STRATEGY_EXECUTE_MAP[token])
+              .div(eth())
+              .div(assetDecimalsDelta);
 
-          const tokenDecimals = await tokenContract.decimals();
-          const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
+            expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
 
-          const assetBalance = await assetContract.balanceOf(strategyContract.address);
-          const expectedBalance = tokenPriceInAsset
-            .mul(tokenDecimalsDelta)
-            .mul(STRATEGY_EXECUTE_MAP[token])
-            .div(eth())
-            .div(assetDecimalsDelta);
+            await finalizeStrategy(strategyContract, 0);
 
-          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
-
-          await finalizeStrategy(strategyContract, 0);
-
-          expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
+            expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
+          }
         });
       });
     });
