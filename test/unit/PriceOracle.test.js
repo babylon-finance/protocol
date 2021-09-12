@@ -6,6 +6,30 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'WETH-> YEARN dai',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: '0x19d3364a399d251e894ac732651be8b0e4e85001',
+    value: parse('3694.4663380'),
+  },
+  {
+    name: 'WETH-> YEARN USDC',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9',
+    value: parse('3694.4663380'),
+  },
+  {
+    name: 'YEARN dai-> WETH dai',
+    tokenIn: '0x19d3364a399d251e894ac732651be8b0e4e85001',
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.0002706'),
+  },
+  {
+    name: 'YEARN USDC-> WETH dai',
+    tokenIn: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9',
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.0002706'),
+  },
+  {
     name: 'WETH->tripool direct',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
@@ -147,7 +171,7 @@ const tokens = [
     name: 'CRV 3 Pool Inverse',
     tokenIn: addresses.tokens.DAI,
     tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
-    value: parse('1.018'),
+    value: parse('0.981'),
   },
   {
     name: 'WBTC to renBTC',

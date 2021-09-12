@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import 'hardhat/console.sol';
+
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -27,6 +29,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {TradeIntegration} from './TradeIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 /**
  * @title UniswapV3TradeIntegration
@@ -37,6 +40,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 contract UniswapV3TradeIntegration is TradeIntegration {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
+    using SafeDecimalMath for uint256;
 
     /* ============ Modifiers ============ */
 
@@ -143,6 +147,9 @@ contract UniswapV3TradeIntegration is TradeIntegration {
             return _tradeInfo.garden.minLiquidityAsset();
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
+        if (address(pool) == address(0)) {
+            return 0;
+        }
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         address denominator;
@@ -158,7 +165,14 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         if (denominator != _reserveAsset) {
             IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
             uint256 price = oracle.getPrice(denominator, _reserveAsset);
-            liquidityInReserve = liquidityInReserve.preciseMul(price);
+            // price is always in 18 decimals
+            // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
+            // normalization into reserveAsset decimals
+            liquidityInReserve = SafeDecimalMath.normalizeAmountTokens(
+                denominator,
+                _reserveAsset,
+                liquidityInReserve.preciseMul(price)
+            );
         }
         return liquidityInReserve;
     }

@@ -716,7 +716,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 : 0;
 
             // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower, strategyDetails[10]);
+            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
@@ -864,19 +864,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Get the BABL rewards (Mining program) for a LP profile
      * @param _strategyRewards      Strategy rewards
      * @param _contributorPower     Contributor power
-     * @param _normalizedAllocated  Capital allocated normalized into DAI
      */
     function _getStrategyLPBabl(
         uint256 _strategyRewards,
-        uint256 _contributorPower,
-        uint256 _normalizedAllocated
+        uint256 _contributorPower
     ) private view returns (uint256) {
         uint256 babl;
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
         // This is due to BABL has 18 decimals
         babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
-            _contributorPower.preciseDiv(_normalizedAllocated)
-        );
+            _contributorPower);
         return babl;
     }
 
@@ -1495,4 +1492,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV4 is RewardsDistributor {}
+contract RewardsDistributorV5 is RewardsDistributor {}
