@@ -29,12 +29,13 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGardenValuer} from './interfaces/IGardenValuer.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
-import {IIshtarGate} from './interfaces/IIshtarGate.sol';
+import {IMardukGate} from './interfaces/IMardukGate.sol';
 import {IGardenNFT} from './interfaces/IGardenNFT.sol';
 import {IStrategyNFT} from './interfaces/IStrategyNFT.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
@@ -50,6 +51,7 @@ contract BabylonViewer {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using Math for int256;
+    using SafeDecimalMath for uint256;
 
     IBabController public controller;
     uint24 internal constant FEE_LOW = 500;
@@ -243,8 +245,8 @@ contract BabylonViewer {
     }
 
     function getPermissions(address _user) external view returns (bool, bool) {
-        IIshtarGate gate = IIshtarGate(controller.ishtarGate());
-        return (IERC721(address(gate)).balanceOf(_user) > 0, gate.canCreate(_user));
+        IMardukGate gate = IMardukGate(controller.mardukGate());
+        return (gate.canAccessBeta(_user), gate.canCreate(_user));
     }
 
     function getGardenPermissions(address _garden, address _user)
@@ -256,14 +258,15 @@ contract BabylonViewer {
             bool
         )
     {
-        IIshtarGate gate = IIshtarGate(controller.ishtarGate());
+        IMardukGate gate = IMardukGate(controller.ishtarGate());
+        bool accessBeta = gate.canAccessBeta(_user);
         return (
             gate.canJoinAGarden(_garden, _user) ||
-                (IERC721(address(gate)).balanceOf(_user) > 0 && !IGarden(_garden).privateGarden()),
+                (accessBeta && !IGarden(_garden).privateGarden()),
             gate.canVoteInAGarden(_garden, _user) ||
-                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStewards()),
+                (accessBeta && IGarden(_garden).publicStewards()),
             gate.canAddStrategiesInAGarden(_garden, _user) ||
-                (IERC721(address(gate)).balanceOf(_user) > 0 && IGarden(_garden).publicStrategists())
+                (accessBeta && IGarden(_garden).publicStrategists())
         );
     }
 
@@ -308,7 +311,7 @@ contract BabylonViewer {
         }
         uint256 total = 0;
         for (uint256 i = 0; i < _members.length; i++) {
-            (bool canDeposit, bool canVote, ) = getUserPermission(_garden, _members[i]);
+            (bool canDeposit, bool canVote, ) = getGardenPermissions(_garden, _members[i]);
             if (canDeposit && canVote) {
                 total = total.add(IERC20(_garden).balanceOf(_members[i]));
             }
@@ -390,10 +393,33 @@ contract BabylonViewer {
             return 1e30;
         }
         (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(_sendToken, _reserveAsset);
+        if (address(pool) == address(0)) {
+            return 0;
+        }
         uint256 poolLiquidity = uint256(pool.liquidity());
-        uint256 liquidityInReserve =
-            poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+        uint256 liquidityInReserve;
+        address denominator;
 
+        if (pool.token0() == _reserveAsset) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
+            denominator = pool.token0();
+        } else {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+            denominator = pool.token1();
+        }
+        // Normalize to reserve asset
+        if (denominator != _reserveAsset) {
+            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+            uint256 price = oracle.getPrice(denominator, _reserveAsset);
+            // price is always in 18 decimals
+            // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
+            // normalization into reserveAsset decimals
+            liquidityInReserve = SafeDecimalMath.normalizeAmountTokens(
+                denominator,
+                _reserveAsset,
+                liquidityInReserve.preciseMul(price)
+            );
+        }
         return liquidityInReserve;
     }
 
@@ -416,22 +442,5 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
-    }
-
-    function getUserPermission(address _garden, address _user)
-        public
-        view
-        returns (
-            bool canDeposit,
-            bool canVote,
-            bool canCreateStrategy
-        )
-    {
-        IGarden garden = IGarden(_garden);
-        IIshtarGate gate = IIshtarGate(IBabController(controller).ishtarGate());
-        bool hasGate = IERC721(address(gate)).balanceOf(_user) > 0;
-        canDeposit = gate.canJoinAGarden(_garden, _user) || (hasGate && !garden.privateGarden());
-        canVote = gate.canVoteInAGarden(_garden, _user) || (hasGate && garden.publicStewards());
-        canCreateStrategy = gate.canAddStrategiesInAGarden(_garden, _user) || (hasGate && garden.publicStrategists());
     }
 }
