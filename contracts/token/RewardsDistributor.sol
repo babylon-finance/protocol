@@ -865,15 +865,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategyRewards      Strategy rewards
      * @param _contributorPower     Contributor power
      */
-    function _getStrategyLPBabl(
-        uint256 _strategyRewards,
-        uint256 _contributorPower
-    ) private view returns (uint256) {
+    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorPower) private view returns (uint256) {
         uint256 babl;
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
         // This is due to BABL has 18 decimals
-        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
-            _contributorPower);
+        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(_contributorPower);
         return babl;
     }
 
