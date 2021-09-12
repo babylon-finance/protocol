@@ -715,7 +715,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         )
     {
         int24 tick;
-        IUniswapV3Pool pool = getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
+        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) != address(0)) {
             uint256 poolLiquidity = uint256(pool.liquidity());
             if (poolLiquidity > 0) {
@@ -726,8 +726,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         return (false, IUniswapV3Pool(0), 0);
     }
 
-    function getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
-        public
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        private
         view
         returns (IUniswapV3Pool pool)
     {
