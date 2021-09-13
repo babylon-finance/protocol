@@ -1079,4 +1079,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV7 is Garden {}
+contract GardenV8 is Garden {}
