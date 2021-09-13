@@ -229,6 +229,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     function getResultAsset(address _investmentAddress) external view override returns (address) {
         return _getResultAsset(_investmentAddress);
     }
+
     /**
      * Gets the rewards and the token that they are denominated in
      *
