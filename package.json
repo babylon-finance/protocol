@@ -23,6 +23,7 @@
     "@tenderly/hardhat-tenderly": "^1.0.12",
     "@typechain/ethers-v5": "^6.0.5",
     "@typechain/hardhat": "^1.0.1",
+    "axios": "^0.21.4",
     "babel-plugin-module-resolver": "^4.1.0",
     "bluebird": "^3.7.2",
     "chai": "^4.3.4",
