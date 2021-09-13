@@ -980,15 +980,15 @@ describe('Garden', function () {
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
       await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s);
 
-      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
-
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
 
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
       expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
+      expect(principalAfter).to.equal(0);
     });
 
     [
