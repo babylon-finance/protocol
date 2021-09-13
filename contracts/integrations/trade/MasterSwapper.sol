@@ -74,6 +74,16 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 preTradeReceiveTokenBalance; // Total initial balance of token being bought
     }
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyGovernance() {
+        require(msg.sender == controller.owner(), 'Only governance can call this');
+        _;
+    }
+
     /* ============ Events ============ */
 
     /* ============ Constants ============ */
@@ -82,10 +92,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
-    ITradeIntegration internal immutable curve;
-    ITradeIntegration internal immutable univ3;
-    ITradeIntegration internal immutable synthetix;
-    ITradeIntegration internal immutable univ2;
+    ITradeIntegration internal curve;
+    ITradeIntegration internal univ3;
+    ITradeIntegration internal synthetix;
+    ITradeIntegration internal univ2;
 
     /* ============ Constructor ============ */
 
@@ -104,7 +114,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ITradeIntegration _univ3,
         ITradeIntegration _synthetix,
         ITradeIntegration _univ2
-    ) BaseIntegration('master swapper', _controller) {
+    ) BaseIntegration('master_swapper_v2', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
@@ -132,6 +142,29 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ) public override nonReentrant {
         _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
     }
+
+    /**
+     * Function to update the internal mappings of the swapper
+     * @param _index                   Index to update
+     * @param _newAddress              New address
+     */
+    function updateTradeAddress(uint256 _index, address _newAddress) external onlyGovernance {
+        require(_newAddress != address(0), 'New address i not valid');
+        if (_index == 0) {
+            curve = ITradeIntegration(_newAddress);
+        }
+        if (_index == 1) {
+            univ3 = ITradeIntegration(_newAddress);
+        }
+        if (_index == 2) {
+            synthetix = ITradeIntegration(_newAddress);
+        }
+        if (_index == 3) {
+            univ2 = ITradeIntegration(_newAddress);
+        }
+    }
+
+    /* ============ Internal Functions ============ */
 
     function _trade(
         address _strategy,
@@ -266,8 +299,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
         require(false, 'Master swapper could not swap');
     }
-
-    /* ============ Internal Functions ============ */
 
     function _checkCurveThroughReserves(
         address[3] memory _reserves,
