@@ -956,7 +956,7 @@ describe('Garden', function () {
   });
 
   describe('withdrawBySig', async function () {
-    it('can witdraw', async function () {
+    it('can withdraw', async function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
@@ -968,15 +968,27 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const gardenBalance = await usdc.balanceOf(garden.address);
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const gardenBalanceBefore = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
       await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
+
+      expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
     });
 
     [
@@ -1042,6 +1054,7 @@ describe('Garden', function () {
             [fee, minAmountOut.mul(-1), minAmountOut.sub(fee)],
           );
         }
+
         const supplyAfter = await garden.totalSupply();
         expect(supplyBefore.sub(supplyAfter)).to.eq(amountIn);
       });
@@ -1396,17 +1409,22 @@ describe('Garden', function () {
 
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
       await garden
         .connect(keeper)
         .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
 
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
+
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
     });
 
     [
