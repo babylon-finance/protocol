@@ -80,8 +80,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private constant maxTwapDeviation = 100;
-    uint160 private constant maxLiquidityDeviationFactor = 50;
+    int24 private constant maxTwapDeviation = 5000;
     int24 private constant baseThreshold = 1000;
 
     /* ============ State Variables ============ */
