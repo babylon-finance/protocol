@@ -56,7 +56,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('convex', _controller) {
+    constructor(IBabController _controller) PassiveIntegration('convex_v2', _controller) {
         _updateCache();
     }
 
