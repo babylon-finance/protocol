@@ -83,7 +83,7 @@ describe('ConvexStakeIntegrationTest', function () {
       // { token: addresses.tokens.USDC, name: 'USDC' },
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
-      addresses.convex.pools.slice(0, 2).forEach(({ crvpool, cvxpool, name }) => {
+      addresses.convex.pools.forEach(({ crvpool, cvxpool, name }) => {
         it(`can enter ${name} CRV pool and stake into convex`, async function () {
           await depositAndStakeStrategy(crvpool, cvxpool, token);
         });
@@ -132,17 +132,16 @@ describe('ConvexStakeIntegrationTest', function () {
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.closeTo(amount, amount.div(50));
+    expect(nav).to.be.gt(amount.sub(amount.div(50)));
 
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await convexRewardToken.balanceOf(strategyContract.address)).to.be.gt(0);
 
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
-    expect(await strategyContract.getNAV()).to.be.gt(nav);
+    expect(await strategyContract.getNAV()).to.be.gte(nav);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
-
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await convexRewardToken.balanceOf(strategyContract.address)).to.equal(0);
 
