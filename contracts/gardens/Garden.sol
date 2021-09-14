@@ -928,7 +928,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // TODO Backward compatibility with initial Gardens
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
-        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance);
+        _updateContributorWithdrawalInfo(_to, amountOut);
 
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
 
@@ -1087,14 +1087,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(
-        address _to,
-        uint256 _netflowQuantity,
-        uint256 _previousBalance
-    ) private {
-        Contributor storage contributor = contributors[_to];
+    function _updateContributorWithdrawalInfo(address _contributor, uint256 _netflowQuantity) private {
+        Contributor storage contributor = contributors[_contributor];
         // If sold everything
-        if (balanceOf(_to) == 0) {
+        if (balanceOf(_contributor) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
@@ -1107,6 +1103,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             //     ? 0
             //     : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
         }
+        rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, 0, false, pid);
         contributor.nonce = contributor.nonce + 1;
 
         // rewardsDistributor.updateCheckpointInGarden(_to, _netflowQuantity, false);
@@ -1154,4 +1151,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV7 is Garden {}
+contract GardenV8 is Garden {}

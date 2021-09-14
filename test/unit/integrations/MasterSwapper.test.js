@@ -57,6 +57,7 @@ describe('MasterSwapper', function () {
         name: 'USDC',
         pairs: [
           { to: addresses.tokens.USDC, symbol: 'USDC' },
+          { to: addresses.tokens.DPI, symbol: 'DPI' },
           { to: addresses.tokens.DAI, symbol: 'DAI' },
           { to: addresses.tokens.sUSD, symbol: 'sUSD' },
           { to: addresses.tokens.USDT, symbol: 'USDT' },
@@ -100,10 +101,9 @@ describe('MasterSwapper', function () {
             garden: garden,
             specificParams: [to, 0],
           });
-          console.log();
+          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
           await executeStrategy(strategyContract);
           let assetBalance = await assetContract.balanceOf(strategyContract.address);
-          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, to);
 
           const assetDecimals = await assetContract.decimals();
           const assetDecimalsDelta = 10 ** (18 - assetDecimals);

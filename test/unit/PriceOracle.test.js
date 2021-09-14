@@ -6,6 +6,18 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'DPI->USDC',
+    tokenIn: addresses.tokens.DPI,
+    tokenOut: addresses.tokens.USDC,
+    value: parse('445.4663380'),
+  },
+  {
+    name: 'USDC->DPI',
+    tokenIn: addresses.tokens.USDC,
+    tokenOut: addresses.tokens.DPI,
+    value: parse('0.002245565920494805'),
+  },
+  {
     name: 'WETH-> YEARN dai',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0x19d3364a399d251e894ac732651be8b0e4e85001',
