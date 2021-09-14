@@ -577,7 +577,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // To compare strategy power between all strategies we normalize their capital into DAI
         // Then, we need to take control of getPrice fluctuations along the time
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
-        _capital = SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, _capital.preciseMul(pricePerTokenUnit));
+        _capital = _capital.preciseMul(pricePerTokenUnit).mul(10**uint256(18).sub(ERC20(reserveAsset).decimals()));
         // Create or/and update the protocol quarter checkpoints if mining program is activated
         _updateProtocolPowerPerQuarter();
         // We update the strategy power per quarter normalized in DAI if mining program is activated
@@ -716,7 +716,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 : 0;
 
             // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower, strategyDetails[10]);
+            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
@@ -765,8 +765,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else if (userVotes < 0 && _profitData[1] == false) {
             // Voting against a strategy that got results below expected return provides rewards
             // to the voter (helping the protocol to only have good strategies)
+            uint256 votesAccounting = _profitData[0] ? totalVotes : _strategyDetails[5];
             babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(Math.abs(userVotes)).preciseDiv(totalVotes)
+                uint256(Math.abs(userVotes)).preciseDiv(votesAccounting)
             );
 
             bablCap = babl.mul(2); // Max cap
@@ -864,19 +865,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Get the BABL rewards (Mining program) for a LP profile
      * @param _strategyRewards      Strategy rewards
      * @param _contributorPower     Contributor power
-     * @param _normalizedAllocated  Capital allocated normalized into DAI
      */
-    function _getStrategyLPBabl(
-        uint256 _strategyRewards,
-        uint256 _contributorPower,
-        uint256 _normalizedAllocated
-    ) private view returns (uint256) {
+    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorPower) private view returns (uint256) {
         uint256 babl;
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
         // This is due to BABL has 18 decimals
-        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(
-            _contributorPower.preciseDiv(_normalizedAllocated)
-        );
+        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(_contributorPower);
         return babl;
     }
 
