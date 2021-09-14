@@ -97,4 +97,6 @@ interface IRewardsDistributor {
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
+
+    function updateGardenPower(address _contributor) external;
 }

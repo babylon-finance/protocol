@@ -174,29 +174,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     struct GardenPowerByTimestamp {
-        // DEPRECATED TODO Pending backward compatibility
         // Garden allocation checkpoints per timestamp per each garden
-        uint256 supply; // Checkpoint to keep track on garden supply
-        uint256 timestamp; // Checkpoint timestamps
-        uint256 power; // Garden power checkpoint (power is proportional to = principal * duration)
+        uint256 avgGardenBalance; // Checkpoint to keep track on garden supply
+        uint256 lastDepositAt; // Checkpoint timestamps
+        uint256 accGardenPower; // Garden power checkpoint (power is proportional to = principal * duration)
     }
     struct ContributorPerGarden {
-        // DEPRECATED TODO Pending backward compatibility
         // Checkpoints to keep track on the evolution of each contributor vs. each garden
         uint256 lastDepositAt; // Last deposit timestamp of each contributor in each garden
         uint256 initialDepositAt; // Checkpoint of the initial deposit
-        uint256[] timeListPointer; // Array of timestamps for each user in each garden
-        uint256 pid; // Garden contributor checkpoints counter to enable iteration
+        uint256[] timeListPointer; // DEPRECATED
+        uint256 pid; // DEPRECATED
         mapping(uint256 => TimestampContribution) tsContributions; // Sub-mapping all the contributor checkpoints
     }
 
     struct TimestampContribution {
-        // DEPRECATED TODO Pending backward compatibility
         // Sub-mapping with all checkpoints for deposits and withdrawals of garden users
-        uint256 supply; // Garden token balance of user in each garden along the time
-        uint256 timestamp; // Checkpoint time
-        uint256 timePointer; // Pointer
-        uint256 power; // Contributor power per checkpoint
+        uint256 avgBalance; // User avg balance in each garden along the time
+        uint256 timestamp; // DEPRECATED
+        uint256 timePointer; // DEPRECATED
+        uint256 power; // Contributor power
     }
     struct Checkpoints {
         // DEPRECATED
@@ -256,8 +253,29 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => uint256[3]) private gardenProfitSharing;
     mapping(address => bool) private gardenCustomProfitSharing;
 
-    uint256 private miningUpdatedAt; // Timestamp of last checkpoint update
+    uint256 private miningUpdatedAt; // Timestamp of last strategy capital update
     mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
+
+    // struct GardenPower {
+    //      uint256 lastDepositAt;
+    //      uint256 initializedAt;
+    //      uint256 accGardenPower;
+    //      uint256 avgGardenBalance;
+    //  }
+
+    //  struct ContributorPowerPerGarden {
+    //      uint256 lastDepositAt;
+    //      uint256 initialDepositAt;
+    //      uint256 power;
+    //      uint256 avgBalance;
+    //  }
+
+    // New garden deposit mapping
+    // mapping(address => GardenPower) private gardenPower;
+    //  mapping(address => mapping(address => ContributorPowerPerGarden)) private contributorPower;
+    // Boolean check to control users and garden migration into to new mapping architecture without checkpoints
+    mapping(address => mapping(address => bool)) private userMigrated;
+    mapping(address => bool) private gardenMigrated;
 
     /* ============ Constructor ============ */
 
@@ -292,6 +310,102 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategy.enteredAt() >= START_TIME) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
             _updateProtocolPrincipal(address(strategy), _capital, _addOrSubstract);
+        }
+    }
+
+    function updateGardenPower(address _contributor) external override onlyActiveGarden {
+        uint256 newSupply = ERC20(msg.sender).totalSupply();
+        uint256 newUserBalance = ERC20(msg.sender).balanceOf(_contributor);
+        _updateGardenPower(msg.sender, newSupply);
+        _updateContributorPower(msg.sender, _contributor, newUserBalance);
+    }
+
+    function _updateGardenPower(address _garden, uint256 _newSupply) internal {
+        uint256 gardenInitializedAt = IGarden(_garden).gardenInitializedAt();
+        if (!gardenMigrated[_garden] && gardenPid[_garden] > 0) {
+            // Backward compatibility, it executes only once to migrate into new mapping structure
+            GardenPowerByTimestamp storage gardenPower =
+                gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
+            gardenPower.accGardenPower = gardenPower.accGardenPower.add(
+                (block.timestamp.sub(gardenPower.lastDepositAt)).mul(gardenPower.avgGardenBalance)
+            );
+            gardenPower.avgGardenBalance = (
+                gardenPower.avgGardenBalance.mul(block.timestamp.sub(gardenInitializedAt)).add(_newSupply)
+            )
+                .div(block.timestamp.sub(gardenInitializedAt)); // TODO get accurate from checkpoints
+            gardenPower.lastDepositAt = block.timestamp;
+            gardenMigrated[_garden] = true;
+        } else {
+            // We use position "[gardenAddress][0]" in the mapping to storage of last update
+            GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
+            // The very first deposit == 0 of new Gardens or following deposits of migrated gardens
+            gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
+                ? 0
+                : gardenPower.accGardenPower.add(
+                    (block.timestamp.sub(gardenPower.lastDepositAt)).mul(gardenPower.avgGardenBalance)
+                );
+
+            gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
+                ? _newSupply
+                : (gardenPower.avgGardenBalance.mul(block.timestamp.sub(gardenInitializedAt)).add(_newSupply)).div(
+                    block.timestamp.sub(gardenInitializedAt)
+                );
+            gardenPower.lastDepositAt = block.timestamp;
+        }
+    }
+
+    function _updateContributorPower(
+        address _garden,
+        address _contributor,
+        uint256 _newUserBalance
+    ) internal {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        if (!userMigrated[_garden][_contributor] && contributor.pid > 0) {
+            // Backward compatibility, it executes only once to migrate into new mapping structure
+            TimestampContribution storage contributorTs =
+                contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
+            // we use 0 position from now on
+            TimestampContribution storage newContributorTs = contributor.tsContributions[0];
+            newContributorTs.power = contributorTs.power.add(
+                (block.timestamp.sub(contributor.lastDepositAt)).mul(contributorTs.avgBalance)
+            );
+            newContributorTs.avgBalance = (
+                contributorTs.avgBalance.mul(block.timestamp.sub(contributor.lastDepositAt)).add(_newUserBalance)
+            )
+                .div(block.timestamp.sub(contributor.lastDepositAt)); // TODO get accurate from checkpoints
+            contributor.lastDepositAt = block.timestamp;
+            userMigrated[_garden][_contributor] = true;
+        } else {
+            // We use position "[0]" in the mapping to storage of last update
+
+            // The very first deposit == 0 of new Gardens or following deposits of migrated gardens
+            contributor.tsContributions[0].power = contributor.lastDepositAt == 0
+                ? 0
+                : contributor.tsContributions[0].power.add(
+                    (block.timestamp.sub(contributor.lastDepositAt)).mul(contributor.tsContributions[0].avgBalance)
+                );
+
+            contributor.tsContributions[0].avgBalance = contributor.lastDepositAt == 0
+                ? _newUserBalance
+                : (
+                    contributor.tsContributions[0]
+                        .avgBalance
+                        .mul(block.timestamp.sub(contributor.initialDepositAt))
+                        .add(_newUserBalance)
+                )
+                    .div(block.timestamp.sub(contributor.initialDepositAt));
+            // initial deposits
+            if (contributor.initialDepositAt == 0) {
+                contributor.initialDepositAt = block.timestamp;
+            }
+            // Removing user
+            if (_newUserBalance == 0) {
+                contributor.initialDepositAt = 0;
+                contributor.lastDepositAt = 0;
+                contributor.tsContributions[0].power = 0;
+                contributor.tsContributions[0].avgBalance = 0;
+            }
+            contributor.lastDepositAt = block.timestamp;
         }
     }
 
@@ -411,8 +525,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory totalRewards = new uint256[](7);
         uint256 initialDepositAt;
         uint256 claimedAt;
+        console.log('finalized strategies', _finalizedStrategies[0]);
         // uint256 contributorPower;
-        (, initialDepositAt, claimedAt, , , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        (, initialDepositAt, claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        console.log('initial deposit - claimedAt', initialDepositAt, claimedAt);
         // update contributor power
         // contributorPower = _getContributorPower(_garden, _contributor, 0, block.timestamp);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -694,6 +810,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[0]: profit
         // profitData[1]: distance
 
+        console.log('conditional claim', strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt);
         // Positive strategies not yet claimed
         if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
             // In case of profits, the distribution of profits might substract the protocol fee beforehand:
@@ -701,23 +818,33 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ? strategyDetails[11].sub(strategyDetails[11].multiplyDecimal(PROFIT_PROTOCOL_FEE))
                 : 0;
             // Get the contributor power until the the strategy exit timestamp
+            console.log('CHECK before getContributorPower');
             uint256 contributorPower = _getContributorPower(_garden, _contributor, 0, strategyDetails[1]);
+            console.log('CHECK after getContributorPower', contributorPower);
+
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
+            console.log('CHECK strategist BABL', rewards[0]);
             // Get strategist profit rewards if profits
             rewards[1] = (strategist == _contributor && profitData[0] == true)
                 ? _getStrategyStrategistProfits(_garden, strategyDetails[11])
                 : 0;
+            console.log('CHECK strategist profits', rewards[1]);
 
             // Get steward rewards
             rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            console.log('CHECK steward BABL', rewards[2]);
+
             // If not profits _getStrategyStewardsProfits should not execute
             rewards[3] = profitData[0] == true
                 ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
                 : 0;
+            console.log('CHECK steward profit', rewards[3]);
 
             // Get LP rewards
             rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
+            console.log('CHECK LP BABL', rewards[4]);
+
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
@@ -1035,13 +1162,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[6]: accGardenPower (garden)
         // powerData[7]: avgGardenBalance (garden)
         // powerData[8]: totalSupply (garden)
-        (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
-            .getContributor(_contributor);
+        // (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
+        //    .getContributor(_contributor);
+        console.log('CHECK before getGardenAndContributor');
+        powerData = _getGardenAndContributor(_garden, _contributor);
+        console.log('powerData[0]: lastDepositAt (contributor)', powerData[0]);
+        console.log('powerData[1]: initialDepositAt (contributor)', powerData[1]);
+        console.log('powerData[2]: balance (contributor)', powerData[2]);
+        console.log('powerData[3]: power (contributor)', powerData[3]);
+        console.log('powerData[4]: avgBalance (contributor)', powerData[4]);
+        console.log('powerData[5]: lastDepositAt (garden)', powerData[5]);
+        console.log('powerData[6]: accGardenPower (garden)', powerData[6]);
+        console.log('powerData[7]: avgGardenBalance (garden)', powerData[7]);
+        console.log('powerData[8]: totalSupply (garden)', powerData[8]);
 
+        console.log(
+            'CHECK after getGardenAndContributor',
+            powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0
+        );
         if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
-            (powerData[5], powerData[6], powerData[7], powerData[8]) = IGarden(_garden).getGardenPower();
+            // (powerData[5], powerData[6], powerData[7], powerData[8]) = IGarden(_garden).getGardenPower();
             // First we update contributor and garden power as of block.timestamp values
             // We then time travel back to when the strategy exitedAt
             // TODO
@@ -1076,10 +1218,49 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
             uint256 balancePower = powerData[2].preciseDiv(powerData[8]);
             uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            // console.log('CHECK balance Power', balancePower);
-            // console.log('CHECK virtual Power', virtualPower);
+            console.log('CHECK balance Power', balancePower);
+            console.log('CHECK virtual Power', virtualPower);
             return virtualPower;
         }
+    }
+
+    function _getGardenAndContributor(address _garden, address _contributor) internal view returns (uint256[] memory) {
+        uint256[] memory powerData = new uint256[](9);
+        console.log('getting garden and contributor 1');
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        GardenPowerByTimestamp storage garden =
+            (gardenPid[_garden] > 0 && !gardenMigrated[_garden])
+                ? gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]]
+                : gardenPowerByTimestamp[_garden][0];
+        console.log('getting garden and contributor 2');
+
+        // powerData[0]: lastDepositAt (contributor)
+        // powerData[1]: initialDepositAt (contributor)
+        // powerData[2]: balance (contributor)
+        // powerData[3]: power (contributor)
+        // powerData[4]: avgBalance (contributor)
+        // powerData[5]: lastDepositAt (garden)
+        // powerData[6]: accGardenPower (garden)
+        // powerData[7]: avgGardenBalance (garden)
+        // powerData[8]: totalSupply (garden)
+        powerData[0] = contributor.lastDepositAt;
+        powerData[1] = contributor.initialDepositAt;
+        powerData[2] = ERC20(_garden).balanceOf(_contributor);
+        console.log('getting garden and contributor 3');
+
+        powerData[3] = (!userMigrated[_garden][_contributor] && contributor.pid > 0)
+            ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].power
+            : contributor.tsContributions[0].power;
+        powerData[4] = (!userMigrated[_garden][_contributor] && contributor.pid > 0)
+            ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].avgBalance
+            : contributor.tsContributions[0].avgBalance;
+        console.log('getting garden and contributor 4');
+
+        powerData[5] = garden.lastDepositAt;
+        powerData[6] = garden.accGardenPower;
+        powerData[7] = garden.avgGardenBalance;
+        powerData[8] = ERC20(_garden).totalSupply();
+        return powerData;
     }
 
     /**

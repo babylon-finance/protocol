@@ -118,8 +118,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 withdrawnSince;
         uint256 totalDeposits;
         uint256 nonce;
-        uint256 power;
-        uint256 avgBalance;
+        // uint256 power;
+        // uint256 avgBalance;
     }
 
     /* ============ State Variables ============ */
@@ -196,13 +196,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address[MAX_EXTRA_CREATORS] public override extraCreators;
 
     // Accumulated garden power
-    struct GardenPower {
-        uint256 lastDepositAt;
-        uint256 accGardenPower;
-        uint256 avgGardenBalance;
-    }
+    // struct GardenPower {
+    //    uint256 lastDepositAt;
+    //    uint256 accGardenPower;
+    //    uint256 avgGardenBalance;
+    //}
 
-    GardenPower private gardenPower;
+    // GardenPower private gardenPower;
 
     /* ============ Modifiers ============ */
 
@@ -495,6 +495,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256[] memory rewards = new uint256[](7);
 
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        console.log('CLAIMING REWARDS', msg.sender, rewards[5], rewards[6]);
         _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
 
         if (rewards[6] > 0) {
@@ -748,20 +749,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        //
-        //uint256 contributorPower =
-        //    rewardsDistributor.getContributorPower(
-        //        address(this),
-        //        _contributor,
-        //        contributor.initialDepositAt,
-        //        block.timestamp
-        //    );
-        //
+
+        uint256 contributorPower =
+            rewardsDistributor.getContributorPower(
+                address(this),
+                _contributor,
+                contributor.initialDepositAt,
+                block.timestamp
+            );
+
         uint256 balance = balanceOf(_contributor);
         uint256 lockedBalance = getLockedBalance(_contributor);
         return (
@@ -775,13 +775,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : 0,
             balance,
             lockedBalance,
-            //contributorPower,
-            contributor.power,
-            contributor.nonce,
-            contributor.avgBalance
+            contributorPower,
+            // contributor.power,
+            contributor.nonce
+            //contributor.avgBalance
         );
     }
 
+    /**
     function getGardenPower()
         external
         view
@@ -795,6 +796,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     {
         return (gardenPower.lastDepositAt, gardenPower.accGardenPower, gardenPower.avgGardenBalance, totalSupply());
     }
+    */
 
     /**
      * Checks balance locked for strategists in active strategies
@@ -979,21 +981,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // TODO Backward compatibility
         // The very first deposit == 0
-        gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
-            ? 0
-            : gardenPower.accGardenPower.add((block.timestamp.sub(gardenPower.lastDepositAt)).mul(totalSupply()));
+        // gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
+        //    ? 0
+        //    : gardenPower.accGardenPower.add((block.timestamp.sub(gardenPower.lastDepositAt)).mul(totalSupply()));
 
         // mint shares
         _mint(_to, sharesToMint);
 
         // The following call should always go after _minting new tokens
-        gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
-            ? totalSupply()
-            : (gardenPower.avgGardenBalance.mul(block.timestamp.sub(gardenInitializedAt)).add(totalSupply())).div(
-                block.timestamp.sub(gardenInitializedAt)
-            );
+        // gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
+        //    ? totalSupply()
+        //    : (gardenPower.avgGardenBalance.mul(block.timestamp.sub(gardenInitializedAt)).add(totalSupply())).div(
+        //        block.timestamp.sub(gardenInitializedAt)
+        //    );
 
-        gardenPower.lastDepositAt = block.timestamp;
+        // gardenPower.lastDepositAt = block.timestamp;
 
         _updateContributorDepositInfo(_to, previousBalance, _amountIn);
 
@@ -1057,10 +1059,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
-            contributor.avgBalance = balanceOf(_contributor);
+            // contributor.avgBalance = balanceOf(_contributor);
         }
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
+
+        /** 
         contributor.power = contributor.lastDepositAt == 0
             ? 0
             : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
@@ -1073,10 +1077,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 .div(block.timestamp.sub(contributor.initialDepositAt));
 
         // TODO USE SCALING factor to use blocks instead of seconds
+        */
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
 
-        // rewardsDistributor.updateCheckpointInGarden(_contributor, _reserveAssetQuantity, true);
+        rewardsDistributor.updateGardenPower(_contributor);
     }
 
     /**
@@ -1094,17 +1099,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
-            contributor.power = 0;
+            // contributor.power = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
-            contributor.power = contributor.lastDepositAt == 0
-                ? 0
-                : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
+            // contributor.power = contributor.lastDepositAt == 0
+            //     ? 0
+            //     : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
         }
         contributor.nonce = contributor.nonce + 1;
 
         // rewardsDistributor.updateCheckpointInGarden(_to, _netflowQuantity, false);
+        rewardsDistributor.updateGardenPower(_to);
     }
 
     /**

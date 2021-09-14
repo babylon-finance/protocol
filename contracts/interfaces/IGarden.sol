@@ -58,6 +58,7 @@ interface IGarden {
 
     // function lastDepositAt() external view returns (uint256);
 
+    /**
     function getGardenPower()
         external
         view
@@ -67,14 +68,13 @@ interface IGarden {
             uint256,
             uint256
         );
-
+    */
     function isGardenStrategy(address _strategy) external view returns (bool);
 
     function getContributor(address _contributor)
         external
         view
         returns (
-            uint256,
             uint256,
             uint256,
             uint256,
