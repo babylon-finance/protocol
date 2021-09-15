@@ -159,7 +159,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
 
     /* ============ External Functions ============ */
 
-    function newMethod() public view returns (string memory) {
+    function newMethod() public pure returns (string memory) {
         return 'foobar';
     }
 }

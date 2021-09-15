@@ -139,8 +139,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     bool private active; // DEPRECATED;
     bool public override privateGarden;
 
-    // Keeps track of the garden balance in reserve asset.
-    uint256 public override principal;
+    uint256 private principal; // DEPRECATED;
 
     // The amount of funds set aside to be paid as rewards. Should NEVER be spent
     // on anything else ever.
@@ -924,13 +923,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
-
+        // TODO Backward compatibility with initial Gardens
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
         _updateContributorWithdrawalInfo(_to, amountOut, previousBalance);
 
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
-        principal = principal.sub(amountOut);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -947,9 +945,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
 
-        // if deposit limit is 0, then there is no deposit limit
         if (maxDepositLimit > 0) {
-            _require(principal.add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            // This is wrong; but calculate principal would be gas expensive
+            _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
@@ -998,9 +996,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         gardenPower.lastDepositAt = block.timestamp;
 
         _updateContributorDepositInfo(_to, previousBalance, _amountIn);
-
-        // account deposit in the principal
-        principal = principal.add(_amountIn);
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1087,26 +1082,31 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(
-        address _to,
-        uint256 _netflowQuantity,
-        uint256 _previousBalance
-    ) private {
-        Contributor storage contributor = contributors[_to];
+    function _updateContributorWithdrawalInfo(address _contributor, uint256 _netflowQuantity, uint256 _previousBalance) private {
+        Contributor storage contributor = contributors[_contributor];
         // If sold everything
-        if (balanceOf(_to) == 0) {
+        if (balanceOf(_contributor) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
             contributor.power = 0;
+            contributor.avgBalance = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
             contributor.power = contributor.lastDepositAt == 0
                 ? 0
                 : contributor.power.add(_previousBalance.mul(block.timestamp.sub(contributor.lastDepositAt)));
+            contributor.avgBalance = contributor.lastDepositAt == 0
+                ? balanceOf(_contributor)
+                : contributor
+                    .avgBalance
+                    .mul(block.timestamp.sub(contributor.initialDepositAt))
+                    .add(balanceOf(_contributor))
+                    .div(block.timestamp.sub(contributor.initialDepositAt));
         }
+        // rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, 0, false, pid);
         contributor.nonce = contributor.nonce + 1;
 
         // rewardsDistributor.updateCheckpointInGarden(_to, _netflowQuantity, false);
@@ -1153,4 +1153,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV5 is Garden {}
+contract GardenV8 is Garden {}

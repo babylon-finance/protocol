@@ -101,7 +101,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         // Approve spending of the tokens
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
-            if (_tokensIn[i] != address(0)) {
+            if (_tokensIn[i] != address(0) && _tokensIn[i] != ETH_ADD_CURVE) {
                 poolInfo.strategy.invokeApprove(_getSpender(_pool), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
@@ -178,18 +178,34 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _pool                    Address of the pool
      * @return address                 Total supply of the token
      */
-    function totalSupply(address _pool) external view returns (uint256) {
+    function totalSupply(address _pool) external view override returns (uint256) {
         return _totalSupply(_pool);
+    }
+
+    /**
+     * Returns the underlying coin
+     * @param _pool                    Address of the pool
+     * @param _i                       Index of coin in the pool
+     * @return address                 Underlying coin
+     * @return uint256                 Rate from coin to underlying
+     */
+    function getUnderlyingAndRate(bytes calldata _pool, uint256 _i) external view override returns (address, uint256) {
+        return _getUnderlyingAndRate(_pool, _i);
     }
 
     function getPoolTokens(
         bytes calldata, /* _pool */
         bool /* forNAV */
-    ) external view virtual override returns (address[] memory);
+    ) public view virtual override returns (address[] memory);
 
     function getPoolWeights(
         bytes calldata /*_pool */
     ) external view virtual override returns (uint256[] memory);
+
+    function getRewardTokens(bytes calldata _pool) external view virtual override returns (address[] memory) {
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        return _getRewardTokens(poolAddress);
+    }
 
     /* ============ Internal Functions ============ */
 
@@ -254,7 +270,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 12);
         require(
             (IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
@@ -267,7 +282,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      * @param _poolInfo               Struct containing pool information used in internal functions
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
-        address poolAddress = BytesLib.decodeOpDataAddressAssembly(_poolInfo.pool, 12);
         require(
             IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,
@@ -340,6 +354,10 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         return IERC20(_pool).totalSupply();
     }
 
+    function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view virtual returns (address, uint256) {
+        return (getPoolTokens(_pool, false)[_i], 1e18);
+    }
+
     function _getSpender(
         bytes calldata /* _pool */
     ) internal view virtual returns (address);
@@ -350,5 +368,11 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
 
     function _getPool(address _pool) internal view virtual returns (address) {
         return _pool;
+    }
+
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal view virtual returns (address[] memory) {
+        return new address[](1);
     }
 }

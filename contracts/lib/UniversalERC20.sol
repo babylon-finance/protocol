@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.7.6;
 
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
@@ -21,6 +23,7 @@ library UniversalERC20 {
 
         if (isETH(token)) {
             address(uint160(to)).transfer(amount);
+            return true;
         } else {
             token.safeTransfer(to, amount);
             return true;

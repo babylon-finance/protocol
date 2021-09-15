@@ -138,11 +138,7 @@ contract LendOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden, _integration);
-        return (
-            assetToken,
-            IERC20(ILendIntegration(_integration).getInvestmentToken(assetToken)).balanceOf(msg.sender),
-            1
-        );
+        return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
     /**
@@ -168,20 +164,21 @@ contract LendOperation is Operation {
             SafeDecimalMath.normalizeAmountTokens(lendToken, _garden.reserveAsset(), assetTokenAmount).preciseDiv(
                 price
             );
-        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+        address rewardsToken = _getRewardToken(_integration);
+        if (rewardsToken != address(0)) {
             uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
-            uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
-            // We add rewards
-            NAV = NAV.add(
-                SafeDecimalMath
-                    .normalizeAmountTokens(
-                    ILendIntegration(_integration).getRewardToken(),
-                    _garden.reserveAsset(),
-                    rewardsAmount
-                )
-                    .preciseDiv(priceRewards)
-            );
-        } catch {}
+            if (rewardsAmount > 0) {
+                uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
+                // We add rewards
+                if (priceRewards != 0) {
+                    NAV = NAV.add(
+                        SafeDecimalMath
+                            .normalizeAmountTokens(rewardsToken, _garden.reserveAsset(), rewardsAmount)
+                            .preciseDiv(priceRewards)
+                    );
+                }
+            }
+        }
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -238,15 +235,14 @@ contract LendOperation is Operation {
                 _garden.reserveAsset()
             );
         }
-        // TODO: remove try/catch once all integrations implemenent
-        // ILendIntegration
-        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+        address rewardsToken = _getRewardToken(_integration);
+        if (rewardsToken != address(0)) {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
                 IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
             }
-        } catch {}
+        }
     }
 
     function _getRemainingDebt(
@@ -259,5 +255,13 @@ contract LendOperation is Operation {
         }
         uint256 price = _getPrice(_borrowToken, _assetToken);
         return _remaining.preciseMul(price);
+    }
+
+    function _getRewardToken(address _integration) private view returns (address) {
+        try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
+            return rewardsToken;
+        } catch {
+            return address(0);
+        }
     }
 }
