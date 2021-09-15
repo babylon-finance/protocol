@@ -6,7 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
-  getController
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
