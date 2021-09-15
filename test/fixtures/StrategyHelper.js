@@ -30,7 +30,7 @@ const USDC_STRATEGY_PARAMS = [
 ];
 
 const WBTC_STRATEGY_PARAMS = [
-  from(1e8), // _maxCapitalRequested
+  from(1000 * 1e8), // _maxCapitalRequested
   from(1e6), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn

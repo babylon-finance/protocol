@@ -38,7 +38,7 @@ contract SafeBeaconProxy is BeaconProxy {
      *
      * - `beacon` must be a contract with the interface {IBeacon}.
      */
-    constructor(address beacon, bytes memory data) payable BeaconProxy(beacon, data) {}
+    constructor(address beacon, bytes memory data) public payable BeaconProxy(beacon, data) {}
 
     /**
      * @dev Accepts all ETH transfers but does not proxy calls to the implementation.

@@ -73,7 +73,7 @@ contract AaveLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getRewardToken() internal pure override returns (address) {
+    function _getRewardToken() internal view override returns (address) {
         return AAVE;
     }
 

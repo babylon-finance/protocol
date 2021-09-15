@@ -1,7 +1,3 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.7.6;
-
 interface IGauge {
     function lp_token() external view returns (address);
 

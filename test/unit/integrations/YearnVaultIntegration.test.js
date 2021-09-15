@@ -35,13 +35,13 @@ describe('YearnVaultIntegrationTest', function () {
 
     describe('getPricePerShare', function () {
       it('get price per share', async function () {
-        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1008114909237872240');
+        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1053972283161872856');
       });
     });
 
     describe('getExpectedShares', function () {
       it('get expected shares', async function () {
-        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('991950412434623098');
+        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('948791553607123083');
       });
     });
 
@@ -63,7 +63,7 @@ describe('YearnVaultIntegrationTest', function () {
           { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
           { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
           { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
-          { vault: '0xda816459f1ab5631232fe5e97a05bbbb94970c95', symbol: 'yvDAI' }, // yvDAI vault
+          { vault: '0x19D3364A399d251E894aC732651be8B0E4e85001', symbol: 'yvDAI' }, // yvDAI vault
         ].forEach(({ vault, symbol }) => {
           it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
             const vaultContract = await ethers.getContractAt('IYearnVault', vault);
@@ -83,7 +83,7 @@ describe('YearnVaultIntegrationTest', function () {
             let amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV
-            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(10));
+            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
             const assetContract = await ethers.getContractAt(

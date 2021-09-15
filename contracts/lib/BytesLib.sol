@@ -506,11 +506,6 @@ library BytesLib {
         return abi.decode(_data, (address));
     }
 
-    function decodeOpDataAddressAndUint(bytes calldata _data) internal pure returns (address, uint256) {
-        // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
-        return abi.decode(_data, (address, uint256));
-    }
-
     function decodeOpDataAsType(
         bytes memory _data,
         uint8 _type,
@@ -529,7 +524,5 @@ library BytesLib {
             // returning bytes type
             return slice(_data, _offset, 20); // to return address type better use toAddress(_data, _offset);
         }
-        // Default uint
-        return slice(_data, _offset, 1);
     }
 }

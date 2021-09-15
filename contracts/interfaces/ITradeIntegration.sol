@@ -31,4 +31,10 @@ interface ITradeIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external;
+
+    function getConversionRates(
+        address _sourceToken,
+        address _destinationToken,
+        uint256 _sourceQuantity
+    ) external returns (uint256, uint256);
 }

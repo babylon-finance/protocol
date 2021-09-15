@@ -86,7 +86,6 @@ cache
 /packages/.DS_Store
 
 coverage.json
-babylon-token-list.json
 
 types
 typechain

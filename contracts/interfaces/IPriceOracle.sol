@@ -30,8 +30,6 @@ interface IPriceOracle {
 
     function getPrice(address _assetOne, address _assetTwo) external view returns (uint256);
 
-    function getPriceNAV(address _assetOne, address _assetTwo) external view returns (uint256);
-
     function getCompoundExchangeRate(address _asset) external view returns (uint256);
 
     function getCreamExchangeRate(address _asset) external view returns (uint256);

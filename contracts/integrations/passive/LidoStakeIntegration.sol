@@ -201,7 +201,7 @@ contract LidoStakeIntegration is PassiveIntegration {
         return true;
     }
 
-    function _getAssetAfterExitPreAction(
+    function _getAssetAfterExitAction(
         address /* _asset */
     ) internal pure override returns (address) {
         return address(stETH);

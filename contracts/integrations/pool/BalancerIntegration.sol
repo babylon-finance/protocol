@@ -55,10 +55,7 @@ contract BalancerIntegration is PoolIntegration {
 
     /* ============ External Functions ============ */
 
-    function getPoolTokens(
-        bytes calldata _pool,
-        bool /* forNAV */
-    ) public view override returns (address[] memory) {
+    function getPoolTokens(bytes calldata _pool, bool forNAV) external view override returns (address[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return IBPool(poolAddress).getCurrentTokens();
     }
@@ -110,7 +107,7 @@ contract BalancerIntegration is PoolIntegration {
         return coreFactory.isBPool(poolAddress);
     }
 
-    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
+    function _getSpender(bytes calldata _pool) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
@@ -136,7 +133,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -172,7 +169,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        pure
+        view
         override
         returns (
             address,

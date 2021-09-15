@@ -27,11 +27,7 @@ import {PriceOracle} from '../PriceOracle.sol';
  * Uses Uniswap V3 to get a price of a token pair
  */
 contract RevertOracle is PriceOracle {
-    function getPrice(
-        address, /* _tokenIn */
-        address /* _tokenOut */
-    ) public pure override returns (uint256) {
+    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
         require(false, 'Price not found');
-        return 0;
     }
 }

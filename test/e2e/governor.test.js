@@ -34,7 +34,7 @@ describe('governor', function () {
     });
 
     // propose
-    await governor.connect(voters[0])['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+    await governor.connect(voters[0])['propose(address[],uint256[],bytes[],string)'](...args);
 
     // mine blocks to reach the block where the voting starts
     await increaseBlock(await governor.votingDelay());

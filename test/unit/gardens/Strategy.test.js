@@ -15,7 +15,7 @@ const {
 const { increaseTime, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
-const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ONE_ETH, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('../../fixtures/StrategyHelper');
 const ZEROMAXCAP_STRATEGY_PARAMS = [
@@ -47,7 +47,6 @@ describe('Strategy', function () {
   let balancerIntegration;
   let oneInchPoolIntegration;
   let yearnVaultIntegration;
-  let masterSwapper;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -56,7 +55,7 @@ describe('Strategy', function () {
         'buy',
         'vote',
         [signer1, signer2, signer3],
-        masterSwapper.address,
+        uniswapV3TradeIntegration.address,
         strategies[i].garden,
       );
       retVal.push(strategy);
@@ -83,7 +82,6 @@ describe('Strategy', function () {
       balancerIntegration,
       oneInchPoolIntegration,
       yearnVaultIntegration,
-      masterSwapper,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -405,7 +403,7 @@ describe('Strategy', function () {
       );
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(10));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(100));
     });
 
     it('should get the NAV value of a lend strategy', async function () {
@@ -421,7 +419,7 @@ describe('Strategy', function () {
       expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(50));
     });
 
-    it.skip('should get the NAV value of a BalancerPool strategy', async function () {
+    it('should get the NAV value of a BalancerPool strategy', async function () {
       const strategyContract = await createStrategy(
         'lp',
         'active',
@@ -452,7 +450,7 @@ describe('Strategy', function () {
 
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(20));
+      expect(nav).to.be.closeTo(ONE_ETH.mul(1), ONE_ETH.div(100));
     });
 
     it('should get the NAV value of a UniswapPool strategy', async function () {
@@ -568,7 +566,7 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong1).to.be.closeTo(
-        '7465310015245664',
+        '14600157511291044',
         reserveAssetRewardsSetAsideLong1.div(100),
       );
 
@@ -583,7 +581,7 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong3 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong3).to.be.closeTo(
-        '7457155378612255',
+        '14544610528254611',
         reserveAssetRewardsSetAsideLong3.div(100),
       );
 
@@ -592,7 +590,7 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong4 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong4).to.be.closeTo(
-        '15746963198401948',
+        '30759450342788913',
         reserveAssetRewardsSetAsideLong4.div(100),
       );
 
@@ -601,7 +599,7 @@ describe('Strategy', function () {
 
       const reserveAssetRewardsSetAsideLong5 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong5).to.be.closeTo(
-        '24032618688505816',
+        '46945477482079494',
         reserveAssetRewardsSetAsideLong5.div(100),
       );
     });
@@ -630,27 +628,27 @@ describe('Strategy', function () {
       await finalizeStrategy(long1);
 
       const treasuryBalance1 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('27488436671748554'), treasuryBalance1.div(20));
+      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('29866719170430347'), treasuryBalance1.div(100));
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
       const treasuryBalance2 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('27488436671748554'), treasuryBalance2.div(20));
+      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('29866719170430347'), treasuryBalance2.div(100));
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('29974155131285971'), treasuryBalance3.div(20));
+      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('34714922679848550'), treasuryBalance3.div(100));
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
       const treasuryBalance4 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('32737424404549201'), treasuryBalance4.div(20));
+      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('40119869284693317'), treasuryBalance4.div(100));
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
       const treasuryBalance5 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('35499309567917156'), treasuryBalance5.div(20));
+      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('45515211664456843'), treasuryBalance5.div(100));
     });
 
     it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {

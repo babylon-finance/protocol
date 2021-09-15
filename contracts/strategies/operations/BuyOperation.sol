@@ -78,7 +78,7 @@ contract BuyOperation is Operation {
         uint8, /* _assetStatus */
         bytes calldata _data,
         IGarden, /* _garden */
-        address _integration
+        address /* _integration */
     )
         external
         override
@@ -89,8 +89,8 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        _trade(_data, _integration, _asset, _capital);
         address token = BytesLib.decodeOpDataAddress(_data);
+        IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, IERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -105,7 +105,7 @@ contract BuyOperation is Operation {
         uint256 _percentage,
         bytes calldata _data,
         IGarden _garden,
-        address _integration
+        address /* _integration */
     )
         external
         override
@@ -118,14 +118,11 @@ contract BuyOperation is Operation {
     {
         address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        ITradeIntegration(_integration).trade(
-            msg.sender,
+        IStrategy(msg.sender).trade(
             token,
             IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset(),
-            2 // TO be able to get back an univ2. Univ2 checks more than 1
+            _garden.reserveAsset()
         );
-        return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
     /**
@@ -145,24 +142,12 @@ contract BuyOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
+        uint256 price = _getPrice(_garden.reserveAsset(), token);
         uint256 NAV =
             SafeDecimalMath
                 .normalizeAmountTokens(token, _garden.reserveAsset(), IERC20(token).balanceOf(msg.sender))
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
-    }
-
-    /* Private Function */
-
-    function _trade(
-        bytes calldata _data,
-        address _integration,
-        address _asset,
-        uint256 _capital
-    ) private {
-        (address token, uint256 minimum) = BytesLib.decodeOpDataAddressAndUint(_data);
-        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }

@@ -49,19 +49,19 @@ describe('BabylonGovernor', function () {
 
   async function claimTokens(voters) {
     for (const voter of voters) {
-      await bablToken.connect(voter.voter).claimMyTokens({ gasPrice: 0 });
+      await bablToken.connect(voter.voter).claimMyTokens();
     }
   }
 
   async function selfDelegation(voters) {
     for (const voter of voters) {
-      await bablToken.connect(voter.voter).delegate(voter.voter.address, { gasPrice: 0 });
+      await bablToken.connect(voter.voter).delegate(voter.voter.address);
     }
   }
 
   async function castVotes(id, voters, governor) {
     for (const voter of voters) {
-      await governor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support), { gasPrice: 0 });
+      await governor.connect(voter.voter).castVote(id, ethers.BigNumber.from(voter.support));
     }
   }
 
@@ -75,7 +75,9 @@ describe('BabylonGovernor', function () {
 
     const description = '<proposal description>';
     const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('<proposal description>'));
-    const id = await governor.hashProposal([ADDRESS_ZERO], [value], ['0x'], descriptionHash, { gasPrice: 0 });
+
+    const id = await governor.hashProposal([ADDRESS_ZERO], [value], ['0x'], descriptionHash);
+
     const proposalObject = {
       id,
       args: [[ADDRESS_ZERO], [value], ['0x'], description],
@@ -159,7 +161,7 @@ describe('BabylonGovernor', function () {
       const args1 = [[ADDRESS_ZERO], [value, value], ['0x'], '<proposal description>'];
       // propose
       await expect(
-        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1, { gasPrice: 0 }),
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
       ).to.be.revertedWith('Governor: invalid proposal length');
     });
     it('can NOT propose with invalid proposal length (targets vs. calldatas)', async function () {
@@ -167,7 +169,7 @@ describe('BabylonGovernor', function () {
       const args1 = [[ADDRESS_ZERO], [value], ['0x', '0x'], '<proposal description>'];
       // propose
       await expect(
-        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1, { gasPrice: 0 }),
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
       ).to.be.revertedWith('Governor: invalid proposal length');
     });
     it('can NOT propose an empty proposal', async function () {
@@ -175,16 +177,16 @@ describe('BabylonGovernor', function () {
       const args1 = [[], [], [], '<proposal description>'];
       // propose
       await expect(
-        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1, { gasPrice: 0 }),
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args1),
       ).to.be.revertedWith('Governor: empty proposal');
     });
     it('can NOT repeat a proposal', async function () {
       const { args } = await getProposal(babGovernor);
       // propose
-      await expect(babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 }))
-        .to.be.not.reverted;
+      await expect(babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args)).to.be.not
+        .reverted;
       await expect(
-        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 }),
+        babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args),
       ).to.be.revertedWith('Governor: proposal already exists');
     });
 
@@ -192,7 +194,7 @@ describe('BabylonGovernor', function () {
       const { id, args } = await getProposal(babGovernor);
 
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       const [
         proposalId,
@@ -240,7 +242,7 @@ describe('BabylonGovernor', function () {
       await bablToken.connect(voter1).transfer(signer1.address, ethers.utils.parseEther('100'));
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -259,7 +261,7 @@ describe('BabylonGovernor', function () {
       const { id, args, voters } = await getProposal(babGovernor);
 
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -282,7 +284,7 @@ describe('BabylonGovernor', function () {
       const { id, args, voters } = await getProposal(babGovernor);
 
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 4 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -308,9 +310,9 @@ describe('BabylonGovernor', function () {
       const { id, args } = await getProposal(mockGovernor);
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
-      await expect(mockGovernor.connect(voter1).castVote(id, voteType.For, { gasPrice: 0 })).to.be.revertedWith(
+      await expect(mockGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
       );
       expect(await mockGovernor.proposalDeadline(id)).to.be.gt((await ethers.provider.getBlock()).number);
@@ -321,12 +323,12 @@ describe('BabylonGovernor', function () {
       const { id, args } = await getProposal(mockGovernor);
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // We vote after the deadline
       await increaseBlock(11);
 
-      await expect(mockGovernor.connect(voter1).castVote(id, voteType.For, { gasPrice: 0 })).to.be.revertedWith(
+      await expect(mockGovernor.connect(voter1).castVote(id, voteType.For)).to.be.revertedWith(
         'Governor: vote not currently active',
       );
       expect(await mockGovernor.proposalDeadline(id)).to.be.lte((await ethers.provider.getBlock()).number);
@@ -346,7 +348,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -374,7 +376,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -406,7 +408,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -436,7 +438,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -466,7 +468,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -478,7 +480,7 @@ describe('BabylonGovernor', function () {
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Active);
 
-      await mockGovernor.connect(voter1)['cancel(uint256)'](id, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['cancel(uint256)'](id);
 
       const state2 = await mockGovernor.state(id);
       expect(state2).to.eq(proposalState.Canceled);
@@ -493,7 +495,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -505,7 +507,7 @@ describe('BabylonGovernor', function () {
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Defeated);
 
-      await mockGovernor.connect(voter1)['cancel(uint256)'](id, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['cancel(uint256)'](id);
 
       const state2 = await mockGovernor.state(id);
       expect(state2).to.eq(proposalState.Canceled);
@@ -521,7 +523,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -537,7 +539,7 @@ describe('BabylonGovernor', function () {
       const voter1Balance = await bablToken.balanceOf(voter1.address);
       // Enable BABL token transfers to remove tokens from proposer running low on babl tokens
       await bablToken.connect(owner).enableTokensTransfers();
-      await bablToken.connect(voter1).transfer(voter2.address, voter1Balance, { gasPrice: 0 });
+      await bablToken.connect(voter1).transfer(voter2.address, voter1Balance);
 
       const state = await mockGovernor.state(id);
       expect(state).to.eq(proposalState.Active);
@@ -558,7 +560,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -584,7 +586,7 @@ describe('BabylonGovernor', function () {
       });
 
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
 
       // 1 blocks to reach the block where the voting starts
       await increaseBlock(1);
@@ -623,7 +625,7 @@ describe('BabylonGovernor', function () {
     it('state pending', async function () {
       const { id, args, voters } = await getProposal(babGovernor);
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
       // 0: pending state
       const state = await babGovernor.state(id);
@@ -632,7 +634,7 @@ describe('BabylonGovernor', function () {
     it('state active', async function () {
       const { id, args, voters } = await getProposal(babGovernor);
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       // 1 block to reach the block where the voting starts
       await increaseBlock(1);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
@@ -643,10 +645,10 @@ describe('BabylonGovernor', function () {
     it('state canceled', async function () {
       const { id, args, voters } = await getProposal(babGovernor);
       // propose
-      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       // 1 block to reach the block where the voting starts
       await increaseBlock(1);
-      await babGovernor.connect(voter1)['cancel(uint256)'](id, { gasPrice: 0 });
+      await babGovernor.connect(voter1)['cancel(uint256)'](id);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
       // 2: canceled state
       const state = await babGovernor.state(id);
@@ -662,7 +664,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       // 15 blocks to pass the voting deadline
       await increaseBlock(15);
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
@@ -681,7 +683,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
@@ -731,7 +733,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
       // increase blocks to reach the voting deadline
@@ -754,7 +756,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
       // increase blocks to reach the voting deadline
@@ -778,15 +780,19 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       // await castVotes(id, voters, mockGovernor);
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      console.log('forVotes', forVotes.toString());
+      console.log('againstVotes', againstVotes.toString());
+      console.log('abstainVotes', abstainVotes.toString());
 
       // increase blocks to reach the voting deadline
       await increaseBlock(15);
       // Anyone can queue
       // await mockGovernor.connect(voter2)['queue(uint256)'](id);
+      console.log('CHECK state', (await mockGovernor.state(id)).toString());
       // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
       // 6: Expired state
       const state = await mockGovernor.state(id);
@@ -804,7 +810,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
       const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
@@ -831,7 +837,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       expect(await mockGovernor.proposalEta(id)).to.be.equal(0);
     });
     it('get timestamp for schedule operation', async function () {
@@ -846,7 +852,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
       // increase blocks to reach the voting deadline
@@ -873,7 +879,7 @@ describe('BabylonGovernor', function () {
         ],
       });
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       await castVotes(id, voters, mockGovernor);
 
@@ -963,7 +969,7 @@ describe('BabylonGovernor', function () {
       expect(signatures.toString()).to.equal('');
       expect(calldatas.toString()).to.equal('');
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
       // Proposal proposed and registered, not empty
       const [targets2, values2, signatures2, calldatas2] = await mockGovernor.getActions(id);
@@ -978,7 +984,7 @@ describe('BabylonGovernor', function () {
       const [mockGovernor, mockTimelock] = await getGovernorMock(10);
       const { id, args, voters } = await getProposal(mockGovernor);
       // propose
-      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args);
       await increaseBlock(1);
 
       const [voter1HasVoted, voter1Support, voter1Votes] = await mockGovernor.getReceipt(id, voter1.address);
