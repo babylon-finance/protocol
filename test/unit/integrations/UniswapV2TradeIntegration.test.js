@@ -30,6 +30,18 @@ describe('UniswapV2TradeIntegration', function () {
         pairs: [
           { asset: addresses.tokens.DAI, symbol: 'DAI' },
           { asset: addresses.tokens.USDC, symbol: 'USDC' },
+          { asset: addresses.tokens.WBTC, symbol: 'COMP' },
+          { asset: addresses.tokens.WETH, symbol: 'WETH' },
+        ],
+      },
+      {
+        token: addresses.tokens.USDC,
+        name: 'USDC',
+        pairs: [
+          { asset: addresses.tokens.DAI, symbol: 'DAI' },
+          { asset: addresses.tokens.USDC, symbol: 'USDC' },
+          { asset: addresses.tokens.WBTC, symbol: 'COMP' },
+          { asset: addresses.tokens.WETH, symbol: 'WETH' },
         ],
       },
     ].forEach(({ token, name, pairs }) => {
@@ -48,16 +60,6 @@ describe('UniswapV2TradeIntegration', function () {
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
 
-          const strategyContract = await getStrategy({
-            kind: 'buy',
-            state: 'vote',
-            integrations: univ2TradeIntegration.address,
-            garden: garden,
-            specificParams: [asset, 2],
-          });
-
-          await executeStrategy(strategyContract);
-
           const tokenPriceInAsset = await priceOracle.connect(owner).getPriceNAV(token, asset);
 
           const assetDecimals = await assetContract.decimals();
@@ -65,6 +67,19 @@ describe('UniswapV2TradeIntegration', function () {
 
           const tokenDecimals = await tokenContract.decimals();
           const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
+
+          // Min amount is based on current price with 10% slippage
+          const minAmountPerBigUnit = tokenPriceInAsset.mul(90).div(100).div(tokenDecimalsDelta);
+
+          const strategyContract = await getStrategy({
+            kind: 'buy',
+            state: 'vote',
+            integrations: univ2TradeIntegration.address,
+            garden: garden,
+            specificParams: [asset, minAmountPerBigUnit],
+          });
+
+          await executeStrategy(strategyContract);
 
           const assetBalance = await assetContract.balanceOf(strategyContract.address);
           const expectedBalance = tokenPriceInAsset
