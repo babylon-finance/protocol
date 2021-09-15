@@ -17,11 +17,14 @@
 */
 
 pragma solidity 0.7.6;
-// import 'hardhat/console.sol';
+
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
 import {ICurvePoolInt128} from '../../interfaces/external/curve/ICurvePoolInt128.sol';
+import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
+import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -41,20 +44,22 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ Constant ============ */
     address private constant TRICRYPTO = 0x331aF2E331bd619DefAa5DAc6c038f53FCF9F785; // Pool only takes ETH
     address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
+    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
+    // Address of Curve Registry
+    ICurveAddressProvider internal constant curveAddressProvider =
+        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     /* ============ State Variables ============ */
-    // Mapping of asset addresses to lp tokens
-    // Some curve pools use lp_token() others token() and somes don't even have the methods public
-    mapping(address => address) public depositToToken;
+
+    // Mapping of pools to deposit contract
+    mapping(address => address) public poolToDeposit;
 
     // Whether to deposit using the underlying coins
     mapping(address => bool) public usesUnderlying;
 
     // Whether it supports the underlying param in add liquidity and remove liquidity
     mapping(address => bool) public supportsUnderlyingParam;
-
-    // Whether addresses use the int128 coins method
-    mapping(address => bool) public coinsInt128;
 
     /* ============ Constructor ============ */
 
@@ -64,54 +69,44 @@ contract CurvePoolIntegration is PoolIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {
-        depositToToken[0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7] = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490; // 3pool
-        depositToToken[0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F] = 0xb19059ebb43466C323583928285a49f558E572Fd; // hbtc
-        depositToToken[0x93054188d876f558f4a66B2EF1d97d16eDf0895B] = 0x49849C98ae39Fff122806C06791Fa73784FB3675; // renbtc
-        depositToToken[0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714] = 0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3; // sbtc
-        depositToToken[0xc5424B857f758E906013F3555Dad202e4bdB4567] = 0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c; // seth
-
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
-        usesUnderlying[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
-        usesUnderlying[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
+        usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
+        usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt
+        usesUnderlying[0x06364f10B501e868329afBc005b3492902d6C763] = true; // PAX
         usesUnderlying[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
-        usesUnderlying[0xFCBa3E75865d2d561BE8D220616520c171F12851] = true; // susd
-        usesUnderlying[0xac795D2c97e60DF6a99ff1c814727302fD747a80] = true; // usdt
-        usesUnderlying[0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3] = true; // y
+        usesUnderlying[0x79a8C46DeA5aDa233ABaFFD40F3A0A2B1e5A4F27] = true; // busd
+        usesUnderlying[0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51] = true; // y
+        usesUnderlying[0xA5407eAE9Ba41422680e2e00537571bcC53efBfD] = true; // susd
         usesUnderlying[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
+        usesUnderlying[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
+
+        poolToDeposit[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = 0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06; // compound
+        poolToDeposit[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = 0xac795D2c97e60DF6a99ff1c814727302fD747a80; // usdt
+        poolToDeposit[0x06364f10B501e868329afBc005b3492902d6C763] = 0xA50cCc70b6a011CffDdf45057E39679379187287; // pax
+        poolToDeposit[0x79a8C46DeA5aDa233ABaFFD40F3A0A2B1e5A4F27] = 0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB; // busd
+        poolToDeposit[0x45F783CCE6B7FF23B2ab2D70e416cdb7D6055f51] = 0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3; // y
+        poolToDeposit[0xA5407eAE9Ba41422680e2e00537571bcC53efBfD] = 0xFCBa3E75865d2d561BE8D220616520c171F12851; // susd
 
         supportsUnderlyingParam[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         supportsUnderlyingParam[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
         supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
-
-        coinsInt128[0xb6c057591E073249F2D9D88Ba59a46CFC9B59EdB] = true; // busd
-        coinsInt128[0xeB21209ae4C2c9FF2a86ACA31E123764A3B6Bc06] = true; // compound
-        coinsInt128[0xA50cCc70b6a011CffDdf45057E39679379187287] = true; // pax
-        coinsInt128[0x93054188d876f558f4a66B2EF1d97d16eDf0895B] = true; // renbtc
-        coinsInt128[0x7fC77b5c7614E1533320Ea6DDc2Eb61fa00A9714] = true; // sbtc
-        coinsInt128[0xFCBa3E75865d2d561BE8D220616520c171F12851] = true; // susd
-        coinsInt128[0xac795D2c97e60DF6a99ff1c814727302fD747a80] = true; // usdt
-        coinsInt128[0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3] = true; // y
+        supportsUnderlyingParam[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
     }
 
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool, bool forNAV) public view override returns (address[] memory) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory result = new address[](_getNCoins(poolAddress));
+        address[8] memory coins;
+        if (usesUnderlying[poolAddress] && !forNAV) {
+            coins = curveRegistry.get_underlying_coins(poolAddress);
+        } else {
+            coins = curveRegistry.get_coins(poolAddress);
+        }
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
-            if (usesUnderlying[poolAddress] && !forNAV) {
-                if (coinsInt128[poolAddress]) {
-                    result[i] = ICurvePoolInt128(poolAddress).underlying_coins(i);
-                } else {
-                    result[i] = ICurvePoolV3(poolAddress).underlying_coins(i);
-                }
-            } else {
-                if (coinsInt128[poolAddress]) {
-                    result[i] = ICurvePoolInt128(poolAddress).coins(i);
-                } else {
-                    result[i] = ICurvePoolV3(poolAddress).coins(i);
-                }
-            }
+            result[i] = coins[i];
         }
         // Override weth to ETH because it only accepts ETH
         if (poolAddress == TRICRYPTO && !forNAV) {
@@ -136,20 +131,18 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     function getPoolTokensOut(
-        bytes calldata _pool,
-        address _poolToken,
-        uint256 _maxAmountsIn
-    ) external view override returns (uint256) {
+        bytes calldata, /* _pool */
+        address, /* _poolToken */
+        uint256 /* _maxAmountsIn */
+    ) external pure override returns (uint256) {
         // return 1 since _poolTokensOut are not used
         return 1;
     }
 
-    function getPoolMinAmountsOut(bytes calldata _pool, uint256 _liquidity)
-        external
-        view
-        override
-        returns (uint256[] memory _minAmountsOut)
-    {
+    function getPoolMinAmountsOut(
+        bytes calldata _pool,
+        uint256 /* _liquidity */
+    ) external view override returns (uint256[] memory _minAmountsOut) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
         return result;
@@ -159,21 +152,27 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
-        if (coinsInt128[poolAddress]) {
-            return ICurvePoolInt128(poolAddress).coins(0) != address(0);
-        } else {
-            return ICurvePoolV3(poolAddress).coins(0) != address(0);
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        try curveRegistry.get_A(poolAddress) returns (
+            uint256 /* A */
+        ) {
+            return true;
+        } catch {
+            return false;
         }
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        if (poolToDeposit[poolAddress] != address(0)) {
+            poolAddress = poolToDeposit[poolAddress];
+        }
         return poolAddress;
     }
 
     function _totalSupply(
         address /* _pool */
-    ) internal view override returns (uint256) {
+    ) internal pure override returns (uint256) {
         return uint256(1e18);
     }
 
@@ -194,7 +193,7 @@ contract CurvePoolIntegration is PoolIntegration {
         address, /* _strategy */
         bytes calldata _pool,
         uint256 _poolTokensOut,
-        address[] calldata, /* _tokensIn */
+        address[] calldata _tokensIn,
         uint256[] calldata _maxAmountsIn
     )
         internal
@@ -216,6 +215,16 @@ contract CurvePoolIntegration is PoolIntegration {
         if (poolAddress == TRICRYPTO) {
             // get the value of eth
             value = _maxAmountsIn[2];
+        }
+        // If any is eth, set as value
+        for (uint256 i = 0; i < poolCoins; i++) {
+            if (_tokensIn[i] == address(0) || _tokensIn[i] == ETH_ADD_CURVE) {
+                value = _maxAmountsIn[i];
+            }
+        }
+        // If we need a deposit contract to deposit underlying, switch
+        if (poolToDeposit[poolAddress] != address(0)) {
+            poolAddress = poolToDeposit[poolAddress];
         }
         return (poolAddress, value, methodData);
     }
@@ -256,6 +265,9 @@ contract CurvePoolIntegration is PoolIntegration {
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
         // Encode method data for Garden to invoke
         bytes memory methodData = _getRemoveLiquidityMethodData(poolAddress, poolCoins, _minAmountsOut, _poolTokensIn);
+        if (poolToDeposit[poolAddress] != address(0)) {
+            poolAddress = poolToDeposit[poolAddress];
+        }
         return (poolAddress, 0, methodData);
     }
 
@@ -357,6 +369,7 @@ contract CurvePoolIntegration is PoolIntegration {
                     );
             }
         }
+        return bytes('');
     }
 
     function _getRemoveLiquidityMethodData(
@@ -456,69 +469,37 @@ contract CurvePoolIntegration is PoolIntegration {
                     );
             }
         }
+        return bytes('');
     }
 
     function _getLpToken(address _pool) internal view override returns (address) {
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
-        try ICurvePoolV3(_pool).lp_token() returns (address result) {
-            return result;
-        } catch {
-            try ICurvePoolV3(_pool).token() returns (address token) {
-                return token;
-            } catch {
-                if (depositToToken[_pool] != address(0)) {
-                    return depositToToken[_pool];
-                }
-                return _pool;
-            }
-        }
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        return curveRegistry.get_lp_token(_pool);
     }
 
     // Used when the contract is the Deposit
-    function _getPool(address _pool) internal view override returns (address) {
-        try ICurvePoolV3(_pool).pool() returns (address result) {
-            return result;
-        } catch {
-            try ICurvePoolV3(_pool).curve() returns (address curve) {
-                return curve;
-            } catch {
-                return _pool;
-            }
-        }
+    function _getPool(address _pool) internal pure override returns (address) {
+        return _pool;
+    }
+
+    function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view override returns (address, uint256) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        return (curveRegistry.get_underlying_coins(poolAddress)[_i], curveRegistry.get_rates(poolAddress)[_i]);
     }
 
     function _getNCoins(address _pool) private view returns (uint256) {
-        if (coinsInt128[_pool]) {
-            return _getNCoins128(_pool);
-        }
-        try ICurvePoolV3(_pool).coins(4) returns (address) {
-            return 5;
-        } catch {
-            try ICurvePoolV3(_pool).coins(3) returns (address) {
-                return 4;
-            } catch {
-                try ICurvePoolV3(_pool).coins(2) returns (address) {
-                    return 3;
-                } catch {
-                    return 2;
-                }
-            }
-        }
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        return curveRegistry.get_n_coins(_pool)[0];
     }
 
-    function _getNCoins128(address _pool) private view returns (uint256) {
-        try ICurvePoolInt128(_pool).coins(4) returns (address) {
-            return 5;
-        } catch {
-            try ICurvePoolInt128(_pool).coins(3) returns (address) {
-                return 4;
-            } catch {
-                try ICurvePoolInt128(_pool).coins(2) returns (address) {
-                    return 3;
-                } catch {
-                    return 2;
-                }
-            }
-        }
+    function _getRewardTokens(
+        address /* _pool */
+    ) internal pure override returns (address[] memory) {
+        address[] memory rewards = new address[](2);
+        rewards[0] = CRV;
+        rewards[1] = CVX;
+        return rewards;
     }
 }

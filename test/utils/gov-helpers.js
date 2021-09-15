@@ -33,14 +33,14 @@ export async function getGovernorMock(bablToken, signer, period = 1, delay = 1) 
 
 export async function castVotes(id, votes, governor) {
   for (const vote of votes) {
-    await governor.connect(vote.voter).castVote(id, from(vote.support));
+    await governor.connect(vote.voter).castVote(id, from(vote.support), { gasPrice: 0 });
   }
 }
 
 export async function claimTokens(bablToken, voters) {
   for (const voter of voters) {
-    await bablToken.connect(voter).claimMyTokens();
-    await bablToken.connect(voter).delegate(voter.address);
+    await bablToken.connect(voter).claimMyTokens({ gasPrice: 0 });
+    await bablToken.connect(voter).delegate(voter.address, { gasPrice: 0 });
   }
 }
 
@@ -55,7 +55,7 @@ export async function getProposal(
 ) {
   const descriptionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(description));
 
-  const id = await governor.hashProposal(targets, values, calldatas, descriptionHash);
+  const id = await governor.hashProposal(targets, values, calldatas, descriptionHash, { gasPrice: 0 });
 
   return {
     id,

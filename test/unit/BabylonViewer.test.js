@@ -5,6 +5,9 @@ const { DEFAULT_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
 const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
 
+const { createGarden } = require('fixtures/GardenHelper');
+const { getStrategy } = require('fixtures/StrategyHelper');
+
 describe('Babylon Viewer', function () {
   let garden1;
   let signer1;
@@ -118,6 +121,38 @@ describe('Babylon Viewer', function () {
       ]);
 
       expect(totalVotes).to.be.eq(eth());
+    });
+  });
+
+  describe('getGardenPrincipal', async function () {
+    it('for garden with no strategies', async function () {
+      const principal = await babViewer.getGardenPrincipal(garden1.address);
+
+      expect(principal).to.be.eq(eth());
+    });
+
+    it('for garden with active strategies', async function () {
+      const garden = await createGarden();
+
+      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+
+      const principal = await babViewer.getGardenPrincipal(garden.address);
+
+      expect(principal).to.be.eq(eth(13));
+    });
+
+    it('for garden with final strategies', async function () {
+      const garden = await createGarden();
+
+      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+
+      const principal = await babViewer.getGardenPrincipal(garden.address);
+
+      expect(principal).to.be.eq(eth(13));
     });
   });
 });

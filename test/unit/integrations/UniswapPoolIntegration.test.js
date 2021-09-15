@@ -133,31 +133,31 @@ describe('UniswapPoolIntegrationTest', function () {
           symbol: 'WETH-DAI',
           token0: addresses.tokens.WETH,
           token1: addresses.tokens.DAI,
-        }, //DAI-WETH pool
+        }, // DAI-WETH pool
         {
           pool: addresses.uniswap.pairs.wethusdc,
           symbol: 'WETH-USDC',
           token0: addresses.tokens.WETH,
           token1: addresses.tokens.USDC,
-        }, //WETH-USDC pool
+        }, // WETH-USDC pool
         {
           pool: addresses.uniswap.pairs.wethwbtc,
           symbol: 'WETH-WBTC',
           token0: addresses.tokens.WETH,
           token1: addresses.tokens.WBTC,
-        }, //WETH-WBTC pool
+        }, // WETH-WBTC pool
         {
           pool: addresses.uniswap.pairs.daiusdc,
           symbol: 'DAI-USDC',
           token0: addresses.tokens.DAI,
           token1: addresses.tokens.USDC,
-        }, //DAI-USDC pool
+        }, // DAI-USDC pool
         {
           pool: addresses.uniswap.pairs.daiwbtc,
           symbol: 'DAI-WBTC',
           token0: addresses.tokens.DAI,
           token1: addresses.tokens.WBTC,
-        }, //DAI-WBTC pool
+        }, // DAI-WBTC pool
       ].forEach(({ pool, symbol, token0, token1 }) => {
         it(`can enter and exit the ${symbol} at Uniswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
@@ -173,7 +173,7 @@ describe('UniswapPoolIntegrationTest', function () {
             garden,
             specificParams: [poolAddress.address, 0],
           });
-          let amount = STRATEGY_EXECUTE_MAP[token];
+          const amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
           // Check NAV

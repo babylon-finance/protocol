@@ -31,7 +31,7 @@ describe('BalancerIntegrationTest', function () {
     });
   });
 
-  describe('Liquidity Pools', function () {
+  describe.skip('Liquidity Pools', function () {
     let daiWethPool;
 
     beforeEach(async () => {

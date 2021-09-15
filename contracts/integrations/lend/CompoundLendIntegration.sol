@@ -105,7 +105,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getRewardToken() internal view override returns (address) {
+    function _getRewardToken() internal pure override returns (address) {
         return COMP;
     }
 
@@ -164,7 +164,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     function _claimRewardsCallData(address _strategy)
         internal
-        view
+        pure
         override
         returns (
             address,
