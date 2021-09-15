@@ -8,6 +8,7 @@ module.exports = async ({
   getRapid,
   getSigner,
   getContract,
+  getConroller,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -15,8 +16,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
   const contract = 'MardukGate';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await getController();
   const ishtarGate = await getContract('IshtarGate');
 
   const deployment = await deploy(contract, {
@@ -28,7 +28,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting marduk gate on controller ${deployment.address}`);
-    await (await controllerContract.editMardukGate(deployment.address, { gasPrice })).wait();
+    await (await controller.editMardukGate(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
