@@ -43,6 +43,8 @@ contract ConvexStakeIntegration is PassiveIntegration {
     /* ============ State Variables ============ */
 
     IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
+    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
     mapping(address => uint256) private cacheConvexTokenToPid;
     uint256 private elementsCached = 0;
@@ -54,7 +56,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('convex', _controller) {
+    constructor(IBabController _controller) PassiveIntegration('convex_v2', _controller) {
         _updateCache();
     }
 
@@ -206,5 +208,10 @@ contract ConvexStakeIntegration is PassiveIntegration {
         (bool found, uint256 pid) = getPid(_asset);
         require(found, 'Pid not found');
         (, token, , , , ) = booster.poolInfo(pid);
+    }
+
+    function _getRewards(address _asset) internal view override returns (address token, uint256 balance) {
+        IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
+        return (CRV, rewards.earned(msg.sender));
     }
 }

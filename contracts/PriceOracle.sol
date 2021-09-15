@@ -527,22 +527,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        // Checks stETH && wstETH (Lido tokens)
-        if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
-            uint256 shares = 1e18;
-            if (_tokenIn == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
-        }
-        if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
-            uint256 shares = 1e18;
-            if (_tokenOut == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
-        }
-
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // Direct curve pair
         price = _checkPairThroughCurve(_tokenIn, _tokenOut);
@@ -555,17 +539,17 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn != TRI_CURVE_POOL) {
             address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
             if (crvPool != address(0)) {
-                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
                 return
-                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(coins[0], _tokenOut));
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(denominator, _tokenOut));
             }
         }
         if (_tokenOut != TRI_CURVE_POOL) {
             address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
             if (crvPool != address(0)) {
-                address[8] memory coins = curveRegistry.get_underlying_coins(crvPool);
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
                 return
-                    getPrice(_tokenIn, coins[0]).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+                    getPrice(_tokenIn, denominator).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
             }
         }
 
@@ -593,23 +577,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         uint256 uniPrice = 0;
-        // Curve Pair through WBTC
-        if (_tokenIn != WBTC && _tokenOut != WBTC) {
-            price = _checkPairThroughCurve(WBTC, _tokenOut);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(_tokenIn, WBTC);
-                if (uniPrice != 0) {
-                    return uniPrice.preciseMul(price);
-                }
-            }
-            price = _checkPairThroughCurve(_tokenIn, WBTC);
-            if (price != 0) {
-                uniPrice = _getUNIV3Price(WBTC, _tokenOut);
-                if (uniPrice != 0) {
-                    return price.preciseMul(uniPrice);
-                }
-            }
-        }
         // Curve pair through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
             price = _checkPairThroughCurve(DAI, _tokenOut);
@@ -644,6 +611,40 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
+        // Curve Pair through WBTC
+        if (_tokenIn != WBTC && _tokenOut != WBTC) {
+            price = _checkPairThroughCurve(WBTC, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, WBTC);
+                if (uniPrice != 0) {
+                    return uniPrice.preciseMul(price);
+                }
+            }
+            price = _checkPairThroughCurve(_tokenIn, WBTC);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(WBTC, _tokenOut);
+                if (uniPrice != 0) {
+                    return price.preciseMul(uniPrice);
+                }
+            }
+        }
+
+        // Checks stETH && wstETH (Lido tokens)
+        if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
+            uint256 shares = 1e18;
+            if (_tokenIn == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
+        }
+        if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
+            uint256 shares = 1e18;
+            if (_tokenOut == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
+        }
+
         // Direct UNI3
         price = _getUNIV3Price(_tokenIn, _tokenOut);
         if (price != 0) {
@@ -673,6 +674,21 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _cleanCurvePoolDenominator(address _pool, ICurveRegistry _curveRegistry) internal view returns (address) {
+      address[8] memory coins = _curveRegistry.get_underlying_coins(_pool);
+      if (coins[0] != address(0)) {
+        return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
+      }
+      if (coins[1] != address(0)) {
+        return coins[1] == ETH_ADD_CURVE ? WETH : coins[1];
+      }
+      if (coins[2] != address(0)) {
+        return coins[2] == ETH_ADD_CURVE ? WETH : coins[2];
+      }
+      return address(0);
+    }
+
 
     // Susceptible to flash loans.
     // Only use for UI and getNAV
