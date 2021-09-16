@@ -57,7 +57,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) TradeIntegration('univ3_2', _controller) {}
+    constructor(IBabController _controller) TradeIntegration('univ3_3', _controller) {}
 
     /* ============ Internal Functions ============ */
 
