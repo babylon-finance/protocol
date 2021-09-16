@@ -541,7 +541,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
                 return
-                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(getPrice(denominator, _tokenOut));
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
+                        getPrice(denominator, _tokenOut)
+                    );
             }
         }
         if (_tokenOut != TRI_CURVE_POOL) {
@@ -549,7 +551,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
                 return
-                    getPrice(_tokenIn, denominator).preciseDiv(curveRegistry.get_virtual_price_from_lp_token(_tokenOut));
+                    getPrice(_tokenIn, denominator).preciseDiv(
+                        curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
+                    );
             }
         }
 
@@ -676,19 +680,18 @@ contract PriceOracle is Ownable, IPriceOracle {
     /* ============ Internal Functions ============ */
 
     function _cleanCurvePoolDenominator(address _pool, ICurveRegistry _curveRegistry) internal view returns (address) {
-      address[8] memory coins = _curveRegistry.get_underlying_coins(_pool);
-      if (coins[0] != address(0)) {
-        return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
-      }
-      if (coins[1] != address(0)) {
-        return coins[1] == ETH_ADD_CURVE ? WETH : coins[1];
-      }
-      if (coins[2] != address(0)) {
-        return coins[2] == ETH_ADD_CURVE ? WETH : coins[2];
-      }
-      return address(0);
+        address[8] memory coins = _curveRegistry.get_underlying_coins(_pool);
+        if (coins[0] != address(0)) {
+            return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
+        }
+        if (coins[1] != address(0)) {
+            return coins[1] == ETH_ADD_CURVE ? WETH : coins[1];
+        }
+        if (coins[2] != address(0)) {
+            return coins[2] == ETH_ADD_CURVE ? WETH : coins[2];
+        }
+        return address(0);
     }
-
 
     // Susceptible to flash loans.
     // Only use for UI and getNAV

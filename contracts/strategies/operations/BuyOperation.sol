@@ -167,12 +167,15 @@ contract BuyOperation is Operation {
         (address token, uint256 minimumPerBigUnit) = BytesLib.decodeOpDataAddressAndUint(_data);
         uint256 minimum = 0;
         if (minimumPerBigUnit > 0) {
-          minimum = SafeDecimalMath
-              .normalizeAmountTokens(_asset, token, _capital.mul(minimumPerBigUnit).div(10 ** ERC20(_asset).decimals()));
-          // If minimum is too low, set to 2 to execute
-          if (minimum == 0) {
-            minimum = 2;
-          }
+            minimum = SafeDecimalMath.normalizeAmountTokens(
+                _asset,
+                token,
+                _capital.mul(minimumPerBigUnit).div(10**ERC20(_asset).decimals())
+            );
+            // If minimum is too low, set to 2 to execute
+            if (minimum == 0) {
+                minimum = 2;
+            }
         }
         ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }
