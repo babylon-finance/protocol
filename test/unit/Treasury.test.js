@@ -2,10 +2,10 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('lib/constants');
-const { from, eth, parse } = require('lib/helpers');
 const { fund } = require('lib/whale');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
+const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('Treasury', function () {
   let signer1;
@@ -28,7 +28,7 @@ describe('Treasury', function () {
       { token: addresses.tokens.WBTC, name: 'WBTC', amount: from(0.05 * 1e8) },
     ].forEach(({ token, name, amount }) => {
       it(`can send ${name}`, async function () {
-        const erc20 = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', token);
+        const erc20 = await getERC20( token);
         await expect(() =>
           treasury.connect(owner).sendTreasuryFunds(token, amount, signer1.address, { gasPrice: 0 }),
         ).to.changeTokenBalances(erc20, [treasury, signer1], [amount.mul(-1), amount]);

@@ -5,6 +5,7 @@ const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('LidoIntegrationTest', function () {
   let lidoIntegration;
@@ -72,8 +73,7 @@ describe('LidoIntegrationTest', function () {
             });
 
             expect(await targetContract.balanceOf(strategyContract.address)).to.equal(0);
-            const reserveContract = await ethers.getContractAt(
-              '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+            const reserveContract = await getERC20(
               token,
             );
             const amount = STRATEGY_EXECUTE_MAP[token];

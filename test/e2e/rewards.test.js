@@ -16,8 +16,7 @@ const {
   GARDEN_PARAMS,
   ADDRESS_ZERO,
 } = require('lib/constants.js');
-const { increaseTime } = require('utils/test-helpers');
-const { from, eth, parse } = require('lib/helpers');
+const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
@@ -81,8 +80,7 @@ describe('rewards', function () {
       wbtc,
     } = await setupTests()());
     await babController.connect(owner).enableBABLMiningProgram();
-    const reserveContract = await ethers.getContractAt(
-      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    const reserveContract = await getERC20(
       addresses.tokens.WETH,
     );
     users = await createWallets(userNum, {
@@ -142,8 +140,7 @@ describe('rewards', function () {
   }
 
   async function deposit(gardens) {
-    const reserveContract = await ethers.getContractAt(
-      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    const reserveContract = await getERC20(
       addresses.tokens.WETH,
     );
     for (const garden of gardens) {

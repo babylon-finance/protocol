@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { eth, normalizeDecimals } = require('utils/test-helpers');
+const { normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
@@ -76,13 +76,12 @@ describe('HarvestVaultIntegrationTest', function () {
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
           const asset = await harvestVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
-          const assetContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+          const assetContract = await getERC20(
             asset,
           );
           const assetDecimals = await assetContract.decimals();
 
-          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const tokenContract = await getERC20( token);
           const tokenDecimals = await tokenContract.decimals();
 
           const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);

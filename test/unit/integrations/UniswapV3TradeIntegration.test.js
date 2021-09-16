@@ -2,12 +2,12 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { eth } = require('lib/helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
+const { normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
@@ -40,12 +40,10 @@ describe('UniswapV3TradeIntegration', function () {
           if (token === asset) return;
 
           const garden1 = await createGarden({ reserveAsset: token });
-          const tokenContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+          const tokenContract = await getERC20(
             token,
           );
-          const assetContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+          const assetContract = await getERC20(
             asset,
           );
           const strategyContract = await getStrategy({

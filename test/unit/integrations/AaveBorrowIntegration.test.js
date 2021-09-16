@@ -10,6 +10,7 @@ const { STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
+const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
@@ -24,8 +25,7 @@ describe('AaveBorrowIntegrationTest', function () {
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt(
-      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
+    const gardenReserveAsset = await getERC20(
       token,
     );
     await depositFunds(token, garden);
@@ -93,9 +93,9 @@ describe('AaveBorrowIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
-    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
-    DAI = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
-    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
+    USDC = await getERC20( addresses.tokens.USDC);
+    DAI = await getERC20( addresses.tokens.DAI);
+    WETH = await getERC20( addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
