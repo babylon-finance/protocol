@@ -1166,7 +1166,7 @@ describe('RewardsDistributor', function () {
       // LP profits
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.000005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
       // Receive DAI as strategist and steward directly in its wallet after claim
       const signer1BalanceDAI = await dai.balanceOf(signer1.address);
       expect(signer1BalanceDAI).to.equal(value);
@@ -1243,7 +1243,7 @@ describe('RewardsDistributor', function () {
       // LP profits
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.000005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.0005'));
       // Receive USDC as strategist and steward directly in its wallet after claim
       const signer1BalanceUSDC = await usdc.balanceOf(signer1.address);
       expect(signer1BalanceUSDC).to.equal(value);
@@ -1631,10 +1631,7 @@ describe('RewardsDistributor', function () {
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(
-        signer1BABLUSDC.add(signer1BABLDAI),
-        ethers.utils.parseEther('0.000005'),
-      );
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.0005'));
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens without profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -1772,7 +1769,7 @@ describe('RewardsDistributor', function () {
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.00005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.005'));
     });
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1879,7 +1876,7 @@ describe('RewardsDistributor', function () {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
       expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2029,8 +2026,8 @@ describe('RewardsDistributor', function () {
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL);
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL);
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.0005'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, ethers.utils.parseEther('0.0005'));
       expect(signer1Profit.toString()).to.be.closeTo('3641062268321416', ethers.utils.parseEther('0.0005'));
       expect(signer2Profit.toString()).to.be.closeTo('871026681481226', ethers.utils.parseEther('0.0005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
@@ -2052,8 +2049,14 @@ describe('RewardsDistributor', function () {
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal(signer1BABL2.add(signer1BABL));
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal(signer2BABL2.add(signer2BABL));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL2.add(signer1BABL),
+        ethers.utils.parseEther('0.0005'),
+      );
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(
+        signer2BABL2.add(signer2BABL),
+        ethers.utils.parseEther('0.0005'),
+      );
       expect(signer1Profit2.toString()).to.be.closeTo('11989663164624488', ethers.utils.parseEther('0.00005'));
       expect(signer2Profit2.toString()).to.be.closeTo('2169456023987573', ethers.utils.parseEther('0.00005'));
     });

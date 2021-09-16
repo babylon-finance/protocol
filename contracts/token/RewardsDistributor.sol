@@ -1019,10 +1019,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _to
     ) private view returns (uint256) {
         // Check to avoid out of bounds
-        _require(
-            _to >= IGarden(_garden).gardenInitializedAt() && _to >= _from && _to <= block.timestamp,
-            Errors.CONTRIBUTOR_POWER_CHECK_WINDOW
-        );
+        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
         uint256[] memory powerData = new uint256[](9);
         // powerData[0]: lastDepositAt (contributor)
         // powerData[1]: initialDepositAt (contributor)
@@ -1035,11 +1032,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[8]: totalSupply (garden)
         (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
             .getContributor(_contributor);
-
+        console.log('conditional', powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0);
         if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
+            // Safe check, time travel only works for a past date, avoid underflow
+            if (_to > block.timestamp) {
+                console.log('cannot go to the future', _to, block.timestamp);
+                _to = block.timestamp;
+            }
             (powerData[5], powerData[6], powerData[7], powerData[8]) = IGarden(_garden).getGardenPower();
+            console.log('powerData[0]', powerData[0]);
+            console.log('powerData[1]', powerData[1]);
+            console.log('powerData[2]', powerData[2]);
+            console.log('powerData[3]', powerData[3]);
+            console.log('powerData[4]', powerData[4]);
+            console.log('powerData[5]', powerData[5]);
+            console.log('powerData[6]', powerData[6]);
+            console.log('powerData[7]', powerData[7]);
+            console.log('powerData[8]', powerData[8]);
+
             // First we update contributor and garden power as of block.timestamp values
             // We then time travel back to when the strategy exitedAt
             // TODO
@@ -1049,33 +1061,33 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // First we need to get an updatedValue of user and garden power since lastDeposits
             // console.log('CHECK user power', powerData[3]);
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
-            // console.log('CHECK updated user power', powerData[3]);
+            console.log('CHECK updated user power', powerData[3]);
             // console.log('CHECK garden power', powerData[6]);
             // console.log('BOOLEAN time check _to', _to == block.timestamp);
             // console.log('---CHECK time',block.timestamp.sub(powerData[5]));
             // console.log('---CHECK time',block.timestamp, powerData[5]);
 
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
-            // console.log('CHECK updated garden power', updatedGardenPower);
+            console.log('CHECK updated garden power', updatedGardenPower);
 
             // Calculate the power at "_to" timestamp
             uint256 timeDiff = block.timestamp.sub(_to);
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
-            // console.log('timeDiff', timeDiff);
+            console.log('timeDiff', timeDiff);
             // console.log('SUBSTRACT CONTRIBUTOR', powerData[4], powerData[4].mul(timeDiff));
             // console.log('SUBSTRACT GARDEN', powerData[7], powerData[7].mul(timeDiff));
             // Avoid underflow conditions
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
 
-            // console.log('--- BACK TO THE POWER CONTRIBUTOR ---', updatedPower);
-            // console.log('--- BACK TO THE POWER GARDEN ---', updatedGardenPower);
+            console.log('--- BACK TO THE POWER CONTRIBUTOR ---', updatedPower);
+            console.log('--- BACK TO THE POWER GARDEN ---', updatedGardenPower);
 
             uint256 balancePower = powerData[2].preciseDiv(powerData[8]);
             uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            // console.log('CHECK balance Power', balancePower);
-            // console.log('CHECK virtual Power', virtualPower);
+            console.log('CHECK balance Power', balancePower);
+            console.log('CHECK virtual Power', virtualPower);
             return virtualPower;
         }
     }

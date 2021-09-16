@@ -1074,6 +1074,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // TODO USE SCALING factor to use blocks instead of seconds
         contributor.lastDepositAt = block.timestamp;
+        console.log('JUST DEPOSITED', block.timestamp);
         contributor.nonce = contributor.nonce + 1;
 
         // rewardsDistributor.updateCheckpointInGarden(_contributor, _reserveAssetQuantity, true);
@@ -1082,7 +1083,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(address _contributor, uint256 _netflowQuantity, uint256 _previousBalance) private {
+    function _updateContributorWithdrawalInfo(
+        address _contributor,
+        uint256 _netflowQuantity,
+        uint256 _previousBalance
+    ) private {
         Contributor storage contributor = contributors[_contributor];
         // If sold everything
         if (balanceOf(_contributor) == 0) {
