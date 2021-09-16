@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('Position testing', function () {
   let signer1;
@@ -15,7 +15,7 @@ describe('Position testing', function () {
   beforeEach(async () => {
     ({ signer1, signer3, garden1, treasury } = await setupTests()());
 
-    weth = await getERC20( addresses.tokens.WETH);
+    weth = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Initial Positions', async function () {

@@ -67,12 +67,8 @@ describe('CurveTradeIntegration', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
-          const tokenContract = await getERC20(
-            token,
-          );
-          const assetContract = await getERC20(
-            asset,
-          );
+          const tokenContract = await getERC20(token);
+          const assetContract = await getERC20(asset);
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
 

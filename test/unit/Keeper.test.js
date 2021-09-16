@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { fund } = require('lib/whale');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
 const { getStrategy } = require('fixtures/StrategyHelper');
@@ -86,9 +86,7 @@ describe('Keeper', function () {
       ].forEach(({ token, name, fee }) => {
         it(`gets paid max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
-          const tokenContract = await getERC20(
-            token,
-          );
+          const tokenContract = await getERC20(token);
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 

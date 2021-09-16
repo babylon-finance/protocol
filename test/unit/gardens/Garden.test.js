@@ -16,7 +16,7 @@ const {
   GARDEN_PARAMS,
   ADDRESS_ZERO,
 } = require('lib/constants.js');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
@@ -1019,7 +1019,7 @@ describe('Garden', function () {
       it(`can witdraw with a Keeper fee into ${name} garden`, async function () {
         const { amountIn, minAmountOut, fee, maxFee, depositIn, depositOut } = opts;
 
-        const erc20 = await getERC20( token);
+        const erc20 = await getERC20(token);
 
         await fund([signer1.address, signer3.address], { tokens: [token] });
 
@@ -1453,7 +1453,7 @@ describe('Garden', function () {
 
         const nonce = 0;
 
-        const erc20 = await getERC20( token);
+        const erc20 = await getERC20(token);
 
         await fund([signer1.address, signer3.address], { tokens: [token] });
 

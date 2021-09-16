@@ -16,7 +16,7 @@ const {
   GARDEN_PARAMS,
   ADDRESS_ZERO,
 } = require('lib/constants.js');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
@@ -80,9 +80,7 @@ describe('rewards', function () {
       wbtc,
     } = await setupTests()());
     await babController.connect(owner).enableBABLMiningProgram();
-    const reserveContract = await getERC20(
-      addresses.tokens.WETH,
-    );
+    const reserveContract = await getERC20(addresses.tokens.WETH);
     users = await createWallets(userNum, {
       tokens: [addresses.tokens.WETH, addresses.tokens.ETH],
       amounts: [eth(900), eth(900)],
@@ -140,9 +138,7 @@ describe('rewards', function () {
   }
 
   async function deposit(gardens) {
-    const reserveContract = await getERC20(
-      addresses.tokens.WETH,
-    );
+    const reserveContract = await getERC20(addresses.tokens.WETH);
     for (const garden of gardens) {
       for (let signer of users) {
         await reserveContract.connect(signer).approve(garden.address, eth(9999999), { gasPrice: 0 });

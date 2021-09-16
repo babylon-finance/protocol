@@ -12,7 +12,7 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('lib/constants.js');
@@ -89,9 +89,7 @@ describe('Strategy', function () {
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
-    wethToken = await getERC20(
-      addresses.tokens.WETH,
-    );
+    wethToken = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Strategy Deployment', async function () {

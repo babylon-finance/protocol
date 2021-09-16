@@ -10,7 +10,7 @@ const { STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
@@ -25,9 +25,7 @@ describe('AaveBorrowIntegrationTest', function () {
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await getERC20(
-      token,
-    );
+    const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
 
     const strategyContract = await createStrategy(
@@ -93,9 +91,9 @@ describe('AaveBorrowIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
-    USDC = await getERC20( addresses.tokens.USDC);
-    DAI = await getERC20( addresses.tokens.DAI);
-    WETH = await getERC20( addresses.tokens.WETH);
+    USDC = await getERC20(addresses.tokens.USDC);
+    DAI = await getERC20(addresses.tokens.DAI);
+    WETH = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

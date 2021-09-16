@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
@@ -86,14 +86,10 @@ describe('YearnVaultIntegrationTest', function () {
             expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(10));
 
             const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
-            const assetContract = await getERC20(
-              asset,
-            );
+            const assetContract = await getERC20(asset);
             const assetDecimals = await assetContract.decimals();
 
-            const tokenContract = await getERC20(
-              token,
-            );
+            const tokenContract = await getERC20(token);
             const tokenDecimals = await tokenContract.decimals();
 
             const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);

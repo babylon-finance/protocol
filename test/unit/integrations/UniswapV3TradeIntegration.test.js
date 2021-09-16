@@ -7,7 +7,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
@@ -40,12 +40,8 @@ describe('UniswapV3TradeIntegration', function () {
           if (token === asset) return;
 
           const garden1 = await createGarden({ reserveAsset: token });
-          const tokenContract = await getERC20(
-            token,
-          );
-          const assetContract = await getERC20(
-            asset,
-          );
+          const tokenContract = await getERC20(token);
+          const assetContract = await getERC20(asset);
           const strategyContract = await getStrategy({
             kind: 'buy',
             state: 'vote',

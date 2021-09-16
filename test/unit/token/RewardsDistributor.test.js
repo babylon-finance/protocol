@@ -6,7 +6,16 @@ const {
   USDC_GARDEN_PARAMS,
   STRATEGY_EXECUTE_MAP,
 } = require('lib/constants');
-const { increaseBlock, increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  increaseBlock,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
@@ -1036,9 +1045,7 @@ describe('RewardsDistributor', function () {
         );
 
         expect(preallocated).to.be.equal(amount);
-        const reserveAssetContract = await getERC20(
-          token,
-        );
+        const reserveAssetContract = await getERC20(token);
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(100);

@@ -86,9 +86,7 @@ describe('MasterSwapper', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === to) return;
 
-          const tokenContract = await getERC20(
-            token,
-          );
+          const tokenContract = await getERC20(token);
           const assetContract = await getERC20(to);
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });

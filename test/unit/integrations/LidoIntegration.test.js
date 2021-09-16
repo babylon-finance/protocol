@@ -73,9 +73,7 @@ describe('LidoIntegrationTest', function () {
             });
 
             expect(await targetContract.balanceOf(strategyContract.address)).to.equal(0);
-            const reserveContract = await getERC20(
-              token,
-            );
+            const reserveContract = await getERC20(token);
             const amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV

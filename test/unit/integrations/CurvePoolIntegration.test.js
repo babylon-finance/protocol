@@ -9,7 +9,7 @@ const {
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
 const { ONE_ETH } = require('lib/constants');
-const { increaseTime , normalizeDecimals ,getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
@@ -66,9 +66,7 @@ describe('CurvePoolIntegrationTest', function () {
         await executeStrategy(strategyContract, { amount: ONE_ETH.mul(1) });
         expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
         const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await getERC20(
-          lpToken,
-        );
+        const poolContract = await getERC20(lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
         await finalizeStrategy(strategyContract, 0);
         expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
@@ -87,9 +85,7 @@ describe('CurvePoolIntegrationTest', function () {
         await executeStrategy(strategyContract);
         expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
         const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await getERC20(
-          lpToken,
-        );
+        const poolContract = await getERC20(lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
         // TODO tricrypto NAV is wrong > 40% difference
         // Workaround set meanwhile
