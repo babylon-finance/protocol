@@ -1,4 +1,6 @@
 const { expect } = require('chai');
+const { deployments } = require('hardhat');
+const { deploy } = deployments;
 const {
   ONE_DAY_IN_SECONDS,
   ONE_ETH,
@@ -2147,6 +2149,75 @@ describe('RewardsDistributor', function () {
           long5.address,
         ]),
       ).to.be.revertedWith('BAB#073');
+    });
+  });
+  describe.only('Backward compatibility', function () {
+    it('should successfully return historic data from a Beta user of Arkad Garden', async function () {
+      const signers = await ethers.getSigners();
+      const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
+
+      const signer = signers[0];
+      const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+
+      const arkadGarden = await ethers.getContractAt('Garden', '0xd42B3A30ca89155d6C3499c81F0C4e5A978bE5c2');
+      const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
+      // Arkad
+      const contributor = await impersonateAddress('0xc31C4549356d46c37021393EeEb6f704B38061eC');
+      const contributor2 = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
+
+      // upgrade garden
+      const gardenBeacon = await ethers.getContractAt(
+        'UpgradeableBeacon',
+        '0xc8f44C560efe396a6e57e48fF07205bD28AF5E75',
+        deployer,
+      );
+      const distributor = await ethers.getContractAt(
+        'RewardsDistributor',
+        '0x40154ad8014df019a53440a60ed351dfba47574e',
+        owner,
+      );
+
+      const gardenNewImpl = await deploy('Garden', {
+        from: signer.address,
+        args: [],
+        log: true,
+      });
+
+      await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
+
+      // upgrade rewards distributor
+      const distributorNewImpl = await deploy('RewardsDistributor', {
+        from: signer.address,
+      });
+
+      await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+
+      console.log(
+        'Contributor 1 beta power',
+        (await distributor.getContributorBetaPower(arkadGarden.address, contributor.address)).toString(),
+      );
+      console.log(
+        'Contributor 1 beta avg balance',
+        (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor.address)).toString(),
+      );
+
+      console.log(
+        'Contributor 2 beta power',
+        (await distributor.getContributorBetaPower(arkadGarden.address, contributor2.address)).toString(),
+      );
+      console.log(
+        'Contributor 2 beta avg balance',
+        (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor2.address)).toString(),
+      );
+
+      console.log('Garden beta power', (await distributor.getGardenBetaPower(arkadGarden.address)).toString());
+      console.log(
+        'Garden beta avg balance',
+        (await distributor.getGardenBetaAvgBalance(arkadGarden.address)).toString(),
+      );
+
+      console.log('VERSION', (await distributor.VERSION()).toString());
+      console.log('garden pid ', (await distributor.getBetaData(arkadGarden.address)).toString());
     });
   });
 });

@@ -97,4 +97,16 @@ interface IRewardsDistributor {
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
+
+    function getContributorBetaPower(address _garden, address _contributor) external view returns (uint256);
+
+    function getContributorBetaAvgBalance(address _garden, address _contributor) external view returns (uint256);
+
+    function getGardenBetaPower(address _garden) external view returns (uint256);
+
+    function getGardenBetaAvgBalance(address _garden) external view returns (uint256);
+
+    function VERSION() external view returns (string memory);
+
+    function getBetaData(address _garden) external view returns (uint256);
 }

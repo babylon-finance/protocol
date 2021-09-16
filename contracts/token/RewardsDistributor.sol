@@ -258,6 +258,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     uint256 private miningUpdatedAt; // Timestamp of last checkpoint update
     mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
+    string public constant override VERSION = 'v2';
 
     /* ============ Constructor ============ */
 
@@ -454,6 +455,93 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _to
     ) external view override returns (uint256) {
         return _getContributorPower(_garden, _contributor, _from, _to);
+    }
+
+    function getContributorBetaPower(address _garden, address _contributor) public view override returns (uint256) {
+        return _getContributorBetaPower(_garden, _contributor);
+    }
+
+    function getGardenBetaPower(address _garden) public view override returns (uint256) {
+        return _getGardenBetaPower(_garden);
+    }
+
+    function getContributorBetaAvgBalance(address _garden, address _contributor)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return _getContributorBetaAvgBalance(_garden, _contributor);
+    }
+
+    function getGardenBetaAvgBalance(address _garden) public view override returns (uint256) {
+        return _getGardenBetaAvgBalance(_garden);
+    }
+
+    function getBetaData(address _garden) external view override returns (uint256) {
+        return gardenPid[_garden];
+    }
+
+    function _getContributorBetaPower(address _garden, address _contributor) internal view returns (uint256) {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        TimestampContribution storage contributorLastCheckpoint =
+            contributor.pid == 0
+                ? contributor.tsContributions[contributor.initialDepositAt]
+                : contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
+        console.log('power w/o update', contributorLastCheckpoint.power);
+        console.log('supply', contributorLastCheckpoint.supply);
+        console.log('timeDiff', block.timestamp.sub(contributor.lastDepositAt));
+        return
+            contributorLastCheckpoint.power.add(
+                (block.timestamp.sub(contributor.lastDepositAt)).mul(contributorLastCheckpoint.supply)
+            );
+    }
+
+    function _getGardenBetaPower(address _garden) internal view returns (uint256) {
+        if (gardenPid[_garden] > 0) {
+            GardenPowerByTimestamp storage garden =
+                gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
+            console.log('power w/o update', garden.power);
+            console.log('supply', garden.supply);
+            console.log('timeDiff', block.timestamp.sub(garden.timestamp));
+            return garden.power.add((block.timestamp.sub(garden.timestamp)).mul(garden.supply));
+        } else {
+            return 0;
+        }
+    }
+
+    function _getContributorBetaAvgBalance(address _garden, address _contributor) internal view returns (uint256) {
+        uint256 avgBalance;
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        for (uint256 i = 0; i < contributor.pid; i++) {
+            TimestampContribution storage contributorCheckpoint =
+                contributor.tsContributions[contributor.timeListPointer[i]];
+            uint256 timeDiff = contributor.timeListPointer[i].sub(contributor.initialDepositAt);
+            console.log(' #%s balance %s', i, contributorCheckpoint.supply);
+            console.log(' #%s timestamp %s', i, contributorCheckpoint.timestamp);
+            console.log(' #%s power %s', i, contributorCheckpoint.power);
+
+            avgBalance = i == 0
+                ? contributorCheckpoint.supply
+                : avgBalance.mul(timeDiff).add(contributorCheckpoint.supply).div(timeDiff);
+            console.log('#%s avgBalance %s', i, avgBalance);
+        }
+        return avgBalance;
+    }
+
+    function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
+        uint256 avgBalance;
+        for (uint256 i = 0; i < gardenPid[_garden]; i++) {
+            GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
+            uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
+            console.log(' GARDEN #%s balance %s', i, garden.supply);
+            console.log(' GARDEN #%s timestamp %s', i, garden.timestamp);
+            console.log(' GARDEN #%s power %s', i, garden.power);
+
+            avgBalance = i == 0 ? garden.supply : avgBalance.mul(timeDiff).add(garden.supply).div(timeDiff);
+            console.log('GARDEN #%s avgBalance %s', i, avgBalance);
+        }
+        return avgBalance;
     }
 
     /**
