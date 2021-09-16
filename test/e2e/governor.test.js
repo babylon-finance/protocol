@@ -22,6 +22,7 @@ describe('governor', function () {
   let voters;
   let PROPOSER_ROLE;
   let EXECUTOR_ROLE;
+  let dai;
 
   const votingPeriod = ONE_DAY_IN_SECONDS * 7;
 
@@ -83,6 +84,7 @@ describe('governor', function () {
       babGovernor,
       timelockController,
       babController,
+      dai,
     } = await setupTests()());
     voters = await getVoters();
     await claimTokens(bablToken, voters);
@@ -153,6 +155,7 @@ describe('governor', function () {
       description: 'empty',
     });
   });
+
   it('can update timelock in the Governor', async function () {
     // create new governor
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
@@ -177,5 +180,35 @@ describe('governor', function () {
       description: 'update timelockcontroller to a new one',
     });
     expect(await newGovernor.timelock()).to.equal(newTimelock.address);
+  });
+
+  it.only('can own treasury and transfer funds out', async function () {
+    const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
+
+    const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
+    const treasury = await ethers.getContractAt('Treasury', '0xD7AAf4676F0F52993cb33aD36784BF970f0E1259');
+    await treasury.connect(deployer).transferOwnership('0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193');
+
+    const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
+
+    for (const voter of voters) {
+      if (!(await token.balanceOf(voter.address)).gt(0)) {
+        await token.connect(voter).claimMyTokens({ gasPrice: 0 });
+      }
+      await token.connect(voter).delegate(voter.address, { gasPrice: 0 });
+    }
+
+    await runProposal(governor, {
+      targets: [treasury.address],
+      values: [from(0)],
+      calldatas: [
+        new ethers.utils.Interface([
+          'function sendTreasuryFunds(address _asset, uint256 _amount, address _to)',
+        ]).encodeFunctionData('sendTreasuryFunds', [dai.address, eth(100), signer1.address]),
+      ],
+      description: 'Transfer some DAI',
+    });
+
+    expect(await dai.balanceOf(signer1.address)).to.eq(eth(100));
   });
 });
