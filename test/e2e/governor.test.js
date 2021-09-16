@@ -182,7 +182,7 @@ describe('governor', function () {
     expect(await newGovernor.timelock()).to.equal(newTimelock.address);
   });
 
-  it.only('can own treasury and transfer funds out', async function () {
+  it('can own treasury and transfer funds out', async function () {
     const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
 
     const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
