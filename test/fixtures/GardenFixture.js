@@ -1,10 +1,10 @@
 const { deployments } = require('hardhat');
-const { GARDEN_PARAMS } = require('../../lib/constants.js');
-const addresses = require('../../lib/addresses');
-const { impersonateAddress } = require('../../lib/rpc');
-const { fund } = require('../../lib/whale');
+const { GARDEN_PARAMS } = require('lib/constants.js');
+const addresses = require('lib/addresses');
+const { impersonateAddress } = require('lib/rpc');
+const { fund } = require('lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
-const { getContract, from, eth } = require('../utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
@@ -56,19 +56,10 @@ async function setUpFixture(
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
 
-  const dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
-  const usdc = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.USDC,
-  );
-  const weth = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.WETH,
-  );
-  const wbtc = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.WBTC,
-  );
+  const dai = await getERC20(addresses.tokens.DAI);
+  const usdc = await getERC20(addresses.tokens.USDC);
+  const weth = await getERC20(addresses.tokens.WETH);
+  const wbtc = await getERC20(addresses.tokens.WBTC);
 
   const owner = await impersonateAddress(timelockController.address);
   await fund([owner.address], { tokens: [addresses.tokens.ETH] });

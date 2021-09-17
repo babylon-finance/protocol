@@ -12,12 +12,12 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { increaseTime, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ONE_ETH } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
-const { getStrategy } = require('../../fixtures/StrategyHelper');
+const { getStrategy } = require('fixtures/StrategyHelper');
 const ZEROMAXCAP_STRATEGY_PARAMS = [
   eth(0), // _maxCapitalRequested == 0
   eth(0.1), // _stake
@@ -89,10 +89,7 @@ describe('Strategy', function () {
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
     strategyCandidate = await ethers.getContractAt('Strategy', strategy21);
 
-    wethToken = await ethers.getContractAt(
-      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-      addresses.tokens.WETH,
-    );
+    wethToken = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Strategy Deployment', async function () {

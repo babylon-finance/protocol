@@ -8,14 +8,14 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
-  const { deployer, owner } = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getRapid();
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await getController();
   const contract = 'PriceOracle';
 
   const deployment = await deploy(contract, {
@@ -27,12 +27,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting price oracle on controller ${deployment.address}`);
-    const isDeployer = (await controllerContract.owner()) === deployer;
-    await (
-      await controllerContract
-        .connect(isDeployer ? signer : await getSigner(owner))
-        .editPriceOracle(deployment.address, { gasPrice })
-    ).wait();
+    await (await controller.editPriceOracle(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

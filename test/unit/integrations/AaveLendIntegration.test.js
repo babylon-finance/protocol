@@ -8,7 +8,7 @@ const {
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { increaseTime } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('AaveLendIntegrationTest', function () {
@@ -32,8 +32,8 @@ describe('AaveLendIntegrationTest', function () {
       signer2,
       signer3,
     } = await setupTests()());
-    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
-    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
+    USDC = await getERC20(addresses.tokens.USDC);
+    WETH = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {

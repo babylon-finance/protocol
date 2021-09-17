@@ -5,7 +5,7 @@ const { impersonateAddress } = require('lib/rpc');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
-const { increaseTime } = require('../utils/test-helpers');
+const { increaseTime } = require('utils/test-helpers');
 
 const { deploy } = deployments;
 

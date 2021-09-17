@@ -259,7 +259,7 @@ contract BabylonViewer {
         )
     {
         IMardukGate gate = IMardukGate(controller.mardukGate());
-        bool accessBeta = gate.canAccessBeta(_user);
+        bool accessBeta = true;
         return (
             gate.canJoinAGarden(_garden, _user) || (accessBeta && !IGarden(_garden).privateGarden()),
             gate.canVoteInAGarden(_garden, _user) || (accessBeta && IGarden(_garden).publicStewards()),

@@ -155,6 +155,7 @@ describe('governor', function () {
       description: 'empty',
     });
   });
+
   it('can update timelock in the Governor', async function () {
     // create new governor
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
@@ -180,6 +181,7 @@ describe('governor', function () {
     });
     expect(await newGovernor.timelock()).to.equal(newTimelock.address);
   });
+
   it('can own treasury and transfer funds out', async function () {
     const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
 
@@ -195,8 +197,6 @@ describe('governor', function () {
       }
       await token.connect(voter).delegate(voter.address, { gasPrice: 0 });
     }
-    console.log('dai balance before', (await dai.balanceOf(signer1.address)).toString());
-    console.log('dai treasury balance before', (await dai.balanceOf(treasury.address)).toString());
 
     await runProposal(governor, {
       targets: [treasury.address],
@@ -208,8 +208,6 @@ describe('governor', function () {
       ],
       description: 'Transfer some DAI',
     });
-    console.log('dai balance after', (await dai.balanceOf(signer1.address)).toString());
-    console.log('dai treasury balance after', (await dai.balanceOf(treasury.address)).toString());
 
     expect(await dai.balanceOf(signer1.address)).to.eq(eth(100));
   });

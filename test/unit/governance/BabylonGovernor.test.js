@@ -7,7 +7,7 @@ const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
-const { ONE_YEAR_IN_SECONDS } = require('../../../lib/constants');
+const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
 describe('BabylonGovernor', function () {
   let owner;

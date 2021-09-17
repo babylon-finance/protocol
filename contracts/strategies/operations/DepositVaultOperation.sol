@@ -193,6 +193,8 @@ contract DepositVaultOperation is Operation {
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        // Get value of pending rewards
+        NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -203,6 +205,21 @@ contract DepositVaultOperation is Operation {
             return _resultAsset;
         } catch {
             return _yieldVault;
+        }
+    }
+
+    function _getRewardsNAV(
+        address _integration,
+        address _yieldVault,
+        address _reserveAsset
+    ) private view returns (uint256) {
+        try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
+            if (rewardToken != address(0) && amount > 0) {
+                return _getPrice(_reserveAsset, rewardToken).preciseMul(amount);
+            }
+            return 0;
+        } catch {
+            return 0;
         }
     }
 }

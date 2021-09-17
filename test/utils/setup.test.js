@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 
 const { increaseTime, increaseBlock, getTimestamp, mineInBlock } = require('utils/test-helpers');
-const { setup } = require('../../lib/scripts/setup');
+const { setup } = require('lib/scripts/setup');
 const { setupTests } = require('fixtures/GardenFixture');
 
 describe('setup', function () {
