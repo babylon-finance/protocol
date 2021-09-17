@@ -56,10 +56,10 @@ describe('rewards', function () {
   let dai;
   let wbtc;
 
-  const gardenNum = 1;
-  const strategyNum = 1;
+  const gardenNum = 3;
+  const strategyNum = 10;
   const depositNum = 1;
-  const userNum = 30;
+  const userNum = 10;
 
   beforeEach(async () => {
     ({

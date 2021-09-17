@@ -258,7 +258,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     uint256 private miningUpdatedAt; // Timestamp of last checkpoint update
     mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
-    string public constant override VERSION = 'v2';
 
     /* ============ Constructor ============ */
 
@@ -344,8 +343,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // PercentageMul must always have 18 decimals
             uint256 percentageMul = str[1].mul(10**mantissa).preciseDiv(str[0].mul(10**mantissa));
 
-            console.log('---CHECK STRATEGY percentageMul---', _strategy, percentageMul);
-            console.log('---CHECK STRATEGY rewards before---', _strategy, rewards);
+            // console.log('---CHECK STRATEGY percentageMul---', _strategy, percentageMul);
+            // console.log('---CHECK STRATEGY rewards before---', _strategy, rewards);
 
             if (percentageMul > 2e18) percentageMul = 2e18;
             rewards = rewards.preciseMul(percentageMul);
@@ -461,8 +460,46 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return _getContributorBetaPower(_garden, _contributor);
     }
 
-    function getGardenBetaPower(address _garden) public view override returns (uint256) {
-        return _getGardenBetaPower(_garden);
+    function getGardenBetaMigrationData(address _garden)
+        public
+        view
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        if (gardenPid[_garden] > 0) {
+            return (
+                gardenTimelist[_garden][gardenPid[_garden].sub(1)],
+                _getGardenBetaPower(_garden),
+                _getGardenBetaAvgBalance(_garden)
+            );
+        } else {
+            return (0, 0, 0);
+        }
+    }
+
+    function getContributorBetaMigrationData(address _garden, address _contributor)
+        public
+        view
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        if (gardenPid[_garden] > 0) {
+            return (
+                contributorPerGarden[_garden][_contributor].lastDepositAt,
+                _getContributorBetaPower(_garden, _contributor),
+                _getContributorBetaAvgBalance(_garden, _contributor)
+            );
+        } else {
+            return (0, 0, 0);
+        }
     }
 
     function getContributorBetaAvgBalance(address _garden, address _contributor)
@@ -478,8 +515,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return _getGardenBetaAvgBalance(_garden);
     }
 
-    function getBetaData(address _garden) external view override returns (uint256) {
-        return gardenPid[_garden];
+    function getGardenBetaPower(address _garden) public view override returns (uint256) {
+        return _getGardenBetaPower(_garden);
     }
 
     function _getContributorBetaPower(address _garden, address _contributor) internal view returns (uint256) {
@@ -488,9 +525,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             contributor.pid == 0
                 ? contributor.tsContributions[contributor.initialDepositAt]
                 : contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
-        console.log('power w/o update', contributorLastCheckpoint.power);
-        console.log('supply', contributorLastCheckpoint.supply);
-        console.log('timeDiff', block.timestamp.sub(contributor.lastDepositAt));
+        // console.log('power w/o update', contributorLastCheckpoint.power);
+        // console.log('supply', contributorLastCheckpoint.supply);
+        // console.log('timeDiff', block.timestamp.sub(contributor.lastDepositAt));
         return
             contributorLastCheckpoint.power.add(
                 (block.timestamp.sub(contributor.lastDepositAt)).mul(contributorLastCheckpoint.supply)
@@ -501,9 +538,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (gardenPid[_garden] > 0) {
             GardenPowerByTimestamp storage garden =
                 gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
-            console.log('power w/o update', garden.power);
-            console.log('supply', garden.supply);
-            console.log('timeDiff', block.timestamp.sub(garden.timestamp));
+            // console.log('power w/o update', garden.power);
+            // console.log('supply', garden.supply);
+            // console.log('timeDiff', block.timestamp.sub(garden.timestamp));
             return garden.power.add((block.timestamp.sub(garden.timestamp)).mul(garden.supply));
         } else {
             return 0;
@@ -517,30 +554,38 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             TimestampContribution storage contributorCheckpoint =
                 contributor.tsContributions[contributor.timeListPointer[i]];
             uint256 timeDiff = contributor.timeListPointer[i].sub(contributor.initialDepositAt);
-            console.log(' #%s balance %s', i, contributorCheckpoint.supply);
-            console.log(' #%s timestamp %s', i, contributorCheckpoint.timestamp);
-            console.log(' #%s power %s', i, contributorCheckpoint.power);
+            // console.log(' #%s balance %s', i, contributorCheckpoint.supply);
+            // console.log(' #%s timestamp %s', i, contributorCheckpoint.timestamp);
+            // console.log(' #%s power %s', i, contributorCheckpoint.power);
 
             avgBalance = i == 0
                 ? contributorCheckpoint.supply
                 : avgBalance.mul(timeDiff).add(contributorCheckpoint.supply).div(timeDiff);
-            console.log('#%s avgBalance %s', i, avgBalance);
+            // console.log('#%s avgBalance %s', i, avgBalance);
         }
         return avgBalance;
     }
 
     function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
+        uint256 gasSpent = gasleft();
         uint256 avgBalance;
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
             GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
             uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
-            console.log(' GARDEN #%s balance %s', i, garden.supply);
-            console.log(' GARDEN #%s timestamp %s', i, garden.timestamp);
-            console.log(' GARDEN #%s power %s', i, garden.power);
+            // console.log(' GARDEN #%s balance %s', i, garden.supply);
+            // console.log(' GARDEN #%s timestamp %s', i, garden.timestamp);
+            // console.log(' GARDEN #%s power %s', i, garden.power);
+            // console.log(
+            //    ' GARDEN timeDiff',
+            //    timeDiff,
+            //    gardenTimelist[_garden][0],
+            //    IGarden(_garden).gardenInitializedAt()
+            //);
 
-            avgBalance = i == 0 ? garden.supply : avgBalance.mul(timeDiff).add(garden.supply).div(timeDiff);
-            console.log('GARDEN #%s avgBalance %s', i, avgBalance);
+            avgBalance = i == 0 ? garden.supply : (avgBalance.mul(timeDiff)).add(garden.supply).div(timeDiff);
+            // console.log('GARDEN #%s avgBalance %s', i, avgBalance);
         }
+        // console.log('AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
         return avgBalance;
     }
 
@@ -1120,16 +1165,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[8]: totalSupply (garden)
         (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
             .getContributor(_contributor);
-        console.log('conditional', powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0);
+        // console.log('conditional', powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0);
         if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
             // Safe check, time travel only works for a past date, avoid underflow
             if (_to > block.timestamp) {
-                console.log('cannot go to the future', _to, block.timestamp);
+                // console.log('cannot go to the future', _to, block.timestamp);
                 _to = block.timestamp;
             }
             (powerData[5], powerData[6], powerData[7], powerData[8]) = IGarden(_garden).getGardenPower();
+
+            // Backward compatibility with previous gardens and users
+            if (powerData[4] == 0 && gardenPid[_garden] > 0) {
+                // pending contributor migration - backward compatible
+                (, powerData[3], powerData[4]) = getContributorBetaMigrationData(_garden, _contributor);
+            }
+            if (powerData[7] == 0 && gardenPid[_garden] > 0) {
+                // pending garden migration - backward compatible
+                (powerData[5], powerData[6], powerData[7]) = getGardenBetaMigrationData(_garden);
+                powerData[8] = ERC20(_garden).totalSupply();
+            }
+
             console.log('powerData[0]', powerData[0]);
             console.log('powerData[1]', powerData[1]);
             console.log('powerData[2]', powerData[2]);
@@ -1142,10 +1199,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
             // First we update contributor and garden power as of block.timestamp values
             // We then time travel back to when the strategy exitedAt
-            // TODO
-            // a) CALCULATE UPDATED VALUES FOR EITHER CONTRIBUTOR AND GARDEN (GARDEN DATA COULD BE RETRIEVED FROM getContributor if needed to avoid more remote calls)
-            // b) check time window
-            // c) if needed, calculate new time.
+
             // First we need to get an updatedValue of user and garden power since lastDeposits
             // console.log('CHECK user power', powerData[3]);
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));

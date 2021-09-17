@@ -120,6 +120,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 nonce;
         uint256 power;
         uint256 avgBalance;
+        bool checkBetaMigration;
     }
 
     /* ============ State Variables ============ */
@@ -200,6 +201,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 lastDepositAt;
         uint256 accGardenPower;
         uint256 avgGardenBalance;
+        bool checkBetaMigration;
     }
 
     GardenPower private gardenPower;
@@ -911,7 +913,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
         uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
-
+        // Backward compatibility to migrate from Beta gardens
+        if (!gardenPower.checkBetaMigration && gardenPower.avgGardenBalance == 0) {
+            (gardenPower.lastDepositAt, gardenPower.accGardenPower, gardenPower.avgGardenBalance) = rewardsDistributor
+                .getGardenBetaMigrationData(address(this));
+            gardenPower.checkBetaMigration = true;
+        }
         // if withPenaltiy then unwind strategy
         if (_withPenalty) {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -976,9 +983,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // make sure contributor gets desired amount of shares
         _require(sharesToMint >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
-
-        // TODO Backward compatibility
-        // The very first deposit == 0
+        uint256 gasSpent = gasleft();
+        // Backward compatibility to be executed only once
+        if (!gardenPower.checkBetaMigration && gardenPower.avgGardenBalance == 0) {
+            (gardenPower.lastDepositAt, gardenPower.accGardenPower, gardenPower.avgGardenBalance) = rewardsDistributor
+                .getGardenBetaMigrationData(address(this));
+            gardenPower.checkBetaMigration = true;
+        }
+        console.log('GAS USED FOR GARDEN UPDATE', gasSpent.sub(gasleft()));
+        console.log(
+            '---CHECK THAT GARDEN UPDATE WORKED----',
+            gardenPower.lastDepositAt,
+            gardenPower.checkBetaMigration
+        );
+        // The very first deposit == 0, it has to go before minting new tokens
         gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
             ? 0
             : gardenPower.accGardenPower.add((block.timestamp.sub(gardenPower.lastDepositAt)).mul(totalSupply()));
@@ -986,7 +1004,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // mint shares
         _mint(_to, sharesToMint);
 
-        // The following call should always go after _minting new tokens
+        // The following call should always go after minting new tokens
         gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
             ? totalSupply()
             : (gardenPower.avgGardenBalance.mul(block.timestamp.sub(gardenInitializedAt)).add(totalSupply())).div(
@@ -995,7 +1013,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         gardenPower.lastDepositAt = block.timestamp;
 
+        gasSpent = gasleft();
         _updateContributorDepositInfo(_to, previousBalance, _amountIn);
+        console.log('CONTRIBUTOR GAS USED FOR UPDATE', gasSpent.sub(gasleft()));
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1059,6 +1079,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.initialDepositAt = block.timestamp;
             contributor.avgBalance = balanceOf(_contributor);
         }
+        // Backward compatibility, to be executed only by Beta users and only once
+        // Beta users has deposited already, but power is still not updated
+        if (!contributor.checkBetaMigration && contributor.lastDepositAt > 0 && contributor.avgBalance == 0) {
+            (contributor.lastDepositAt, contributor.power, contributor.avgBalance) = rewardsDistributor
+                .getContributorBetaMigrationData(address(this), _contributor);
+            contributor.checkBetaMigration = true;
+        }
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.power = contributor.lastDepositAt == 0
@@ -1074,7 +1101,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // TODO USE SCALING factor to use blocks instead of seconds
         contributor.lastDepositAt = block.timestamp;
-        console.log('JUST DEPOSITED', block.timestamp);
         contributor.nonce = contributor.nonce + 1;
 
         // rewardsDistributor.updateCheckpointInGarden(_contributor, _reserveAssetQuantity, true);
@@ -1099,6 +1125,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.avgBalance = 0;
             totalContributors = totalContributors.sub(1);
         } else {
+            // Backward compatibility, to be executed only by Beta users and only once
+            // Beta users has deposited already, but power is still not updated
+            if (!contributor.checkBetaMigration && contributor.lastDepositAt > 0 && contributor.avgBalance == 0) {
+                (contributor.lastDepositAt, contributor.power, contributor.avgBalance) = rewardsDistributor
+                    .getContributorBetaMigrationData(address(this), _contributor);
+                contributor.checkBetaMigration = true;
+            }
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
             contributor.power = contributor.lastDepositAt == 0
                 ? 0

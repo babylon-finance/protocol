@@ -1,6 +1,7 @@
 const { expect } = require('chai');
 const { deployments } = require('hardhat');
 const { deploy } = deployments;
+const { fund } = require('lib/whale');
 const {
   ONE_DAY_IN_SECONDS,
   ONE_ETH,
@@ -112,6 +113,7 @@ describe('RewardsDistributor', function () {
   let priceOracle;
   let uniswapV3TradeIntegration;
   let masterSwapper;
+  let mardukGate;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -232,6 +234,7 @@ describe('RewardsDistributor', function () {
       uniswapV3TradeIntegration,
       priceOracle,
       masterSwapper,
+      mardukGate,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
@@ -2151,8 +2154,8 @@ describe('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
-  describe.only('Backward compatibility', function () {
-    it('should successfully return historic data from a Beta user of Arkad Garden', async function () {
+  describe('Backward compatibility', function () {
+    it('should successfully return historic data from a Beta user of Arkad Garden and update / move power logic at garden level', async function () {
       const signers = await ethers.getSigners();
       const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
 
@@ -2176,6 +2179,26 @@ describe('RewardsDistributor', function () {
         '0x40154ad8014df019a53440a60ed351dfba47574e',
         owner,
       );
+      const controller = await ethers.getContractAt(
+        'BabController',
+        '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f',
+        owner,
+      );
+
+      // upgrade controller
+      const controllerNewImpl = await deploy('BabController', {
+        from: signer.address,
+      });
+
+      await proxyAdmin.upgrade(controller.address, controllerNewImpl.address);
+      await controller.editMardukGate(mardukGate.address);
+
+      // upgrade rewards distributor
+      const distributorNewImpl = await deploy('RewardsDistributor', {
+        from: signer.address,
+      });
+
+      await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
 
       const gardenNewImpl = await deploy('Garden', {
         from: signer.address,
@@ -2185,39 +2208,83 @@ describe('RewardsDistributor', function () {
 
       await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
 
-      // upgrade rewards distributor
-      const distributorNewImpl = await deploy('RewardsDistributor', {
-        from: signer.address,
+      // console.log(
+      //   'Contributor 1 beta power',
+      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor.address)).toString(),
+      // );
+      // console.log(
+      //   'Contributor 1 beta avg balance',
+      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor.address)).toString(),
+      // );
+
+      // console.log(
+      //   'Contributor 2 beta power',
+      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor2.address)).toString(),
+      // );
+      // console.log(
+      //   'Contributor 2 beta avg balance',
+      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor2.address)).toString(),
+      // );
+
+      // console.log('Garden beta power', (await distributor.getGardenBetaPower(arkadGarden.address)).toString());
+      // console.log(
+      //   'Garden beta avg balance',
+      //   (await distributor.getGardenBetaAvgBalance(arkadGarden.address)).toString(),
+      // );
+
+      await fund([contributor.address, contributor2.address], {
+        tokens: [addresses.tokens.DAI],
+        amounts: [ethers.utils.parseEther('500'), ethers.utils.parseEther('200')],
       });
 
-      await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+      // console.log(
+      //   'User 1 BEFORE A DEPOSIT -> BEFORE UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('User 2 BEFORE A DEPOSIT -> BEFORE UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
+      await dai.connect(contributor).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      // await dai.connect(contributor2).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      const contributorBeforeUpdate = await arkadGarden.getContributor(contributor.address);
 
-      console.log(
-        'Contributor 1 beta power',
-        (await distributor.getContributorBetaPower(arkadGarden.address, contributor.address)).toString(),
-      );
-      console.log(
-        'Contributor 1 beta avg balance',
-        (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor.address)).toString(),
-      );
+      await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
+      // await arkadGarden.connect(contributor2).deposit(ethers.utils.parseEther('200'), 1, contributor2.address, false);
+      const contributorAfterUpdate1 = await arkadGarden.getContributor(contributor.address);
 
-      console.log(
-        'Contributor 2 beta power',
-        (await distributor.getContributorBetaPower(arkadGarden.address, contributor2.address)).toString(),
-      );
-      console.log(
-        'Contributor 2 beta avg balance',
-        (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor2.address)).toString(),
-      );
+      // console.log(
+      //   'User 1 AFTER A DEPOSIT -> AFTER UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('User 2 AFTER A DEPOSIT -> AFTER UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
+      await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
+      const contributorAfterUpdate2 = await arkadGarden.getContributor(contributor.address);
 
-      console.log('Garden beta power', (await distributor.getGardenBetaPower(arkadGarden.address)).toString());
-      console.log(
-        'Garden beta avg balance',
-        (await distributor.getGardenBetaAvgBalance(arkadGarden.address)).toString(),
-      );
+      // console.log(
+      //   'User 1 AFTER 2nd DEPOSIT -> AFTER UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('VERSION', (await distributor.VERSION()).toString());
+      // console.log('garden pid ', (await distributor.getBetaData(arkadGarden.address)).toString());
 
-      console.log('VERSION', (await distributor.VERSION()).toString());
-      console.log('garden pid ', (await distributor.getBetaData(arkadGarden.address)).toString());
+      expect(contributorBeforeUpdate[8]).to.equal(0); // power before update from rewards distributor
+      expect(contributorBeforeUpdate[10]).to.equal(0); // avg balance update from  rewards distributor
+      // after update by first deposit
+      expect(contributorAfterUpdate1[8]).to.be.closeTo(
+        ethers.utils.parseEther('13866788214.063025322230284820'),
+        contributorAfterUpdate1[8].div(50),
+      );
+      expect(contributorAfterUpdate1[10]).to.be.closeTo(
+        ethers.utils.parseEther('200.000789038525624468'),
+        contributorAfterUpdate1[10].div(50),
+      );
+      // after update by second deposit
+      expect(contributorAfterUpdate2[8]).to.be.closeTo(
+        ethers.utils.parseEther('13866787334.691584453841760823'),
+        contributorAfterUpdate2[8].div(50),
+      );
+      expect(contributorAfterUpdate2[10]).to.be.closeTo(
+        ethers.utils.parseEther('200.000944081390169015'),
+        contributorAfterUpdate2[10].div(50),
+      );
     });
   });
 });

@@ -543,7 +543,7 @@ describe('Garden', function () {
       await increaseTime(1000);
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW),
-      ).to.be.closeTo(ethers.utils.parseEther('0.495785820525532969'), ethers.utils.parseEther('0.005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.487816764132553606'), ethers.utils.parseEther('0.02'));
     });
     it('the contributor power is calculated correctly if _to is after its last deposit and from = 0 (2 deposits from user)', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -555,7 +555,7 @@ describe('Garden', function () {
       await increaseTime(1000);
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, NOW),
-      ).to.be.closeTo(ethers.utils.parseEther('0.662802252401457436'), ethers.utils.parseEther('0.005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.655420897477890599'), ethers.utils.parseEther('0.02'));
     });
     it('the contributor power is calculated correctly if _to is between two deposits and from = 0 (2 distanced deposits from user)', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -661,7 +661,7 @@ describe('Garden', function () {
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 2% of contribution power within the time period
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end),
-      ).to.be.closeTo(ethers.utils.parseEther('0.022402636527754115'), ethers.utils.parseEther('0.0005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.022402636527754115'), ethers.utils.parseEther('0.005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -701,7 +701,7 @@ describe('Garden', function () {
       // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 50% of contribution power within the time period as most of the period had 50%
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
-      ).to.be.closeTo(ethers.utils.parseEther('0.350165172690704180'), ethers.utils.parseEther('0.005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.341006101847704193'), ethers.utils.parseEther('0.02'));
     });
     it('contributor power is calculated correctly for different users in the same garden with the same power ', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {

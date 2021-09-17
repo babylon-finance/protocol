@@ -106,7 +106,21 @@ interface IRewardsDistributor {
 
     function getGardenBetaAvgBalance(address _garden) external view returns (uint256);
 
-    function VERSION() external view returns (string memory);
+    function getGardenBetaMigrationData(address _garden)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function getBetaData(address _garden) external view returns (uint256);
+    function getContributorBetaMigrationData(address _garden, address _contributor)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 }
