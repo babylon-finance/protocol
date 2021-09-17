@@ -1051,10 +1051,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         IMardukGate mgate = IMardukGate(IBabController(controller).mardukGate());
-        bool betaAccess = mgate.canAccessBeta(_user);
-        canDeposit = mgate.canJoinAGarden(address(this), _user) || (betaAccess && !privateGarden);
-        canVote = mgate.canVoteInAGarden(address(this), _user) || (betaAccess && publicStewards);
-        canCreateStrategy = mgate.canAddStrategiesInAGarden(address(this), _user) || (betaAccess && publicStrategists);
+        bool betaAccess = true;
+        canDeposit = (betaAccess && !privateGarden) || mgate.canJoinAGarden(address(this), _user);
+        canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
+        canCreateStrategy = (betaAccess && publicStrategists) || mgate.canAddStrategiesInAGarden(address(this), _user);
     }
 
     // Checks if an address is a creator
