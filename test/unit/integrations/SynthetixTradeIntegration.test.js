@@ -1,12 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { increaseTime } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
-const { STRATEGY_EXECUTE_MAP, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
-const { eth } = require('lib/helpers');
+const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
-const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
+const { getStrategy, executeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
@@ -54,14 +53,8 @@ describe('SynthetixTradeIntegration', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 
-          const tokenContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            token,
-          );
-          const assetContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            asset,
-          );
+          const tokenContract = await getERC20(token);
+          const assetContract = await getERC20(asset);
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
 

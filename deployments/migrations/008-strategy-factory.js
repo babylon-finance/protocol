@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
@@ -16,8 +17,7 @@ module.exports = async ({
   const strategyContract = 'Strategy';
   const beaconContract = 'StrategyBeacon';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
+  const controller = await getController();
 
   const strategy = await deploy(strategyContract, {
     from: deployer,
@@ -43,7 +43,7 @@ module.exports = async ({
 
   if (strategyFactory.newlyDeployed) {
     console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
-    await (await controllerContract.editStrategyFactory(strategyFactory.address, { gasPrice })).wait();
+    await (await controller.editStrategyFactory(strategyFactory.address, { gasPrice })).wait();
   }
 
   if (network.live && strategy.newlyDeployed) {

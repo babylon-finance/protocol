@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -13,8 +14,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
   const contract = 'MasterSwapper';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
+  const controller = await getController();
   const curve = await deployments.get('CurveTradeIntegration');
   const univ3 = await deployments.get('UniswapV3TradeIntegration');
   const synthetix = await deployments.get('SynthetixTradeIntegration');
@@ -29,7 +29,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log('Setting master swapper in controller', deployment.address);
-    await (await controllerContract.setMasterSwapper(deployment.address, { gasPrice })).wait();
+    await (await controller.setMasterSwapper(deployment.address, { gasPrice })).wait();
   }
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));

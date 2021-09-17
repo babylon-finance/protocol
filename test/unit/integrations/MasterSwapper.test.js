@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { eth } = require('lib/helpers');
+const { getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
@@ -86,11 +86,8 @@ describe('MasterSwapper', function () {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === to) return;
 
-          const tokenContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            token,
-          );
-          const assetContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', to);
+          const tokenContract = await getERC20(token);
+          const assetContract = await getERC20(to);
 
           const garden = await createGarden({ reserveAsset: token, signer: signer1 });
 

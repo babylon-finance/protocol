@@ -10,6 +10,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 describe('CompoundBorrowIntegrationTest', function () {
   let compoundBorrowIntegration;
@@ -26,10 +27,7 @@ describe('CompoundBorrowIntegrationTest', function () {
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
-    const gardenReserveAsset = await ethers.getContractAt(
-      '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-      token,
-    );
+    const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
 
     const asset1Address = asset1.address === addresses.tokens.WETH ? ADDRESS_ZERO : asset1.address;
@@ -86,10 +84,10 @@ describe('CompoundBorrowIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ garden1, compoundLendIntegration, compoundBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
-    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
-    DAI = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
-    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
-    WBTC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WBTC);
+    USDC = await getERC20(addresses.tokens.USDC);
+    DAI = await getERC20(addresses.tokens.DAI);
+    WETH = await getERC20(addresses.tokens.WETH);
+    WBTC = await getERC20(addresses.tokens.WBTC);
   });
 
   describe('Deployment', function () {

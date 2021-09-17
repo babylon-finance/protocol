@@ -21,6 +21,7 @@ require('./lib/plugins/utils');
 
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
+require('./lib/tasks/export-token-list');
 require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
@@ -73,7 +74,7 @@ module.exports = {
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
-      url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+      url: 'https://nameless-polished-dawn.quiknode.pro/1c4b67dd2b4a57754e6b6dc0e5f81e5c457f399f/',
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${OWNER_PRIVATE_KEY}`],
       saveDeployments: true,
     },

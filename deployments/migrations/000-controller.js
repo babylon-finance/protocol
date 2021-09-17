@@ -23,7 +23,7 @@ module.exports = async ({
   }
 
   console.log('KEEPER', KEEPER);
-  const controller = await upgradesDeployer.deployAdminProxy(
+  const deployment = await upgradesDeployer.deployAdminProxy(
     'BabController',
     'BabControllerProxy',
     { from: deployer, log: true, gasPrice },
@@ -32,32 +32,32 @@ module.exports = async ({
     },
   );
 
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await ethers.getContractAt('BabController', deployment.address, signer);
 
-  if (!(await controllerContract.isValidReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'))) {
+  if (!(await controller.isValidReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'))) {
     console.log('Setting reserve asset to WETH');
-    await (await controllerContract.addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', { gasPrice })).wait();
+    await (await controller.addReserveAsset('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', { gasPrice })).wait();
   }
 
-  if (!(await controllerContract.isValidReserveAsset('0x6B175474E89094C44Da98b954EedeAC495271d0F'))) {
+  if (!(await controller.isValidReserveAsset('0x6B175474E89094C44Da98b954EedeAC495271d0F'))) {
     console.log('Adding DAI as reserve asset');
-    await (await controllerContract.addReserveAsset('0x6B175474E89094C44Da98b954EedeAC495271d0F', { gasPrice })).wait();
+    await (await controller.addReserveAsset('0x6B175474E89094C44Da98b954EedeAC495271d0F', { gasPrice })).wait();
   }
 
-  if (!(await controllerContract.isValidReserveAsset('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'))) {
+  if (!(await controller.isValidReserveAsset('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'))) {
     console.log('Adding USDC as reserve asset');
-    await (await controllerContract.addReserveAsset('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', { gasPrice })).wait();
+    await (await controller.addReserveAsset('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', { gasPrice })).wait();
   }
 
-  if (!(await controllerContract.isValidReserveAsset('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'))) {
+  if (!(await controller.isValidReserveAsset('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'))) {
     console.log('Adding WBTC as reserve asset');
-    await (await controllerContract.addReserveAsset('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', { gasPrice })).wait();
+    await (await controller.addReserveAsset('0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', { gasPrice })).wait();
   }
 
   // Use OpenZeppelin Defender Keeper
-  if (!(await controllerContract.isValidKeeper(KEEPER))) {
+  if (!(await controller.isValidKeeper(KEEPER))) {
     console.log(`Adding KEEPER ${KEEPER}`);
-    await (await controllerContract.addKeepers([KEEPER], { gasPrice })).wait();
+    await (await controller.addKeepers([KEEPER], { gasPrice })).wait();
   }
 
   if (network.live && controller.newlyDeployed) {

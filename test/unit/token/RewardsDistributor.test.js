@@ -6,9 +6,17 @@ const {
   USDC_GARDEN_PARAMS,
   STRATEGY_EXECUTE_MAP,
 } = require('lib/constants');
-const { increaseTime, increaseBlock } = require('utils/test-helpers');
+const {
+  increaseBlock,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 
-const { parse } = require('lib/helpers');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
 
@@ -230,12 +238,12 @@ describe('RewardsDistributor', function () {
       uniswapV3TradeIntegration,
       priceOracle,
       masterSwapper,
+      dai,
+      usdc,
+      weth,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
-    usdc = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
-    dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
-    weth = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
@@ -1039,10 +1047,7 @@ describe('RewardsDistributor', function () {
         );
 
         expect(preallocated).to.be.equal(amount);
-        const reserveAssetContract = await ethers.getContractAt(
-          '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-          token,
-        );
+        const reserveAssetContract = await getERC20(token);
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(100);
