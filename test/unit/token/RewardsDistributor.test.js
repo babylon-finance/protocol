@@ -1,4 +1,7 @@
 const { expect } = require('chai');
+const { deployments } = require('hardhat');
+const { deploy } = deployments;
+const { fund } = require('lib/whale');
 const {
   ONE_DAY_IN_SECONDS,
   ONE_ETH,
@@ -83,7 +86,6 @@ async function getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, tim
     timeListPointer: protocolObj.timeListPointer,
     power: protocolObj.power,
   });
-
   await getAndValidateQuarter(rewardsDistributor, protocolObj.quarter, {
     quarterPrincipal: protocolObj.principal,
     quarterNumber: protocolObj.quarter,
@@ -118,6 +120,7 @@ describe('RewardsDistributor', function () {
   let priceOracle;
   let uniswapV3TradeIntegration;
   let masterSwapper;
+  let mardukGate;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -238,6 +241,7 @@ describe('RewardsDistributor', function () {
       uniswapV3TradeIntegration,
       priceOracle,
       masterSwapper,
+      mardukGate,
       dai,
       usdc,
       weth,
@@ -1171,7 +1175,7 @@ describe('RewardsDistributor', function () {
       // LP profits
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.000005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
       // Receive DAI as strategist and steward directly in its wallet after claim
       const signer1BalanceDAI = await dai.balanceOf(signer1.address);
       expect(signer1BalanceDAI).to.equal(value);
@@ -1248,7 +1252,7 @@ describe('RewardsDistributor', function () {
       // LP profits
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.000005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.0005'));
       // Receive USDC as strategist and steward directly in its wallet after claim
       const signer1BalanceUSDC = await usdc.balanceOf(signer1.address);
       expect(signer1BalanceUSDC).to.equal(value);
@@ -1355,9 +1359,12 @@ describe('RewardsDistributor', function () {
 
       // Execute DAI Garden strategy long2
       await executeStrategy(long2, { amount: ethers.utils.parseEther('1000') });
-      await injectFakeProfits(long1, ethers.utils.parseEther('200')); // injecting DAI (18 decimals)
-      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // injecting USDC (6 decimals)
-      // Finalize both strategies (long 2 has higher duration -> more rewardss)
+
+      await injectFakeProfits(long1, ethers.utils.parseEther('200')); // We inject Dai with 18 decimals during strategy execution
+
+      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // We inject usdc (6 decimals) during strategy execution
+
+      // Finalize both strategies (long 2 has higher duration -> more rewards)
       await finalizeStrategyAfterQuarter(long1);
       await finalizeStrategyImmediate(long2);
       // Check pending rewards for users at USDC Garden
@@ -1633,10 +1640,7 @@ describe('RewardsDistributor', function () {
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(
-        signer1BABLUSDC.add(signer1BABLDAI),
-        ethers.utils.parseEther('0.000005'),
-      );
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.0005'));
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens without profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -1774,7 +1778,7 @@ describe('RewardsDistributor', function () {
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.00005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.005'));
     });
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1881,11 +1885,8 @@ describe('RewardsDistributor', function () {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
-        signer1BABL,
-        ethers.utils.parseEther('0.0005'),
-      );
-      expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
+      expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -2034,15 +2035,9 @@ describe('RewardsDistributor', function () {
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
-        signer1BABL,
-        ethers.utils.parseEther('0.0005'),
-      );
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.closeTo(
-        signer2BABL,
-        ethers.utils.parseEther('0.0005'),
-      );
-      expect(signer1Profit.toString()).to.be.closeTo('5661673429627975', ethers.utils.parseEther('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.0005'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, ethers.utils.parseEther('0.0005'));
+      expect(signer1Profit.toString()).to.be.closeTo('3641062268321416', ethers.utils.parseEther('0.0005'));
       expect(signer2Profit.toString()).to.be.closeTo('871026681481226', ethers.utils.parseEther('0.0005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
         long3.address,
@@ -2063,17 +2058,16 @@ describe('RewardsDistributor', function () {
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
         signer1BABL2.add(signer1BABL),
-        ethers.utils.parseEther('0.005'),
+        ethers.utils.parseEther('0.0005'),
       );
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.closeTo(
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(
         signer2BABL2.add(signer2BABL),
-        ethers.utils.parseEther('0.005'),
+        ethers.utils.parseEther('0.0005'),
       );
-
-      expect(signer1Profit2.toString()).to.be.closeTo('19132336437560088', ethers.utils.parseEther('0.0005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('3135337489180200', ethers.utils.parseEther('0.0005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('11989663164624488', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2169456023987573', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
@@ -2162,6 +2156,155 @@ describe('RewardsDistributor', function () {
           long5.address,
         ]),
       ).to.be.revertedWith('BAB#073');
+    });
+  });
+  describe.only('Backward compatibility', function () {
+    it('should successfully return historic data from a Beta user of Arkad Garden and update / move power logic at garden level', async function () {
+      const signers = await ethers.getSigners();
+      const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
+
+      const signer = signers[0];
+      const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+
+      const arkadGarden = await ethers.getContractAt('Garden', '0xd42B3A30ca89155d6C3499c81F0C4e5A978bE5c2');
+      const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
+      // Arkad
+      const contributor = await impersonateAddress('0xc31C4549356d46c37021393EeEb6f704B38061eC');
+      const contributor2 = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
+
+      // upgrade garden
+      const gardenBeacon = await ethers.getContractAt(
+        'UpgradeableBeacon',
+        '0xc8f44C560efe396a6e57e48fF07205bD28AF5E75',
+        deployer,
+      );
+      const distributor = await ethers.getContractAt(
+        'RewardsDistributor',
+        '0x40154ad8014df019a53440a60ed351dfba47574e',
+        owner,
+      );
+      const controller = await ethers.getContractAt(
+        'BabController',
+        '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f',
+        owner,
+      );
+
+      // upgrade controller
+      const controllerNewImpl = await deploy('BabController', {
+        from: signer.address,
+      });
+
+      await proxyAdmin.upgrade(controller.address, controllerNewImpl.address);
+      await controller.editMardukGate(mardukGate.address);
+
+      // upgrade rewards distributor
+      const distributorNewImpl = await deploy('RewardsDistributor', {
+        from: signer.address,
+      });
+
+      await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+
+      const gardenNewImpl = await deploy('Garden', {
+        from: signer.address,
+        args: [],
+        log: true,
+      });
+
+      await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
+
+      // console.log(
+      //   'Contributor 1 beta power',
+      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor.address)).toString(),
+      // );
+      // console.log(
+      //   'Contributor 1 beta avg balance',
+      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor.address)).toString(),
+      // );
+
+      // console.log(
+      //   'Contributor 2 beta power',
+      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor2.address)).toString(),
+      // );
+      // console.log(
+      //   'Contributor 2 beta avg balance',
+      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor2.address)).toString(),
+      // );
+
+      // console.log('Garden beta power', (await distributor.getGardenBetaPower(arkadGarden.address)).toString());
+      // console.log(
+      //   'Garden beta avg balance',
+      //   (await distributor.getGardenBetaAvgBalance(arkadGarden.address)).toString(),
+      // );
+
+      await fund([contributor.address, contributor2.address], {
+        tokens: [addresses.tokens.DAI],
+        amounts: [ethers.utils.parseEther('500'), ethers.utils.parseEther('200')],
+      });
+
+      // console.log(
+      //   'User 1 BEFORE A DEPOSIT -> BEFORE UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('User 2 BEFORE A DEPOSIT -> BEFORE UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
+      await dai.connect(contributor).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      // await dai.connect(contributor2).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+      const contributorBeforeUpdate = await arkadGarden.getContributor(contributor.address);
+      console.log('---BEFORE 1st DEPOSIT---');
+      console.log('Arkad Garden address', arkadGarden.address);
+      await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
+      // await arkadGarden.connect(contributor2).deposit(ethers.utils.parseEther('200'), 1, contributor2.address, false);
+      console.log('---AFTER 1st DEPOSIT---');
+
+      const contributorAfterUpdate1 = await arkadGarden.getContributor(contributor.address);
+
+      // console.log(
+      //   'User 1 AFTER A DEPOSIT -> AFTER UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('User 2 AFTER A DEPOSIT -> AFTER UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
+      console.log('---BEFORE 2nd DEPOSIT---');
+      await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
+      console.log('---AFTER 2nd DEPOSIT---');
+
+      const contributorAfterUpdate2 = await arkadGarden.getContributor(contributor.address);
+
+      // console.log(
+      //   'User 1 AFTER 2nd DEPOSIT -> AFTER UPDATE',
+      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
+      // );
+      // console.log('VERSION', (await distributor.VERSION()).toString());
+      // console.log('garden pid ', (await distributor.getBetaData(arkadGarden.address)).toString());
+      console.log('0', contributorBeforeUpdate[0].toString());
+      console.log('1', contributorBeforeUpdate[1].toString());
+      console.log('2', contributorBeforeUpdate[2].toString());
+      console.log('3', contributorBeforeUpdate[3].toString());
+      console.log('4', contributorBeforeUpdate[4].toString());
+      console.log('5', contributorBeforeUpdate[5].toString());
+      console.log('6', contributorBeforeUpdate[6].toString());
+      console.log('7', contributorBeforeUpdate[7].toString());
+      console.log('8', contributorBeforeUpdate[8].toString());
+      console.log('9', contributorBeforeUpdate[9].toString());
+
+      expect(contributorBeforeUpdate[8]).to.equal(0); // power before update from rewards distributor
+      expect(contributorBeforeUpdate[10]).to.equal(0); // avg balance update from  rewards distributor
+      // after update by first deposit
+      expect(contributorAfterUpdate1[8]).to.be.closeTo(
+        ethers.utils.parseEther('13866788214.063025322230284820'),
+        contributorAfterUpdate1[8].div(50),
+      );
+      expect(contributorAfterUpdate1[10]).to.be.closeTo(
+        ethers.utils.parseEther('200.000789038525624468'),
+        contributorAfterUpdate1[10].div(50),
+      );
+      // after update by second deposit
+      expect(contributorAfterUpdate2[8]).to.be.closeTo(
+        ethers.utils.parseEther('13866787334.691584453841760823'),
+        contributorAfterUpdate2[8].div(50),
+      );
+      expect(contributorAfterUpdate2[10]).to.be.closeTo(
+        ethers.utils.parseEther('200.000944081390169015'),
+        contributorAfterUpdate2[10].div(50),
+      );
     });
   });
 });

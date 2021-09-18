@@ -98,5 +98,28 @@ interface IRewardsDistributor {
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
-    function updateGardenPower(address _contributor) external;
+    function updateGardenPowerAndContributor(
+        address _garden,
+        address _contributor,
+        uint256 _previousBalance,
+        uint256 _previousSupply
+    ) external;
+
+    function getGardenBetaMigrationData(address _garden)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
+
+    function getContributorBetaMigrationData(address _garden, address _contributor)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 }
