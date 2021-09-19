@@ -4,9 +4,9 @@ const { fund } = require('lib/whale');
 const { from, eth, parse } = require('lib/helpers');
 const { impersonateAddress, setCode } = require('lib/rpc');
 const addresses = require('lib/addresses');
-const { ONE_ETH, ADDRESS_ZERO } = require('lib/constants');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
-const { createStrategy } = require('fixtures/StrategyHelper.js');
+const { createStrategy, finalizeStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
 
 describe('GardenValuer', function () {
   let dai;
@@ -55,7 +55,7 @@ describe('GardenValuer', function () {
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
 
-      expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.equal(ONE_ETH);
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.equal(eth());
     });
 
     it('gets correct value for the garden with many deposits', async function () {
@@ -65,7 +65,7 @@ describe('GardenValuer', function () {
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
 
-      expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.equal(ONE_ETH.mul(5));
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.equal(eth().mul(5));
     });
 
     it('gets correct value for the garden with active strategy', async function () {
@@ -75,7 +75,7 @@ describe('GardenValuer', function () {
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
 
-      expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.closeTo(ONE_ETH.mul(5), ONE_ETH.div(10));
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth().mul(5), eth().div(10));
     });
 
     it('gets correct value for the garden with finished strategy', async function () {
@@ -85,7 +85,26 @@ describe('GardenValuer', function () {
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
       const totalSupply = await garden1.totalSupply();
 
-      expect(pricePerGardenToken.mul(totalSupply).div(ONE_ETH)).to.closeTo(ONE_ETH.mul(5), ONE_ETH.div(10));
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth().mul(5), eth().div(10));
+    });
+
+    it('accounts for the keeper debt', async function () {
+      // add 4 ETH to the garden and trade them for a token
+      const strategy = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategy, { fee: eth(1), amount: eth(4), time: ONE_DAY_IN_SECONDS });
+
+      const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
+      const totalSupply = await garden1.totalSupply();
+
+      expect(await garden1.keeperDebt()).to.equal(eth());
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth().mul(4), eth().div(10));
     });
 
     it('gets correct value for the garden 0 price asset', async function () {
