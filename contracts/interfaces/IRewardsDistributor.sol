@@ -111,7 +111,8 @@ interface IRewardsDistributor {
         returns (
             uint256,
             uint256,
-            uint256
+            uint256,
+            bool
         );
 
     function getContributorBetaMigrationData(address _garden, address _contributor)
@@ -120,6 +121,7 @@ interface IRewardsDistributor {
         returns (
             uint256,
             uint256,
-            uint256
+            uint256,
+            bool
         );
 }

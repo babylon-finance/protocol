@@ -660,7 +660,7 @@ describe('Garden', function () {
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 2% of contribution power within the time period
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, 0, end),
-      ).to.be.closeTo(ethers.utils.parseEther('0.022402636527754115'), ethers.utils.parseEther('0.005'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.027869493086061244'), ethers.utils.parseEther('0.005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
@@ -676,10 +676,10 @@ describe('Garden', function () {
       const start = NOW;
       const end = start + 7776000 / 3;
       await increaseTime(100);
-      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 0.7% of contribution power within the time period
+      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 7% of contribution power within the time period
       await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end)).toString(),
-      ).to.be.closeTo((71743363281910311).toString(), ethers.utils.parseEther('0.005'));
+        await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
+      ).to.be.closeTo(ethers.utils.parseEther('0.077030913380276668'), ethers.utils.parseEther('0.005'));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power (2 big deposits) ', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {

@@ -297,7 +297,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Function that set each contributor timestamp per garden
+     * Function that set each contributor power update per garden
      * @param _garden                Address of the garden the contributor belongs to
      * @param _contributor           Address of the contributor
      * @param _previousBalance       Previous balance of the contributor
@@ -309,17 +309,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         uint256 _previousSupply
     ) external override nonReentrant onlyActiveGarden {
-        //  _updateGardenPower(_garden);
-        // _setContributorTimestampParams(_garden, _contributor, _previousBalance, _depositOrWithdraw);
-        _updateGardenPower(_garden, _contributor, _previousSupply);
+        _updateGardenPower(_garden, _previousSupply);
         _updateContributorPower(_garden, _contributor, _previousBalance);
     }
 
-    function _updateGardenPower(
-        address _garden,
-        address _contributor,
-        uint256 _previousSupply
-    ) internal {
+    function _updateGardenPower(address _garden, uint256 _previousSupply) internal {
         uint256 gasSpent = gasleft();
         // we select timestamp [0] to persist the garden power data as we deprecated checkpoints
         GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
@@ -328,7 +322,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             (
                 gardenPower.lastDepositAt,
                 gardenPower.accGardenPower,
-                gardenPower.avgGardenBalance
+                gardenPower.avgGardenBalance,
+
             ) = getGardenBetaMigrationData(_garden);
             betaGardenMigrated[_garden] = true;
         }
@@ -359,11 +354,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal {
         // TODO remove gasSpent measurement and variables
         uint256 gasSpent = gasleft();
-        ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
         // Backward compatibility, to be executed only by Beta users and only once if needed data migration
-        console.log('BEFORE BEFORE updated contributor power', contributorDetail.power);
 
         if (
             !betaUserMigrated[_garden][_contributor] &&
@@ -374,21 +368,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             (
                 contributor.lastDepositAt,
                 contributorDetail.power,
-                contributorDetail.avgBalance
+                contributorDetail.avgBalance,
+
             ) = getContributorBetaMigrationData(_garden, _contributor);
             betaUserMigrated[_garden][_contributor] = true;
         }
         // The very first deposit takes 0 of power
         // Power is updated by usign previous balance (before the new mint or burn which is just done as part of this deposit/withdraw op)
-        console.log('BEFORE updated contributor power', contributorDetail.power);
-        console.log('ADDING power', (block.timestamp.sub(contributor.lastDepositAt)).mul(_previousBalance));
-        console.log('previous balance', _previousBalance);
-        console.log('timediff', block.timestamp.sub(contributor.lastDepositAt));
 
         contributorDetail.power = contributor.lastDepositAt == 0
             ? 0
             : contributorDetail.power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(_previousBalance));
-        console.log('AFTER updated contributor power', contributorDetail.power);
         // The following call should always go after minting new tokens
         // The reason is that we need an updated user balance to update avg contributor balance
         contributorDetail.avgBalance = contributor.lastDepositAt == 0
@@ -423,30 +413,29 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         returns (
             uint256,
             uint256,
-            uint256
+            uint256,
+            bool
         )
     {
-        console.log('-------CHECK migrating GARDEN------', _garden, gardenPid[_garden]);
         if (gardenPid[_garden] > 0) {
-            console.log('updating beta garden', _garden, gardenTimelist[_garden][gardenPid[_garden].sub(1)]);
             return (
-                gardenTimelist[_garden][gardenPid[_garden].sub(1)],
+                betaGardenMigrated[_garden]
+                    ? gardenPowerByTimestamp[_garden][0].lastDepositAt
+                    : gardenTimelist[_garden][gardenPid[_garden].sub(1)],
                 _getGardenBetaPower(_garden),
-                _getGardenBetaAvgBalance(_garden)
+                _getGardenBetaAvgBalance(_garden),
+                betaGardenMigrated[_garden]
             );
         } else {
-            return (0, 0, 0);
+            return (0, 0, 0, false);
         }
     }
 
     function _getGardenBetaPower(address _garden) internal view returns (uint256) {
-        // Assumes that the garden is a beta garden with checkpoints
         if (gardenPid[_garden] > 0) {
+            // Assumes that the garden is a beta garden with checkpoints
             GardenPowerByTimestamp storage garden =
                 gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
-            // console.log('power w/o update', garden.power);
-            // console.log('supply', garden.supply);
-            // console.log('timeDiff', block.timestamp.sub(garden.timestamp));
             return garden.accGardenPower;
         } else {
             return 0;
@@ -459,22 +448,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
             GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
             uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
-            // console.log(' GARDEN #%s balance %s', i, garden.supply);
-            // console.log(' GARDEN #%s timestamp %s', i, garden.timestamp);
-            // console.log(' GARDEN #%s power %s', i, garden.power);
-            // console.log(
-            //    ' GARDEN timeDiff',
-            //    timeDiff,
-            //    gardenTimelist[_garden][0],
-            //    IGarden(_garden).gardenInitializedAt()
-            //);
 
             avgBalance = i == 0
                 ? garden.avgGardenBalance
                 : (avgBalance.mul(timeDiff)).add(garden.avgGardenBalance).div(timeDiff);
-            // console.log('GARDEN #%s avgBalance %s', i, avgBalance);
         }
-        // console.log('AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
+        console.log('GETTING AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
         return avgBalance;
     }
 
@@ -485,17 +464,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         returns (
             uint256,
             uint256,
-            uint256
+            uint256,
+            bool
         )
     {
         if (gardenPid[_garden] > 0) {
             return (
                 contributorPerGarden[_garden][_contributor].lastDepositAt,
                 _getContributorBetaPower(_garden, _contributor),
-                _getContributorBetaAvgBalance(_garden, _contributor)
+                _getContributorBetaAvgBalance(_garden, _contributor),
+                betaUserMigrated[_garden][_contributor]
             );
         } else {
-            return (0, 0, 0);
+            return (0, 0, 0, false);
         }
     }
 
@@ -505,9 +486,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             contributor.pid == 0
                 ? contributor.tsContributions[contributor.initialDepositAt]
                 : contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
-        // console.log('power w/o update', contributorLastCheckpoint.power);
-        // console.log('supply', contributorLastCheckpoint.supply);
-        // console.log('timeDiff', block.timestamp.sub(contributor.lastDepositAt));
         return contributorLastCheckpoint.power;
     }
 
@@ -519,16 +497,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             TimestampContribution storage contributorCheckpoint =
                 contributor.tsContributions[contributor.timeListPointer[i]];
             uint256 timeDiff = contributor.timeListPointer[i].sub(contributor.initialDepositAt);
-            // console.log(' #%s balance %s', i, contributorCheckpoint.supply);
-            // console.log(' #%s timestamp %s', i, contributorCheckpoint.timestamp);
-            // console.log(' #%s power %s', i, contributorCheckpoint.power);
 
             avgBalance = i == 0
                 ? contributorCheckpoint.avgBalance
                 : avgBalance.mul(timeDiff).add(contributorCheckpoint.avgBalance).div(timeDiff);
-            // console.log('#%s avgBalance %s', i, avgBalance);
         }
-        console.log('beta user avg balance', _contributor, avgBalance);
         return avgBalance;
     }
 
@@ -1284,27 +1257,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[8]: totalSupply (garden)
         powerData = _getGardenAndContributor(_garden, _contributor);
 
-        console.log(
-            'CHECK after getGardenAndContributor',
-            powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0
-        );
         if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
             // Safe check, time travel only works for a past date, avoid underflow
             if (_to > block.timestamp) {
-                // console.log('cannot go to the future', _to, block.timestamp);
                 _to = block.timestamp;
             }
 
             // Backward compatibility with previous gardens and users
             if (powerData[4] == 0 && gardenPid[_garden] > 0) {
                 // pending contributor migration - backward compatible
-                (, powerData[3], powerData[4]) = getContributorBetaMigrationData(_garden, _contributor);
+                (, powerData[3], powerData[4], ) = getContributorBetaMigrationData(_garden, _contributor);
             }
             if (powerData[7] == 0 && gardenPid[_garden] > 0) {
                 // pending garden migration - backward compatible
-                (powerData[5], powerData[6], powerData[7]) = getGardenBetaMigrationData(_garden);
+                (powerData[5], powerData[6], powerData[7], ) = getGardenBetaMigrationData(_garden);
                 powerData[8] = ERC20(_garden).totalSupply();
             }
 
@@ -1322,13 +1290,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We then time travel back to when the strategy exitedAt
 
             // First we need to get an updatedValue of user and garden power since lastDeposits
-            // console.log('CHECK user power', powerData[3]);
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
             console.log('CHECK updated user power', powerData[3]);
-            // console.log('CHECK garden power', powerData[6]);
-            // console.log('BOOLEAN time check _to', _to == block.timestamp);
-            // console.log('---CHECK time',block.timestamp.sub(powerData[5]));
-            // console.log('---CHECK time',block.timestamp, powerData[5]);
 
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
             console.log('CHECK updated garden power', updatedGardenPower);
@@ -1338,8 +1301,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
             console.log('timeDiff', timeDiff);
-            // console.log('SUBSTRACT CONTRIBUTOR', powerData[4], powerData[4].mul(timeDiff));
-            // console.log('SUBSTRACT GARDEN', powerData[7], powerData[7].mul(timeDiff));
             // Avoid underflow conditions
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
@@ -1357,13 +1318,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     function _getGardenAndContributor(address _garden, address _contributor) internal view returns (uint256[] memory) {
         uint256[] memory powerData = new uint256[](9);
-        console.log('getting garden and contributor 1');
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         GardenPowerByTimestamp storage garden =
             (!betaGardenMigrated[_garden] && gardenPid[_garden] > 0)
                 ? gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]]
                 : gardenPowerByTimestamp[_garden][0];
-        console.log('getting garden and contributor 2');
 
         // powerData[0]: lastDepositAt (contributor)
         // powerData[1]: initialDepositAt (contributor)
@@ -1377,7 +1336,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         powerData[0] = contributor.lastDepositAt;
         powerData[1] = contributor.initialDepositAt;
         powerData[2] = ERC20(_garden).balanceOf(_contributor);
-        console.log('getting garden and contributor 3');
 
         powerData[3] = (!betaUserMigrated[_garden][_contributor] && contributor.pid > 0)
             ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].power
@@ -1385,7 +1343,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         powerData[4] = (!betaUserMigrated[_garden][_contributor] && contributor.pid > 0)
             ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].avgBalance
             : contributor.tsContributions[0].avgBalance;
-        console.log('getting garden and contributor 4');
 
         powerData[5] = garden.lastDepositAt;
         powerData[6] = garden.accGardenPower;

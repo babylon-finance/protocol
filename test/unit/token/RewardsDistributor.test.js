@@ -2158,8 +2158,8 @@ describe('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
-  describe.only('Backward compatibility', function () {
-    it('should successfully return historic data from a Beta user of Arkad Garden and update / move power logic at garden level', async function () {
+  describe('Backward compatibility', function () {
+    it('should successfully migrate historic data from a Beta user of Arkad Garden and update / move power logic w/o checkpoints', async function () {
       const signers = await ethers.getSigners();
       const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
 
@@ -2212,99 +2212,80 @@ describe('RewardsDistributor', function () {
 
       await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
 
-      // console.log(
-      //   'Contributor 1 beta power',
-      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor.address)).toString(),
-      // );
-      // console.log(
-      //   'Contributor 1 beta avg balance',
-      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor.address)).toString(),
-      // );
-
-      // console.log(
-      //   'Contributor 2 beta power',
-      //   (await distributor.getContributorBetaPower(arkadGarden.address, contributor2.address)).toString(),
-      // );
-      // console.log(
-      //   'Contributor 2 beta avg balance',
-      //   (await distributor.getContributorBetaAvgBalance(arkadGarden.address, contributor2.address)).toString(),
-      // );
-
-      // console.log('Garden beta power', (await distributor.getGardenBetaPower(arkadGarden.address)).toString());
-      // console.log(
-      //   'Garden beta avg balance',
-      //   (await distributor.getGardenBetaAvgBalance(arkadGarden.address)).toString(),
-      // );
+      // TODO check other contributors (e.g. marduk gate)
 
       await fund([contributor.address, contributor2.address], {
         tokens: [addresses.tokens.DAI],
         amounts: [ethers.utils.parseEther('500'), ethers.utils.parseEther('200')],
       });
 
-      // console.log(
-      //   'User 1 BEFORE A DEPOSIT -> BEFORE UPDATE',
-      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
-      // );
       // console.log('User 2 BEFORE A DEPOSIT -> BEFORE UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
       await dai.connect(contributor).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       // await dai.connect(contributor2).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       const contributorBeforeUpdate = await arkadGarden.getContributor(contributor.address);
+      const contributorBetaPowerBefore = await distributor.getContributorBetaMigrationData(
+        arkadGarden.address,
+        contributor.address,
+      );
+      const gardenBetaPowerBefore = await distributor.getGardenBetaMigrationData(arkadGarden.address);
       console.log('---BEFORE 1st DEPOSIT---');
-      console.log('Arkad Garden address', arkadGarden.address);
       await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
       // await arkadGarden.connect(contributor2).deposit(ethers.utils.parseEther('200'), 1, contributor2.address, false);
       console.log('---AFTER 1st DEPOSIT---');
 
       const contributorAfterUpdate1 = await arkadGarden.getContributor(contributor.address);
+      const gardenBetaPowerAfter1 = await distributor.getGardenBetaMigrationData(arkadGarden.address);
 
-      // console.log(
-      //   'User 1 AFTER A DEPOSIT -> AFTER UPDATE',
-      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
-      // );
-      // console.log('User 2 AFTER A DEPOSIT -> AFTER UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
+      const contributorBetaPowerAfter1 = await distributor.getContributorBetaMigrationData(
+        arkadGarden.address,
+        contributor.address,
+      );
       console.log('---BEFORE 2nd DEPOSIT---');
       await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
       console.log('---AFTER 2nd DEPOSIT---');
+      const contributorBetaPowerAfter2 = await distributor.getContributorBetaMigrationData(
+        arkadGarden.address,
+        contributor.address,
+      );
 
       const contributorAfterUpdate2 = await arkadGarden.getContributor(contributor.address);
 
-      // console.log(
-      //   'User 1 AFTER 2nd DEPOSIT -> AFTER UPDATE',
-      //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
-      // );
-      // console.log('VERSION', (await distributor.VERSION()).toString());
-      // console.log('garden pid ', (await distributor.getBetaData(arkadGarden.address)).toString());
-      console.log('0', contributorBeforeUpdate[0].toString());
-      console.log('1', contributorBeforeUpdate[1].toString());
-      console.log('2', contributorBeforeUpdate[2].toString());
-      console.log('3', contributorBeforeUpdate[3].toString());
-      console.log('4', contributorBeforeUpdate[4].toString());
-      console.log('5', contributorBeforeUpdate[5].toString());
-      console.log('6', contributorBeforeUpdate[6].toString());
-      console.log('7', contributorBeforeUpdate[7].toString());
-      console.log('8', contributorBeforeUpdate[8].toString());
-      console.log('9', contributorBeforeUpdate[9].toString());
+      expect(contributorBeforeUpdate[8]).to.be.closeTo(
+        ethers.utils.parseEther('0.037118723422909827'),
+        contributorBeforeUpdate[8].div(50),
+      ); // power before update from rewards distributor
+      expect(contributorBetaPowerBefore[0]).to.equal(1624231155); // last deposit timestamp of Arkad
+      expect(contributorBetaPowerBefore[1]).to.equal(ethers.utils.parseEther('311542600.000000000000000000')); // Arkad accumulated power
+      expect(contributorBetaPowerBefore[2]).to.equal(ethers.utils.parseEther('200.000650163041324820')); // avg Balance
+      expect(contributorBetaPowerBefore[3]).to.equal(false); // pending migration
+      expect(gardenBetaPowerBefore[0]).to.equal(1630918928); // last deposit timestamp of Arkad
+      expect(gardenBetaPowerBefore[1]).to.equal(ethers.utils.parseEther('190745068890.174805973843135454')); // Arkad garden accumulated power
+      expect(gardenBetaPowerBefore[2]).to.equal(ethers.utils.parseEther('200.521941033020828562')); // avg Balance
+      expect(gardenBetaPowerBefore[3]).to.equal(false); // pending migration
 
-      expect(contributorBeforeUpdate[8]).to.equal(0); // power before update from rewards distributor
-      expect(contributorBeforeUpdate[10]).to.equal(0); // avg balance update from  rewards distributor
       // after update by first deposit
       expect(contributorAfterUpdate1[8]).to.be.closeTo(
-        ethers.utils.parseEther('13866788214.063025322230284820'),
+        ethers.utils.parseEther('0.037118721112759008'),
         contributorAfterUpdate1[8].div(50),
       );
-      expect(contributorAfterUpdate1[10]).to.be.closeTo(
-        ethers.utils.parseEther('200.000789038525624468'),
-        contributorAfterUpdate1[10].div(50),
-      );
+      expect(contributorBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 100); // last deposit timestamp of Arkad
+      expect(contributorBetaPowerAfter1[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
+      expect(contributorBetaPowerAfter1[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
+      expect(contributorBetaPowerAfter1[3]).to.equal(true); // migration done during deposit
+      expect(gardenBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 100); // last deposit timestamp of Arkad
+      expect(gardenBetaPowerAfter1[1]).to.equal(gardenBetaPowerBefore[1]); // Arkad garden accumulated power
+      expect(gardenBetaPowerAfter1[2]).to.equal(gardenBetaPowerBefore[2]); // avg Balance
+      expect(gardenBetaPowerAfter1[3]).to.equal(true); // migration completed during deposit
+
       // after update by second deposit
       expect(contributorAfterUpdate2[8]).to.be.closeTo(
-        ethers.utils.parseEther('13866787334.691584453841760823'),
+        ethers.utils.parseEther('0.037118717837723536'),
         contributorAfterUpdate2[8].div(50),
       );
-      expect(contributorAfterUpdate2[10]).to.be.closeTo(
-        ethers.utils.parseEther('200.000944081390169015'),
-        contributorAfterUpdate2[10].div(50),
-      );
+      expect(contributorBetaPowerAfter2[0]).to.closeTo(ethers.BigNumber.from(1630924368), 100); // last deposit timestamp of Arkad
+      expect(contributorBetaPowerAfter2[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
+      expect(contributorBetaPowerAfter2[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
+      expect(contributorBetaPowerAfter2[3]).to.equal(true); // migration done during deposit
     });
   });
 });

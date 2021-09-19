@@ -736,7 +736,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        console.log('GARDEN getContributor', address(this));
         uint256 contributorPower =
             rewardsDistributor.getContributorPower(
                 address(this),
@@ -870,8 +869,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(_to);
-        _require(_amountIn <= balanceOf(_to).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
-
+        uint256 previousBalance = balanceOf(_to);
+        _require(_amountIn <= previousBalance.sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
         // this value would have 18 decimals even for USDC
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
@@ -888,9 +887,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
-        uint256 previousBalance = balanceOf(_to);
+        // We need previous supply before minting new tokens to get accurate rewards calculations
         uint256 previousSupply = totalSupply();
-        // TODO Backward compatibility with initial Gardens
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
         _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply);
@@ -1017,7 +1015,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
         uint256 gasSpent = gasleft();
-        console.log('NEW DEPOSIT TIMESTAMP', block.timestamp);
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
@@ -1025,7 +1022,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _previousSupply
         );
         console.log('GAS USED TO UPDATE DEPOSIT AT RD', gasSpent.sub(gasleft()));
-        // pid++;
     }
 
     /**
@@ -1055,7 +1051,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _previousBalance,
             _previousSupply
         );
-        console.log('GAS USED TO UPDATE DEPOSIT AT RD', gasSpent.sub(gasleft()));
+        console.log('GAS USED TO UPDATE WITHDRAW AT RD', gasSpent.sub(gasleft()));
         contributor.nonce = contributor.nonce + 1;
     }
 
