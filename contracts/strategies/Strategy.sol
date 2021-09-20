@@ -608,7 +608,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](13);
+        uint256[] memory data = new uint256[](12);
         bool[] memory boolData = new bool[](2);
 
         data[0] = executedAt;
@@ -623,10 +623,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[9] = strategyRewards;
         boolData[0] = capitalReturned >= capitalAllocated ? true : false;
         boolData[1] = capitalReturned >= data[8] ? true : false;
-        // Normalized into DAI capitalAllocated needed at Rewards Distributor
-        data[10] = SafeDecimalMath.normalizeAmountTokens(garden.reserveAsset(), DAI, data[6]);
-        data[11] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
-        data[12] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
+        data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         return (strategist, data, boolData);
     }
 

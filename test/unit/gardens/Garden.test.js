@@ -697,10 +697,10 @@ describe('Garden', function () {
       });
       const start = NOW;
       const end = start + 7776000 / 3;
-      // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 50% of contribution power within the time period as most of the period had 50%
+      // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 36% of contribution power within the time period as most of the period had 50%
       await expect(
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, start, end),
-      ).to.be.closeTo(ethers.utils.parseEther('0.341006101847704193'), ethers.utils.parseEther('0.02'));
+      ).to.be.closeTo(ethers.utils.parseEther('0.361116333418682848'), ethers.utils.parseEther('0.02'));
     });
     it('contributor power is calculated correctly for different users in the same garden with the same power ', async function () {
       await garden1.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
