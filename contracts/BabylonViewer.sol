@@ -130,10 +130,16 @@ contract BabylonViewer {
             ? IGardenValuer(controller.gardenValuer()).calculateGardenValuation(_garden, garden.reserveAsset())
             : 0;
         totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
-        totalSupplyValuationAndSeed[3] = ERC20(garden.reserveAsset())
-            .balanceOf(address(garden))
-            .sub(garden.keeperDebt())
-            .sub(garden.reserveAssetRewardsSetAside());
+        totalSupplyValuationAndSeed[3] = ERC20(garden.reserveAsset()).balanceOf(address(garden));
+        if (totalSupplyValuationAndSeed[3] > garden.keeperDebt()) {
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.keeperDebt());
+        }
+        if (totalSupplyValuationAndSeed[3] > garden.reserveAssetRewardsSetAside()) {
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.reserveAssetRewardsSetAside());
+        } else {
+            totalSupplyValuationAndSeed[3] = 0;
+        }
+
         uint256[3] memory profits = _getGardenProfitSharing(_garden);
         return (
             ERC20(_garden).name(),
