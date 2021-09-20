@@ -1229,15 +1229,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _to = block.timestamp;
             }
 
-            // Backward compatibility with previous gardens and users
+            // Backward compatibility module for beta gardens and beta users
+            // First we check the contributor in case of a beta user pending migration
             if (powerData[4] == 0 && gardenPid[_garden] > 0) {
                 // pending contributor migration - backward compatible
                 (, powerData[3], powerData[4], ) = _getContributorBetaMigrationData(_garden, _contributor);
             }
+            // Second we check the garden in case of a beta garden pending migration
             if (powerData[7] == 0 && gardenPid[_garden] > 0) {
                 // pending garden migration - backward compatible
                 (powerData[5], powerData[6], powerData[7], ) = _getGardenBetaMigrationData(_garden);
-                powerData[8] = ERC20(_garden).totalSupply();
             }
 
             console.log('powerData[0]', powerData[0]);
@@ -1281,7 +1282,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getGardenAndContributor(address _garden, address _contributor) internal view returns (uint256[] memory) {
         uint256[] memory powerData = new uint256[](9);
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        // We take care if a beta user is already migrated or not to the new optimize-gas architecture
+        // We take care if a beta user is already migrated or not to the new optimized-gas architecture
         GardenPowerByTimestamp storage garden =
             (!betaGardenMigrated[_garden] && gardenPid[_garden] > 0)
                 ? gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]]
@@ -1493,6 +1494,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the last power measured in the last checkpoint of a garden
      */
     function _getGardenBetaPower(address _garden) internal view returns (uint256) {
+        // Only beta gardens have used gardenPid
         if (gardenPid[_garden] > 0) {
             // Assumes that the garden is a beta garden with checkpoints
             GardenPowerByTimestamp storage garden =
@@ -1513,6 +1515,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
         uint256 gasSpent = gasleft();
         uint256 avgBalance;
+        // Only beta gardens have used gardenPid
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
             GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
             uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
@@ -1536,6 +1539,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _getContributorBetaPower(address _garden, address _contributor) internal view returns (uint256) {
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        // Only beta users have used pid
         TimestampContribution storage contributorLastCheckpoint =
             contributor.pid == 0
                 ? contributor.tsContributions[contributor.initialDepositAt]

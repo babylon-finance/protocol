@@ -1886,7 +1886,7 @@ describe('RewardsDistributor', function () {
       const signer1Profit = signer1Rewards[6];
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
-      expect(signer1Profit.toString()).to.be.closeTo('11985706580696756', ethers.utils.parseEther('0.005'));
+      expect(signer1Profit.toString()).to.be.closeTo('5983787580486307', ethers.utils.parseEther('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -1950,8 +1950,8 @@ describe('RewardsDistributor', function () {
       expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
       console.log('---CHECK 5---');
 
-      expect(signer1Profit).to.be.closeTo('7393982129520472', signer1Profit.div(100));
-      expect(signer1Profit2).to.be.closeTo('7264213370295943', signer1Profit2.div(100));
+      expect(signer1Profit).to.be.closeTo('5983787580486307', signer1Profit.div(100));
+      expect(signer1Profit2).to.be.closeTo('5958439050861242', signer1Profit2.div(100));
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
@@ -1980,7 +1980,7 @@ describe('RewardsDistributor', function () {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
       // TODO: Add calculations of profits and BABL
-      expect(signer1Profit).to.be.closeTo('14658195499816415', signer1Profit.div(100));
+      expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
       expect(signer1BABL).to.be.closeTo('83465698586246333338582', signer1BABL.div(100));
     });
 
@@ -2066,8 +2066,8 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('11989663164624488', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('2169456023987573', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('10813510863198169', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('1157789933205635', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
@@ -2268,11 +2268,11 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('0.037118721112759008'),
         contributorAfterUpdate1[8].div(50),
       );
-      expect(contributorBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 100); // last deposit timestamp of Arkad
+      expect(contributorBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 1000); // last deposit timestamp of Arkad
       expect(contributorBetaPowerAfter1[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
       expect(contributorBetaPowerAfter1[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
       expect(contributorBetaPowerAfter1[3]).to.equal(true); // migration done during deposit
-      expect(gardenBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 100); // last deposit timestamp of Arkad
+      expect(gardenBetaPowerAfter1[0]).to.equal(contributorBetaPowerAfter1[0]); // last deposit timestamp of Arkad
       expect(gardenBetaPowerAfter1[1]).to.equal(gardenBetaPowerBefore[1]); // Arkad garden accumulated power
       expect(gardenBetaPowerAfter1[2]).to.equal(gardenBetaPowerBefore[2]); // avg Balance
       expect(gardenBetaPowerAfter1[3]).to.equal(true); // migration completed during deposit
