@@ -1,4 +1,5 @@
 require('dotenv/config');
+require('@babel/register');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
