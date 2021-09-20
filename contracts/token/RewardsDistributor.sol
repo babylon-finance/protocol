@@ -525,23 +525,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             contributor.pid == 0
                 ? contributor.tsContributions[contributor.initialDepositAt]
                 : contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
-        // console.log('power w/o update', contributorLastCheckpoint.power);
-        // console.log('supply', contributorLastCheckpoint.supply);
-        // console.log('timeDiff', block.timestamp.sub(contributor.lastDepositAt));
-        return
-            contributorLastCheckpoint.power.add(
-                (block.timestamp.sub(contributor.lastDepositAt)).mul(contributorLastCheckpoint.supply)
-            );
+        return contributorLastCheckpoint.power;
     }
 
     function _getGardenBetaPower(address _garden) internal view returns (uint256) {
         if (gardenPid[_garden] > 0) {
             GardenPowerByTimestamp storage garden =
                 gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
-            // console.log('power w/o update', garden.power);
-            // console.log('supply', garden.supply);
-            // console.log('timeDiff', block.timestamp.sub(garden.timestamp));
-            return garden.power.add((block.timestamp.sub(garden.timestamp)).mul(garden.supply));
+            return garden.power;
         } else {
             return 0;
         }
@@ -554,14 +545,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             TimestampContribution storage contributorCheckpoint =
                 contributor.tsContributions[contributor.timeListPointer[i]];
             uint256 timeDiff = contributor.timeListPointer[i].sub(contributor.initialDepositAt);
-            // console.log(' #%s balance %s', i, contributorCheckpoint.supply);
-            // console.log(' #%s timestamp %s', i, contributorCheckpoint.timestamp);
-            // console.log(' #%s power %s', i, contributorCheckpoint.power);
 
             avgBalance = i == 0
                 ? contributorCheckpoint.supply
                 : avgBalance.mul(timeDiff).add(contributorCheckpoint.supply).div(timeDiff);
-            // console.log('#%s avgBalance %s', i, avgBalance);
         }
         return avgBalance;
     }
@@ -572,20 +559,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
             GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
             uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
-            // console.log(' GARDEN #%s balance %s', i, garden.supply);
-            // console.log(' GARDEN #%s timestamp %s', i, garden.timestamp);
-            // console.log(' GARDEN #%s power %s', i, garden.power);
-            // console.log(
-            //    ' GARDEN timeDiff',
-            //    timeDiff,
-            //    gardenTimelist[_garden][0],
-            //    IGarden(_garden).gardenInitializedAt()
-            //);
 
             avgBalance = i == 0 ? garden.supply : (avgBalance.mul(timeDiff)).add(garden.supply).div(timeDiff);
-            // console.log('GARDEN #%s avgBalance %s', i, avgBalance);
         }
-        // console.log('AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
         return avgBalance;
     }
 
@@ -1165,7 +1141,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[8]: totalSupply (garden)
         (powerData[0], powerData[1], , , , , powerData[2], , powerData[3], , powerData[4]) = IGarden(_garden)
             .getContributor(_contributor);
-        // console.log('conditional', powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0);
         if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
             return 0;
         } else {
@@ -1201,13 +1176,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We then time travel back to when the strategy exitedAt
 
             // First we need to get an updatedValue of user and garden power since lastDeposits
-            // console.log('CHECK user power', powerData[3]);
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
             console.log('CHECK updated user power', powerData[3]);
-            // console.log('CHECK garden power', powerData[6]);
-            // console.log('BOOLEAN time check _to', _to == block.timestamp);
-            // console.log('---CHECK time',block.timestamp.sub(powerData[5]));
-            // console.log('---CHECK time',block.timestamp, powerData[5]);
 
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
             console.log('CHECK updated garden power', updatedGardenPower);
@@ -1217,8 +1187,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
             console.log('timeDiff', timeDiff);
-            // console.log('SUBSTRACT CONTRIBUTOR', powerData[4], powerData[4].mul(timeDiff));
-            // console.log('SUBSTRACT GARDEN', powerData[7], powerData[7].mul(timeDiff));
             // Avoid underflow conditions
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
@@ -1234,304 +1202,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
-    /**
-        console.log('CHECK');
-        // Out of bounds
-        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
-        (, uint256 initialDepositAt, , , , , , , , ) = IGarden(_garden).getContributor(_contributor);
-        console.log('CHECK 1', initialDepositAt);
-
-        if (initialDepositAt == 0 || initialDepositAt > _to) {
-            return 0;
-       
-        } else {
-            uint256 userLiquidity;
-            uint256 gardenLiquidity;
-            console.log('CHECK 2 length', depositInfo[_garden].length);
-
-            for (uint256 i = 0; i < depositInfo[_garden].length; i++) {
-                DepositInfo storage userDeposit = depositInfo[_garden][i];
-                if (userDeposit.timestamp > _to) {
-                    continue;
-                }
-
-                if (userDeposit.contributor == _contributor) {
-                    console.log('userLiquidity', userLiquidity);
-                    userLiquidity = userDeposit.depositOrWithdraw == true ? userLiquidity.add(userDeposit.amount) : userLiquidity.sub(userDeposit.amount);
-                }
-                console.log('gardenLiquidity', gardenLiquidity);
-                gardenLiquidity = userDeposit.depositOrWithdraw == true ? gardenLiquidity.add(userDeposit.amount) : gardenLiquidity.sub(userDeposit.amount);
-            }
-            console.log('EO');
-            console.log('TOTAL userLiquidity', userLiquidity);
-            console.log('TOTAL gardenLiquidity', gardenLiquidity);
-            console.log('contributor power', userLiquidity.preciseDiv(gardenLiquidity));
-
-            return userLiquidity.preciseDiv(gardenLiquidity);
-        }
-    }
-     */
-
-    /**
-        ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
-        Checkpoints memory powerCheckpoints = checkpoints[address(_garden)][address(_contributor)];
-
-        if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _to) {
-            return 0;
-        } else {
-            if (_from <= IGarden(_garden).gardenInitializedAt()) {
-                // Avoid division by zero in case of _from parameter is not passed
-                _from = IGarden(_garden).gardenInitializedAt();
-            }
-            // Find closest point to _from and _to either contributor and garden checkpoints at their left
-            (powerCheckpoints.fromDepositAt, powerCheckpoints.lastDepositAt) = _locateCheckpointsContributor(
-                _garden,
-                _contributor,
-                _from,
-                _to
-            );
-            (powerCheckpoints.gardenFromDepositAt, powerCheckpoints.gardenLastDepositAt) = _locateCheckpointsGarden(
-                _garden,
-                _from,
-                _to
-            );
-
-            // origin must be less than end window
-            _require(
-                powerCheckpoints.fromDepositAt <= powerCheckpoints.lastDepositAt &&
-                    powerCheckpoints.gardenFromDepositAt <= powerCheckpoints.gardenLastDepositAt,
-                Errors.CONTRIBUTOR_POWER_CHECK_DEPOSITS
-            );
-            uint256 contributorPower;
-            uint256 gardenPower;
-
-            // "FROM power calculations" PART
-            // Avoid underflows
-
-            if (_from < powerCheckpoints.fromDepositAt) {
-                // Contributor still has no power but _from is later than the start of the garden
-                contributorPower = 0;
-            } else if (_from > powerCheckpoints.fromDepositAt) {
-                contributorPower = contributor.tsContributions[powerCheckpoints.fromDepositAt].power.add(
-                    (_from.sub(powerCheckpoints.fromDepositAt)).mul(
-                        contributor.tsContributions[powerCheckpoints.fromDepositAt].supply
-                    )
-                );
-            } else {
-                // _from == fromDepositAt
-                contributorPower = contributor.tsContributions[powerCheckpoints.fromDepositAt].power;
-            }
-            gardenPower = gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].power.add(
-                (_from.sub(powerCheckpoints.gardenFromDepositAt)).mul(
-                    gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenFromDepositAt].supply
-                )
-            );
-            // "TO power calculations" PART
-            // We go for accurate power calculations avoiding overflows
-            // contributor power overflow
-            _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
-            if (_from == _to) {
-                // Requested a specific checkpoint calculation (no slot)
-                if (gardenPower == 0) {
-                    return 0;
-                } else {
-                    return contributorPower.preciseDiv(gardenPower);
-                }
-                // Not a checkpoint anymore but a slot
-            } else if (_to < powerCheckpoints.lastDepositAt) {
-                // contributor has not deposited yet
-                return 0;
-            } else if (
-                _to == powerCheckpoints.lastDepositAt &&
-                powerCheckpoints.fromDepositAt == powerCheckpoints.lastDepositAt
-            ) {
-                // no more contributor checkpoints in the slot
-                gardenPower = (
-                    gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
-                        (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(
-                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].supply
-                        )
-                    )
-                )
-                    .sub(gardenPower);
-                _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
-                return contributorPower.preciseDiv(gardenPower);
-            } else {
-                contributorPower = (
-                    contributor.tsContributions[powerCheckpoints.lastDepositAt].power.add(
-                        (_to.sub(powerCheckpoints.lastDepositAt)).mul(
-                            contributor.tsContributions[powerCheckpoints.lastDepositAt].supply
-                        )
-                    )
-                )
-                    .sub(contributorPower);
-
-                gardenPower = (
-                    gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].power.add(
-                        (_to.sub(powerCheckpoints.gardenLastDepositAt)).mul(
-                            gardenPowerByTimestamp[address(_garden)][powerCheckpoints.gardenLastDepositAt].supply
-                        )
-                    )
-                )
-                    .sub(gardenPower);
-                _require(contributorPower <= gardenPower, Errors.CONTRIBUTOR_POWER_OVERFLOW);
-
-                return contributorPower.preciseDiv(gardenPower);
-            }
-        }
-    }
-    */
-
-    /**
-     * Gets the earlier and closest (deposit/withdrawal) checkpoints of a contributor in a specific range
-     * @param _garden      Address of the garden
-     * @param _contributor Address if the contributor
-     * @param _from        Initial timestamp
-     * @param _to          End timestamp
-     * @return uint256     Contributor power during that period
-     */
-    /**
-    function _locateCheckpointsContributor(
-        address _garden,
-        address _contributor,
-        uint256 _from,
-        uint256 _to
-    ) private view returns (uint256, uint256) {
-        ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][address(_contributor)];
-
-        uint256 lastDepositAt = contributor.timeListPointer[contributor.timeListPointer.length.sub(1)]; // Initialized with lastDeposit
-        uint256 fromDepositAt = contributor.timeListPointer[0]; // Initialized with initialDeposit
-
-        if (lastDepositAt > _to || fromDepositAt < _from) {
-            // We go to find the closest deposits of the contributor to _from and _to
-            for (uint256 i = 0; i < contributor.timeListPointer.length; i++) {
-                if (contributor.timeListPointer[i] <= _to) {
-                    lastDepositAt = contributor.timeListPointer[i];
-                }
-                if (contributor.timeListPointer[i] <= _from) {
-                    fromDepositAt = contributor.timeListPointer[i];
-                }
-            }
-        }
-        return (fromDepositAt, lastDepositAt);
-    }
-     */
-    /**
-     * Gets the earlier and closest (deposit/withdrawal) checkpoints of a garden in a specific range
-     * @param _garden      Address of the garden
-     * @param _from        Initial timestamp
-     * @param _to          End timestamp
-     * @return uint256     Contributor power during that period
-     */
-    /**
-    function _locateCheckpointsGarden(
-        address _garden,
-        uint256 _from,
-        uint256 _to
-    ) private view returns (uint256, uint256) {
-        uint256 gardenLastCheckpoint = gardenTimelist[address(_garden)].length.sub(1);
-        uint256 gardenLastDepositAt = gardenTimelist[address(_garden)][gardenLastCheckpoint]; // Initialized to the last garden checkpoint
-        uint256 gardenFromDepositAt = gardenTimelist[address(_garden)][0]; // Initialized to the first garden checkpoint
-
-        if (gardenLastDepositAt > _to || gardenFromDepositAt < _from) {
-            // We go for the closest timestamp of garden to _to and _from
-            for (uint256 i = 0; i <= gardenLastCheckpoint; i++) {
-                uint256 gardenTime = gardenTimelist[address(_garden)][i];
-                if (gardenTime <= _to) {
-                    gardenLastDepositAt = gardenTime;
-                }
-                if (gardenTime <= _from) {
-                    gardenFromDepositAt = gardenTime;
-                }
-            }
-        }
-        return (gardenFromDepositAt, gardenLastDepositAt);
-    }
-     */
-    /**
-     * Function that keeps checkpoints of the garden power (deposits and withdrawals) per timestamp
-     * @param _garden               Garden address
-     */
-    /**
-    function _updateGardenPower(address _garden) private {
-        IGarden garden = IGarden(_garden);
-        GardenPowerByTimestamp storage gardenTimestamp = gardenPowerByTimestamp[address(garden)][block.timestamp];
-        gardenTimestamp.supply = IERC20(address(IGarden(_garden))).totalSupply();
-
-        gardenTimestamp.timestamp = block.timestamp;
-
-        if (gardenPid[address(_garden)] == 0) {
-            // The very first deposit of all contributors in the mining program
-            gardenTimestamp.power = 0;
-        } else {
-            // Any other deposit different from the very first one (will have an antecesor)
-            GardenPowerByTimestamp storage previousGardenTimestamp =
-                gardenPowerByTimestamp[address(garden)][
-                    gardenTimelist[address(garden)][gardenPid[address(garden)].sub(1)]
-                ];
-            gardenTimestamp.power = previousGardenTimestamp.power.add(
-                gardenTimestamp.timestamp.sub(previousGardenTimestamp.timestamp).mul(previousGardenTimestamp.supply)
-            );
-        }
-
-        gardenTimelist[address(garden)].push(block.timestamp); // Register of deposit timestamps in the array for iteration
-        gardenPid[address(garden)]++;
-    }
-     */
-
-    /**
-     * Updates contributor timestamps params
-     * @param _garden               Garden address
-     * @param _contributor          Contributor address
-     * @param _previousBalance      Previous balance
-     * @param _depositOrWithdraw    Whether it is a deposit or a withdraw
-     */
-    /**
-    function _setContributorTimestampParams(
-        address _garden,
-        address _contributor,
-        uint256 _previousBalance,
-        bool _depositOrWithdraw
-    ) private {
-        // We make checkpoints around contributor deposits to give the right rewards afterwards
-        ContributorPerGarden storage contributor = contributorPerGarden[address(_garden)][_contributor];
-        TimestampContribution storage contributorDetail = contributor.tsContributions[block.timestamp];
-        contributorDetail.supply = IERC20(address(IGarden(_garden))).balanceOf(address(_contributor));
-
-        contributorDetail.timestamp = block.timestamp;
-
-        contributorDetail.timePointer = contributor.pid;
-
-        if (contributor.pid == 0) {
-            // The very first deposit
-            contributorDetail.power = 0;
-        } else {
-            // Any other deposits or withdrawals different from the very first one (will have an antecesor)
-            contributorDetail.power = contributor.tsContributions[contributor.lastDepositAt].power.add(
-                (block.timestamp.sub(contributor.lastDepositAt)).mul(
-                    contributor.tsContributions[contributor.lastDepositAt].supply
-                )
-            );
-        }
-        if (_depositOrWithdraw == true) {
-            // Deposit
-            if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-                contributor.initialDepositAt = block.timestamp;
-            }
-            contributor.lastDepositAt = block.timestamp;
-        } else {
-            // Withdrawals
-            if (contributorDetail.supply == 0) {
-                contributor.lastDepositAt = 0;
-                contributor.initialDepositAt = 0;
-                delete contributor.timeListPointer;
-            }
-        }
-
-        contributor.timeListPointer.push(block.timestamp);
-        contributor.pid++;
-    }
-     */
     /**
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)

@@ -2262,7 +2262,6 @@ describe('RewardsDistributor', function () {
       // console.log('User 2 AFTER A DEPOSIT -> AFTER UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
       await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
       const contributorAfterUpdate2 = await arkadGarden.getContributor(contributor.address);
-
       // console.log(
       //   'User 1 AFTER 2nd DEPOSIT -> AFTER UPDATE',
       //   (await arkadGarden.getContributor(contributor.address))[10].toString(),
@@ -2274,7 +2273,7 @@ describe('RewardsDistributor', function () {
       expect(contributorBeforeUpdate[10]).to.equal(0); // avg balance update from  rewards distributor
       // after update by first deposit
       expect(contributorAfterUpdate1[8]).to.be.closeTo(
-        ethers.utils.parseEther('13866788214.063025322230284820'),
+        ethers.utils.parseEther('7088119129.437171153660448200'),
         contributorAfterUpdate1[8].div(50),
       );
       expect(contributorAfterUpdate1[10]).to.be.closeTo(
@@ -2283,7 +2282,7 @@ describe('RewardsDistributor', function () {
       );
       // after update by second deposit
       expect(contributorAfterUpdate2[8]).to.be.closeTo(
-        ethers.utils.parseEther('13866787334.691584453841760823'),
+        ethers.utils.parseEther('7088121421.139304109535590486'),
         contributorAfterUpdate2[8].div(50),
       );
       expect(contributorAfterUpdate2[10]).to.be.closeTo(
