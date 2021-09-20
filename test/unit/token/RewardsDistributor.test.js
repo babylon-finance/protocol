@@ -2282,7 +2282,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('0.037118717837723536'),
         contributorAfterUpdate2[8].div(50),
       );
-      expect(contributorBetaPowerAfter2[0]).to.closeTo(ethers.BigNumber.from(1630924368), 100); // last deposit timestamp of Arkad
+      expect(contributorBetaPowerAfter2[0]).to.closeTo(ethers.BigNumber.from(1630924368), 1000); // last deposit timestamp of Arkad
       expect(contributorBetaPowerAfter2[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
       expect(contributorBetaPowerAfter2[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
       expect(contributorBetaPowerAfter2[3]).to.equal(true); // migration done during deposit
