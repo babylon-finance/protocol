@@ -736,13 +736,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        uint256 contributorPower =
-            rewardsDistributor.getContributorPower(
-                address(this),
-                _contributor,
-                contributor.initialDepositAt,
-                block.timestamp
-            );
+        uint256 contributorPower = rewardsDistributor.getContributorPower(address(this), _contributor, block.timestamp);
         uint256 balance = balanceOf(_contributor);
         uint256 lockedBalance = getLockedBalance(_contributor);
         return (
@@ -891,7 +885,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 previousSupply = totalSupply();
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
-        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply);
+        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
 
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
 
@@ -945,8 +939,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // mint shares
         _mint(_to, sharesToMint);
-
-        _updateContributorDepositInfo(_to, previousBalance, _amountIn, previousSupply);
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        _updateContributorDepositInfo(_to, previousBalance, _amountIn, previousSupply, sharesToMint);
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1001,7 +995,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _previousBalance,
         uint256 _reserveAssetQuantity,
-        uint256 _previousSupply
+        uint256 _previousSupply,
+        uint256 _newTokens
     ) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
@@ -1014,14 +1009,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
-        uint256 gasSpent = gasleft();
+        // uint256 gasSpent = gasleft();
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
             _previousBalance,
-            _previousSupply
+            _previousSupply,
+            _newTokens,
+            true // deposit
         );
-        console.log('GAS USED TO UPDATE DEPOSIT AT RD', gasSpent.sub(gasleft()));
+        // console.log('GAS USED TO UPDATE DEPOSIT AT RD', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -1031,7 +1029,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _netflowQuantity,
         uint256 _previousBalance,
-        uint256 _previousSupply
+        uint256 _previousSupply,
+        uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
         // If sold everything
@@ -1044,14 +1043,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
-        uint256 gasSpent = gasleft();
+        // uint256 gasSpent = gasleft();
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
             _previousBalance,
-            _previousSupply
+            _previousSupply,
+            _tokensToBurn,
+            false // withdraw
         );
-        console.log('GAS USED TO UPDATE WITHDRAW AT RD', gasSpent.sub(gasleft()));
+        // console.log('GAS USED TO UPDATE WITHDRAW AT RD', gasSpent.sub(gasleft()));
         contributor.nonce = contributor.nonce + 1;
     }
 

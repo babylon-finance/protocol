@@ -157,12 +157,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ Structs ============ */
 
     struct ProtocolPerTimestamp {
-        // DEPRECATED
-        uint256 principal;
-        uint256 time;
-        uint256 quarterBelonging;
-        uint256 timeListPointer;
-        uint256 power;
+        uint256 principal; // DEPRECATED
+        uint256 time; // DEPRECATED
+        uint256 quarterBelonging; // DEPRECATED
+        uint256 timeListPointer; // DEPRECATED
+        uint256 power; // DEPRECATED
     }
 
     struct ProtocolPerQuarter {
@@ -196,12 +195,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 power; // Contributor power
     }
     struct Checkpoints {
-        // DEPRECATED
-        // Checkpoints for contributor power calculations where a certain window (from -> to) is queried
-        uint256 fromDepositAt; // First contributor checkpoint within the provided window
-        uint256 lastDepositAt; // Last contributor checkpoint within the provided window
-        uint256 gardenFromDepositAt; // First contributor checkpoint within the provided window
-        uint256 gardenLastDepositAt; // Last garden checkpoint within the provided window
+        uint256 fromDepositAt; // DEPRECATED
+        uint256 lastDepositAt; // DEPRECATED
+        uint256 gardenFromDepositAt; // DEPRECATED
+        uint256 gardenLastDepositAt; // DEPRECATED
     }
 
     /* ============ State Variables ============ */
@@ -242,8 +239,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 preallocated; // Strategy capital preallocated before each checkpoint
         uint256 pricePerTokenUnit; // Last average price per allocated tokens per strategy normalized into DAI
     }
-    mapping(address => mapping(uint256 => StrategyPerQuarter)) public strategyPerQuarter; // Acumulated strategy power per each quarter along the time
-    mapping(address => StrategyPricePerTokenUnit) public strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
+    mapping(address => mapping(uint256 => StrategyPerQuarter)) private strategyPerQuarter; // Acumulated strategy power per each quarter along the time
+    mapping(address => StrategyPricePerTokenUnit) private strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
 
     // Reentrancy guard countermeasure
     uint256 private status;
@@ -292,7 +289,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     {
         IStrategy strategy = IStrategy(msg.sender);
         if (strategy.enteredAt() >= START_TIME) {
-            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
+            // onlyMiningActive control, it does consider all strategies created after the Mining Program is activated
             _updateProtocolPrincipal(address(strategy), _capital, _addOrSubstract);
         }
     }
@@ -308,10 +305,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _previousBalance,
-        uint256 _previousSupply
+        uint256 _previousSupply,
+        uint256 _tokenDiff,
+        bool _addOrSubstract
     ) external override nonReentrant onlyActiveGarden {
-        _updateGardenPower(_garden, _previousSupply);
-        _updateContributorPower(_garden, _contributor, _previousBalance);
+        uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
+        uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
+        _updateGardenPower(_garden, _previousSupply, newSupply);
+        _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
     }
 
     /**
@@ -376,7 +377,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden           Address of the beta garden
      * @return all data needed for the migration
      */
-    function getGardenBetaMigrationData(address _garden)
+
+    /*   function getGardenBetaMigrationData(address _garden)
         external
         view
         override
@@ -388,7 +390,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         )
     {
         return _getGardenBetaMigrationData(_garden);
-    }
+    } */
 
     /**
      * Function to get the beta contributor details of a beta Garden that needs migration into the new optimized-gas structure without checkpoints
@@ -398,7 +400,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor      Address of the beta contributor
      * @return all data needed for the migration
      */
-    function getContributorBetaMigrationData(address _garden, address _contributor)
+    /*     function getContributorBetaMigrationData(address _garden, address _contributor)
         external
         view
         override
@@ -410,7 +412,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         )
     {
         return _getContributorBetaMigrationData(_garden, _contributor);
-    }
+    } */
 
     /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
@@ -519,89 +521,55 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Gets the contributor power from one timestamp to the other
      * @param _garden      Address of the garden where the contributor belongs to
      * @param _contributor Address if the contributor
-     * @param _from        Initial timestamp
-     * @param _to          End timestamp
+     * @param _time        Timestamp to check power
      * @return uint256     Contributor power during that period
      */
     function getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _from,
-        uint256 _to
+        uint256 _time
     ) external view override returns (uint256) {
-        return _getContributorPower(_garden, _contributor, _from, _to);
+        return _getContributorPower(_garden, _contributor, _time);
     }
 
     /**
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
+    /*  function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
         return _tokenSupplyPerQuarter(_quarter);
-    }
+    } */
 
     /**
-     * Check the protocol state in a certain timestamp
-     * @param time      Timestamp
+     * Check the mining program state for a specific quarter and strategy
+     * @param _quarterNum      Number of quarter
+     * @param _strategy        Address of strategy
      */
-    /**
-    function checkProtocol(uint256 _time)
+
+    function checkMiningState(uint256 _quarterNum, address _strategy)
         external
         view
         override
-        returns (
-            uint256 principal,
-            uint256 time,
-            uint256 quarterBelonging,
-            uint256 timeListPointer,
-            uint256 power
-        )
+        returns (uint256[] memory, bool[] memory)
     {
-        ProtocolPerTimestamp storage protocolCheckpoint = protocolPerTimestamp[_time];
+        uint256[] memory miningData = new uint256[](11);
+        bool[] memory miningBool = new bool[](3);
+        miningData[0] = START_TIME;
+        miningData[1] = miningUpdatedAt;
+        miningData[2] = miningProtocolPrincipal;
+        miningData[3] = miningProtocolPower;
+        miningData[4] = protocolPerQuarter[_quarterNum].quarterPower;
+        miningData[5] = strategyPrincipal[_strategy];
+        miningData[6] = strategyPricePerTokenUnit[_strategy].preallocated;
+        miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
+        miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
+        // miningData[9] =  miningData[4] > 0 ? strategyPerQuarter[_strategy][_quarterNum].quarterPower.preciseDiv(protocolPerQuarter[_quarterNum].quarterPower) : 0;
+        miningData[10] = _tokenSupplyPerQuarter(_quarterNum);
+        miningBool[0] = (block.timestamp >= START_TIME && START_TIME != 0);
+        miningBool[1] = isProtocolPerQuarter[_quarterNum];
+        miningBool[2] = strategyPerQuarter[_strategy][_quarterNum].initialized;
 
-        return (
-            protocolCheckpoint.principal,
-            protocolCheckpoint.time,
-            protocolCheckpoint.quarterBelonging,
-            protocolCheckpoint.timeListPointer,
-            protocolCheckpoint.power
-        );
-    }
-    */
-    /**
-     * Check the quarter power for a specific quarter
-     * @param _num     Number of quarter
-     */
-
-    function checkQuarterPower(uint256 _num) external view override returns (uint256 quarterPower) {
-        return (protocolPerQuarter[_num].quarterPower);
-    }
-
-    /**
-     * Check the strategy data for a specific quarter
-     * @param _num      Number of quarter
-     * @param _strategy Address of strategy
-     */
-
-    function checkStrategy(uint256 _num, address _strategy)
-        external
-        view
-        override
-        returns (
-            uint256 quarterPower,
-            bool initialized,
-            uint256 principal,
-            uint256 preallocated,
-            uint256 pricePerTokenUnit
-        )
-    {
-        return (
-            strategyPerQuarter[_strategy][_num].quarterPower,
-            strategyPerQuarter[_strategy][_num].initialized,
-            strategyPrincipal[_strategy],
-            strategyPricePerTokenUnit[_strategy].preallocated,
-            strategyPricePerTokenUnit[_strategy].pricePerTokenUnit
-        );
+        return (miningData, miningBool);
     }
 
     /**
@@ -615,15 +583,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else {
             return [PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE];
         }
-    }
-
-    /**
-     * Check the strategy price per token unit used and allocation
-     * @param _strategy     Address of the garden
-     */
-    function getStrategyPricePerTokenUnit(address _strategy) external view override returns (uint256, uint256) {
-        StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
-        return (strPpt.preallocated, strPpt.pricePerTokenUnit);
     }
 
     /* ============ Internal Functions ============ */
@@ -680,9 +639,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden           Address of the garden
      * @param _previousSupply   Previous garden token supply before minting or burning new user tokens
      */
-    function _updateGardenPower(address _garden, uint256 _previousSupply) internal {
+    function _updateGardenPower(
+        address _garden,
+        uint256 _previousSupply,
+        uint256 _newSupply
+    ) internal {
         // TODO remove gasSpent measurement and variables
-        uint256 gasSpent = gasleft();
+        // uint256 gasSpent = gasleft();
         // We select timestamp [0] to persist the garden power data as we deprecated checkpoints
         GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
         // Backward compatibility to be executed only once per beta garden to migrate the garden data into new gas-optimized data model
@@ -703,16 +666,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // The following call should always go after minting new tokens
         // The reason is that we need an updated totalSupply to update avg garden balance
         gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
-            ? ERC20(_garden).totalSupply()
+            ? _newSupply
             : (
                 gardenPower.avgGardenBalance.mul(block.timestamp.sub(IGarden(_garden).gardenInitializedAt())).add(
-                    ERC20(_garden).totalSupply()
+                    _newSupply
                 )
             )
                 .div(block.timestamp.sub(IGarden(_garden).gardenInitializedAt()));
 
         gardenPower.lastDepositAt = block.timestamp;
-        console.log('UPDATE GARDEN POWER GAS SPENT', gasSpent.sub(gasleft()));
+        // console.log('UPDATE GARDEN POWER GAS SPENT', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -725,10 +688,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _updateContributorPower(
         address _garden,
         address _contributor,
-        uint256 _previousBalance
+        uint256 _previousBalance,
+        uint256 _newBalance
     ) internal {
         // TODO remove gasSpent measurement and variables
-        uint256 gasSpent = gasleft();
+        // uint256 gasSpent = gasleft();
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
@@ -758,12 +722,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // The reason is that we need an updated user balance to update avg contributor balance
         // The new balance of the user takes care of the sharePrice so we use garden tokens count for power
         contributorDetail.avgBalance = contributor.lastDepositAt == 0
-            ? ERC20(_garden).balanceOf(_contributor)
-            : (
-                contributorDetail.avgBalance.mul(block.timestamp.sub(contributor.initialDepositAt)).add(
-                    ERC20(_garden).balanceOf(_contributor)
-                )
-            )
+            ? _newBalance
+            : (contributorDetail.avgBalance.mul(block.timestamp.sub(contributor.initialDepositAt)).add(_newBalance))
                 .div(block.timestamp.sub(contributor.initialDepositAt));
         // Initial Deposit
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
@@ -772,14 +732,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         contributor.lastDepositAt = block.timestamp;
 
         // Check for withdrawals of full capital
-        if (ERC20(_garden).balanceOf(_contributor) == 0) {
+        if (_newBalance == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributorDetail.avgBalance = 0;
             contributorDetail.power = 0;
             delete contributor.timeListPointer; // Backward compatible
         }
-        console.log('UPDATE CONTRIBUTOR POWER GAS SPENT', gasSpent.sub(gasleft()));
+        // console.log('UPDATE CONTRIBUTOR POWER GAS SPENT', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -871,7 +831,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 : 0;
             // Get the contributor power until the the strategy exit timestamp
             console.log('CHECK before getContributorPower');
-            uint256 contributorPower = _getContributorPower(_garden, _contributor, 0, strategyDetails[1]);
+            uint256 contributorPower = _getContributorPower(_garden, _contributor, strategyDetails[1]);
             console.log('CHECK after getContributorPower', contributorPower);
 
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
@@ -1197,18 +1157,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Gets the contributor power from a timestamp to a specific timestamp within a garden
      * @param _garden      Address of the garden
      * @param _contributor Address if the contributor
-     * @param _from        Initial timestamp
-     * @param _to          End timestamp
+     * @param _time        Timestamp
      * @return uint256     Contributor power during that period
      */
     function _getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _from,
-        uint256 _to
+        uint256 _time
     ) private view returns (uint256) {
         // Check to avoid out of bounds
-        _require(_to >= IGarden(_garden).gardenInitializedAt() && _to >= _from, Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
+        _require(_time >= IGarden(_garden).gardenInitializedAt(), Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
         uint256[] memory powerData = new uint256[](9);
         // powerData[0]: lastDepositAt (contributor)
         // powerData[1]: initialDepositAt (contributor)
@@ -1221,12 +1179,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[8]: totalSupply (garden)
         powerData = _getGardenAndContributor(_garden, _contributor);
 
-        if (powerData[1] == 0 || powerData[1] > _to || powerData[2] == 0) {
+        if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
             return 0;
         } else {
             // Safe check to avoid underflow, time travel only works for a past date
-            if (_to > block.timestamp) {
-                _to = block.timestamp;
+            if (_time > block.timestamp) {
+                _time = block.timestamp;
             }
 
             // Backward compatibility module for beta gardens and beta users
@@ -1260,7 +1218,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_to" timestamp
-            uint256 timeDiff = block.timestamp.sub(_to);
+            uint256 timeDiff = block.timestamp.sub(_time);
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
             console.log('timeDiff', timeDiff);
@@ -1279,7 +1237,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
-    function _getGardenAndContributor(address _garden, address _contributor) internal view returns (uint256[] memory) {
+    function _getGardenAndContributor(address _garden, address _contributor) private view returns (uint256[] memory) {
         uint256[] memory powerData = new uint256[](9);
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         // We take care if a beta user is already migrated or not to the new optimized-gas architecture
@@ -1513,7 +1471,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the real average balance of a beta garden until its last checkpoint
      */
     function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
-        uint256 gasSpent = gasleft();
+        // uint256 gasSpent = gasleft();
         uint256 avgBalance;
         // Only beta gardens have used gardenPid
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
@@ -1524,7 +1482,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ? garden.avgGardenBalance
                 : (avgBalance.mul(timeDiff)).add(garden.avgGardenBalance).div(timeDiff);
         }
-        console.log('GETTING AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
+        // console.log('GETTING AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
         return avgBalance;
     }
 

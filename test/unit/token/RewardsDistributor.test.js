@@ -1046,11 +1046,11 @@ describe('RewardsDistributor', function () {
         const amount = STRATEGY_EXECUTE_MAP[token];
 
         await executeStrategy(strategyContract, { amount });
-        const [preallocated, pricePerTokenUnit] = await rewardsDistributor.getStrategyPricePerTokenUnit(
-          strategyContract.address,
-        );
+        // strategyData[6]: preAllocated
+        // strategyData[7]: pricePerTokenUnit
+        const [strategyData] = await rewardsDistributor.checkMiningState(1, strategyContract.address);
 
-        expect(preallocated).to.be.equal(amount);
+        expect(strategyData[6]).to.be.equal(amount);
         const reserveAssetContract = await getERC20(token);
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
@@ -1058,11 +1058,9 @@ describe('RewardsDistributor', function () {
 
         // We reallocate capital
         await executeStrategy(strategyContract, { amount: amount });
-        const [preallocated1, pricePerTokenUnit1] = await rewardsDistributor.getStrategyPricePerTokenUnit(
-          strategyContract.address,
-        );
-        expect(preallocated1).to.be.equal(amount.mul(2));
-        expect(pricePerTokenUnit1).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit1.div(100));
+        const [strategyData1] = await rewardsDistributor.checkMiningState(1, strategyContract.address);
+        expect(strategyData1[6]).to.be.equal(amount.mul(2));
+        expect(strategyData1[7]).to.be.closeTo(strategyData[7], strategyData1[7].div(100));
 
         expect(await strategyContract.capitalAllocated()).to.equal(amount.mul(2));
 
@@ -1070,22 +1068,18 @@ describe('RewardsDistributor', function () {
         await increaseBlock(50);
         // We unwind capital
         await strategyContract.connect(owner).unwindStrategy(amount);
-        const [preallocated2, pricePerTokenUnit2] = await rewardsDistributor.getStrategyPricePerTokenUnit(
-          strategyContract.address,
-        );
-        expect(preallocated2).to.be.closeTo(amount, preallocated2.div(100));
-        expect(pricePerTokenUnit2).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit2.div(100));
+        const [strategyData2] = await rewardsDistributor.checkMiningState(1, strategyContract.address);
+        expect(strategyData2[6]).to.be.closeTo(amount, strategyData2[6].div(100));
+        expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
 
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(10);
         await finalizeStrategyAfter30Days(strategyContract);
-        const [preallocated3, pricePerTokenUnit3] = await rewardsDistributor.getStrategyPricePerTokenUnit(
-          strategyContract.address,
-        );
+        const [strategyData3] = await rewardsDistributor.checkMiningState(1, strategyContract.address);
 
-        expect(preallocated3).to.be.equal(0);
-        expect(pricePerTokenUnit3).to.be.closeTo(pricePerTokenUnit, pricePerTokenUnit3.div(100));
+        expect(strategyData3[6]).to.be.equal(0);
+        expect(strategyData3[7]).to.be.closeTo(strategyData[7], strategyData3[7].div(100));
         expect(await reserveAssetContract.balanceOf(garden.address)).to.be.gte(amount);
       });
     });

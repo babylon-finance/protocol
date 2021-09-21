@@ -37,8 +37,6 @@ interface IRewardsDistributor {
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
 
-    function getStrategyPricePerTokenUnit(address _strategy) external view returns (uint256, uint256);
-
     function getStrategyRewards(address _strategy) external view returns (uint96);
 
     function getRewards(
@@ -50,38 +48,17 @@ interface IRewardsDistributor {
     function getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _from,
-        uint256 _to
+        uint256 _time
     ) external view returns (uint256);
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
-    function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
-
-    /**
-    function checkProtocol(uint256 _time)
+    /*     function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
+     */
+    function checkMiningState(uint256 _quarterNum, address _strategy)
         external
         view
-        returns (
-            uint256 principal,
-            uint256 time,
-            uint256 quarterBelonging,
-            uint256 timeListPointer,
-            uint256 power
-        );
-    */
-    function checkQuarterPower(uint256 _num) external view returns (uint256 quarterPower);
-
-    function checkStrategy(uint256 _num, address _strategy)
-        external
-        view
-        returns (
-            uint256,
-            bool,
-            uint256,
-            uint256,
-            uint256
-        );
+        returns (uint256[] memory, bool[] memory);
 
     /* ============ External Functions ============ */
 
@@ -102,10 +79,12 @@ interface IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _previousBalance,
-        uint256 _previousSupply
+        uint256 _previousSupply,
+        uint256 _tokenDiff,
+        bool _addOrSubstract
     ) external;
 
-    function getGardenBetaMigrationData(address _garden)
+    /*     function getGardenBetaMigrationData(address _garden)
         external
         view
         returns (
@@ -123,5 +102,5 @@ interface IRewardsDistributor {
             uint256,
             uint256,
             bool
-        );
+        ); */
 }
