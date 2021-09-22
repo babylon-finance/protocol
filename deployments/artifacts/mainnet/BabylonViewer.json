@@ -46,9 +46,9 @@
           "type": "string"
         },
         {
-          "internalType": "uint256[12]",
+          "internalType": "uint256[13]",
           "name": "",
-          "type": "uint256[12]"
+          "type": "uint256[13]"
         },
         {
           "internalType": "bool[]",
@@ -114,9 +114,9 @@
           "type": "string"
         },
         {
-          "internalType": "address",
+          "internalType": "address[5]",
           "name": "",
-          "type": "address"
+          "type": "address[5]"
         },
         {
           "internalType": "address",
@@ -139,9 +139,9 @@
           "type": "address[]"
         },
         {
-          "internalType": "uint256[10]",
+          "internalType": "uint256[11]",
           "name": "",
-          "type": "uint256[10]"
+          "type": "uint256[11]"
         },
         {
           "internalType": "uint256[10]",
@@ -186,6 +186,25 @@
           "internalType": "bool",
           "name": "",
           "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_garden",
+          "type": "address"
+        }
+      ],
+      "name": "getGardenPrincipal",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -301,6 +320,30 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_garden",
+          "type": "address"
+        },
+        {
+          "internalType": "address[]",
+          "name": "_members",
+          "type": "address[]"
+        }
+      ],
+      "name": "getPotentialVotes",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "_tokenIn",
           "type": "address"
         },
@@ -398,6 +441,23 @@
         "returns": {
           "_0": "Garden complete details"
         }
+      },
+      "getGardenPrincipal(address)": {
+        "params": {
+          "_garden": "Address of the garden to fetch"
+        },
+        "returns": {
+          "_0": "Garden principal"
+        }
+      },
+      "getPotentialVotes(address,address[])": {
+        "params": {
+          "_garden": "Garden to retrieve votes for",
+          "_members": "All members of a garden"
+        },
+        "returns": {
+          "_0": "uint256 Total number of tokens that can vote"
+        }
       }
     },
     "title": "BabylonViewer",
@@ -411,6 +471,12 @@
       },
       "getGardenDetails(address)": {
         "notice": "Gets garden details"
+      },
+      "getGardenPrincipal(address)": {
+        "notice": "Gets garden principal"
+      },
+      "getPotentialVotes(address,address[])": {
+        "notice": "Gets the number of tokens that can vote in this garden"
       }
     },
     "version": 1
