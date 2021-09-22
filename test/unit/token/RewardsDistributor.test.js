@@ -143,6 +143,7 @@ describe('RewardsDistributor', function () {
     // We calculate the profit of the strategy
     const allocated = await strategy.capitalAllocated();
     let returned = await strategy.capitalReturned();
+    let supply;
 
     if (returned > allocated * 2) {
       // We simulate the protocol cap x2
@@ -150,14 +151,16 @@ describe('RewardsDistributor', function () {
     }
     const profit = ethers.BigNumber.from(returned).mul(ONE_ETH).div(ethers.BigNumber.from(allocated));
     const [, , , , , exitedAt] = await strategy.getStrategyState();
-    const bablSupplyQ1 = await rewardsDistributor.tokenSupplyPerQuarter(quarterStart);
+    [supply] = await rewardsDistributor.checkMining(quarterStart, strategy.address);
+    const bablSupplyQ1 = supply[9];
 
     if (quarterStart !== quarterEnd) {
       // More than 1 quarter
       const bablTokenQi = [];
       const supplyPerQuarter = [];
       for (let i = 0; i <= quarterEnd - quarterStart; i++) {
-        supplyPerQuarter[i] = await rewardsDistributor.tokenSupplyPerQuarter(quarterStart + i);
+        [supply] = await rewardsDistributor.checkMining(quarterStart + i, strategy.address);
+        supplyPerQuarter[i] = supply[9];
         if (i === 0) {
           // First
           timePercent = ONE_ETH;
@@ -268,13 +271,19 @@ describe('RewardsDistributor', function () {
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
     it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(455)).toString()).to.be.equal('2');
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(462)).toString()).to.be.equal('1');
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(463)).toString()).to.be.equal('0');
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(512)).toString()).to.be.equal('0');
+      let [supply] = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(2);
+      [supply] = await rewardsDistributor.checkMining(462, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(1);
+      [supply] = await rewardsDistributor.checkMining(463, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(0);
+      [supply] = await rewardsDistributor.checkMining(512, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(0);
       // At 513 quarter the formula had an overflow, now it is fixed and still provides 0 tokens (it really provides 0 tokens since epoch 463 ahead but we avoid the overflow at 513).
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(513)).toString()).to.be.equal('0');
-      await expect((await rewardsDistributor.tokenSupplyPerQuarter(700)).toString()).to.be.equal('0');
+      [supply] = await rewardsDistributor.checkMining(513, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(0);
+      [supply] = await rewardsDistributor.checkMining(700, ADDRESS_ZERO);
+      await expect(supply[9]).to.be.equal(0);
     });
     it('should get 0 BABL rewards if the Mining Program has not started yet', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
@@ -2217,27 +2226,26 @@ describe('RewardsDistributor', function () {
       await dai.connect(contributor).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       // await dai.connect(contributor2).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       const contributorBeforeUpdate = await arkadGarden.getContributor(contributor.address);
-      const contributorBetaPowerBefore = await distributor.getContributorBetaMigrationData(
+
+      const [betaPowerBefore, betaPowerBeforeBool] = await distributor.getBetaMigration(
         arkadGarden.address,
         contributor.address,
       );
-      const gardenBetaPowerBefore = await distributor.getGardenBetaMigrationData(arkadGarden.address);
       console.log('---BEFORE 1st DEPOSIT---');
       await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
       // await arkadGarden.connect(contributor2).deposit(ethers.utils.parseEther('200'), 1, contributor2.address, false);
       console.log('---AFTER 1st DEPOSIT---');
 
       const contributorAfterUpdate1 = await arkadGarden.getContributor(contributor.address);
-      const gardenBetaPowerAfter1 = await distributor.getGardenBetaMigrationData(arkadGarden.address);
-
-      const contributorBetaPowerAfter1 = await distributor.getContributorBetaMigrationData(
+      const [betaPowerAfter1, betaPowerBoolAfter1] = await distributor.getBetaMigration(
         arkadGarden.address,
         contributor.address,
       );
+
       console.log('---BEFORE 2nd DEPOSIT---');
       await arkadGarden.connect(contributor).deposit(ethers.utils.parseEther('200'), 1, contributor.address, false);
       console.log('---AFTER 2nd DEPOSIT---');
-      const contributorBetaPowerAfter2 = await distributor.getContributorBetaMigrationData(
+      const [betaPowerAfter2, betaPowerBoolAfter2] = await distributor.getBetaMigration(
         arkadGarden.address,
         contributor.address,
       );
@@ -2248,38 +2256,38 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('0.037118723422909827'),
         contributorBeforeUpdate[8].div(50),
       ); // power before update from rewards distributor
-      expect(contributorBetaPowerBefore[0]).to.equal(1624231155); // last deposit timestamp of Arkad
-      expect(contributorBetaPowerBefore[1]).to.equal(ethers.utils.parseEther('311542600.000000000000000000')); // Arkad accumulated power
-      expect(contributorBetaPowerBefore[2]).to.equal(ethers.utils.parseEther('200.000650163041324820')); // avg Balance
-      expect(contributorBetaPowerBefore[3]).to.equal(false); // pending migration
-      expect(gardenBetaPowerBefore[0]).to.equal(1630918928); // last deposit timestamp of Arkad
-      expect(gardenBetaPowerBefore[1]).to.equal(ethers.utils.parseEther('190745068890.174805973843135454')); // Arkad garden accumulated power
-      expect(gardenBetaPowerBefore[2]).to.equal(ethers.utils.parseEther('200.521941033020828562')); // avg Balance
-      expect(gardenBetaPowerBefore[3]).to.equal(false); // pending migration
+      expect(betaPowerBefore[3]).to.equal(1624231155); // last deposit timestamp of Arkad
+      expect(betaPowerBefore[4]).to.equal(ethers.utils.parseEther('311542600.000000000000000000')); // Arkad accumulated power
+      expect(betaPowerBefore[5]).to.equal(ethers.utils.parseEther('200.000650163041324820')); // avg Balance
+      expect(betaPowerBeforeBool[1]).to.equal(false); // pending migration
+      expect(betaPowerBefore[0]).to.equal(1630918928); // last deposit timestamp of Arkad
+      expect(betaPowerBefore[1]).to.equal(ethers.utils.parseEther('190745068890.174805973843135454')); // Arkad garden accumulated power
+      expect(betaPowerBefore[2]).to.equal(ethers.utils.parseEther('200.521941033020828562')); // avg Balance
+      expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration
 
       // after update by first deposit
       expect(contributorAfterUpdate1[8]).to.be.closeTo(
         ethers.utils.parseEther('0.037118721112759008'),
         contributorAfterUpdate1[8].div(50),
       );
-      expect(contributorBetaPowerAfter1[0]).to.be.closeTo(ethers.BigNumber.from(1630924367), 1000); // last deposit timestamp of Arkad
-      expect(contributorBetaPowerAfter1[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
-      expect(contributorBetaPowerAfter1[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
-      expect(contributorBetaPowerAfter1[3]).to.equal(true); // migration done during deposit
-      expect(gardenBetaPowerAfter1[0]).to.equal(contributorBetaPowerAfter1[0]); // last deposit timestamp of Arkad
-      expect(gardenBetaPowerAfter1[1]).to.equal(gardenBetaPowerBefore[1]); // Arkad garden accumulated power
-      expect(gardenBetaPowerAfter1[2]).to.equal(gardenBetaPowerBefore[2]); // avg Balance
-      expect(gardenBetaPowerAfter1[3]).to.equal(true); // migration completed during deposit
+      expect(betaPowerAfter1[3]).to.be.closeTo(ethers.BigNumber.from(1630924367), 1000); // last deposit timestamp of Arkad
+      expect(betaPowerAfter1[4]).to.equal(betaPowerBefore[4]); // Arkad accumulated power
+      expect(betaPowerAfter1[5]).to.equal(betaPowerBefore[5]); // avg Balance
+      expect(betaPowerBoolAfter1[1]).to.equal(true); // migration done during deposit
+      expect(betaPowerAfter1[0]).to.equal(betaPowerAfter1[3]); // last deposit timestamp of Arkad
+      expect(betaPowerAfter1[1]).to.equal(betaPowerBefore[1]); // Arkad garden accumulated power
+      expect(betaPowerAfter1[2]).to.equal(betaPowerBefore[2]); // avg Balance
+      expect(betaPowerBoolAfter1[0]).to.equal(true); // migration completed during deposit
 
       // after update by second deposit
       expect(contributorAfterUpdate2[8]).to.be.closeTo(
         ethers.utils.parseEther('0.037118717837723536'),
         contributorAfterUpdate2[8].div(50),
       );
-      expect(contributorBetaPowerAfter2[0]).to.closeTo(ethers.BigNumber.from(1630924368), 1000); // last deposit timestamp of Arkad
-      expect(contributorBetaPowerAfter2[1]).to.equal(contributorBetaPowerBefore[1]); // Arkad accumulated power
-      expect(contributorBetaPowerAfter2[2]).to.equal(contributorBetaPowerBefore[2]); // avg Balance
-      expect(contributorBetaPowerAfter2[3]).to.equal(true); // migration done during deposit
+      expect(betaPowerAfter2[3]).to.closeTo(ethers.BigNumber.from(1630924368), 1000); // last deposit timestamp of Arkad
+      expect(betaPowerAfter2[4]).to.equal(betaPowerBefore[4]); // Arkad accumulated power
+      expect(betaPowerAfter2[5]).to.equal(betaPowerBefore[5]); // avg Balance
+      expect(betaPowerBoolAfter2[1]).to.equal(true); // migration done during deposit
     });
   });
 });

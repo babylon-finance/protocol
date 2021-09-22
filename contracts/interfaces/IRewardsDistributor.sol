@@ -53,9 +53,12 @@ interface IRewardsDistributor {
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
-    /*     function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
-     */
-    function checkMiningState(uint256 _quarterNum, address _strategy)
+    function checkMining(uint256 _quarterNum, address _strategy)
+        external
+        view
+        returns (uint256[] memory, bool[] memory);
+
+    function getBetaMigration(address _garden, address _contributor)
         external
         view
         returns (uint256[] memory, bool[] memory);
@@ -83,24 +86,4 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
-
-    /*     function getGardenBetaMigrationData(address _garden)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        );
-
-    function getContributorBetaMigrationData(address _garden, address _contributor)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        ); */
 }

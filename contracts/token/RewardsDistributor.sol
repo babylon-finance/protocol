@@ -371,50 +371,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ========== View functions ========== */
 
     /**
-     * Function to get the garden details of a beta Garden that needs migration into the new optimized-gas structure without checkpoints
-     * @dev Once all the beta gardens data are migrated, it will not longer need to execute this code again
-     * This code is needed until all beta gardens are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @return all data needed for the migration
-     */
-
-    /*   function getGardenBetaMigrationData(address _garden)
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        return _getGardenBetaMigrationData(_garden);
-    } */
-
-    /**
-     * Function to get the beta contributor details of a beta Garden that needs migration into the new optimized-gas structure without checkpoints
-     * @dev Once all the beta contributors of all beta gardens data are migrated, it will not longer need to execute this code again
-     * This code is needed until all beta users are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @param _contributor      Address of the beta contributor
-     * @return all data needed for the migration
-     */
-    /*     function getContributorBetaMigrationData(address _garden, address _contributor)
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        return _getContributorBetaMigrationData(_garden, _contributor);
-    } */
-
-    /**
      * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
      * @param _garden                   Garden to which the strategies and the user must belong to
      * @param _contributor              Address of the contributor to check
@@ -533,12 +489,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Calculates the BABL rewards supply for each quarter
-     * @param _quarter      Number of the epoch (quarter)
+     * Check the beta migration data state
+     * @param _garden       Address of garden
+     * @param _contributor  Address of contributor
      */
-    /*  function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
-        return _tokenSupplyPerQuarter(_quarter);
-    } */
+
+    function getBetaMigration(address _garden, address _contributor)
+        external
+        view
+        override
+        returns (uint256[] memory, bool[] memory)
+    {
+        uint256[] memory migrationData = new uint256[](6);
+        bool[] memory migrationBool = new bool[](2);
+        (migrationData[0], migrationData[1], migrationData[2], migrationBool[0]) = _getGardenBetaMigrationData(_garden);
+        (migrationData[3], migrationData[4], migrationData[5], migrationBool[1]) = _getContributorBetaMigrationData(
+            _garden,
+            _contributor
+        );
+        return (migrationData, migrationBool);
+    }
 
     /**
      * Check the mining program state for a specific quarter and strategy
@@ -546,14 +516,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategy        Address of strategy
      */
 
-    function checkMiningState(uint256 _quarterNum, address _strategy)
+    function checkMining(uint256 _quarterNum, address _strategy)
         external
         view
         override
         returns (uint256[] memory, bool[] memory)
     {
-        uint256[] memory miningData = new uint256[](11);
-        bool[] memory miningBool = new bool[](3);
+        uint256[] memory miningData = new uint256[](10);
+        bool[] memory miningBool = new bool[](2);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -563,11 +533,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[6] = strategyPricePerTokenUnit[_strategy].preallocated;
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
-        // miningData[9] =  miningData[4] > 0 ? strategyPerQuarter[_strategy][_quarterNum].quarterPower.preciseDiv(protocolPerQuarter[_quarterNum].quarterPower) : 0;
-        miningData[10] = _tokenSupplyPerQuarter(_quarterNum);
-        miningBool[0] = (block.timestamp >= START_TIME && START_TIME != 0);
-        miningBool[1] = isProtocolPerQuarter[_quarterNum];
-        miningBool[2] = strategyPerQuarter[_strategy][_quarterNum].initialized;
+        miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
+        miningBool[0] = isProtocolPerQuarter[_quarterNum];
+        miningBool[1] = strategyPerQuarter[_strategy][_quarterNum].initialized;
 
         return (miningData, miningBool);
     }
