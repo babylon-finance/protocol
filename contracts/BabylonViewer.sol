@@ -118,18 +118,28 @@ contract BabylonViewer {
             address[] memory,
             address[] memory,
             uint256[11] memory,
-            uint256[9] memory,
+            uint256[10] memory,
             uint256[3] memory
         )
     {
         IGarden garden = IGarden(_garden);
         uint256 principal = getGardenPrincipal(_garden);
-        uint256[] memory totalSupplyValuationAndSeed = new uint256[](3);
+        uint256[] memory totalSupplyValuationAndSeed = new uint256[](4);
         totalSupplyValuationAndSeed[0] = IERC20(_garden).totalSupply();
         totalSupplyValuationAndSeed[1] = totalSupplyValuationAndSeed[0] > 0
             ? IGardenValuer(controller.gardenValuer()).calculateGardenValuation(_garden, garden.reserveAsset())
             : 0;
         totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
+        totalSupplyValuationAndSeed[3] = ERC20(garden.reserveAsset()).balanceOf(address(garden));
+        if (totalSupplyValuationAndSeed[3] > garden.keeperDebt()) {
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.keeperDebt());
+        }
+        if (totalSupplyValuationAndSeed[3] > garden.reserveAssetRewardsSetAside()) {
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.reserveAssetRewardsSetAside());
+        } else {
+            totalSupplyValuationAndSeed[3] = 0;
+        }
+
         uint256[3] memory profits = _getGardenProfitSharing(_garden);
         return (
             ERC20(_garden).name(),
@@ -169,7 +179,8 @@ contract BabylonViewer {
                     ? totalSupplyValuationAndSeed[0].preciseMul(totalSupplyValuationAndSeed[1])
                     : 0,
                 totalSupplyValuationAndSeed[0],
-                totalSupplyValuationAndSeed[2]
+                totalSupplyValuationAndSeed[2],
+                totalSupplyValuationAndSeed[3]
             ],
             profits
         );
@@ -269,10 +280,11 @@ contract BabylonViewer {
 
     function getGardensUser(address _user, uint256 _offset) external view returns (address[] memory, bool[] memory) {
         address[] memory gardens = controller.getGardens();
-        address[] memory userGardens = new address[](25);
-        bool[] memory hasUserDeposited = new bool[](25);
+        address[] memory userGardens = new address[](50);
+        bool[] memory hasUserDeposited = new bool[](50);
+        uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         uint8 resultIndex;
-        for (uint256 i = _offset; i < gardens.length; i++) {
+        for (uint256 i = _offset; i < limit; i++) {
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
             if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];

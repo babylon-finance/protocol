@@ -114,6 +114,9 @@ contract GardenValuer {
         // Subtract the reserves set aside for rewards
         valuation = valuation.sub(IGarden(_garden).reserveAssetRewardsSetAside());
 
+        // Subtract Keeper debt
+        valuation = valuation.sub(IGarden(_garden).keeperDebt());
+
         // Get the valuation in terms of the quote asset
         valuation = valuation.preciseMul(reservePrice);
 
