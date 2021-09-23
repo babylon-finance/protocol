@@ -368,6 +368,67 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
+    /**
+     * PRIVILEGE FUNCTION to migrate beta gardens into the new optimized gas data structure without checkpoints
+     * @dev Can be called by anyone, should be called once for each garden and can be removed after all beta gardens data are migrated
+     * @param _gardens     Array of protocol gardens to perform beta data migration
+     */
+    function migrateBetaGardens(address[] memory _gardens) public override {
+        for (uint256 i = 0; i < _gardens.length; i++) {
+            _require(IBabController(controller).isGarden(_gardens[i]), Errors.ONLY_ACTIVE_GARDEN);
+            GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_gardens[i]][0];
+            // Check if still migration is pending and it is a beta garden
+            if (!betaGardenMigrated[_gardens[i]] && gardenPower.avgGardenBalance == 0) {
+                (
+                    gardenPower.lastDepositAt,
+                    gardenPower.accGardenPower,
+                    gardenPower.avgGardenBalance,
+
+                ) = _getGardenBetaMigrationData(_gardens[i]);
+                // We set the flag of migration complete to true to avoid new updates that might corrupt data
+                betaGardenMigrated[_gardens[i]] = true;
+            }
+        }
+    }
+
+    /**
+     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure without checkpoints
+     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and can be removed after all beta garden users data of all gardens are migrated
+     * @param _garden       Address of a protocol beta garden whose contributors belong to
+     * @param _contributors Array of beta contributor addresses to migrate data
+     */
+    function migrateBetaUsers(address _garden, address[] memory _contributors) public override {
+        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        if (!betaGardenMigrated[_garden] && gardenPowerByTimestamp[_garden][0].avgGardenBalance == 0) {
+            // we need to update the garden first if still not migrated
+            address[] memory gardens = new address[](1);
+            gardens[0] = _garden;
+            migrateBetaGardens(gardens);
+        }
+        // Then we migrate users, one by one
+        for (uint256 i = 0; i < _contributors.length; i++) {
+            ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributors[i]];
+            // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
+            TimestampContribution storage contributorDetail = contributor.tsContributions[0];
+            // Check if still migration is pending and it is a beta contributor
+            if (
+                !betaUserMigrated[_garden][_contributors[i]] &&
+                contributor.lastDepositAt > 0 &&
+                contributorDetail.avgBalance == 0
+            ) {
+                // It is a beta user that need data migration
+                (
+                    contributor.lastDepositAt,
+                    contributorDetail.power,
+                    contributorDetail.avgBalance,
+
+                ) = _getContributorBetaMigrationData(_garden, _contributors[i]);
+                // Beta user data already migrated
+                betaUserMigrated[_garden][_contributors[i]] = true;
+            }
+        }
+    }
+
     /* ========== View functions ========== */
 
     /**
@@ -472,7 +533,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Gets the contributor power from one timestamp to the other
      * @param _garden      Address of the garden where the contributor belongs to
-     * @param _contributor Address if the contributor
+     * @param _contributor Address of the contributor
      * @param _time        Timestamp to check power
      * @return uint256     Contributor power during that period
      */
@@ -480,8 +541,59 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _time
-    ) external view override returns (uint256) {
-        return _getContributorPower(_garden, _contributor, _time);
+    ) public view override returns (uint256) {
+        // Check to avoid out of bounds
+        _require(_time >= IGarden(_garden).gardenInitializedAt(), Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
+        uint256[] memory powerData = new uint256[](9);
+        // powerData[0]: lastDepositAt (contributor)
+        // powerData[1]: initialDepositAt (contributor)
+        // powerData[2]: balance (contributor)
+        // powerData[3]: power (contributor)
+        // powerData[4]: avgBalance (contributor)
+        // powerData[5]: lastDepositAt (garden)
+        // powerData[6]: accGardenPower (garden)
+        // powerData[7]: avgGardenBalance (garden)
+        // powerData[8]: totalSupply (garden)
+        powerData = _getGardenAndContributor(_garden, _contributor);
+
+        if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
+            return 0;
+        } else {
+            // Safe check to avoid underflow, time travel only works for a past date
+            if (_time > block.timestamp) {
+                _time = block.timestamp;
+            }
+
+            // Backward compatibility module for beta gardens and beta users
+            // First we check the contributor in case of a beta user pending migration
+            if (powerData[4] == 0 && gardenPid[_garden] > 0) {
+                // pending contributor migration - backward compatible
+                (, powerData[3], powerData[4], ) = _getContributorBetaMigrationData(_garden, _contributor);
+            }
+            // Second we check the garden in case of a beta garden pending migration
+            if (powerData[7] == 0 && gardenPid[_garden] > 0) {
+                // pending garden migration - backward compatible
+                (powerData[5], powerData[6], powerData[7], ) = _getGardenBetaMigrationData(_garden);
+            }
+
+            // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
+            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
+            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
+
+            // We then time travel back to when the strategy exitedAt
+            // Calculate the power at "_to" timestamp
+            uint256 timeDiff = block.timestamp.sub(_time);
+            uint256 userPowerDiff = powerData[4].mul(timeDiff);
+            uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
+            // Avoid underflow conditions 0 at user, 1 at garden
+            updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
+            updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
+            uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
+            if (virtualPower > 1e18) {
+                virtualPower = 1e18; // Overflow limit
+            }
+            return virtualPower;
+        }
     }
 
     /**
@@ -788,7 +900,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(PROFIT_PROTOCOL_FEE))
                 : 0;
             // Get the contributor power until the the strategy exit timestamp
-            uint256 contributorPower = _getContributorPower(_garden, _contributor, strategyDetails[1]);
+            uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
             // Get strategist profit rewards if profits
@@ -1096,72 +1208,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             SafeERC20.safeTransfer(babltoken, _to, bablBal);
         } else {
             SafeERC20.safeTransfer(babltoken, _to, _amount);
-        }
-    }
-
-    /**
-     * Gets the contributor power from a timestamp to a specific timestamp within a garden
-     * @param _garden      Address of the garden
-     * @param _contributor Address if the contributor
-     * @param _time        Timestamp
-     * @return uint256     Contributor power during that period
-     */
-    function _getContributorPower(
-        address _garden,
-        address _contributor,
-        uint256 _time
-    ) private view returns (uint256) {
-        // Check to avoid out of bounds
-        _require(_time >= IGarden(_garden).gardenInitializedAt(), Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
-        uint256[] memory powerData = new uint256[](9);
-        // powerData[0]: lastDepositAt (contributor)
-        // powerData[1]: initialDepositAt (contributor)
-        // powerData[2]: balance (contributor)
-        // powerData[3]: power (contributor)
-        // powerData[4]: avgBalance (contributor)
-        // powerData[5]: lastDepositAt (garden)
-        // powerData[6]: accGardenPower (garden)
-        // powerData[7]: avgGardenBalance (garden)
-        // powerData[8]: totalSupply (garden)
-        powerData = _getGardenAndContributor(_garden, _contributor);
-
-        if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
-            return 0;
-        } else {
-            // Safe check to avoid underflow, time travel only works for a past date
-            if (_time > block.timestamp) {
-                _time = block.timestamp;
-            }
-
-            // Backward compatibility module for beta gardens and beta users
-            // First we check the contributor in case of a beta user pending migration
-            if (powerData[4] == 0 && gardenPid[_garden] > 0) {
-                // pending contributor migration - backward compatible
-                (, powerData[3], powerData[4], ) = _getContributorBetaMigrationData(_garden, _contributor);
-            }
-            // Second we check the garden in case of a beta garden pending migration
-            if (powerData[7] == 0 && gardenPid[_garden] > 0) {
-                // pending garden migration - backward compatible
-                (powerData[5], powerData[6], powerData[7], ) = _getGardenBetaMigrationData(_garden);
-            }
-
-            // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
-            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
-            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
-
-            // We then time travel back to when the strategy exitedAt
-            // Calculate the power at "_to" timestamp
-            uint256 timeDiff = block.timestamp.sub(_time);
-            uint256 userPowerDiff = powerData[4].mul(timeDiff);
-            uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
-            // Avoid underflow conditions 0 at user, 1 at garden
-            updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
-            updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
-            uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            if (virtualPower > 1e18) {
-                virtualPower = 1e18; // Overflow limit
-            }
-            return virtualPower;
         }
     }
 
