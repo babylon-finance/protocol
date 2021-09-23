@@ -1744,7 +1744,7 @@ describe('RewardsDistributor', function () {
       // Execute DAI Garden strategy long2
       await executeStrategy(long2, { amount: ethers.utils.parseEther('1000') });
 
-      await substractFakeProfits(long1, ethers.utils.parseEther('0.0025')); // Using fake 18 decimals during the strategy execution
+      await substractFakeProfits(long1, ethers.utils.parseEther('0.0020')); // Using fake 18 decimals during the strategy execution
       await substractFakeProfits(long2, ethers.BigNumber.from(20 * 1000000)); // Dai has 18 decimals, we add usdc (6 decimals) during strategy execution
 
       // Finalize both strategies (long 2 has higher duration -> more rewardss)

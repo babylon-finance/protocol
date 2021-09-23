@@ -311,6 +311,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external override nonReentrant onlyActiveGarden {
         uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
+        // Temporal beta migrations for beta gardens and beta users
+        address[] memory betaContributor = new address[](1);
+        betaContributor[0] = _contributor;
+        migrateBetaUsers(_garden, betaContributor);
         _updateGardenPower(_garden, _previousSupply, newSupply);
         _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
     }
@@ -723,7 +727,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We select timestamp [0] to persist the garden power data as we deprecated checkpoints
         GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
         // Backward compatibility to be executed only once per beta garden to migrate the garden data into new gas-optimized data model
-        if (!betaGardenMigrated[_garden] && gardenPower.avgGardenBalance == 0) {
+        /* if (!betaGardenMigrated[_garden] && gardenPower.avgGardenBalance == 0) {
             (
                 gardenPower.lastDepositAt,
                 gardenPower.accGardenPower,
@@ -731,7 +735,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
             ) = _getGardenBetaMigrationData(_garden);
             betaGardenMigrated[_garden] = true;
-        }
+        } */
         // The very first deposit takes 0 of power in a garden as power is principal x time and time is 0
         // Power is updated by usign previous totalSupply (before the new mint or burn which is just done as part of deposit/withdraw op)
         gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
@@ -768,7 +772,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
         // Backward compatibility, to be executed only by Beta users and only once if needed data migration
-        if (
+        /* if (
             !betaUserMigrated[_garden][_contributor] &&
             contributor.lastDepositAt > 0 &&
             contributorDetail.avgBalance == 0
@@ -782,7 +786,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             ) = _getContributorBetaMigrationData(_garden, _contributor);
             // Beta user data already migrated
             betaUserMigrated[_garden][_contributor] = true;
-        }
+        } */
         // The very first deposit takes 0 of power
         // Power is updated by usign previous balance (before the new mint or burn which is just done as part of this deposit/withdraw op)
         // Its power is proportional to the time passed by the previous supply during that time
