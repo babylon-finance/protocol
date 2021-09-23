@@ -1925,18 +1925,14 @@ describe('RewardsDistributor', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
-      console.log('---CHECK 1---');
-
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-      console.log('---CHECK 2---');
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      console.log('---CHECK 3---');
 
       await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
@@ -1944,14 +1940,12 @@ describe('RewardsDistributor', function () {
         long1.address,
         long2.address,
       ]);
-      console.log('---CHECK 4---');
 
       const signer1BABL2 = signer1Rewards2[5];
       const signer1Profit2 = signer1Rewards2[6];
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
-      console.log('---CHECK 5---');
 
       expect(signer1Profit).to.be.closeTo('5983787580486307', signer1Profit.div(100));
       expect(signer1Profit2).to.be.closeTo('5958439050861242', signer1Profit2.div(100));
@@ -2222,7 +2216,6 @@ describe('RewardsDistributor', function () {
         amounts: [ethers.utils.parseEther('500'), ethers.utils.parseEther('200')],
       });
 
-      // console.log('User 2 BEFORE A DEPOSIT -> BEFORE UPDATE', (await arkadGarden.getContributor(contributor2.address))[10].toString());
       await dai.connect(contributor).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       // await dai.connect(contributor2).approve(arkadGarden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
       const contributorBeforeUpdate = await arkadGarden.getContributor(contributor.address);

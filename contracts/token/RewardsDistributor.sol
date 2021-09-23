@@ -461,12 +461,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // PercentageMul must always have 18 decimals
             uint256 percentageMul = str[1].mul(10**mantissa).preciseDiv(str[0].mul(10**mantissa));
 
-            console.log('---CHECK STRATEGY percentageMul---', _strategy, percentageMul);
-            console.log('---CHECK STRATEGY rewards before---', _strategy, rewards);
-
             if (percentageMul > 2e18) percentageMul = 2e18;
             rewards = rewards.preciseMul(percentageMul);
-            console.log('---CHECK STRATEGY rewards after---', _strategy, rewards);
             return Safe3296.safe96(rewards, 'overflow 96 bits');
         } else {
             return 0;
@@ -612,8 +608,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousSupply,
         uint256 _newSupply
     ) internal {
-        // TODO remove gasSpent measurement and variables
-        // uint256 gasSpent = gasleft();
         // We select timestamp [0] to persist the garden power data as we deprecated checkpoints
         GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
         // Backward compatibility to be executed only once per beta garden to migrate the garden data into new gas-optimized data model
@@ -643,7 +637,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 .div(block.timestamp.sub(IGarden(_garden).gardenInitializedAt()));
 
         gardenPower.lastDepositAt = block.timestamp;
-        // console.log('UPDATE GARDEN POWER GAS SPENT', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -659,8 +652,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousBalance,
         uint256 _newBalance
     ) internal {
-        // TODO remove gasSpent measurement and variables
-        // uint256 gasSpent = gasleft();
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
@@ -707,7 +698,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             contributorDetail.power = 0;
             delete contributor.timeListPointer; // Backward compatible
         }
-        // console.log('UPDATE CONTRIBUTOR POWER GAS SPENT', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -798,33 +788,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(PROFIT_PROTOCOL_FEE))
                 : 0;
             // Get the contributor power until the the strategy exit timestamp
-            console.log('CHECK before getContributorPower');
             uint256 contributorPower = _getContributorPower(_garden, _contributor, strategyDetails[1]);
-            console.log('CHECK after getContributorPower', contributorPower);
-
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
-            console.log('CHECK strategist BABL', rewards[0]);
             // Get strategist profit rewards if profits
             rewards[1] = (strategist == _contributor && profitData[0] == true)
                 ? _getStrategyStrategistProfits(_garden, strategyDetails[10])
                 : 0;
-            console.log('CHECK strategist profits', rewards[1]);
-
             // Get steward rewards
             rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
-            console.log('CHECK steward BABL', rewards[2]);
-
             // If not profits _getStrategyStewardsProfits should not execute
             rewards[3] = profitData[0] == true
                 ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
                 : 0;
-            console.log('CHECK steward profit', rewards[3]);
-
             // Get LP rewards
             rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
-            console.log('CHECK LP BABL', rewards[4]);
-
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
@@ -1167,40 +1145,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 (powerData[5], powerData[6], powerData[7], ) = _getGardenBetaMigrationData(_garden);
             }
 
-            console.log('powerData[0]', powerData[0]);
-            console.log('powerData[1]', powerData[1]);
-            console.log('powerData[2]', powerData[2]);
-            console.log('powerData[3]', powerData[3]);
-            console.log('powerData[4]', powerData[4]);
-            console.log('powerData[5]', powerData[5]);
-            console.log('powerData[6]', powerData[6]);
-            console.log('powerData[7]', powerData[7]);
-            console.log('powerData[8]', powerData[8]);
-
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
-            console.log('CHECK updated user power', powerData[3]);
-
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
-            console.log('CHECK updated garden power', updatedGardenPower);
 
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_to" timestamp
             uint256 timeDiff = block.timestamp.sub(_time);
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
-            console.log('timeDiff', timeDiff);
             // Avoid underflow conditions 0 at user, 1 at garden
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
-
-            console.log('--- BACK TO THE POWER CONTRIBUTOR ---', updatedPower);
-            console.log('--- BACK TO THE POWER GARDEN ---', updatedGardenPower);
-
-            uint256 balancePower = powerData[2].preciseDiv(powerData[8]);
             uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            console.log('CHECK balance Power', balancePower);
-            console.log('CHECK virtual Power', virtualPower);
+            if (virtualPower > 1e18) {
+                virtualPower = 1e18; // Overflow limit
+            }
             return virtualPower;
         }
     }
@@ -1439,7 +1399,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the real average balance of a beta garden until its last checkpoint
      */
     function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
-        // uint256 gasSpent = gasleft();
         uint256 avgBalance;
         // Only beta gardens have used gardenPid
         for (uint256 i = 0; i < gardenPid[_garden]; i++) {
@@ -1450,7 +1409,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ? garden.avgGardenBalance
                 : (avgBalance.mul(timeDiff)).add(garden.avgGardenBalance).div(timeDiff);
         }
-        // console.log('GETTING AVG GARDEN BALANCE GAS SPENT', gasSpent.sub(gasleft()));
         return avgBalance;
     }
 

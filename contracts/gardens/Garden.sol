@@ -1009,7 +1009,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
-        // uint256 gasSpent = gasleft();
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
@@ -1019,7 +1018,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _newTokens,
             true // deposit
         );
-        // console.log('GAS USED TO UPDATE DEPOSIT AT RD', gasSpent.sub(gasleft()));
     }
 
     /**
@@ -1053,7 +1051,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _tokensToBurn,
             false // withdraw
         );
-        // console.log('GAS USED TO UPDATE WITHDRAW AT RD', gasSpent.sub(gasleft()));
         contributor.nonce = contributor.nonce + 1;
     }
 

@@ -919,14 +919,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             strategyReturns,
             burningAmount
         );
-        console.log('UPDATING STRATEGY->REWARDS DISTRIBUTOR');
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
         if (hasMiningStarted) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
         }
-        console.log('FINISHED UPDATING STRATEGY->REWARDS DISTRIBUTOR', address(this));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
