@@ -25,13 +25,6 @@ pragma solidity 0.7.6;
  */
 
 interface IRewardsDistributor {
-    // Structs
-    struct PrincipalPerTimestamp {
-        uint256 principal;
-        uint256 time;
-        uint256 timeListPointer;
-    }
-
     /* ========== View functions ========== */
 
     // solhint-disable-next-line

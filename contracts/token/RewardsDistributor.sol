@@ -43,13 +43,16 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
  * @author Babylon Finance
- * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
- * along the time reserved for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
+ * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards
+ * of the BABL Mining Program along the time reserved for executed strategies. It implements a supply curve
+ * to distribute 500K BABL along the time.
  * The supply curve is designed to optimize the long-term sustainability of the protocol.
  * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
- * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
- * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
- * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
+ * For that, it houses the state of the protocol power along the time as each strategy power is compared
+ * to the whole protocol usage.
+ * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses
+ * to specific profiles, which are actively contributing to the protocol growth and their communities
+ * (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using LowGasSafeMath for uint256;
@@ -184,7 +187,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 initialDepositAt; // Checkpoint of the initial deposit
         uint256[] timeListPointer; // DEPRECATED, but still needed during beta gardens migration
         uint256 pid; // DEPRECATED, but still needed during beta gardens migration
-        mapping(uint256 => TimestampContribution) tsContributions; // Sub-mapping of contributor details, updated info after beta will be only at position [0]
+        // Sub-mapping of contributor details, updated info after beta will be only at position [0]
+        mapping(uint256 => TimestampContribution) tsContributions;
     }
 
     struct TimestampContribution {
@@ -209,21 +213,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // BABL Token contract
     TimeLockedToken private babltoken;
 
-    // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal) in all ongoing strategies during mining program.
+    // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal)
+    // in all ongoing strategies during mining program.
     uint256 private miningProtocolPrincipal; // Protocol principal (only related to mining program)
     mapping(uint256 => ProtocolPerTimestamp) private protocolPerTimestamp; // DEPRECATED
     uint256[] private timeList; // DEPRECATED
     uint256 private miningProtocolPower; // Mining protocol power along the time
 
-    mapping(uint256 => ProtocolPerQuarter) private protocolPerQuarter; // Mapping of the accumulated protocol per each active quarter
-    mapping(uint256 => bool) private isProtocolPerQuarter; // Check if the protocol per quarter data has been initialized
+    // Mapping of the accumulated protocol per each active quarter
+    mapping(uint256 => ProtocolPerQuarter) private protocolPerQuarter;
+    // Check if the protocol per quarter data has been initialized
+    mapping(uint256 => bool) private isProtocolPerQuarter;
 
     mapping(address => mapping(uint256 => uint256)) private rewardsPowerOverhead; // DEPRECATED
     // Contributor power control
-    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden; // Contributor details per garden
+    // Contributor details per garden
+    mapping(address => mapping(address => ContributorPerGarden)) private contributorPerGarden;
     mapping(address => mapping(address => Checkpoints)) private checkpoints; // DEPRECATED
     // Garden power control
-    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp; // Garden power details per garden. Updated info after beta will be only at position [0]
+    // Garden power details per garden. Updated info after beta will be only at position [0]
+    mapping(address => mapping(uint256 => GardenPowerByTimestamp)) private gardenPowerByTimestamp;
     mapping(address => uint256[]) private gardenTimelist; // DEPRECATED, but still needed during beta gardens migration
     mapping(address => uint256) private gardenPid; // DEPRECATED, but still needed during beta gardens migration
 
@@ -239,8 +248,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 preallocated; // Strategy capital preallocated before each checkpoint
         uint256 pricePerTokenUnit; // Last average price per allocated tokens per strategy normalized into DAI
     }
-    mapping(address => mapping(uint256 => StrategyPerQuarter)) private strategyPerQuarter; // Acumulated strategy power per each quarter along the time
-    mapping(address => StrategyPricePerTokenUnit) private strategyPricePerTokenUnit; // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
+    // Acumulated strategy power per each quarter along the time
+    mapping(address => mapping(uint256 => StrategyPerQuarter)) private strategyPerQuarter;
+    // Pro-rata oracle price allowing re-allocations and unwinding of any capital value
+    mapping(address => StrategyPricePerTokenUnit) private strategyPricePerTokenUnit;
 
     // Reentrancy guard countermeasure
     uint256 private status;
@@ -312,6 +323,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
         // Temporal beta migrations for beta gardens and beta users
+        // If already migrated, it does nothing
         address[] memory betaContributor = new address[](1);
         betaContributor[0] = _contributor;
         _migrateBetaUsers(_garden, betaContributor);
@@ -349,15 +361,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Function that set the babl Token address as it is going to be released in a future date
-     * @param _bablToken BABLToken address
-     */
-    function setBablToken(TimeLockedToken _bablToken) external onlyOwner onlyUnpaused {
-        _require(address(_bablToken) != address(0) && _bablToken != babltoken, Errors.INVALID_ADDRESS);
-        babltoken = _bablToken;
-    }
-
-    /**
      * Set customized profit shares for a specific garden by the gardener
      * @param _strategistShare      New % of strategistShare
      * @param _stewardsShare        New % of stewardsShare
@@ -375,7 +378,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * PRIVILEGE FUNCTION to migrate beta gardens into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called once for each garden and can be removed after all beta gardens data are migrated
+     * @dev Can be called by anyone, should be called once for each garden and can be removed
+     * after all beta gardens data are migrated
      * @param _gardens     Array of protocol gardens to perform beta data migration
      */
     function migrateBetaGardens(address[] memory _gardens) external override onlyOwner {
@@ -383,8 +387,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and can be removed after all beta garden users data of all gardens are migrated
+     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure
+     * without checkpoints.
+     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and
+     * can be removed after all beta garden users data of all gardens are migrated
      * @param _garden       Address of a protocol beta garden whose contributors belong to
      * @param _contributors Array of beta contributor addresses to migrate data
      */
@@ -400,7 +406,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor              Address of the contributor to check
      * @param _finalizedStrategies      List of addresses of the finalized strategies to check
      * @return Array of size 7 with the following distribution:
-     * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
+     * rewards[0]: Strategist BABL
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
      */
     function getRewards(
         address _garden,
@@ -468,7 +480,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 uint256 protocolPower = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
                 _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
                 if (i.add(1) == numQuarters) {
-                    // last quarter - we need to take proportional supply for that timeframe despite the epoch has not finished yet
+                    // last quarter - we need to take proportional supply for that timeframe despite
+                    // the epoch has not finished yet
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                         slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                     );
@@ -644,7 +657,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _updateProtocolPowerPerQuarter();
         // We update the strategy power per quarter normalized in DAI if mining program is activated
         _updateStrategyPowerPerQuarter(_strategy);
-        // The following function call _updatePrincipal must be always executed after _updateProtocolPowerPerQuarter and _updateStrategyPowerPerQuarter
+        // The following function call _updatePrincipal must be always executed
+        // after _updateProtocolPowerPerQuarter and _updateStrategyPowerPerQuarter
         _updatePrincipal(_strategy, _capital, _addOrSubstract);
         // The following time set should always be executed at the end
         miningUpdatedAt = block.timestamp;
@@ -653,7 +667,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Update the principal considered part of the mining program either Protocol or Strategies
      * @param _strategy         Strategy address
-     * @param _capital          Capital normalized into DAI to add or substract for accurate comparisons between strategies
+     * @param _capital          Capital normalized into DAI to add or substract for accurate
+     * comparisons between strategies
      * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy under mining
      */
     function _updatePrincipal(
@@ -685,7 +700,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We select timestamp [0] to persist the garden power data as we deprecated checkpoints
         GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
         // The very first deposit takes 0 of power in a garden as power is principal x time and time is 0
-        // Power is updated by usign previous totalSupply (before the new mint or burn which is just done as part of deposit/withdraw op)
+        // Power is updated by usign previous totalSupply (before the new mint or burn which is just done
+        // as part of deposit/withdraw op)
         gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
             ? 0
             : gardenPower.accGardenPower.add((block.timestamp.sub(gardenPower.lastDepositAt)).mul(_previousSupply));
@@ -727,7 +743,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
         // The very first deposit takes 0 of power
-        // Power is updated by usign previous balance (before the new mint or burn which is just done as part of this deposit/withdraw op)
+        // Power is updated by usign previous balance (before the new mint or burn which is
+        // just done as part of this deposit/withdraw op)
         // Its power is proportional to the time passed by the previous supply during that time
         contributorDetail.power = contributor.lastDepositAt == 0
             ? 0
@@ -787,7 +804,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     .preciseDiv(strPpt.preallocated.add(_capital));
                 strPpt.preallocated = strPpt.preallocated.add(_capital);
             } else {
-                // We use the previous pricePerToken in a substract instead of a new price (as allocated capital used previous prices not the current one)
+                // We use the previous pricePerToken in a substract instead of a new price
+                // (as allocated capital used previous prices not the current one)
                 strPpt.preallocated = strPpt.preallocated.sub(_capital);
             }
             return strPpt.pricePerTokenUnit;
@@ -796,7 +814,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * PRIVILEGE FUNCTION to migrate beta gardens into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called once for each garden and can be removed after all beta gardens data are migrated
+     * @dev Can be called by anyone, should be called once for each garden and can be removed after
+     * all beta gardens data are migrated
      * @param _gardens     Array of protocol gardens to perform beta data migration
      */
     function _migrateBetaGardens(address[] memory _gardens) internal {
@@ -825,8 +844,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and can be removed after all beta garden users data of all gardens are migrated
+     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure
+     * without checkpoints
+     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and
+     * can be removed after all beta garden users data of all gardens are migrated
      * @param _garden       Address of a protocol beta garden whose contributors belong to
      * @param _contributors Array of beta contributor addresses to migrate data
      */
@@ -882,7 +903,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 if (data[0] == data[1].sub(1)) {
                     // There were no intermediate epoch without checkpoints, we are in the next epoch
                     // We need to divide the debtPower between previous epoch and current epoch
-                    // We re-initialize the protocol power in the new epoch adding only the corresponding to its duration
+                    // We re-initialize the protocol power in the new epoch adding only the corresponding
+                    // to its duration
                     protocolCheckpoint.quarterPower = data[3]
                         .mul(block.timestamp.sub(START_TIME.add(data[1].mul(EPOCH_DURATION).sub(EPOCH_DURATION))))
                         .div(data[2]);
@@ -891,7 +913,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                         .quarterPower
                         .add(data[3].sub(protocolCheckpoint.quarterPower));
                 } else {
-                    // There were some intermediate epochs without checkpoints - we need to create missing checkpoints and update the last (current) one
+                    // There were some intermediate epochs without checkpoints - we need to create
+                    // missing checkpoints and update the last (current) one.
                     // We have to update all the quarters since last update
                     for (uint256 i = 0; i <= data[1].sub(data[0]); i++) {
                         ProtocolPerQuarter storage newCheckpoint = protocolPerQuarter[data[0].add(i)];
@@ -920,7 +943,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             isProtocolPerQuarter[data[1].sub(1)] = true;
         } else {
             // Quarter checkpoint already created
-            // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
+            // We update the power of the quarter by adding the new difference between last quarter
+            // checkpoint and this checkpoint
             protocolCheckpoint.quarterPower = protocolCheckpoint.quarterPower.add(data[3]);
             miningProtocolPower = miningProtocolPower.add(data[3]);
         }
@@ -943,13 +967,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // The strategy quarter is not yet initialized then we create it
             // If it the first checkpoint in the first executing epoch - keep power 0
             if (data[3] > _getQuarter(data[0])) {
-                // Each time a running strategy has a new checkpoint on a new (different) epoch than previous checkpoints
+                // Each time a running strategy has a new checkpoint on a new (different) epoch than
+                // previous checkpoints.
                 // debtPower is the proportional power of the strategy for this quarter from previous checkpoint
                 // We need to iterate since last checkpoint
                 (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(data[1], block.timestamp);
 
-                // There were intermediate epochs without checkpoints - we need to create their corresponding checkpoints and update the last one
-                // We have to update all the quarters including where the previous checkpoint is and the one where we are now
+                // There were intermediate epochs without checkpoints - we need to create their corresponding
+                //  checkpoints and update the last one
+                // We have to update all the quarters including where the previous checkpoint is and
+                // the one where we are now
                 for (uint256 i = 0; i < numQuarters; i++) {
                     StrategyPerQuarter storage newCheckpoint = strategyPerQuarter[_strategy][startingQuarter.add(i)];
                     uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
@@ -973,7 +1000,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             strategyCheckpoint.initialized = true;
         } else {
             // We are in the same quarter than previous checkpoints for this strategy
-            // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
+            // We update the power of the quarter by adding the new difference between
+            // last quarter checkpoint and this checkpoint
             strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(data[4]);
         }
     }
@@ -1032,7 +1060,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _claimedAt            User last claim timestamp
 
      * @return Array of size 7 with the following distribution:
-     * rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
+     * rewards[0]: Strategist BABL 
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
      */
     function _getStrategyProfitsAndBABL(
         address _garden,
@@ -1042,7 +1076,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _claimedAt
     ) private view returns (uint256[] memory) {
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
-        // rewards[0]: Strategist BABL , rewards[1]: Strategist Profit, rewards[2]: Steward BABL, rewards[3]: Steward Profit, rewards[4]: LP BABL, rewards[5]: total BABL, rewards[6]: total Profits
         uint256[] memory rewards = new uint256[](7);
 
         (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
@@ -1177,8 +1210,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 profitShare =
             gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : PROFIT_STEWARD_SHARE;
         if (userVotes > 0) {
-            // If the strategy got profits equal or above expected return only positive votes counts, so we divide by only positive
-            // Otherwise, we divide by all total votes as also voters against will get some profits if the strategy returned less than expected
+            // If the strategy got profits equal or above expected return only positive votes counts,
+            // so we divide by only positive
+            // Otherwise, we divide by all total votes as also voters against will get some profits
+            // if the strategy returned less than expected
             uint256 accountingVotes = _profitData[1] ? _strategyDetails[4] : totalVotes;
             return
                 _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
@@ -1374,7 +1409,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Get the garden details of a beta Garden that needs migration into the new optimized-gas structure without checkpoints
+     * Get the garden details of a beta Garden that needs migration into the new optimized-gas structure
+     * without checkpoints
      * @dev Once all the beta gardens data are migrated, it will not longer need to execute this code again
      * This code is needed until all beta gardens are migrated into the new optimized-gas structure
      * @param _garden           Address of the beta garden
@@ -1405,8 +1441,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Get the beta contributor details of a beta Garden that needs migration into the new optimized-gas structure without checkpoints
-     * @dev Once all the beta contributors of all beta gardens data are migrated, it will not longer need to execute this code again
+     * Get the beta contributor details of a beta Garden that needs migration into the new optimized-gas
+     * structure without checkpoints
+     * @dev Once all the beta contributors of all beta gardens data are migrated, it will not longer need
+     * to execute this code again
      * This code is needed until all beta users are migrated into the new optimized-gas structure
      * @param _garden           Address of the beta garden
      * @param _contributor      Address of the beta contributor
@@ -1435,7 +1473,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Get the garden power for a beta garden to migrate its power into the new gas-optimized gardenpower structure without checkpoints
+     * Get the garden power for a beta garden to migrate its power into the new gas-optimized
+     * gardenpower structure without checkpoints
      * @dev Once the beta garden data is migrated, it will not longer need to execute this code again
      * This code is needed until all beta gardens are migrated into the new optimized-gas structure
      * @param _garden           Address of the beta garden
@@ -1454,7 +1493,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Calculate the garden average balance (totalSupply vs. time) for a beta garden as it is needed for the new gas-optimized gardenpower structure without checkpoints
+     * Calculate the garden average balance (totalSupply vs. time) for a beta garden as it is needed
+     *  for the new gas-optimized gardenpower structure without checkpoints
      * @dev Once the beta garden data is migrated, it will not longer need to execute this code again
      * This code is needed until all beta gardens are migrated into the new optimized-gas structure
      * @param _garden           Address of the beta garden
@@ -1475,7 +1515,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Calculate the contributor power for a beta user by using previous checkpoints as it is needed for the new gas-optimized contributorpower structure without checkpoints
+     * Calculate the contributor power for a beta user by using previous checkpoints as it is
+     * needed for the new gas-optimized contributorpower structure without checkpoints
      * The usage of the result will be used to migrate the user, which actually happens only once
      * @dev Once the user data is migrated, it will not longer need to execute this code again
      * This code is needed until all beta users are migrated into the new optimized-gas structure
@@ -1494,7 +1535,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Calculate the contributor average balance (supply vs. time) for a beta user by using previous checkpoints as it is needed for the new gas-optimized contributorpower structure without checkpoints
+     * Calculate the contributor average balance (supply vs. time) for a beta user by using
+     * previous checkpoints as it is needed for the new gas-optimized contributorpower structure without checkpoints
      * The usage of the result will be used to migrate the user, which actually happens only once
      * @dev Once the user data is migrated, it will not longer need to execute this code again
      * This code is needed until all beta users are migrated into the new optimized-gas structure

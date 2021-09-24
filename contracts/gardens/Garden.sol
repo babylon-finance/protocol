@@ -674,7 +674,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         // Make sure creator can still have normal permissions after renouncing
-        _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE); // Creator can only renounce to 0x in public gardens
+        // Creator can only renounce to 0x in public gardens
+        _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE);
         if (msg.sender == creator) {
             creator = _newCreator;
             return;
@@ -781,17 +782,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
      *
-     * @param _creatorDeposit                       Deposit by the creator
-     * @param _maxDepositLimit                      Max deposit limit
-     * @param _minLiquidityAsset                    Number that represents min amount of liquidity denominated in ETH
-     * @param _depositHardlock                      Number that represents the time deposits are locked for an user after he deposits
-     * @param _minContribution                      Min contribution to the garden
-     * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _minVotesQuorum                       Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minStrategyDuration                  Min duration of an strategy
-     * @param _maxStrategyDuration                  Max duration of an strategy
-     * @param _minVoters                            The minimum amount of voters needed for quorum
-     * @param _maxContributors                      The maximum amount of contributors allowed in this garden
+     * @param _creatorDeposit              Deposit by the creator
+     * @param _maxDepositLimit             Max deposit limit
+     * @param _minLiquidityAsset           Number that represents min amount of liquidity denominated in ETH
+     * @param _depositHardlock             Number that represents the time deposits are locked for
+     *                                     an user after he deposits
+     * @param _minContribution             Min contribution to the garden
+     * @param _strategyCooldownPeriod      How long after the strategy has been activated, will it be ready
+     *                                     to be executed
+     * @param _minVotesQuorum              Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minStrategyDuration         Min duration of an strategy
+     * @param _maxStrategyDuration         Max duration of an strategy
+     * @param _minVoters                   The minimum amount of voters needed for quorum
+     * @param _maxContributors             The maximum amount of contributors allowed in this garden
      */
     function _start(
         uint256 _creatorDeposit,
@@ -864,7 +867,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(_to);
         uint256 previousBalance = balanceOf(_to);
-        _require(_amountIn <= previousBalance.sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
+        // Strategists cannot withdraw locked stake while in active strategies
+        _require(_amountIn <= previousBalance.sub(lockedAmount), Errors.TOKENS_STAKED);
         // this value would have 18 decimals even for USDC
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
