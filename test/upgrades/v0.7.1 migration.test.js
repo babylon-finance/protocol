@@ -1,5 +1,6 @@
 const { expect } = require('chai');
-const { deployments } = require('hardhat');
+const { deployments, ethers } = require('hardhat');
+const { from, eth } = require('lib/helpers');
 
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
@@ -157,7 +158,9 @@ const upgradeFixture = deployments.createFixture(async (hre, options) => {
 
   await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
 
-  return { controller, owner, deployer, keeper, dai, distributor };
+  const gardens = await controller.getGardens();
+
+  return { controller, owner, deployer, keeper, dai, distributor, gardens };
 });
 
 describe('v0.7.1', function () {
@@ -166,32 +169,33 @@ describe('v0.7.1', function () {
   let priceOracle;
   let dai;
   let distributor;
+  let gardens;
+  let deployer;
 
   beforeEach(async () => {
-    ({ owner, keeper, priceOracle, dai, distributor } = await upgradeFixture());
+    ({ owner, keeper, priceOracle, dai, distributor, gardens, deployer } = await upgradeFixture());
   });
 
   describe('after upgrade', function () {
     describe.skip('can finalizeStrategy', function () {
       for (const [name, strategy] of [
-        ['Leverage long ETH', '0x49567812f97369a05e8D92462d744EFd00d7Ea42'],
-        ['lend eth, borrow dai, harvest dai', '0xcd4fD2a8426c86067836d077eDA7FA2A1dF549dD'],
+        ['Leverage long ETH curve++', '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48'],
+        ['Strategy 🏓 ETH Rebound DPI', '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C'],
         ['Leverage BED', '0x0f4b1585ed506986d3a14436034D1D52704e5b56'],
-        ['Stake ETH - Lido', '0xD8BAdcC27Ecb72F1e88b95172E7DeeeF921883C8'],
-        ['Yearn USDC Vault', '0xa29b722f9D021FE435475b344355521Fa580940F'],
-        ['Lend DAI on Aave', '0x4C449D3C878A6CabaD3f606A4978837Ac5196D5B'],
-        ['Stake ETH', '0x07DEbD22bCa7d010E53fc8ec23E8ADc3a516eC08'],
-        ['end eth, borrow dai, yearn da', '0x27cdbC334cF2dc7Aa720241e9a98Adbc8cc41254'],
-        ['Stable Coin Farm Strategy', '0x40A561a3457F6EFDb8f80cDe3D55D280cce45f3a'],
-        ['ETH-LINK LP', '0xc80C2f1c170fBD793845e67c58e2469569174EA2'],
-        ['WETH-LINK', '0xe3bBF21574E18363733255ba56862E721CD2F3a4'],
-        ['Long BED', '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0'],
-        ['Lend weth, borrow dai, farm yearn dai', '0xFDeA6F30F3dadD60382bAA07252923Ff6007c35d'],
-        ['Lend wbtc, borrow dai, yield yearn dai', '0x81b1C6A04599b910e33b1AB549DE4a19E5701838'],
-        ['Yearn - DAI Vault', '0x23E6E7B35E9E117176799cEF885B9D4a97D42df9'],
-        ['ETHficient Stables', '0x3d4c6303E8E6ad9F4697a5c3deAe9827217439Ae'],
-        ['long DAI', '0xB0147911b9d584618eB8F3BF63AD1AB858085101'],
-        ['RAI/ETH UNI LP', '0x884957Fd342993A748c82aC608043859F1482126'],
+        ['Strategy crv strat', '0x208D1C629a41B7d24EB9B6d0989dfdB5a9b47d5d'],
+        ['Strategy Stake ETH - Lido', '0xD8BAdcC27Ecb72F1e88b95172E7DeeeF921883C8'],
+        ['Strategy Staked ETH Liquidity', '0x3FeaD42999D537477CE39335aA7b4951e8e78233'],
+        ['Strategy Convex-boosted 3pool', '0x9D78319EDA31663B487204F0CA88A046e742eE16'],
+        ['Strategy Stake ETH', '0x07DEbD22bCa7d010E53fc8ec23E8ADc3a516eC08'],
+        ['Strategy Staked ETH Liquidity', '0x4f85dD417d19058cA81564f41572fb90D2F7e935'],
+        ['Strategy Stable Coin Farm Strategy', '0x40A561a3457F6EFDb8f80cDe3D55D280cce45f3a'],
+        ['Strategy ETH-LINK LP', '0xc80C2f1c170fBD793845e67c58e2469569174EA2'],
+        ['Strategy WETH-LINK Pool', '0xe3bBF21574E18363733255ba56862E721CD2F3a4'],
+        ['Strategy Long BED', '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0'],
+        ['Strategy Lend weth, borrow dai, farm yearn dai', '0xFDeA6F30F3dadD60382bAA07252923Ff6007c35d'],
+        [' Strategy Lend wbtc, borrow dai, yield yearn dai', '0x81b1C6A04599b910e33b1AB549DE4a19E5701838'],
+        ['Strategy Long DAI @ Curve Compound Convex', '0x9f794DD83E2C815158Fc290c3c2b20f8B6605746'],
+        ['Strategy ETHficient Stables', '0x3d4c6303E8E6ad9F4697a5c3deAe9827217439Ae'],
       ]) {
         it(name, async () => {
           const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
@@ -311,6 +315,111 @@ describe('v0.7.1', function () {
         expect(beta2PowerBefore[5]).to.equal(beta2PowerAfter1[5]); // migration snapshot is kept (no change)
 
         expect(beta2PowerAfter1[0]).to.equal(beta2PowerAfter1[3]); // last checkpoints are the same (garden vs. user)
+      });
+    });
+    describe('can migrate all gardens', function () {
+      it('should successfully migrate all protocol beta gardens', async function () {
+        for (let i = 0; i < gardens.length; i++) {
+          const garden = await ethers.getContractAt('Garden', gardens[i]);
+          const creator = await garden.creator();
+          const [, betaPowerBeforeBool] = await distributor.getBetaMigration(garden.address, creator);
+          expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration
+        }
+        // We launch the migration
+        await distributor.connect(deployer).migrateBetaGardens(gardens);
+
+        for (let i = 0; i < gardens.length; i++) {
+          const garden = await ethers.getContractAt('Garden', gardens[i]);
+          const creator = await garden.creator();
+          const [, betaPowerAfterBool] = await distributor.getBetaMigration(garden.address, creator);
+          expect(betaPowerAfterBool[0]).to.equal(true); // migration completed
+        }
+      });
+      it('should successfully migrate all beta creators and their beta gardens', async function () {
+        for (let i = 0; i < gardens.length; i++) {
+          const garden = await ethers.getContractAt('Garden', gardens[i]);
+          const creator = await garden.creator();
+          const [, betaPowerBeforeBool] = await distributor.getBetaMigration(garden.address, creator);
+
+          const creatorBeforeUpdate = await garden.getContributor(creator);
+          expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration of the garden
+          expect(betaPowerBeforeBool[1]).to.equal(false); // pending migration of the creator
+          // We launch the migration for each garden and its creator
+          await distributor.connect(deployer).migrateBetaUsers(gardens[i], [creator]);
+
+          const [, betaPowerAfterBool] = await distributor.getBetaMigration(garden.address, creator);
+          const creatorAfterUpdate = await garden.getContributor(creator);
+
+          expect(betaPowerAfterBool[0]).to.equal(true); // garden migration completed
+          expect(betaPowerAfterBool[1]).to.equal(true); // user migration completed
+          expect(creatorBeforeUpdate[0].toString()).to.equal(creatorAfterUpdate[0].toString());
+          expect(creatorBeforeUpdate[1].toString()).to.equal(creatorAfterUpdate[1].toString());
+          expect(creatorBeforeUpdate[2].toString()).to.equal(creatorAfterUpdate[2].toString());
+          expect(creatorBeforeUpdate[3].toString()).to.equal(creatorAfterUpdate[3].toString());
+          expect(creatorBeforeUpdate[4].toString()).to.equal(creatorAfterUpdate[4].toString());
+          expect(creatorBeforeUpdate[5].toString()).to.equal(creatorAfterUpdate[5].toString());
+          expect(creatorBeforeUpdate[6].toString()).to.equal(creatorAfterUpdate[6].toString());
+          expect(creatorBeforeUpdate[7].toString()).to.equal(creatorAfterUpdate[7].toString());
+          // Contributor power might be higher or lower depending on the position the user is getting in the garden along the time. As there are some seconds of difference between measures, it is not equal.
+          expect(from(creatorBeforeUpdate[8])).to.closeTo(
+            from(creatorAfterUpdate[8]),
+            from(creatorBeforeUpdate[8].div(100)),
+          );
+          expect(creatorBeforeUpdate[9].toString()).to.equal(creatorAfterUpdate[9].toString());
+        }
+      });
+      it('should successfully migrate an empty garden and re-deposit/join will restart contributor power', async function () {
+        // We use Test YOLO Garden which is empty
+        const garden = await ethers.getContractAt('Garden', '0x8DeA590BA32511f2abF57064423B5630738bA36A');
+        const creator = await garden.creator();
+        const creatorSigner = await impersonateAddress(creator);
+
+        const [, betaPowerBeforeBool] = await distributor.getBetaMigration(garden.address, creator);
+
+        const creatorBeforeUpdate = await garden.getContributor(creator);
+        expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration of the garden
+        expect(betaPowerBeforeBool[1]).to.equal(false); // pending migration of the creator
+        // We launch the migration for each garden and its creator
+        await distributor.connect(deployer).migrateBetaUsers(garden.address, [creator]);
+
+        const [, betaPowerAfterBool] = await distributor.getBetaMigration(garden.address, creator);
+        const creatorAfterUpdate = await garden.getContributor(creator);
+        let block = await ethers.provider.getBlock();
+
+        await fund([creator], {
+          tokens: [addresses.tokens.DAI],
+          amounts: [ethers.utils.parseEther('500')],
+        });
+
+        await dai.connect(creatorSigner).approve(garden.address, ethers.utils.parseEther('500'), { gasPrice: 0 });
+        await garden.connect(creatorSigner).deposit(ethers.utils.parseEther('500'), 1, creator, false);
+
+        expect(betaPowerAfterBool[0]).to.equal(true); // garden migration completed
+        expect(betaPowerAfterBool[1]).to.equal(true); // user migration completed
+        expect(creatorBeforeUpdate[0].toString()).to.equal(creatorAfterUpdate[0].toString());
+        expect(creatorBeforeUpdate[1].toString()).to.equal(creatorAfterUpdate[1].toString());
+        expect(creatorBeforeUpdate[2].toString()).to.equal(creatorAfterUpdate[2].toString());
+        expect(creatorBeforeUpdate[3].toString()).to.equal(creatorAfterUpdate[3].toString());
+        expect(creatorBeforeUpdate[4].toString()).to.equal(creatorAfterUpdate[4].toString());
+        expect(creatorBeforeUpdate[5].toString()).to.equal(creatorAfterUpdate[5].toString());
+        expect(creatorBeforeUpdate[6].toString()).to.equal(creatorAfterUpdate[6].toString());
+        expect(creatorBeforeUpdate[7].toString()).to.equal(creatorAfterUpdate[7].toString());
+        // Contributor power might be higher or lower depending on the position the user is getting in the garden along the time. As there are some seconds of difference between measures, it is not equal.
+        expect(from(creatorBeforeUpdate[8])).to.closeTo(
+          from(creatorAfterUpdate[8]),
+          from(creatorBeforeUpdate[8].div(100)),
+        );
+        expect(creatorBeforeUpdate[9].toString()).to.equal(creatorAfterUpdate[9].toString());
+        increaseTime(ONE_DAY_IN_SECONDS);
+        block = await ethers.provider.getBlock();
+        // exactly at deposit timestamp gets 0% (underflow protection)
+        expect(await distributor.getContributorPower(garden.address, creator, from(block.timestamp))).to.equal(from(0));
+        expect(
+          await distributor.getContributorPower(garden.address, creator, from(block.timestamp).add(from(100))),
+        ).to.equal(eth(1));
+        expect(
+          await distributor.getContributorPower(garden.address, creator, from(block.timestamp).add(from(3600))),
+        ).to.equal(eth(1));
       });
     });
   });
