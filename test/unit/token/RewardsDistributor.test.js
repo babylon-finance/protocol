@@ -259,16 +259,6 @@ describe('RewardsDistributor', function () {
       expect(!!deployedc).to.equal(true);
     });
   });
-  describe('setBABLToken', function () {
-    it('can set a new BABL Token address', async function () {
-      const newToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
-      await expect(rewardsDistributor.connect(owner).setBablToken(newToken.address)).not.to.be.reverted;
-    });
-    it('can NOT set zero address as a new BABL Token address', async function () {
-      await expect(rewardsDistributor.connect(owner).setBablToken(ADDRESS_ZERO)).to.be.revertedWith('BAB#096');
-    });
-  });
-
   describe('Strategy BABL Mining Rewards Calculation', async function () {
     it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
       let [supply] = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
