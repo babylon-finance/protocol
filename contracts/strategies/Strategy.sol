@@ -39,6 +39,7 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
@@ -118,7 +119,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 break;
             }
         }
-        _require(isIntegration, Errors.ONLY_INTEGRATION);
+        IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
+        _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
     }
 
     function _onlyUnpaused() private view {
