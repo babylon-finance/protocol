@@ -107,6 +107,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+    function _onlyIntegration(address _address) private view {
+        bool isIntegration = false;
+        for (uint256 i = 0; i < opIntegrations.length; i++) {
+            if (opIntegrations[i] == _address) {
+                isIntegration = true;
+                break;
+            }
+        }
+        _require(isIntegration, Errors.ONLY_INTEGRATION);
+    }
+
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(
@@ -487,6 +501,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _asset,
         uint256 _quantity
     ) external override {
+        _onlyIntegration(msg.sender);
+        _onlyUnpaused();
         IERC20(_asset).safeApprove(_spender, 0);
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
@@ -503,6 +519,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes calldata _data
     ) external override returns (bytes memory) {
+        _onlyIntegration(msg.sender);
+        _onlyUnpaused();
         return _invoke(_target, _value, _data);
     }
 
