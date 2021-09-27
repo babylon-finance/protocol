@@ -164,6 +164,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
     }
 
+    function isTradeIntegration(address _integration) external view returns (bool) {
+        return
+            _integration == address(curve) ||
+            _integration == address(univ3) ||
+            _integration == address(synthetix) ||
+            _integration == address(univ2);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _trade(
