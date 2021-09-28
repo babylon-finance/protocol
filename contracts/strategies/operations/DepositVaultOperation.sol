@@ -18,13 +18,15 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
+import {ConvexStakeIntegration} from '../../integrations/passive/ConvexStakeIntegration.sol';
+import {IBooster} from '../../interfaces/external/convex/IBooster.sol';
+import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -45,6 +47,10 @@ contract DepositVaultOperation is Operation {
     using BytesLib for bytes;
 
     /* ============ Constructor ============ */
+
+    IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
+    address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32; // lDO
 
     /**
      * Creates the integration
@@ -215,6 +221,29 @@ contract DepositVaultOperation is Operation {
         address _yieldVault,
         address _reserveAsset
     ) private view returns (uint256) {
+        // Patching old convex stETH.
+        if (
+            address(msg.sender) == 0x3FeaD42999D537477CE39335aA7b4951e8e78233 ||
+            address(msg.sender) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935
+        ) {
+            uint256 nav =
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                );
+            nav = nav.add(
+                _getPrice(_reserveAsset, LDO).preciseMul(
+                    IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
+                )
+            );
+            return nav;
+        }
+        // Patching 3Pool
+        if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
+            return
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
+                );
+        }
         try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
             if (rewardToken != address(0) && amount > 0) {
                 return _getPrice(_reserveAsset, rewardToken).preciseMul(amount);
