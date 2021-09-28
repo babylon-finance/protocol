@@ -48,6 +48,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         address investment; // Investment address
         uint256 investmentTokensInTransaction; // Investment tokens affected by this transaction
         uint256 investmentTokensInGarden; // Investment tokens garden balance
+        uint256 underlyingTokensInGarden; // Underlying tokens garden balance
         uint256 limitDepositTokenQuantity; // Limit deposit/withdrawal token amount
     }
 
@@ -253,8 +254,8 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
-                _investmentInfo.investmentTokensInGarden),
+            getInvestmentTokenAmount(address(_investmentInfo.strategy), _investmentInfo.assetToken) >
+                _investmentInfo.investmentTokensInGarden,
             'The garden did not receive the investment tokens'
         );
     }
@@ -269,10 +270,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             _investmentInfo.assetToken == address(0)
                 ? address(_investmentInfo.strategy).balance
                 : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
-        require(
-            balance >= _investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction,
-            'The garden did not return the investment tokens'
-        );
+        require(balance > _investmentInfo.underlyingTokensInGarden, 'The garden did not return the investment tokens');
     }
 
     /**
@@ -314,6 +312,9 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.assetToken = _assetToken;
         investmentInfo.investment = _investmentToken;
         investmentInfo.investmentTokensInGarden = getInvestmentTokenAmount(_strategy, _assetToken);
+        investmentInfo.underlyingTokensInGarden = _assetToken == address(0)
+            ? address(_strategy).balance
+            : IERC20(_assetToken).balanceOf(address(_strategy));
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
