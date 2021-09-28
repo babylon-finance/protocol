@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
@@ -13,8 +14,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
   const contract = 'DepositVaultOperation';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('IBabController', controller.address, signer);
+  const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -25,7 +25,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Adding operation ${contract}(${deployment.address}) to BabController`);
-    await (await controllerContract.setOperation(2, deployment.address, { gasPrice })).wait();
+    await (await controller.setOperation(2, deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

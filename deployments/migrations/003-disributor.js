@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
@@ -13,8 +14,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
 
   const bablToken = await deployments.get('BABLToken');
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await getController();
 
   const rewardsDistributor = await upgradesDeployer.deployAdminProxy(
     'RewardsDistributor',
@@ -32,7 +32,7 @@ module.exports = async ({
     await (await bablTokenContract.setRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
 
     console.log(`Setting rewards distributor on controller ${rewardsDistributor.address}`);
-    await (await controllerContract.editRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
+    await (await controller.editRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
   }
 
   if (network.live && rewardsDistributor.newlyDeployed) {

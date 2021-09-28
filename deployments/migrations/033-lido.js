@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -13,8 +14,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
   const contract = 'LidoStakeIntegration';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -24,6 +24,8 @@ module.exports = async ({
   });
 
   if (network.live && deployment.newlyDeployed) {
+    console.log(`Adding lido stake integration ${contract}(${deployment.address})`);
+
     await tenderly.push(await getTenderlyContract(contract));
   }
 };

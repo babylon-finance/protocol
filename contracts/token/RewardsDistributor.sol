@@ -85,7 +85,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     modifier onlyActiveGarden(address _garden, uint256 _pid) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         _require(msg.sender == address(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(IGarden(_garden).active(), Errors.ONLY_ACTIVE_GARDEN);
         _;
     }
 
@@ -455,7 +454,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function tokenSupplyPerQuarter(uint256 _quarter) external view override returns (uint96) {
+    function tokenSupplyPerQuarter(uint256 _quarter) external pure override returns (uint96) {
         return _tokenSupplyPerQuarter(_quarter);
     }
 
@@ -785,21 +784,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 strategyRewards = strategy.strategyRewards();
         int256 userVotes = strategy.getUserVotes(_contributor);
         uint256 allocated = strategy.capitalAllocated();
-        uint256 totalPositiveVotes = strategy.totalPositiveVotes();
+        uint256 totalVotes = strategy.totalPositiveVotes().add(strategy.totalNegativeVotes());
         uint256 bablCap;
         uint256 expected = allocated.add(allocated.preciseMul(strategy.expectedReturn()));
-
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl;
         if (userVotes > 0 && _profit == true && _distance == true) {
             // Voting in favor of the execution of the strategy with profits and positive distance
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(userVotes).preciseDiv(totalPositiveVotes)
+                uint256(userVotes).preciseDiv(totalVotes)
             );
         } else if (userVotes > 0 && _profit == true && _distance == false) {
             // Voting in favor positive profits but below expected return
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(userVotes).preciseDiv(totalPositiveVotes)
+                uint256(userVotes).preciseDiv(totalVotes)
             );
             // We discount the error of expected return vs real returns
             babl = babl.sub(babl.preciseMul(_distanceValue.preciseDiv(expected)));
@@ -810,7 +808,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Voting against a strategy that got results below expected return provides rewards
             // to the voter (helping the protocol to only have good strategies)
             babl = strategyRewards.multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
-                uint256(Math.abs(userVotes)).preciseDiv(strategy.totalNegativeVotes())
+                uint256(Math.abs(userVotes)).preciseDiv(totalVotes)
             );
 
             bablCap = babl.mul(2); // Max cap
@@ -843,24 +841,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         int256 userVotes = strategy.getUserVotes(_contributor);
+        uint256 totalVotes = strategy.totalPositiveVotes().add(strategy.totalNegativeVotes());
         uint256 profitShare =
             gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : PROFIT_STEWARD_SHARE;
         if (_profit == true) {
             if (userVotes > 0) {
-                return
-                    _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
-                        strategy.totalPositiveVotes()
-                    );
+                return _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(totalVotes);
             } else if ((userVotes < 0) && _distance == false) {
                 return
                     _profitValue.multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
-                        strategy.totalNegativeVotes()
+                        totalVotes
                     );
             } else if ((userVotes < 0) && _distance == true) {
                 // Voted against a very profit strategy above expected returns, get no profit at all
                 return 0;
             }
-        } else return 0; // No profits at all
+        }
+        return 0; // No profits at all
     }
 
     /**
@@ -930,7 +927,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
                 return _profitValue.multiplyDecimal(profitShare);
             }
-        } else return 0; // No profits at all
+        }
+        return 0; // No profits at all
     }
 
     /**
@@ -947,14 +945,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         uint256 strategyRewards = strategy.strategyRewards();
         uint256 babl;
-        uint256 allocated =
-            SafeDecimalMath.normalizeAmountTokens(IGarden(_garden).reserveAsset(), DAI, strategy.capitalAllocated());
         uint256[] memory ts = new uint256[](3);
         // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         uint256 contributorPower = _getContributorPower(_garden, _contributor, ts[0], ts[1]);
         // We take care of normalization into 18 decimals for capital allocated in less decimals than 18
-        babl = strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributorPower.preciseDiv(allocated));
+        babl = strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(contributorPower);
         return babl;
     }
 
@@ -1419,7 +1415,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 _quarter) internal view returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
         _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
         if (_quarter >= 513) {
             return 0; // Avoid math overflow
@@ -1526,4 +1522,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV4 is RewardsDistributor {}
+contract RewardsDistributorV5 is RewardsDistributor {}

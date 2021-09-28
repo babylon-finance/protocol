@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -22,7 +23,7 @@ module.exports = async ({
   });
 
   if (deployment.newlyDeployed) {
-    console.log(`Deployed Babylon Viewer on controller ${deployment.address}`);
+    console.log(`Deployed Babylon Viewer ${deployment.address}`);
   }
 
   if (network.live && deployment.newlyDeployed) {

@@ -1,6 +1,15 @@
 let MULTISIG = process.env.MULTISIG || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getRapid }) => {
+module.exports = async ({
+  network,
+  getNamedAccounts,
+  deployments,
+  ethers,
+  getSigner,
+  getChainId,
+  getContract,
+  getRapid,
+}) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
   const gasPrice = await getRapid();

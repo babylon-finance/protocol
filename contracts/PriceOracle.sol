@@ -25,12 +25,17 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
+import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
+import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
+import {IYearnRegistry} from './interfaces/external/yearn/IYearnRegistry.sol';
+import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
 import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
 
@@ -48,28 +53,37 @@ contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
 
-    /* ============ State Variables ============ */
-
     /* ============ Constants ============ */
 
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
+    // Address of Curve Registry
+    ICurveAddressProvider internal constant curveAddressProvider =
+        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    IUniswapV2Router internal constant uniRouterV2 = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IYearnRegistry private constant yearnRegistry = IYearnRegistry(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
 
+    address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    address private constant TRI_CURVE_POOL = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
+    uint256 private constant CURVE_SLIPPAGE = 6e16;
 
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private constant maxTwapDeviation = 100;
-    uint160 private constant maxLiquidityDeviationFactor = 50;
+    int24 private constant maxTwapDeviation = 5000;
     int24 private constant baseThreshold = 1000;
+
+    /* ============ State Variables ============ */
 
     // Mapping of cToken addresses
     mapping(address => address) public cTokenToAsset;
@@ -79,6 +93,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => address) public crTokenToAsset;
     // Mapping of synths
     mapping(address => bool) public synths;
+    // Mapping of yearn vaults
+    mapping(address => bool) public vaults;
 
     /* ============ Constructor ============ */
 
@@ -159,53 +175,53 @@ contract PriceOracle is Ownable, IPriceOracle {
         crTokenToAsset[0x10a3da2BB0Fae4D591476fd97D6636fd172923a8] = 0x584bC13c7D411c00c01A62e8019472dE68768430; // HEGIC
         crTokenToAsset[0x3C6C553A95910F9FC81c98784736bd628636D296] = 0x36F3FD68E7325a35EB768F1AedaAe9EA0689d723; // ESD
         crTokenToAsset[0x21011BC93d9E515B9511A817A1eD1D6d468f49Fc] = 0x4688a8b1F292FDaB17E9a90c8Bc379dC1DBd8713; // COVER
-        // crTokenToAsset[0x85759961b116f1D36fD697855c57A6ae40793D9B] = 0x111111111117dc0aa78b770fa6a738034120c302; // 1INCH
-        // crTokenToAsset[0x7Aaa323D7e398be4128c7042d197a2545f0f1fea] = 0xd26114cd6ee289accf82350c8d8487fedb8a0c07; // OMG
-        // crTokenToAsset[0x011a014d5e8Eb4771E575bB1000318D509230Afa] = 0xbb2b8038a1640196fbe3e38816f3e67cba72d940; // UNI-V2-WBTC-ETH
-        // crTokenToAsset[0xE6C3120F38F56deb38B69b65cC7dcAF916373963] = 0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852; // UNI-V2-ETH-USDT
-        // crTokenToAsset[0x4Fe11BC316B6d7A345493127fBE298b95AdaAd85] = 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc; // UNI-V2-USDC-ETH
-        // crTokenToAsset[0xcD22C4110c12AC41aCEfA0091c432ef44efaAFA0] = 0xa478c2975ab1ea89e8196811f51a7b7ade33eb11; // UNI-V2-DAI-ETH
-        // crTokenToAsset[0x228619CCa194Fbe3Ebeb2f835eC1eA5080DaFbb2] = 0x8798249c2e607446efb7ad49ec89dd1865ff4272; // XSUSHI
-        // crTokenToAsset[0x73f6cBA38922960b7092175c0aDD22Ab8d0e81fC] = 0xceff51756c56ceffca006cd410b03ffc46dd3a58; // SLP-WBTC-ETH
-        // crTokenToAsset[0x38f27c03d6609a86FF7716ad03038881320BE4Ad] = 0xc3d03e4f041fd4cd388c549ee2a29a9e5075882f; // SLP-DAI-ETH
-        // crTokenToAsset[0x5EcaD8A75216CEa7DFF978525B2D523a251eEA92] = 0x397ff1542f962076d0bfe58ea045ffa2d347aca0; // SLP-USDC-ETH
-        // crTokenToAsset[0x5C291bc83d15f71fB37805878161718eA4b6AEe9] = 0x06da0fd433c1a5d7a4faa01111c044910a184553; // SLP-ETH-USDT
-        // crTokenToAsset[0x6BA0C66C48641e220CF78177C144323b3838D375] = 0x795065dcc9f64b5614c407a6efdc400da6221fb0; // SLP-SUSHI-ETH
-        // crTokenToAsset[0xd532944df6DFd5Dd629E8772F03D4fC861873abF] = 0x088ee5007c98a9677165d78dd2109ae4a3d04d0c; // SLP-YFI-ETH
-        // crTokenToAsset[0x197070723CE0D3810a0E47F06E935c30a480D4Fc] = 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599; // WBTC
-        // crTokenToAsset[0xC25EAE724f189Ba9030B2556a1533E7c8A732E14] = 0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f; // SNX
-        // crTokenToAsset[0x25555933a8246Ab67cbf907CE3d1949884E82B55] = 0x57ab1ec28d129707052df4df418d58a2d46d5f51; // SUSD
-        // crTokenToAsset[0xc68251421edda00a10815e273fa4b1191fac651b] = 0x429881672b9ae42b8eba0e26cd9c73711b891ca5; // PICKLE
-        // crTokenToAsset[0x65883978aDA0e707c3b2BE2A6825b1C4BDF76A90] = 0x8ab7404063ec4dbcfd4598215992dc3f8ec853d7; // AKRO
-        // crTokenToAsset[0x8B950f43fCAc4931D408F1fcdA55C6CB6cbF3096] = 0x19d97d8fa813ee2f51ad4b4e04ea08baf4dffc28; // BBADGER
-        // crTokenToAsset[0x59089279987DD76fC65Bf94Cb40E186b96e03cB3] = 0x8207c1ffc5b6804f6024322ccf34f29c3541ae26; // OGN
-        // crTokenToAsset[0x2Db6c82CE72C8d7D770ba1b5F5Ed0b6E075066d6] = 0xff20817765cb7f73d4bde2e66e067e58d11095c2; // AMP
-        // crTokenToAsset[0xb092b4601850E23903A42EaCBc9D8A0EeC26A4d5] = 0x853d955acef822db058eb8505911ed77f175b99e; // FRAX
-        // crTokenToAsset[0x1d0986Fb43985c88Ffa9aD959CC24e6a087C7e35] = 0xa1faa113cbe53436df28ff0aee54275c13b40975; // ALPHA
-        // crTokenToAsset[0x51F48b638F82e8765F7a26373A2Cb4CcB10C07af] = 0xa47c8bf37f92abed4a126bda807a7b7498661acd; // UST
-        // crTokenToAsset[0xc36080892c64821fa8e396bc1bD8678fA3b82b17] = 0x4e15361fd6b4bb609fa63c81a2be19d873717870; // FTM
-        // crTokenToAsset[0x8379BAA817c5c5aB929b03ee8E3c48e45018Ae41] = 0x3155ba85d5f96b2d030a4966af206230e46849cb; // RUNE
-        // crTokenToAsset[0x299e254A8a165bBeB76D9D69305013329Eea3a3B] = 0xbc396689893d065f41bc2c6ecbee5e0085233447; // PERP
-        // crTokenToAsset[0xf8445C529D363cE114148662387eba5E62016e20] = 0x03ab458634910aad20ef5f1c8ee96f1d6ac54919; // RAI
-        // crTokenToAsset[0x7C3297cFB4c4bbd5f44b450c0872E0ADA5203112] = 0x967da4048cd07ab37855c090aaf366e4ce1b9f48; // OCEAN
-        // crTokenToAsset[0xA87e8e61dfAC8af5944D353Cd26B96B20d5f4D01] = 0x986b4aff588a109c09b50a03f42e4110e29d353f; // YVECRV CHECK!
-        // crTokenToAsset[0x081FE64df6dc6fc70043aedF3713a3ce6F190a21] = 0xfca59cd816ab1ead66534d82bc21e7515ce441cf; // RARI
-        // crTokenToAsset[0x28526Bb33d7230E65E735dB64296413731C5402e] = 0xb753428af26e81097e7fd17f40c88aaa3e04902c; // SFI
-        // crTokenToAsset[0x45406ba53bB84Cd32A58e7098a2D4D1b11B107F6] = 0x27b7b1ad7288079a66d12350c828d3c00a6f07d7; // YVCurve-IB CHECK!
-        // crTokenToAsset[0x6d1B9e01aF17Dd08d6DEc08E210dfD5984FF1C20] = 0x986b4aff588a109c09b50a03f42e4110e29d353f; // YVCurve-sETH
-        // crTokenToAsset[0x1F9b4756B008106C806c7E64322d7eD3B72cB284] = 0xdcd90c7f6324cfa40d7169ef80b12031770b4325; // YVCurve-stETH
-        // crTokenToAsset[0xab10586C918612BA440482db77549d26B7ABF8f7] = 0x1337def16f9b486faed0293eb623dc8395dfe46a; // ARMOR
-        // crTokenToAsset[0xdFFf11DFe6436e42a17B86e7F419Ac8292990393] = 0x1337def18c680af1f9f45cbcab6309562975b1dd; // ARNXM
-        // crTokenToAsset[0xDbb5e3081dEf4b6cdD8864aC2aeDA4cBf778feCf] = 0xec67005c4e498ec7f55e092bd1d35cbc47c91892; // MLN
-        // crTokenToAsset[0x71cEFCd324B732d4E058AfAcBA040d908c441847] = 0x1b40183efb4dd766f11bda7a7c3ad8982e998421; // VSP
-        // crTokenToAsset[0x1A122348B73B58eA39F822A89e6ec67950c2bBD0] = 0xba4cfe5741b357fa371b506e5db0774abfecf8fc; // VVSP
-        // crTokenToAsset[0x523EFFC8bFEfC2948211A05A905F761CBA5E8e9E] = 0x6810e776880c02933d47db1b9fc05908e5386b96; // GNO
-        // crTokenToAsset[0x4202D97E00B9189936EdF37f8D01cfF88BDd81d4] = 0xa9fe4601811213c340e850ea305481aff02f5b28; // YVWETH
-        // crTokenToAsset[0x4BAa77013ccD6705ab0522853cB0E9d453579Dd4] = 0x4baa77013ccd6705ab0522853cb0e9d453579dd4; // YUSD
-        // crTokenToAsset[0x98E329eB5aae2125af273102f3440DE19094b77c] = 0xcc4304a31d09258b0029ea7fe63d032f52e44efe; // SWAP
-        // crTokenToAsset[0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91] = 0x956F47F50A910163D8BF957Cf5846D573E7f87CA; // FEI
-        // crTokenToAsset[0xE585c76573D7593ABF21537B607091F76c996E73] = 0x4691937a7508860f876c9c0a2a617e7d9e945d4b; // WOO
-        // crTokenToAsset[0x81E346729723C4D15d0FB1c5679b9f2926Ff13C6] = 0x1f573d6fb3f13d689ff844b4ce37794d79a7ff1c; // BNT
+        crTokenToAsset[0x85759961b116f1D36fD697855c57A6ae40793D9B] = 0x111111111117dC0aa78b770fA6A738034120C302; // 1INCH
+        crTokenToAsset[0x7Aaa323D7e398be4128c7042d197a2545f0f1fea] = 0xd26114cd6EE289AccF82350c8d8487fedB8A0C07; // OMG
+        crTokenToAsset[0x011a014d5e8Eb4771E575bB1000318D509230Afa] = 0xBb2b8038a1640196FbE3e38816F3e67Cba72D940; // UNI-V2-WBTC-ETH
+        crTokenToAsset[0xE6C3120F38F56deb38B69b65cC7dcAF916373963] = 0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852; // UNI-V2-ETH-USDT
+        crTokenToAsset[0x4Fe11BC316B6d7A345493127fBE298b95AdaAd85] = 0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc; // UNI-V2-USDC-ETH
+        crTokenToAsset[0xcD22C4110c12AC41aCEfA0091c432ef44efaAFA0] = 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11; // UNI-V2-DAI-ETH
+        crTokenToAsset[0x228619CCa194Fbe3Ebeb2f835eC1eA5080DaFbb2] = 0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272; // XSUSHI
+        crTokenToAsset[0x73f6cBA38922960b7092175c0aDD22Ab8d0e81fC] = 0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58; // SLP-WBTC-ETH
+        crTokenToAsset[0x38f27c03d6609a86FF7716ad03038881320BE4Ad] = 0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f; // SLP-DAI-ETH
+        crTokenToAsset[0x5EcaD8A75216CEa7DFF978525B2D523a251eEA92] = 0x397FF1542f962076d0BFE58eA045FfA2d347ACa0; // SLP-USDC-ETH
+        crTokenToAsset[0x5C291bc83d15f71fB37805878161718eA4b6AEe9] = 0x06da0fd433C1A5d7a4faa01111c044910A184553; // SLP-ETH-USDT
+        crTokenToAsset[0x6BA0C66C48641e220CF78177C144323b3838D375] = 0x795065dCc9f64b5614C407a6EFDC400DA6221FB0; // SLP-SUSHI-ETH
+        crTokenToAsset[0xd532944df6DFd5Dd629E8772F03D4fC861873abF] = 0x088ee5007C98a9677165D78dD2109AE4a3D04d0C; // SLP-YFI-ETH
+        crTokenToAsset[0x197070723CE0D3810a0E47F06E935c30a480D4Fc] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599; // WBTC
+        crTokenToAsset[0xC25EAE724f189Ba9030B2556a1533E7c8A732E14] = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F; // SNX
+        crTokenToAsset[0x25555933a8246Ab67cbf907CE3d1949884E82B55] = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51; // SUSD
+        crTokenToAsset[0xc68251421eDDa00a10815E273fA4b1191fAC651b] = 0x429881672B9AE42b8EbA0E26cD9C73711b891Ca5; // PICKLE
+        crTokenToAsset[0x65883978aDA0e707c3b2BE2A6825b1C4BDF76A90] = 0x8Ab7404063Ec4DBcfd4598215992DC3F8EC853d7; // AKRO
+        crTokenToAsset[0x8B950f43fCAc4931D408F1fcdA55C6CB6cbF3096] = 0x19D97D8fA813EE2f51aD4B4e04EA08bAf4DFfC28; // BBADGER
+        crTokenToAsset[0x59089279987DD76fC65Bf94Cb40E186b96e03cB3] = 0x8207c1FfC5B6804F6024322CcF34F29c3541Ae26; // OGN
+        crTokenToAsset[0x2Db6c82CE72C8d7D770ba1b5F5Ed0b6E075066d6] = 0xfF20817765cB7f73d4bde2e66e067E58D11095C2; // AMP
+        crTokenToAsset[0xb092b4601850E23903A42EaCBc9D8A0EeC26A4d5] = 0x853d955aCEf822Db058eb8505911ED77F175b99e; // FRAX
+        crTokenToAsset[0x1d0986Fb43985c88Ffa9aD959CC24e6a087C7e35] = 0xa1faa113cbE53436Df28FF0aEe54275c13B40975; // ALPHA
+        crTokenToAsset[0x51F48b638F82e8765F7a26373A2Cb4CcB10C07af] = 0xa47c8bf37f92aBed4A126BDA807A7b7498661acD; // UST
+        crTokenToAsset[0xc36080892c64821fa8e396bc1bD8678fA3b82b17] = 0x4E15361FD6b4BB609Fa63C81A2be19d873717870; // FTM
+        crTokenToAsset[0x8379BAA817c5c5aB929b03ee8E3c48e45018Ae41] = 0x3155BA85D5F96b2d030a4966AF206230e46849cb; // RUNE
+        crTokenToAsset[0x299e254A8a165bBeB76D9D69305013329Eea3a3B] = 0xbC396689893D065F41bc2C6EcbeE5e0085233447; // PERP
+        crTokenToAsset[0xf8445C529D363cE114148662387eba5E62016e20] = 0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919; // RAI
+        crTokenToAsset[0x7C3297cFB4c4bbd5f44b450c0872E0ADA5203112] = 0x967da4048cD07aB37855c090aAF366e4ce1b9F48; // OCEAN
+        crTokenToAsset[0xA87e8e61dfAC8af5944D353Cd26B96B20d5f4D01] = 0x986b4AFF588a109c09B50A03f42E4110E29D353F; // YVECRV CHECK!
+        crTokenToAsset[0x081FE64df6dc6fc70043aedF3713a3ce6F190a21] = 0xFca59Cd816aB1eaD66534D82bc21E7515cE441CF; // RARI
+        crTokenToAsset[0x28526Bb33d7230E65E735dB64296413731C5402e] = 0xb753428af26E81097e7fD17f40c88aaA3E04902c; // SFI
+        crTokenToAsset[0x45406ba53bB84Cd32A58e7098a2D4D1b11B107F6] = 0x27b7b1ad7288079A66d12350c828D3C00A6F07d7; // YVCurve-IB CHECK!
+        crTokenToAsset[0x6d1B9e01aF17Dd08d6DEc08E210dfD5984FF1C20] = 0x986b4AFF588a109c09B50A03f42E4110E29D353F; // YVCurve-sETH
+        crTokenToAsset[0x1F9b4756B008106C806c7E64322d7eD3B72cB284] = 0xdCD90C7f6324cfa40d7169ef80b12031770B4325; // YVCurve-stETH
+        crTokenToAsset[0xab10586C918612BA440482db77549d26B7ABF8f7] = 0x1337DEF16F9B486fAEd0293eb623Dc8395dFE46a; // ARMOR
+        crTokenToAsset[0xdFFf11DFe6436e42a17B86e7F419Ac8292990393] = 0x1337DEF18C680aF1f9f45cBcab6309562975b1dD; // ARNXM
+        crTokenToAsset[0xDbb5e3081dEf4b6cdD8864aC2aeDA4cBf778feCf] = 0xec67005c4E498Ec7f55E092bd1d35cbC47C91892; // MLN
+        crTokenToAsset[0x71cEFCd324B732d4E058AfAcBA040d908c441847] = 0x1b40183EFB4Dd766f11bDa7A7c3AD8982e998421; // VSP
+        crTokenToAsset[0x1A122348B73B58eA39F822A89e6ec67950c2bBD0] = 0xbA4cFE5741b357FA371b506e5db0774aBFeCf8Fc; // VVSP
+        crTokenToAsset[0x523EFFC8bFEfC2948211A05A905F761CBA5E8e9E] = 0x6810e776880C02933D47DB1b9fc05908e5386b96; // GNO
+        crTokenToAsset[0x4202D97E00B9189936EdF37f8D01cfF88BDd81d4] = 0xa9fE4601811213c340e850ea305481afF02f5b28; // YVWETH
+        crTokenToAsset[0x4BAa77013ccD6705ab0522853cB0E9d453579Dd4] = 0x4BAa77013ccD6705ab0522853cB0E9d453579Dd4; // YUSD
+        crTokenToAsset[0x98E329eB5aae2125af273102f3440DE19094b77c] = 0xCC4304A31d09258b0029eA7FE63d032f52e44EFe; // SWAP
+        crTokenToAsset[0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91] = 0x956F47F50A910163D8BF957Cf5846D573E7f87CA; // FEI
+        crTokenToAsset[0xE585c76573D7593ABF21537B607091F76c996E73] = 0x4691937a7508860F876c9c0a2a617E7d9E945D4B; // WOO
+        crTokenToAsset[0x81E346729723C4D15d0FB1c5679b9f2926Ff13C6] = 0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C; // BNT
 
         synths[0x57Ab1ec28D129707052df4dF418D58a2D46d5f51] = true; // ProxyERC20sUSD
         synths[0x176C674Ee533C6139B0dc8b458D72A93dCB3e705] = true; // ProxyiAAVE
@@ -263,7 +279,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         synths[0x6d16cF3EC5F763d4d99cB0B0b110eefD93B11B56] = true; // ProxysOIL
         synths[0xD31533E8d0f3DF62060e94B3F1318137bB6E3525] = true; // ProxysREN
         synths[0x0352557B007A4Aae1511C114409b932F06F9E2f4] = true; // ProxysRUNE
-        synths[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTSLA
+        synths[0xf2E08356588EC5cd9E437552Da87C0076b4970B0] = true; // ProxysTRX
+        synths[0x918dA91Ccbc32B7a6A0cc4eCd5987bbab6E31e6D] = true; // ProxysTSLA
         synths[0x30635297E450b930f8693297eBa160D9e6c8eBcf] = true; // ProxysUNI
         synths[0x6A22e5e94388464181578Aa7A6B869e00fE27846] = true; // ProxysXAG
         synths[0x261EfCdD24CeA98652B9700800a13DfBca4103fF] = true; // ProxysXAU
@@ -271,6 +288,162 @@ contract PriceOracle is Ownable, IPriceOracle {
         synths[0xa2B0fDe6D710e201d0d608e924A484d1A5fEd57c] = true; // ProxysXRP
         synths[0x2e59005c5c0f0a4D77CcA82653d48b46322EE5Cd] = true; // ProxysXTZ
         synths[0x992058B7DB08F9734d84485bfbC243C4ee6954A7] = true; // ProxysYFI
+
+        vaults[0xC4dAf3b5e2A9e93861c3FBDd25f1e943B8D87417] = true; // Curve USDP Pool yVault
+        vaults[0x49b3E44e54b6220aF892DbA48ae45F1Ea6bC4aE9] = true; // TUSD yVault
+        vaults[0x25212Df29073FfFA7A67399AcEfC2dd75a831A1A] = true; // Curve EURS Pool yVault
+        vaults[0xDdb166C6CB38CEDe52d12c405b6e906c1fB6f9d7] = true; // crvRenWSBTC yVault
+        vaults[0x32651dD149a6EC22734882F790cBEB21402663F9] = true; // USDT yVault
+        vaults[0x1f6BDffBadD98e410F83C66D1278241375F5199f] = true; // WBTC yVault
+        vaults[0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9] = true; // USDC yVault
+        vaults[0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E] = true; // WBTC yVault
+        vaults[0xE537B5cc158EB71037D4125BDD7538421981E6AA] = true; // Curve 3Crypto Pool yVault
+        vaults[0xa5cA62D95D24A4a350983D5B8ac4EB8638887396] = true; // sUSD yVault
+        vaults[0x4A3FE75762017DB0eD73a71C9A06db7768DB5e66] = true; // COMP yVault
+        vaults[0x0FCDAeDFb8A7DfDa2e9838564c5A1665d856AFDF] = true; // yearn Curve.fi MUSD/3Crv
+        vaults[0xd9788f3931Ede4D5018184E198699dC6d66C1915] = true; // AAVE yVault
+        vaults[0x722f76f34cB5c3B008A50E0664e55A53F4F461AB] = true; // yvUSDT MetaVault
+        vaults[0x27b7b1ad7288079A66d12350c828D3C00A6F07d7] = true; // Curve Iron Bank Pool yVault
+        vaults[0x8ee57c05741aA9DB947A744E713C15d4d19D8822] = true; // Curve yBUSD Pool yVault
+        vaults[0x32413274504908460f0c373C7f20F429Fb80ed3A] = true; // saCRV yVault
+        vaults[0x8B58Aa42A4Aa222b684078459CE03Dd0A43342B1] = true; // USDP yVault
+        vaults[0x5737022626C282a89D105fD2e89ed6928EbDAe93] = true; // eCRV yVault
+        vaults[0x5dbcF33D8c2E976c6b560249878e6F1491Bca25c] = true; // yearn Curve.fi yDAI/yUSDC/yUSDT/yTUSD
+        vaults[0x3149950258FbBcE1638d6C23ac93A692604Ef864] = true; // crvRenWBTC yVault
+        vaults[0x8cc94ccd0f3841a468184aCA3Cc478D2148E1757] = true; // Curve mUSD Pool yVault
+        vaults[0x3C90033684F2504D55eeb652720785F70FA692D4] = true; // crvCOMP
+        vaults[0x0F6121fB28C7C42916d663171063c62684598f9F] = true; // HBTC yVault
+        vaults[0x23D3D0f1c697247d5e0a9efB37d8b0ED0C464f7f] = true; // Curve tBTC Pool yVault
+        vaults[0xcC7E70A958917cCe67B4B87a8C30E6297451aE98] = true; // yearn Curve.fi GUSD/3Crv
+        vaults[0x8fA3A9ecd9EFb07A8CE90A6eb014CF3c0E3B32Ef] = true; // Curve BBTC Pool yVault
+        vaults[0xdA816459F1AB5631232FE5e97a05BBBb94970c95] = true; // DAI yVault
+        vaults[0x6D2F347DCFc55C6AC80e515a58344acd7FeF0B84] = true; // bCRV yVault
+        vaults[0x0e880118C29F095143dDA28e64d95333A9e75A47] = true; // eCRV yVault
+        vaults[0x80bbeE2fa460dA291e796B9045e93d19eF948C6A] = true; // Curve Pax Pool yVault
+        vaults[0x03403154afc09Ce8e44C3B185C82C6aD5f86b9ab] = true; // yearn Curve.fi aDAI/aUSDC/aUSDT
+        vaults[0xFe8A3837cFf919C800bdC5d1ac6136F84497d679] = true; // UNI yVault
+        vaults[0x0ff3773a6984aD900f7FB23A9acbf07AC3aDFB06] = true; // Curve Y Pool yVault
+        vaults[0xD6Ea40597Be05c201845c0bFd2e96A60bACde267] = true; // Curve Compound Pool yVault
+        vaults[0x597aD1e0c13Bfe8025993D9e79C69E1c0233522e] = true; // yearn USD//C
+        vaults[0xBacB69571323575C6a5A3b4F9EEde1DC7D31FBc1] = true; // yearn Curve.fi aDAI/aSUSD
+        vaults[0xac333895ce1A73875CF7B4Ecdc5A743C12f3d82B] = true; // WETH yVault
+        vaults[0x4962B6C40B5E9433E029c5c423F6b1ce7fF28b0f] = true; // sUSD yVault
+        vaults[0x7158c1Bee7a0Fa5BD6AFFc77b2309991D7ADCdd4] = true; // USDC yVault
+        vaults[0xAc1C90b9c76d56BA2e24F3995F7671c745f8f308] = true; // AAVE yVault
+        vaults[0x8e6741b456a074F0Bc45B8b82A755d4aF7E965dF] = true; // yearn Curve.fi DUSD/3Crv
+        vaults[0x3D980E50508CFd41a13837A60149927a11c03731] = true; // Curve triCrypto Pool yVault
+        vaults[0xe1237aA7f535b0CC33Fd973D66cBf830354D16c7] = true; // yearn Wrapped Ether
+        vaults[0xFBEB78a723b8087fD2ea7Ef1afEc93d35E8Bed42] = true; // UNI yVault
+        vaults[0xdb25cA703181E7484a155DD612b06f57E12Be5F0] = true; // YFI yVault
+        vaults[0xFe39Ce91437C76178665D64d7a2694B0f6f17fE3] = true; // yearn Curve.fi USDN/3Crv
+        vaults[0xe11ba472F74869176652C35D30dB89854b5ae84D] = true; // HEGIC yVault
+        vaults[0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139] = true; // Curve FRAX Pool yVault
+        vaults[0xa2619fDFB99ABeb533a1147461f3f1109c5ADe75] = true; // WETH yVault
+        vaults[0x629c759D1E83eFbF63d84eb3868B564d9521C129] = true; // yearn Curve.fi cDAI/cUSDC
+        vaults[0x1133b2E2F51becCF25b2f8d0cA48c1d93DD5ab12] = true; // OCEAN yVault
+        vaults[0x1Ae8Ccd120A05080d9A01C3B4F627F865685D091] = true; // WBTC yVault
+        vaults[0x7356f09C294Cb9c6428AC7327B24B0f29419C181] = true; // SNX yVault
+        vaults[0x873fB544277FD7b977B196a826459a69E27eA4ea] = true; // RAI yVault
+        vaults[0x2147935D9739da4E691b8Ae2e1437492A394eBf5] = true; // WETH ubiVault
+        vaults[0x3D27705c64213A5DcD9D26880c1BcFa72d5b6B0E] = true; // Curve USDK Pool yVault
+        vaults[0x4C4A6A22bCE915C724A66b82128577F1B24831eD] = true; // Curve EURT Pool yVault
+        vaults[0xB98Df7163E61bf053564bde010985f67279BBCEC] = true; // DAI yVault
+        vaults[0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6] = true; // Curve LUSD Pool yVault
+        vaults[0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E] = true; // Curve HBTC Pool yVault
+        vaults[0x5120FeaBd5C21883a4696dBCC5D123d6270637E9] = true; // WETH yVault
+        vaults[0x30FCf7c6cDfC46eC237783D94Fc78553E79d4E9C] = true; // Curve DUSD Pool yVault
+        vaults[0xf8768814b88281DE4F532a3beEfA5b85B69b9324] = true; // Curve TUSD Pool yVault
+        vaults[0xF6C9E9AF314982A4b38366f4AbfAa00595C5A6fC] = true; // yearn Curve.fi UST/3Crv
+        vaults[0xcE0F1Ef5aAAB82547acc699d3Ab93c069bb6e547] = true; // sUSD-hedging yVault
+        vaults[0x96Ea6AF74Af09522fCB4c28C269C26F59a31ced6] = true; // yearn Curve.fi LINK/sLINK
+        vaults[0xAaAee277F21Bb7D2Bf49E6b36d0d94DC229B0B25] = true; // LUSD yVault
+        vaults[0x0d4EA8536F9A13e4FBa16042a46c30f092b06aA5] = true; // Curve EURT Pool yVault
+        vaults[0x39CAF13a104FF567f71fd2A4c68C026FDB6E740B] = true; // Curve Aave Pool yVault
+        vaults[0x671a912C10bba0CFA74Cfc2d6Fba9BA1ed9530B2] = true; // LINK yVault
+        vaults[0xe9Dc63083c464d6EDcCFf23444fF3CFc6886f6FB] = true; // Curve oBTC Pool yVault
+        vaults[0x7047F90229a057C13BF847C0744D646CFb6c9E1A] = true; // Curve renBTC Pool yVault
+        vaults[0xb4D1Be44BfF40ad6e506edf43156577a3f8672eC] = true; // Curve sAave Pool yVault
+        vaults[0x5B707472eeF1553646740a7e5BEcFD41B9B4Ef4C] = true; // COMP yVault
+        vaults[0x9d409a0A012CFbA9B15F6D4B36Ac57A46966Ab9a] = true; // Yearn Compounding veCRV yVault
+        vaults[0xa442BEB83baBC33D93c8Bec471070Ce59b88fb7d] = true; // WETH yVault
+        vaults[0x9cA85572E6A3EbF24dEDd195623F188735A5179f] = true; // yearn Curve.fi DAI/USDC/USDT
+        vaults[0x7Da96a3891Add058AdA2E826306D812C638D87a7] = true; // USDT yVault
+        vaults[0x477faf103dADc5Fe5BAa40951cf7512dcBC18126] = true; // USDC yVault
+        vaults[0x054AF22E1519b020516D72D749221c24756385C9] = true; // Curve HUSD Pool yVault
+        vaults[0xBF7AA989192b020a8d3e1C65a558e123834325cA] = true; // HBTC yVault
+        vaults[0x19D3364A399d251E894aC732651be8B0E4e85001] = true; // DAI yVault
+        vaults[0x3466c90017F82DDA939B01E8DBd9b0f97AEF8DfC] = true; // sUSD yVault
+        vaults[0xB8C3B7A2A618C552C23B1E4701109a9E756Bab67] = true; // 1INCH yVault
+        vaults[0x7F83935EcFe4729c4Ea592Ab2bC1A32588409797] = true; // yearn Curve.fi oBTC/sbtcCRV
+        vaults[0x3408324Dbb537886CADc180f6FfCf674eE215F67] = true; // "renBTC yVault"
+        vaults[0x3c5DF3077BcF800640B5DAE8c91106575a4826E6] = true; // Curve pBTC Pool yVault
+        vaults[0x0e8A7717A4FD7694682E7005957dD5d7598bF14A] = true; // yExperimentalWBTC
+        vaults[0xD2C65E20C3fDE3F18097e7414e65596e0C83B1a9] = true; // ICE yVault
+        vaults[0x7Ff566E1d69DEfF32a7b244aE7276b9f90e9D0f6] = true; // yearn Curve.fi renBTC/wBTC/sBTC
+        vaults[0x4856A7EFBbFcaE92AB13c5e2e322Fc77647bB856] = true; // RAI yVault
+        vaults[0x5533ed0a3b83F70c3c4a1f69Ef5546D3D4713E44] = true; // yearn Curve.fi DAI/USDC/USDT/sUSD
+        vaults[0xbD65955F752B2eF093B34B05e5FFb439AE8e5049] = true; // COMP yVault
+        vaults[0xa9fE4601811213c340e850ea305481afF02f5b28] = true; // WETH yVault
+        vaults[0x71955515ADF20cBDC699B8bC556Fc7Fd726B31B0] = true; // USDC yVault
+        vaults[0x6d765CbE5bC922694afE112C140b8878b9FB0390] = true; // SUSHI yVault
+        vaults[0x497590d2d57f05cf8B42A36062fA53eBAe283498] = true; // SUSHI yVault
+        vaults[0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8] = true; // Curve MIM Pool yVault
+        vaults[0xED0244B688cF059f32f45E38A6ac6E479D6755f6] = true; // WETH yVault
+        vaults[0x4B5BfD52124784745c1071dcB244C6688d2533d3] = true; // Curve Y Pool yVault
+        vaults[0x2f08119C6f07c006695E079AAFc638b8789FAf18] = true; // yearn Tether USD
+        vaults[0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5] = true; // yearn Curve.fi hBTC/wBTC
+        vaults[0x123964EbE096A920dae00Fb795FFBfA0c9Ff4675] = true; // yearn Curve.fi pBTC/sbtcCRV
+        vaults[0x03c31f3444357087d5f568d24AE17f9177c8AA84] = true; // LINK yVault
+        vaults[0xC116dF49c02c5fD147DE25Baa105322ebF26Bd97] = true; // Curve RSV Pool yVault
+        vaults[0x2F194Da57aa855CAa02Ea3Ab991fa5d38178B9e6] = true; // UNI yVault
+        vaults[0x98B058b2CBacF5E99bC7012DF757ea7CFEbd35BC] = true; // yearn Curve.fi EURS/sEUR
+        vaults[0x07FB4756f67bD46B748b16119E802F1f880fb2CC] = true; // yearn Curve.fi tBTC/sbtcCrv
+        vaults[0x3B96d491f067912D18563d56858Ba7d6EC67a6fa] = true; // Curve USDN Pool yVault
+        vaults[0x39546945695DCb1c037C836925B355262f551f55] = true; // yearn Curve.fi HUSD/3Crv
+        vaults[0xBfedbcbe27171C418CDabC2477042554b1904857] = true; // Curve rETH Pool yVault
+        vaults[0x37d19d1c4E1fa9DC47bD1eA12f742a0887eDa74a] = true; // yearn TrueUSD
+        vaults[0x8472E9914C0813C4b465927f82E213EA34839173] = true; // sBTC yVault
+        vaults[0xFD0877d9095789cAF24c98F7CCe092fa8E120775] = true; // TUSD yVault
+        vaults[0xF11b141BE4D1985E41c3AEa99417e27603F67c4c] = true; // wAAVE
+        vaults[0xA8B1Cb4ed612ee179BDeA16CCa6Ba596321AE52D] = true; // yearn Curve.fi bBTC/sbtcCRV
+        vaults[0xcB550A6D4C8e3517A939BC79d0c7093eb7cF56B5] = true; // WBTC yVault
+        vaults[0x6Ede7F19df5df6EF23bD5B9CeDb651580Bdf56Ca] = true; // Curve BUSD Pool yVault
+        vaults[0x881b06da56BB5675c54E4Ed311c21E54C5025298] = true; // yearn ChainLink Token
+        vaults[0x79fF6c5A23B492619661F7c5b73a961114A4C940] = true; // AAVE yVault
+        vaults[0x986b4AFF588a109c09B50A03f42E4110E29D353F] = true; // Curve sETH Pool yVault
+        vaults[0xf4fDbc7C66Dc9832D672Ffe6242B6A386CeAd5DE] = true; // sUSD yVault
+        vaults[0xdCD90C7f6324cfa40d7169ef80b12031770B4325] = true; // Curve stETH Pool yVault
+        vaults[0x132d8D2C76Db3812403431fAcB00F3453Fc42125] = true; // Curve ankrETH Pool yVault
+        vaults[0xF962B098Ecc4352aA2AD1d4164BD2b8367fd94c3] = true; // LINK yVault
+        vaults[0xbda3A6CB2aaef41805F6317841d7B8654eC8b124] = true; // crvRenWBTC yVault
+        vaults[0xACd43E627e64355f1861cEC6d3a6688B31a6F952] = true; // yearn Dai Stablecoin
+        vaults[0x75A3f32ba5e60A094729257EE44841F9552baFb9] = true; // AAVE yVault
+        vaults[0x84E13785B5a27879921D6F685f041421C7F482dA] = true; // Curve 3pool yVault
+        vaults[0xf2db9a7c0ACd427A680D640F02d90f6186E71725] = true; // Curve LINK Pool yVault
+        vaults[0x19b8Bc5CcF9700e16f2780bEA152F01C449f45D0] = true; // ALCX yVault
+        vaults[0xF29AE508698bDeF169B89834F76704C3B205aedf] = true; // SNX yVault
+        vaults[0x63859212aa05d60295a2F18a9e0C707040605BAd] = true; // DAI ubiVault
+        vaults[0x1B5eb1173D2Bf770e50F10410C9a96F7a8eB6e75] = true; // yearn Curve.fi USDP/3Crv
+        vaults[0x2994529C0652D127b7842094103715ec5299bBed] = true; // yearn Curve.fi yDAI/yUSDC/yUSDT/yBUSD
+        vaults[0xdf5110EF6bc751cBaf76D35B8A3f312b581B5173] = true; // DAI ubiVault
+        vaults[0x1C6a9783F812b3Af3aBbf7de64c3cD7CC7D1af44] = true; // Curve UST Pool yVault
+        vaults[0x56A5Fd5104a4956898753dfb060ff32882Ae0eb4] = true; // ALCX yVault
+        vaults[0x5a770DbD3Ee6bAF2802D29a901Ef11501C44797A] = true; // Curve sUSD Pool yVault
+        vaults[0xb32747B4045479B77a8b8Eb44029ba12580214F8] = true; // SUSHI yVault
+        vaults[0xE14d13d8B3b85aF791b2AADD661cDBd5E6097Db1] = true; // YFI yVault
+        vaults[0xE625F5923303f1CE7A43ACFEFd11fd12f30DbcA4] = true; // yearn Curve.fi ETH/aETH
+        vaults[0x29E240CFD7946BA20895a7a02eDb25C210f9f324] = true; // yearn Aave Interest bearing LINK
+        vaults[0x2a38B9B0201Ca39B17B460eD2f11e4929559071E] = true; // Curve GUSD Pool yVault
+        vaults[0x28a5b95C101df3Ded0C0d9074DB80C438774B6a9] = true; // Curve USDT Pool yVault
+        vaults[0x8414Db07a7F743dEbaFb402070AB01a4E0d2E45e] = true; // Curve sBTC Pool yVault
+        vaults[0xAf322a2eDf31490250fdEb0D712621484b09aBB6] = true; // USDT yVault
+        vaults[0xBA2E7Fed597fd0E3e70f5130BcDbbFE06bB94fe1] = true; // yearn yearn.finance
+        vaults[0x5b189D92983E941273b26e3b46e5a16206c08827] = true; // eCRV yVault
+        vaults[0xa258C4606Ca8206D8aA700cE2143D7db854D168c] = true; // WETH yVault
+        vaults[0xA74d4B67b3368E83797a35382AFB776bAAE4F5C8] = true; // Curve alUSD Pool yVault
+        vaults[0x63739d137EEfAB1001245A8Bd1F3895ef3e186E7] = true; // DAI yVault
+        vaults[0x5334e150B938dd2b6bd040D9c4a03Cff0cED3765] = true; // yearn Curve.fi renBTC/wBTC
+        vaults[0xE0db48B4F71752C4bEf16De1DBD042B82976b8C7] = true; // yearn mStable USD
     }
 
     /* ============ External Functions ============ */
@@ -281,18 +454,37 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _tokenOut             Address of the second token
      * @return price                Price of the pair
      */
-    function getPrice(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
-        bool found;
-        uint256 price;
-        int24 tick;
-        IUniswapV3Pool pool;
+    function getPriceNAV(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
+        return _getPrice(_tokenIn, _tokenOut, true);
+    }
 
+    /**
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
+     * @return price                Price of the pair
+     */
+    function getPrice(address _tokenIn, address _tokenOut) public view virtual override returns (uint256 price) {
+        return _getPrice(_tokenIn, _tokenOut, false);
+    }
+
+    /**
+     * Returns the amount out corresponding to the amount in for a given token
+     * @param _tokenIn              Address of the first token
+     * @param _tokenOut             Address of the second token
+     * @param _forNAV               Whether it is just for display purposes
+     * @return price                Price of the pair
+     */
+    function _getPrice(
+        address _tokenIn,
+        address _tokenOut,
+        bool _forNAV
+    ) public view returns (uint256 price) {
         // Same asset. Returns base unit
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
         uint256 exchangeRate;
-
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
             exchangeRate = getCompoundExchangeRate(_tokenIn);
@@ -335,6 +527,112 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        // Direct curve pair
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+
+        if (price != 0) {
+            return price;
+        }
+
+        // Curve LP tokens
+        if (_tokenIn != TRI_CURVE_POOL) {
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                return
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
+                        getPrice(denominator, _tokenOut)
+                    );
+            }
+        }
+        if (_tokenOut != TRI_CURVE_POOL) {
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                return
+                    getPrice(_tokenIn, denominator).preciseDiv(
+                        curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
+                    );
+            }
+        }
+
+        // Yearn vaults
+        if (_isYearnVault(_tokenIn)) {
+            price = IYearnVault(_tokenIn).pricePerShare().preciseMul(
+                getPrice(IYearnVault(_tokenIn).token(), _tokenOut)
+            );
+            uint256 yvDecimals = ERC20(_tokenIn).decimals();
+            if (yvDecimals < 18) {
+                price = price.mul(10**(18 - yvDecimals));
+            }
+            return price;
+        }
+
+        if (_isYearnVault(_tokenOut)) {
+            address vaultAsset = IYearnVault(_tokenOut).token();
+            price = getPrice(_tokenIn, vaultAsset).preciseDiv(IYearnVault(_tokenOut).pricePerShare());
+
+            uint256 yvDecimals = ERC20(_tokenOut).decimals();
+            if (yvDecimals < 18) {
+                price = price.div(10**(18 - yvDecimals));
+            }
+            return price;
+        }
+
+        uint256 uniPrice = 0;
+        // Curve pair through DAI
+        if (_tokenIn != DAI && _tokenOut != DAI) {
+            price = _checkPairThroughCurve(DAI, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, DAI);
+                if (uniPrice != 0) {
+                    return uniPrice.preciseMul(price);
+                }
+            }
+            price = _checkPairThroughCurve(_tokenIn, DAI);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(DAI, _tokenOut);
+                if (uniPrice != 0) {
+                    return price.preciseMul(uniPrice);
+                }
+            }
+        }
+        // Curve pair through WETH
+        if (_tokenIn != WETH && _tokenOut != WETH) {
+            price = _checkPairThroughCurve(WETH, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, WETH);
+                if (uniPrice != 0) {
+                    return uniPrice.preciseMul(price);
+                }
+            }
+            price = _checkPairThroughCurve(_tokenIn, WETH);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(WETH, _tokenOut);
+                if (uniPrice != 0) {
+                    return price.preciseMul(uniPrice);
+                }
+            }
+        }
+        // Curve Pair through WBTC
+        if (_tokenIn != WBTC && _tokenOut != WBTC) {
+            price = _checkPairThroughCurve(WBTC, _tokenOut);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(_tokenIn, WBTC);
+                if (uniPrice != 0) {
+                    return uniPrice.preciseMul(price);
+                }
+            }
+            price = _checkPairThroughCurve(_tokenIn, WBTC);
+            if (price != 0) {
+                uniPrice = _getUNIV3Price(WBTC, _tokenOut);
+                if (uniPrice != 0) {
+                    return price.preciseMul(uniPrice);
+                }
+            }
+        }
+
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
             uint256 shares = 1e18;
@@ -351,41 +649,81 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
         }
 
-        // TODOs
-        // btc pairs, use curve
-        // stable pairs, use curve
-
+        // Direct UNI3
+        price = _getUNIV3Price(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
+        }
+        // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
-            return getPrice(_tokenIn, WETH).preciseDiv(getPrice(_tokenOut, WETH));
+            uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
+            if (divisor != 0) {
+                return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
+            }
         }
-        // We try the low pool first
-        (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_LOW);
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_MEDIUM);
+        // UniV3 through DAI
+        if (_tokenIn != DAI && _tokenOut != DAI) {
+            uint256 divisor = _getUNIV3Price(_tokenOut, DAI);
+            if (divisor != 0) {
+                return _getUNIV3Price(_tokenIn, DAI).preciseDiv(divisor);
+            }
         }
-        if (!found) {
-            (found, pool, tick) = checkPool(_tokenIn, _tokenOut, FEE_HIGH);
+        // Use only univ2 for UI
+        if (_forNAV) {
+            price = _getUNIV2Price(_tokenIn, _tokenOut);
         }
         // No valid price
-        require(found, 'Price not found');
-
-        price = OracleLibrary
-            .getQuoteAtTick(
-            tick,
-            // because we use 1e18 as a precision unit
-            uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
-            _tokenIn,
-            _tokenOut
-        )
-            .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+        require(price != 0, 'Price not found');
         return price;
     }
 
-    function checkPool(
-        address _tokenIn,
-        address _tokenOut,
-        uint24 fee
-    )
+    /* ============ Internal Functions ============ */
+
+    function _cleanCurvePoolDenominator(address _pool, ICurveRegistry _curveRegistry) internal view returns (address) {
+        address[8] memory coins = _curveRegistry.get_underlying_coins(_pool);
+        if (coins[0] != address(0)) {
+            return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
+        }
+        if (coins[1] != address(0)) {
+            return coins[1] == ETH_ADD_CURVE ? WETH : coins[1];
+        }
+        if (coins[2] != address(0)) {
+            return coins[2] == ETH_ADD_CURVE ? WETH : coins[2];
+        }
+        return address(0);
+    }
+
+    // Susceptible to flash loans.
+    // Only use for UI and getNAV
+    function _getUNIV2Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+        address[] memory path = new address[](2);
+        path[0] = _tokenIn;
+        path[1] = _tokenOut;
+        return uniRouterV2.getAmountsOut(ERC20(_tokenIn).decimals(), path)[1];
+    }
+
+    function _getUNIV3Price(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+        bool found;
+        int24 tick;
+        IUniswapV3Pool pool;
+        // We try the low pool first
+        (found, pool, tick) = _checkPool(_tokenIn, _tokenOut);
+        if (!found) {
+            return 0;
+        }
+        return
+            OracleLibrary
+                .getQuoteAtTick(
+                tick,
+                // because we use 1e18 as a precision unit
+                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+                _tokenIn,
+                _tokenOut
+            )
+                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+    }
+
+    function _checkPool(address _tokenIn, address _tokenOut)
         internal
         view
         returns (
@@ -395,15 +733,37 @@ contract PriceOracle is Ownable, IPriceOracle {
         )
     {
         int24 tick;
-        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(_tokenIn, _tokenOut, fee));
+        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) != address(0)) {
-            (, tick, , , , , ) = pool.slot0();
-            return (_checkPrice(tick, pool), pool, tick);
+            uint256 poolLiquidity = uint256(pool.liquidity());
+            if (poolLiquidity > 0) {
+                (, tick, , , , , ) = pool.slot0();
+                return (_checkPrice(tick, pool), pool, tick);
+            }
         }
         return (false, IUniswapV3Pool(0), 0);
     }
 
-    /* ============ Internal Functions ============ */
+    function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
+        private
+        view
+        returns (IUniswapV3Pool pool)
+    {
+        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow >= liquidityMedium && liquidityLow >= liquidityHigh) {
+            return poolLow;
+        }
+        if (liquidityMedium >= liquidityLow && liquidityMedium >= liquidityHigh) {
+            return poolMedium;
+        }
+        return poolHigh;
+    }
 
     /// @dev Revert if current price is too close to min or max ticks allowed
     /// by Uniswap, or if it deviates too much from the TWAP. Should be called
@@ -438,7 +798,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         // observe fails if the pair has no observations
         try _pool.observe(secondsAgo) returns (
             int56[] memory tickCumulatives,
-            uint160[] memory secondsPerLiquidityCumulativeX128s
+            uint160[] memory /* secondsPerLiquidityCumulativeX128s */
         ) {
             return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
         } catch {
@@ -464,5 +824,56 @@ contract PriceOracle is Ownable, IPriceOracle {
             exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(crTokenToAsset[_asset]).decimals()));
         }
         return exchangeRateNormalized;
+    }
+
+    function _getPriceThroughCurve(
+        address _curvePool,
+        address _tokenIn,
+        address _tokenOut
+    ) private view returns (uint256) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
+        uint256 price = 0;
+        if (_curvePool == TRI_CURVE_POOL) {
+            price = ICurvePoolV3(_curvePool).get_dy(
+                uint256(i),
+                uint256(j),
+                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+            );
+        } else {
+            price = ICurvePoolV3(_curvePool).get_dy(
+                i,
+                j,
+                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+            );
+        }
+        price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
+        uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
+        if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
+            return price;
+        }
+        return 0;
+    }
+
+    function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
+        if (_tokenIn == WETH && curvePool == address(0)) {
+            _tokenIn = ETH_ADD_CURVE;
+            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _tokenOut);
+        }
+        if (_tokenOut == WETH && curvePool == address(0)) {
+            _tokenOut = ETH_ADD_CURVE;
+            curvePool = curveRegistry.find_pool_for_coins(_tokenIn, ETH_ADD_CURVE);
+        }
+        if (curvePool != address(0)) {
+            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
+            return price;
+        }
+        return 0;
+    }
+
+    function _isYearnVault(address _token) private view returns (bool) {
+        return vaults[_token];
     }
 }

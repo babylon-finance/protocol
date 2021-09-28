@@ -45,4 +45,8 @@ interface IPassiveIntegration {
     function getPricePerShare(address _investmentAddress) external view returns (uint256);
 
     function getInvestmentAsset(address _investmentAddress) external view returns (address);
+
+    function getResultAsset(address _investmentAddress) external view returns (address);
+
+    function getRewards(address _investmentAddress) external view returns (address, uint256);
 }

@@ -1,4 +1,5 @@
 require('dotenv/config');
+require('@babel/register');
 require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-waffle');
@@ -21,6 +22,7 @@ require('./lib/plugins/utils');
 
 require('./lib/tasks/node-ready');
 require('./lib/tasks/export');
+require('./lib/tasks/export-token-list');
 require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
@@ -65,10 +67,11 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: 12821000,
+        blockNumber: 13171630,
       },
       saveDeployments: true,
       gas: 9e6,
+      initialBaseFeePerGas: 0,
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
@@ -153,7 +156,7 @@ module.exports = {
     deployments: 'deployments/artifacts',
   },
   mocha: {
-    timeout: 120000,
+    timeout: 9999999,
   },
 
   watcher: {

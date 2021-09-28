@@ -6,6 +6,7 @@ module.exports = async ({
   deployments,
   ethers,
   getRapid,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -13,8 +14,7 @@ module.exports = async ({
   const gasPrice = await getRapid();
   const contract = 'Treasury';
 
-  const controller = await deployments.get('BabControllerProxy');
-  const controllerContract = await ethers.getContractAt('BabController', controller.address, signer);
+  const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -25,7 +25,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting treasury on controller ${deployment.address}`);
-    await (await controllerContract.editTreasury(deployment.address, { gasPrice })).wait();
+    await (await controller.editTreasury(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

@@ -58,6 +58,10 @@ async function getContract(contractName, deploymentName) {
   return await ethers.getContractAt(contractName, (await deployments.get(deploymentName || contractName)).address);
 }
 
+async function getERC20(address) {
+  return await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', address);
+}
+
 function eth(value = 1) {
   return ethers.utils.parseEther(value.toString());
 }
@@ -77,6 +81,8 @@ function enums(...options) {
 }
 
 module.exports = {
+  getERC20,
+  increaseTime,
   increaseTime,
   increaseBlock,
   getTimestamp,

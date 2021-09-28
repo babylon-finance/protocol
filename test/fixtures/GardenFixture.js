@@ -1,10 +1,10 @@
 const { deployments } = require('hardhat');
-const { GARDEN_PARAMS } = require('../../lib/constants.js');
-const addresses = require('../../lib/addresses');
-const { impersonateAddress } = require('../../lib/rpc');
-const { fund } = require('../../lib/whale');
+const { GARDEN_PARAMS } = require('lib/constants.js');
+const addresses = require('lib/addresses');
+const { impersonateAddress } = require('lib/rpc');
+const { fund } = require('lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
-const { getContract, from, eth } = require('../utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
@@ -38,12 +38,17 @@ async function setUpFixture(
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
+  const convexStakeIntegration = await getContract('ConvexStakeIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
   const lidoIntegration = await getContract('LidoStakeIntegration');
+  const curveTradeIntegration = await getContract('CurveTradeIntegration');
+  const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
+  const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
+  const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
   const addLiquidityOperation = await getContract('AddLiquidityOperation');
@@ -51,19 +56,10 @@ async function setUpFixture(
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
 
-  const dai = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.DAI);
-  const usdc = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.USDC,
-  );
-  const weth = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.WETH,
-  );
-  const wbtc = await ethers.getContractAt(
-    '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-    addresses.tokens.WBTC,
-  );
+  const dai = await getERC20(addresses.tokens.DAI);
+  const usdc = await getERC20(addresses.tokens.USDC);
+  const weth = await getERC20(addresses.tokens.WETH);
+  const wbtc = await getERC20(addresses.tokens.WBTC);
 
   const owner = await impersonateAddress(timelockController.address);
   await fund([owner.address], { tokens: [addresses.tokens.ETH] });
@@ -187,26 +183,6 @@ async function setUpFixture(
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
   const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
 
-  if (fund) {
-    for (const signer of signers.slice(3, 10)) {
-      await dai.connect(daiWhaleSigner).transfer(signer.address, eth(1e6), {
-        gasPrice: 0,
-      });
-
-      await usdc.connect(usdcWhaleSigner).transfer(signer.address, from(1e6 * 1e6), {
-        gasPrice: 0,
-      });
-
-      await weth.connect(wethWhaleSigner).transfer(signer.address, eth(100), {
-        gasPrice: 0,
-      });
-
-      await wbtc.connect(wbtcWhaleSigner).transfer(signer.address, from(10e8), {
-        gasPrice: 0,
-      });
-    }
-  }
-
   console.log('end garden fixture');
 
   return {
@@ -216,21 +192,26 @@ async function setUpFixture(
     treasury,
     rewardsDistributor,
     uniswapV3TradeIntegration,
+    curveTradeIntegration,
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
     curvePoolIntegration,
+    convexStakeIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
+    synthetixTradeIntegration,
+    univ2TradeIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
     lidoIntegration,
     babViewer,
     timelockController,
     babGovernor,
+    masterSwapper,
 
     garden1,
     garden2,

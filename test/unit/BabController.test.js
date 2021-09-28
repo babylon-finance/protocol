@@ -5,7 +5,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_ETH } = require('lib/constants');
 const { impersonateAddress } = require('lib/rpc');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { increaseTime } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { ethers } = require('hardhat');
 
 describe('BabController', function () {
@@ -94,10 +94,7 @@ describe('BabController', function () {
     });
 
     it('can create a new garden with DAI as the reserve asset', async function () {
-      const dai = await ethers.getContractAt(
-        '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-        addresses.tokens.DAI,
-      );
+      const dai = await getERC20(addresses.tokens.DAI);
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
@@ -145,47 +142,6 @@ describe('BabController', function () {
             },
           ),
       ).to.be.reverted;
-    });
-
-    it('cannot disable an inactive garden', async function () {
-      const initialCommunities = await babController.getGardens();
-      await deleteCandidateStrategies(initialCommunities[0]);
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.reverted;
-    });
-
-    it('can remove a disabled garden without active strategies', async function () {
-      const initialCommunities = await babController.getGardens();
-      expect(initialCommunities.length).to.equal(4);
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
-        'Garden has active strategies!',
-      );
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.revertedWith(
-        'The garden needs to be disabled',
-      );
-      await deleteCandidateStrategies(initialCommunities[0]);
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).not.to.be.reverted;
-      // Try garden removal again
-      await expect(babController.connect(owner).removeGarden(initialCommunities[0])).to.be.not.reverted;
-
-      const updatedCommunities = await babController.getGardens();
-      expect(updatedCommunities.length).to.equal(3);
-    });
-
-    it('can enable and disable a garden', async function () {
-      const initialCommunities = await babController.getGardens();
-      await deleteCandidateStrategies(initialCommunities[0]);
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.not.be.reverted;
-      await expect(babController.connect(owner).enableGarden(initialCommunities[0])).to.not.be.reverted;
-    });
-    it('can NOT disable garden with ongoing strategies', async function () {
-      const initialCommunities = await babController.getGardens();
-
-      await expect(babController.connect(owner).disableGarden(initialCommunities[0])).to.be.revertedWith(
-        'Garden has active strategies!',
-      );
     });
   });
 
@@ -380,6 +336,7 @@ describe('BabController', function () {
         }),
       ).to.not.be.reverted;
     });
+
     it('owner can unpause the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
@@ -393,6 +350,7 @@ describe('BabController', function () {
       await expect(babController.connect(owner).enableBABLMiningProgram()).to.not.be.reverted;
       await expect(rewardsDistributor.connect(owner).setBablToken(newBablToken.address)).to.not.be.reverted;
     });
+
     it('owner can unpause the BABL Token main functions as a TimeLockedToken', async function () {
       // Enable BABL token transfers
       await bablToken.connect(owner).enableTokensTransfers();

@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { eth, normalizeDecimals } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
@@ -27,13 +27,13 @@ describe('HarvestVaultIntegrationTest', function () {
 
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
-      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1053071965952518439');
+      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1061572091432476339');
     });
   });
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('949602716938234987');
+      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('941999142658892357');
     });
   });
   describe('getInvestmentAsset', function () {
@@ -76,13 +76,10 @@ describe('HarvestVaultIntegrationTest', function () {
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
           const asset = await harvestVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
-          const assetContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            asset,
-          );
+          const assetContract = await getERC20(asset);
           const assetDecimals = await assetContract.decimals();
 
-          const tokenContract = await ethers.getContractAt('ERC20', token);
+          const tokenContract = await getERC20(token);
           const tokenDecimals = await tokenContract.decimals();
 
           const reservePriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);

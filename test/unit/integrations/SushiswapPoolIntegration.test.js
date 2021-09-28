@@ -9,7 +9,7 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
-const { eth, normalizeDecimals } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 
@@ -27,13 +27,13 @@ describe('SushiswapPoolIntegrationTest', function () {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
     const reservePriceInAsset1 = await priceOracle.connect(owner).getPrice(token, token1);
 
-    const token0Contract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token0);
+    const token0Contract = await getERC20(token0);
     const token0Decimals = await token0Contract.decimals();
 
-    const token1Contract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token1);
+    const token1Contract = await getERC20(token1);
     const token1Decimals = await token1Contract.decimals();
 
-    const tokenContract = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', token);
+    const tokenContract = await getERC20(token);
     const tokenDecimals = await tokenContract.decimals();
 
     const amount0ToAdd = await normalizeDecimals(
@@ -181,10 +181,7 @@ describe('SushiswapPoolIntegrationTest', function () {
           await executeStrategy(strategyContract, { amount });
           // Check NAV
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
-          const tokenContract = await ethers.getContractAt(
-            '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
-            token,
-          );
+          const tokenContract = await getERC20(token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           const LPTokens = await getExpectedLPTokens(token, amount, poolAddress, token0, token1);
           expect(await poolAddress.balanceOf(strategyContract.address)).to.be.closeTo(LPTokens, LPTokens.div(50)); // 2% slippage

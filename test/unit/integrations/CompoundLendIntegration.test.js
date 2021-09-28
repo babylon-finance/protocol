@@ -8,7 +8,7 @@ const {
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { increaseTime } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('CompoundLendIntegrationTest', function () {
@@ -24,10 +24,10 @@ describe('CompoundLendIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ garden1, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
-    CETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.CETH);
-    USDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.USDC);
-    CUSDC = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.CUSDC);
-    WETH = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', addresses.tokens.WETH);
+    CETH = await getERC20(addresses.tokens.CETH);
+    USDC = await getERC20(addresses.tokens.USDC);
+    CUSDC = await getERC20(addresses.tokens.CUSDC);
+    WETH = await getERC20(addresses.tokens.WETH);
   });
 
   describe('Deployment', function () {
@@ -70,6 +70,10 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
       const beforeCusdc = await CUSDC.balanceOf(strategyContract.address);
+      await executeStrategy(strategyContract);
+      // Adds more capital
+      await executeStrategy(strategyContract);
+
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.lt(beforeCusdc.div(1000));

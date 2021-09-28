@@ -18,13 +18,15 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
+import {ConvexStakeIntegration} from '../../integrations/passive/ConvexStakeIntegration.sol';
+import {IBooster} from '../../interfaces/external/convex/IBooster.sol';
+import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -34,10 +36,10 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 import {Operation} from './Operation.sol';
 
 /**
- * @title DepositVaultOperation
+ * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance
  *
- * Executes a deposit vault operation
+ * Executes a stake (deposit vault) operation
  */
 contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
@@ -45,6 +47,10 @@ contract DepositVaultOperation is Operation {
     using BytesLib for bytes;
 
     /* ============ Constructor ============ */
+
+    IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
+    address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32; // lDO
 
     /**
      * Creates the integration
@@ -113,7 +119,8 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        return (yieldVault, IERC20(yieldVault).balanceOf(msg.sender), 0); // liquid
+        vaultAsset = _getResultAsset(_integration, yieldVault);
+        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
     function _getMinAmountExpected(
@@ -135,7 +142,7 @@ contract DepositVaultOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -150,26 +157,20 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        uint256 amountVault = IERC20(yieldVault).balanceOf(msg.sender).preciseMul(_percentage);
+        uint256 amountVault =
+            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
-            IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
-                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
+            amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                    10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                )
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
-        if (vaultAsset != _garden.reserveAsset()) {
-            if (vaultAsset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-                vaultAsset = WETH;
-            }
-            if (vaultAsset != _garden.reserveAsset()) {
-                IStrategy(msg.sender).trade(
-                    vaultAsset,
-                    IERC20(vaultAsset).balanceOf(msg.sender),
-                    _garden.reserveAsset()
-                );
-            }
-        }
-        return (yieldVault, 0, 0);
+        return (
+            vaultAsset,
+            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            0
+        );
     }
 
     /**
@@ -190,17 +191,66 @@ contract DepositVaultOperation is Operation {
             return (0, true);
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(
             10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
         );
-        uint256 balance = IERC20(vault).balanceOf(msg.sender);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        // Get value of pending rewards
+        NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
+    }
+
+    // Function to provide backward compatibility
+    function _getResultAsset(address _integration, address _yieldVault) private view returns (address) {
+        try IPassiveIntegration(_integration).getResultAsset(_yieldVault) returns (address _resultAsset) {
+            return _resultAsset;
+        } catch {
+            return _yieldVault;
+        }
+    }
+
+    function _getRewardsNAV(
+        address _integration,
+        address _yieldVault,
+        address _reserveAsset
+    ) private view returns (uint256) {
+        // Patching old convex stETH.
+        if (
+            address(msg.sender) == 0x3FeaD42999D537477CE39335aA7b4951e8e78233 ||
+            address(msg.sender) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935
+        ) {
+            uint256 nav =
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                );
+            nav = nav.add(
+                _getPrice(_reserveAsset, LDO).preciseMul(
+                    IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
+                )
+            );
+            return nav;
+        }
+        // Patching 3Pool
+        if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
+            return
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
+                );
+        }
+        try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
+            if (rewardToken != address(0) && amount > 0) {
+                return _getPrice(_reserveAsset, rewardToken).preciseMul(amount);
+            }
+            return 0;
+        } catch {
+            return 0;
+        }
     }
 }

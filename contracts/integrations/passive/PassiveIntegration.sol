@@ -163,7 +163,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
-            _investmentAddress = _getAssetAfterExitAction(_investmentAddress);
+            _investmentAddress = _getAssetAfterExitPreAction(_investmentAddress);
             _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
 
@@ -221,6 +221,25 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return _getInvestmentAsset(_investmentAddress);
     }
 
+    /**
+     * Gets the asset you obtained after entering the investment
+     *
+     * @return address                            Returns the asset that this investment obtains
+     */
+    function getResultAsset(address _investmentAddress) external view override returns (address) {
+        return _getResultAsset(_investmentAddress);
+    }
+
+    /**
+     * Gets the rewards and the token that they are denominated in
+     *
+     * @return address                            Returns the address with the token of extra rewards
+     * @return uint256                            Extra rewards received so far
+     */
+    function getRewards(address _investmentAddress) external view override returns (address, uint256) {
+        return _getRewards(_investmentAddress);
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -244,9 +263,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         InvestmentInfo memory investmentInfo;
         investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
-        investmentInfo.investment = _investment;
+        investmentInfo.investment = _getResultAsset(_investment);
         investmentInfo.totalSupply = IERC20(_investment).totalSupply();
-        investmentInfo.investmentTokensInGarden = IERC20(_investment).balanceOf(_strategy);
+        investmentInfo.investmentTokensInGarden = IERC20(investmentInfo.investment).balanceOf(_strategy);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -277,7 +296,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         );
         require(
             _investmentInfo.investmentTokensInGarden >= _investmentInfo.investmentTokensInTransaction,
-            'The garden does not have enough investment tokens'
+            'The strategy does not have enough investment tokens'
         );
     }
 
@@ -290,7 +309,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         require(
             (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
                 _investmentInfo.investmentTokensInGarden),
-            'The garden did not receive the investment tokens'
+            'The strategy did not receive the investment tokens'
         );
     }
 
@@ -303,7 +322,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         require(
             IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
                 (_investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction) + 100,
-            'The garden did not return the investment tokens'
+            'The strategy did not return the investment tokens'
         );
     }
 
@@ -411,11 +430,21 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         uint8 // op
     ) internal view virtual returns (address);
 
+    function _getRewards(
+        address //_investmentAddress
+    ) internal view virtual returns (address, uint256) {
+        return (address(0), 0);
+    }
+
     function _preActionNeedsApproval() internal view virtual returns (bool) {
         return false;
     }
 
-    function _getAssetAfterExitAction(address _asset) internal view virtual returns (address) {
+    function _getAssetAfterExitPreAction(address _asset) internal view virtual returns (address) {
         return _asset;
+    }
+
+    function _getResultAsset(address _investment) internal view virtual returns (address) {
+        return _investment;
     }
 }
