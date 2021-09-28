@@ -70,6 +70,10 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
       const beforeCusdc = await CUSDC.balanceOf(strategyContract.address);
+      await executeStrategy(strategyContract);
+      // Adds more capital
+      await executeStrategy(strategyContract);
+
       await finalizeStrategy(strategyContract);
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await CUSDC.balanceOf(strategyContract.address)).to.be.lt(beforeCusdc.div(1000));
