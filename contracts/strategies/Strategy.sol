@@ -39,6 +39,7 @@ import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
@@ -105,6 +106,21 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _onlyKeeper() private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
+
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+    function _onlyIntegration(address _address) private view {
+        bool isIntegration = false;
+        for (uint256 i = 0; i < opIntegrations.length; i++) {
+            if (opIntegrations[i] == _address) {
+                isIntegration = true;
+                break;
+            }
+        }
+        IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
+        _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
     }
 
     function _onlyUnpaused() private view {
@@ -487,6 +503,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _asset,
         uint256 _quantity
     ) external override {
+        _onlyIntegration(msg.sender);
+        _onlyUnpaused();
         IERC20(_asset).safeApprove(_spender, 0);
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
@@ -503,6 +521,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes calldata _data
     ) external override returns (bytes memory) {
+        _onlyIntegration(msg.sender);
+        _onlyUnpaused();
         return _invoke(_target, _value, _data);
     }
 
@@ -958,4 +978,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV8 is Strategy {}
+contract StrategyV10 is Strategy {}

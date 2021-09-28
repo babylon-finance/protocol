@@ -194,7 +194,7 @@ contract LendOperation is Operation {
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
         // Apply percentage
-        numTokensToRedeem = numTokensToRedeem.mul(_percentage.div(10**(18)));
+        numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
         uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
         remainingDebtInCollateralTokens = SafeDecimalMath.normalizeAmountTokens(
             _borrowToken,
