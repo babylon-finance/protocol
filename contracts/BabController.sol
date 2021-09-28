@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -312,7 +313,23 @@ contract BabController is OwnableUpgradeable, IBabController {
         if (bablMiningProgramEnabled == false) {
             // Can only be activated once
             bablMiningProgramEnabled = true;
-            IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
+            address[] storage liveStrategies;
+            // Get all protocol gardens at initialization of mining program
+            for (uint256 i = 0; i < gardens.length; i++) {
+                // get all strategies at each garden and check whether or not are active strategies
+                address[] memory strategies = IGarden(gardens[i]).getStrategies();
+                if (strategies.length == 0) {
+                    continue;
+                }
+                for (uint256 j = 0; j < strategies.length; j++) {
+                    if (IStrategy(strategies[j]).isStrategyActive()) {
+                        // We pre-select eligible strategies to call rewards distributor
+                        liveStrategies.push(strategies[j]);
+                    }
+                }
+            }
+            // console.log('live strategies BABController', liveStrategies[0], liveStrategies[1]);
+            IRewardsDistributor(rewardsDistributor).startBABLRewards(liveStrategies); // Sets the timestamp
         }
     }
 

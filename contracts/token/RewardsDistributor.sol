@@ -349,25 +349,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards() external override onlyController onlyUnpaused {
+    function startBABLRewards(address[] memory _strategies) external override onlyController onlyUnpaused {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
-            _includeRunningStrategies();
-        }
-    }
-
-    function _includeRunningStrategies() internal {
-        // Get all protocol gardens at initialization of mining program
-        address[] memory gardens = IBabController(controller).getGardens();
-        for (uint256 i = 0; i < gardens.length; i++) {
-            // get all strategies at each garden and check whether or not are active strategies
-            address[] memory strategies = IGarden(gardens[i]).getStrategies();
-            for (uint256 j = 0; j < strategies.length; j++) {
-                if (IStrategy(strategies[j]).isStrategyActive()) {
-                    _updateProtocolPrincipal(strategies[j], IStrategy(strategies[j]).capitalAllocated(), true);
-                }
-            }
+            _addLiveStrategies(_strategies);
         }
     }
 
@@ -695,6 +681,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Adding capital
             miningProtocolPrincipal = miningProtocolPrincipal.add(_capital);
             strategyPrincipal[_strategy] = strategyPrincipal[_strategy].add(_capital);
+        }
+    }
+
+    /**
+     * Add live strategies to the mining program (if any) during mining activation
+     * It is executed once by the controller
+     * @param _strategies         Array of live strategies during mining program activation
+     */
+    function _addLiveStrategies(address[] memory _strategies) internal {
+        // Assumption:
+        // Strategies are "active" as they are checked at origin by BabController
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            if (_strategies[i] != address(0)) {
+                _updateProtocolPrincipal(_strategies[i], IStrategy(_strategies[i]).capitalAllocated(), true);
+            }
         }
     }
 
