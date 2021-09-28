@@ -154,8 +154,10 @@ contract DepositVaultOperation is Operation {
         uint256 amountVault =
             IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         uint256 minAmount =
-            IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
-                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED))
+            amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                    10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                )
             );
         IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         return (
