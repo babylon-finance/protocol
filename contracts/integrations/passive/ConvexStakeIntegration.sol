@@ -23,6 +23,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
@@ -212,6 +213,16 @@ contract ConvexStakeIntegration is PassiveIntegration {
 
     function _getRewards(address _asset) internal view override returns (address token, uint256 balance) {
         IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
-        return (CRV, rewards.earned(msg.sender));
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        uint256 totalAmount = rewards.earned(msg.sender) * 2; // * 2 accounts roughly for CVX
+        // add extra rewards and convert to reward token
+        uint256 extraRewardsLength = rewards.extraRewardsLength();
+        if (extraRewardsLength > 0) {
+          for (uint i = 0; i < extraRewardsLength; i++) {
+            IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
+            totalAmount = totalAmount.add(oracle.getPrice(extraRewards.rewardToken(), rewards.extraRewards(i)).preciseMul(extraRewards.earned(msg.sender)));
+          }
+        }
+        return (rewards.rewardToken(), totalAmount);
     }
 }
