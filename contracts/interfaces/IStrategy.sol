@@ -125,6 +125,15 @@ interface IStrategy {
             uint256
         );
 
+    function getStrategyRewardsContext()
+        external
+        view
+        returns (
+            address,
+            uint256[] memory,
+            bool[] memory
+        );
+
     function isStrategyActive() external view returns (bool);
 
     function getUserVotes(address _address) external view returns (int256);

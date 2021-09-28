@@ -200,7 +200,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 private minRebalanceCapital; // DEPRECATED Min amount of capital so that it is worth to rebalance the capital here
+    uint256 private minRebalanceCapital; // DEPRECATED
     address[] private tokensNeeded; // Not used anymore
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
@@ -618,6 +618,40 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Get mining context details of a Strategy
+     *
+     */
+    function getStrategyRewardsContext()
+        external
+        view
+        override
+        returns (
+            address,
+            uint256[] memory,
+            bool[] memory
+        )
+    {
+        uint256[] memory data = new uint256[](12);
+        bool[] memory boolData = new bool[](2);
+
+        data[0] = executedAt;
+        data[1] = exitedAt;
+        data[2] = updatedAt;
+        data[3] = enteredAt;
+        data[4] = totalPositiveVotes;
+        data[5] = totalNegativeVotes;
+        data[6] = capitalAllocated;
+        data[7] = capitalReturned;
+        data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
+        data[9] = strategyRewards;
+        boolData[0] = capitalReturned >= capitalAllocated ? true : false;
+        boolData[1] = capitalReturned >= data[8] ? true : false;
+        data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
+        data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        return (strategist, data, boolData);
+    }
+
+    /**
      * Get the state of a Strategy
      *
      */
@@ -683,10 +717,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 lastOp = opTypes.length - 1;
         if (opTypes[lastOp] == 4) {
             // Backward compatibility
+            // pointer to the starting byte of the ethereum token address
             address token =
                 opDatas.length > 0
                     ? opDatas[lastOp]
-                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12); // pointer to the starting byte of the ethereum token address
+                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12);
             uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
@@ -888,7 +923,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 protocolProfits;
         uint256 burningAmount;
         // Strategy returns were positive
-        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0; // in reserve asset, e.g., WETH, USDC, DAI, WBTC
+        // in reserve asset, e.g., WETH, USDC, DAI, WBTC
+        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned.sub(capitalAllocated) : 0;
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
@@ -919,7 +955,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         ) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
-            strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time
+            // Must be zero in case the mining program didnt started on time
+            strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
         }
     }
 
@@ -953,4 +990,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV9 is Strategy {}
+contract StrategyV10 is Strategy {}
