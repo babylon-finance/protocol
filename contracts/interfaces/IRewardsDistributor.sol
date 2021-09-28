@@ -25,19 +25,10 @@ pragma solidity 0.7.6;
  */
 
 interface IRewardsDistributor {
-    // Structs
-    struct PrincipalPerTimestamp {
-        uint256 principal;
-        uint256 time;
-        uint256 timeListPointer;
-    }
-
     /* ========== View functions ========== */
 
     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
-
-    function getStrategyPricePerTokenUnit(address _strategy) external view returns (uint256, uint256);
 
     function getStrategyRewards(address _strategy) external view returns (uint96);
 
@@ -50,34 +41,20 @@ interface IRewardsDistributor {
     function getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _from,
-        uint256 _to
+        uint256 _time
     ) external view returns (uint256);
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
-    function tokenSupplyPerQuarter(uint256 quarter) external view returns (uint96);
-
-    function checkProtocol(uint256 _time)
+    function checkMining(uint256 _quarterNum, address _strategy)
         external
         view
-        returns (
-            uint256 principal,
-            uint256 time,
-            uint256 quarterBelonging,
-            uint256 timeListPointer,
-            uint256 power
-        );
+        returns (uint256[] memory, bool[] memory);
 
-    function checkQuarter(uint256 _num)
+    function getBetaMigration(address _garden, address _contributor)
         external
         view
-        returns (
-            uint256 quarterPrincipal,
-            uint256 quarterNumber,
-            uint256 quarterPower,
-            uint96 supplyPerQuarter
-        );
+        returns (uint256[] memory, bool[] memory);
 
     /* ============ External Functions ============ */
 
@@ -98,7 +75,12 @@ interface IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _previousBalance,
-        bool _depositOrWithdraw,
-        uint256 _pid
+        uint256 _previousSupply,
+        uint256 _tokenDiff,
+        bool _addOrSubstract
     ) external;
+
+    function migrateBetaGardens(address[] memory _gardens) external;
+
+    function migrateBetaUsers(address _garden, address[] memory _contributors) external;
 }

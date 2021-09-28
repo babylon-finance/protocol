@@ -1,17 +1,14 @@
 /*
  Copyright 2021 Babylon Finance.
-
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
     http://www.apache.org/licenses/LICENSE-2.0
-
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
@@ -677,7 +674,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         // Make sure creator can still have normal permissions after renouncing
-        _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE); // Creator can only renounce to 0x in public gardens
+        // Creator can only renounce to 0x in public gardens
+        _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE);
         if (msg.sender == creator) {
             creator = _newCreator;
             return;
@@ -739,13 +737,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        uint256 contributorPower =
-            rewardsDistributor.getContributorPower(
-                address(this),
-                _contributor,
-                contributor.initialDepositAt,
-                block.timestamp
-            );
+        uint256 contributorPower = rewardsDistributor.getContributorPower(address(this), _contributor, block.timestamp);
         uint256 balance = balanceOf(_contributor);
         uint256 lockedBalance = getLockedBalance(_contributor);
         return (
@@ -790,17 +782,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
      * fees and issuance premium. Only callable by the Garden's creator
      *
-     * @param _creatorDeposit                       Deposit by the creator
-     * @param _maxDepositLimit                      Max deposit limit
-     * @param _minLiquidityAsset                    Number that represents min amount of liquidity denominated in ETH
-     * @param _depositHardlock                      Number that represents the time deposits are locked for an user after he deposits
-     * @param _minContribution                      Min contribution to the garden
-     * @param _strategyCooldownPeriod               How long after the strategy has been activated, will it be ready to be executed
-     * @param _minVotesQuorum                       Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minStrategyDuration                  Min duration of an strategy
-     * @param _maxStrategyDuration                  Max duration of an strategy
-     * @param _minVoters                            The minimum amount of voters needed for quorum
-     * @param _maxContributors                      The maximum amount of contributors allowed in this garden
+     * @param _creatorDeposit              Deposit by the creator
+     * @param _maxDepositLimit             Max deposit limit
+     * @param _minLiquidityAsset           Number that represents min amount of liquidity denominated in ETH
+     * @param _depositHardlock             Number that represents the time deposits are locked for
+     *                                     an user after he deposits
+     * @param _minContribution             Min contribution to the garden
+     * @param _strategyCooldownPeriod      How long after the strategy has been activated, will it be ready
+     *                                     to be executed
+     * @param _minVotesQuorum              Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
+     * @param _minStrategyDuration         Min duration of an strategy
+     * @param _maxStrategyDuration         Max duration of an strategy
+     * @param _minVoters                   The minimum amount of voters needed for quorum
+     * @param _maxContributors             The maximum amount of contributors allowed in this garden
      */
     function _start(
         uint256 _creatorDeposit,
@@ -872,8 +866,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 lockedAmount = getLockedBalance(_to);
-        _require(_amountIn <= balanceOf(_to).sub(lockedAmount), Errors.TOKENS_STAKED); // Strategists cannot withdraw locked stake while in active strategies
-
+        uint256 previousBalance = balanceOf(_to);
+        // Strategists cannot withdraw locked stake while in active strategies
+        _require(_amountIn <= previousBalance.sub(lockedAmount), Errors.TOKENS_STAKED);
         // this value would have 18 decimals even for USDC
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
@@ -890,10 +885,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
-        // TODO Backward compatibility with initial Gardens
+        // We need previous supply before minting new tokens to get accurate rewards calculations
+        uint256 previousSupply = totalSupply();
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut);
-        _updateContributorWithdrawalInfo(_to, amountOut);
+        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
 
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
 
@@ -937,6 +933,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         uint256 previousBalance = balanceOf(_to);
+        uint256 previousSupply = totalSupply();
 
         uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
         uint256 sharesToMint = normalizedAmountIn.preciseDiv(_pricePerShare);
@@ -946,8 +943,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // mint shares
         _mint(_to, sharesToMint);
-
-        _updateContributorDepositInfo(_to, previousBalance, _amountIn);
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        _updateContributorDepositInfo(_to, previousBalance, _amountIn, previousSupply, sharesToMint);
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1000,12 +997,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _updateContributorDepositInfo(
         address _contributor,
-        uint256 previousBalance,
-        uint256 _reserveAssetQuantity
+        uint256 _previousBalance,
+        uint256 _reserveAssetQuantity,
+        uint256 _previousSupply,
+        uint256 _newTokens
     ) private {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
-        if (previousBalance == 0 || contributor.initialDepositAt == 0) {
+        if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
             _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
@@ -1014,14 +1013,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         contributor.nonce = contributor.nonce + 1;
-        rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, previousBalance, true, pid);
-        pid++;
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        rewardsDistributor.updateGardenPowerAndContributor(
+            address(this),
+            _contributor,
+            _previousBalance,
+            _previousSupply,
+            _newTokens,
+            true // deposit
+        );
     }
 
     /**
      * Updates the contributor info in the array
      */
-    function _updateContributorWithdrawalInfo(address _contributor, uint256 _netflowQuantity) private {
+    function _updateContributorWithdrawalInfo(
+        address _contributor,
+        uint256 _netflowQuantity,
+        uint256 _previousBalance,
+        uint256 _previousSupply,
+        uint256 _tokensToBurn
+    ) private {
         Contributor storage contributor = contributors[_contributor];
         // If sold everything
         if (balanceOf(_contributor) == 0) {
@@ -1033,9 +1045,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
-        rewardsDistributor.updateGardenPowerAndContributor(address(this), _contributor, 0, false, pid);
+        // uint256 gasSpent = gasleft();
+        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        rewardsDistributor.updateGardenPowerAndContributor(
+            address(this),
+            _contributor,
+            _previousBalance,
+            _previousSupply,
+            _tokensToBurn,
+            false // withdraw
+        );
         contributor.nonce = contributor.nonce + 1;
-        pid++;
     }
 
     /**

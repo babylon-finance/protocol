@@ -10,6 +10,7 @@ const {
   PROFIT_STEWARD_SHARE,
   PROFIT_LP_SHARE,
   ONE_DAY_IN_SECONDS,
+  ONE_ETH,
   PROTOCOL_FEE,
   PROFIT_PROTOCOL_FEE,
   GARDEN_PARAMS_STABLE,
@@ -55,7 +56,7 @@ describe('rewards', function () {
   let dai;
   let wbtc;
 
-  const gardenNum = 1;
+  const gardenNum = 3;
   const strategyNum = 1;
   const depositNum = 1;
   const userNum = 30;
@@ -112,6 +113,7 @@ describe('rewards', function () {
 
   async function finalize(strategies) {
     for (const strategy of strategies) {
+      await injectFakeProfits(strategy, ONE_ETH.mul(200));
       await strategy.connect(keeper).finalizeStrategy(0, '', { gasPrice: 0 });
       await increaseTime(3600);
     }
