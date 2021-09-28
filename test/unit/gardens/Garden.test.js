@@ -623,9 +623,10 @@ describe('Garden', function () {
       const start = NOW + 59986244;
       const end = start + ONE_YEAR_IN_SECONDS * 2;
       await increaseTime(ONE_YEAR_IN_SECONDS * 2);
-      await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).toString(),
-      ).to.be.closeTo((653976411913439490).toString(), eth('0.005'));
+      await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
+        eth('0.659706562778795455'),
+        eth('0.02'),
+      );
     });
     it('the contributor power is calculated correctly if _from and _to are 2 years after the last deposit but several other deposits were taking place', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {

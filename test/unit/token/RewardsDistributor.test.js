@@ -1942,7 +1942,7 @@ describe('RewardsDistributor', function () {
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
-        ethers.utils.parseEther('0.0005'),
+        ethers.utils.parseEther('0.02'),
       );
     });
 
