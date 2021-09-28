@@ -239,7 +239,7 @@ contract DepositVaultOperation is Operation {
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
             return
                 _getPrice(_reserveAsset, CRV).preciseMul(
-                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
                 );
         }
         try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
