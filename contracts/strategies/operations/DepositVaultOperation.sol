@@ -220,15 +220,27 @@ contract DepositVaultOperation is Operation {
         address _reserveAsset
     ) private view returns (uint256) {
         // Patching old convex stETH.
-        if (address(msg.sender) == 0x3FeaD42999D537477CE39335aA7b4951e8e78233 ||
-            address(msg.sender) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935) {
-            uint256 nav = _getPrice(_reserveAsset, CRV).preciseMul(IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender)) * 2;
-            nav = nav.add(_getPrice(_reserveAsset, LDO).preciseMul(IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)));
+        if (
+            address(msg.sender) == 0x3FeaD42999D537477CE39335aA7b4951e8e78233 ||
+            address(msg.sender) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935
+        ) {
+            uint256 nav =
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                );
+            nav = nav.add(
+                _getPrice(_reserveAsset, LDO).preciseMul(
+                    IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
+                )
+            );
             return nav;
         }
         // Patching 3Pool
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
-            return _getPrice(_reserveAsset, CRV).preciseMul(IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender)) * 2;
+            return
+                _getPrice(_reserveAsset, CRV).preciseMul(
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                );
         }
         try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
             if (rewardToken != address(0) && amount > 0) {

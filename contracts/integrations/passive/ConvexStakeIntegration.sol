@@ -218,10 +218,14 @@ contract ConvexStakeIntegration is PassiveIntegration {
         // add extra rewards and convert to reward token
         uint256 extraRewardsLength = rewards.extraRewardsLength();
         if (extraRewardsLength > 0) {
-          for (uint i = 0; i < extraRewardsLength; i++) {
-            IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
-            totalAmount = totalAmount.add(oracle.getPrice(extraRewards.rewardToken(), rewards.extraRewards(i)).preciseMul(extraRewards.earned(msg.sender)));
-          }
+            for (uint256 i = 0; i < extraRewardsLength; i++) {
+                IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
+                totalAmount = totalAmount.add(
+                    oracle.getPrice(extraRewards.rewardToken(), rewards.extraRewards(i)).preciseMul(
+                        extraRewards.earned(msg.sender)
+                    )
+                );
+            }
         }
         return (rewards.rewardToken(), totalAmount);
     }
