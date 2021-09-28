@@ -287,15 +287,15 @@ describe('RewardsDistributor', function () {
 
       expect((await long.strategyRewards()).toString()).to.be.equal('0');
     });
-    it('should get 0 BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+    it('should get proportional BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long, ONE_ETH);
-      // Mining program has to be enabled before the strategy is created
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
       await babController.connect(owner).enableBABLMiningProgram();
       await finalizeStrategyAfter30Days(long);
-
-      expect((await long.strategyRewards()).toString()).to.be.equal('0');
+      expect((await long.strategyRewards()).toString()).to.be.gt('0');
     });
     it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);

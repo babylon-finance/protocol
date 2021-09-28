@@ -17,6 +17,8 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -418,8 +420,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
 
-        // Removes protocol principal for the calculation of rewards
-        if (hasMiningStarted) {
+        // Accounting of strategy power contribution along the time
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
         }
@@ -735,7 +740,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (executedAt == 0) {
             executedAt = block.timestamp;
         }
-        if (hasMiningStarted) {
+        // We consider also strategies on candidate state when mining program is activated
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // The Mining program has not started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
@@ -904,7 +913,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             burningAmount
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (hasMiningStarted) {
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this))); // Must be zero in case the mining program didnt started on time

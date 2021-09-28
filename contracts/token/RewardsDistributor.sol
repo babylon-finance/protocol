@@ -286,7 +286,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         onlyMiningActive
     {
         IStrategy strategy = IStrategy(msg.sender);
-        if (strategy.enteredAt() >= START_TIME) {
+        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        uint256[] memory ts = new uint256[](3);
+        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        if ((ts[0] >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
             _updateProtocolPrincipal(address(strategy), _capital, _addOrSubstract);
         }
@@ -307,7 +310,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             strategy.capitalAllocated().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
         uint256 returned =
             strategy.capitalReturned().preciseMul(oracle.getPrice(IGarden(strategy.garden()).reserveAsset(), DAI));
-        if ((strategy.enteredAt() >= START_TIME) && (START_TIME != 0)) {
+        if ((strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
@@ -316,7 +319,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
-
             for (uint256 i = 0; i < numQuarters; i++) {
                 uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION)); // Initialization timestamp at the end of the first slot where the strategy starts its execution
                 // We calculate each epoch
@@ -370,6 +372,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
+            _includeRunningStrategies();
+        }
+    }
+
+    function _includeRunningStrategies() internal {
+        // Get all protocol gardens at initialization of mining program
+        address[] memory gardens = IBabController(controller).getGardens();
+        for (uint256 i = 0; i < gardens.length; i++) {
+            // get all strategies at each garden and check whether or not are active strategies
+            address[] memory strategies = IGarden(gardens[i]).getStrategies();
+            for (uint256 j = 0; j < strategies.length; j++) {
+                if (IStrategy(strategies[j]).isStrategyActive()) {
+                    _updateProtocolPrincipal(strategies[j], IStrategy(strategies[j]).capitalAllocated(), true);
+                }
+            }
         }
     }
 
@@ -1059,10 +1076,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = _strategy.getStrategyState();
+        if (ts[2] < START_TIME) {
+            // Only for strategies starting before mining and still executing, get proportional
+            // Exited strategies before the mining starts, are not eligible of this standard setup
+            ts[2] = START_TIME;
+        }
         if (!strategyCheckpoint.initialized) {
             // The strategy quarter is not yet initialized then we create it
             if (_getQuarter(block.timestamp) == _getQuarter(ts[0])) {
                 // The first checkpoint in the first executing epoch
+                // It also allows running strategies before the start to take the proportional since the mining starts
                 strategyCheckpoint.quarterPower = 0;
                 strategyCheckpoint.quarterNumber = _getQuarter(block.timestamp);
             } else {
@@ -1113,7 +1136,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else {
             // Quarter checkpoint already created, it must have been filled with general info
             // We update the power of the quarter by adding the new difference between last quarter checkpoint and this checkpoint
-
             strategyCheckpoint.quarterPower = strategyCheckpoint.quarterPower.add(
                 strategyCheckpoint.quarterPrincipal.mul(block.timestamp.sub(ts[2]))
             );
@@ -1431,7 +1453,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _now      Timestamp to calculate its quarter
      */
     function _getQuarter(uint256 _now) internal view returns (uint256) {
-        uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        // Avoid underflow for active strategies during mining activation
+        uint256 quarter = _now >= START_TIME ? (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18) : 0;
         return quarter.add(1);
     }
 
@@ -1441,6 +1464,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to     Ending timestamp
      */
     function _getRewardsWindow(uint256 _from, uint256 _to) internal view returns (uint256, uint256) {
+        // Avoid underflow for active strategies during mining activation
+        if (_from < START_TIME) {
+            _from = START_TIME;
+        }
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
 
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
