@@ -100,7 +100,9 @@ contract CompoundLendIntegration is LendIntegration {
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
-        return ctoken.balanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**18);
+        uint256 decimals = _assetToken == address(0) ? 18 : ERC20(_assetToken).decimals();
+        uint256 cDecimals = ERC20(address(ctoken)).decimals();
+        return ctoken.balanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**(18 - cDecimals + decimals));
     }
 
     /* ============ Internal Functions ============ */
