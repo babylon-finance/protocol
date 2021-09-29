@@ -1,8 +1,12 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { ethers, deployments } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
+const { fund } = require('lib/whale');
+const addresses = require('lib/addresses');
+const { deploy } = deployments;
+
 const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
 const { getVoters, getGovernorMock, getProposal, castVotes, claimTokens } = require('utils/gov-helpers');
 
@@ -104,6 +108,54 @@ describe('governor', function () {
         ),
       ],
       description: 'enable tokenTrasfers and miningProgram',
+    });
+  });
+  it('can enable miningProgram and include all active strategies on it', async function () {
+    const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
+    const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
+    const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
+    console.log('---CHECK 1---');
+    const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
+
+    const controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
+    await claimTokens(token, voters);
+
+    const distributor = await ethers.getContractAt(
+      'RewardsDistributor',
+      '0x40154ad8014df019a53440a60ed351dfba47574e',
+      owner,
+    );
+    await fund([owner.address, deployer.address], {
+      tokens: [addresses.tokens.ETH],
+    });
+
+    const signers = await ethers.getSigners();
+    const signer = signers[0];
+    // upgrade controller
+    const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+    const controllerNewImpl = await deploy('BabController', {
+      from: signer.address,
+    });
+    await proxyAdmin.upgrade(controller.address, controllerNewImpl.address);
+
+    // upgrade rewards distributor
+    const distributorNewImpl = await deploy('RewardsDistributor', {
+      from: signer.address,
+    });
+
+    await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+
+    // We transfer ownership of BabController to TimelockController
+    await controller.transferOwnership('0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193');
+    await runProposal(governor, {
+      targets: [controller.address],
+      values: [from(0)],
+      calldatas: [
+        new ethers.utils.Interface(['function enableBABLMiningProgram()']).encodeFunctionData(
+          'enableBABLMiningProgram',
+        ),
+      ],
+      description: 'enable miningProgram and include live strategies',
     });
   });
 
