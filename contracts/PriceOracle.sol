@@ -20,11 +20,13 @@ pragma solidity 0.7.6;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
-import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
@@ -48,7 +50,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
  *
  * Uses Uniswap V3 to get a price of a token pair
  */
-contract PriceOracle is Ownable, IPriceOracle {
+contract PriceOracle is IPriceOracle {
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
