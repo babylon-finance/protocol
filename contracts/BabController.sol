@@ -328,7 +328,6 @@ contract BabController is OwnableUpgradeable, IBabController {
                     }
                 }
             }
-            // console.log('live strategies BABController', liveStrategies[0], liveStrategies[1]);
             IRewardsDistributor(rewardsDistributor).startBABLRewards(liveStrategies); // Sets the timestamp
         }
     }
