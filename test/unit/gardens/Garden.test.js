@@ -593,8 +593,8 @@ describe('Garden', function () {
       });
       await increaseTime(1000);
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, NOW)).to.be.closeTo(
-        from('165330842531365590'),
-        eth('0.05'),
+        from('223358366622324742'),
+        eth('0.06'),
       );
     });
     it('the contributor power is calculated correctly if _from is between two deposits and _to after the last deposit', async function () {
@@ -664,8 +664,8 @@ describe('Garden', function () {
       await increaseTime(100);
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 3% of contribution power within the time period
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.039481320162676577'),
-        eth('0.005'),
+        eth('0.046684176676397281'),
+        eth('0.01'),
       );
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
@@ -706,8 +706,8 @@ describe('Garden', function () {
       const end = start + 7776000 / 3;
       // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 36% of contribution power within the time period as most of the period had 50%
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.361116333418682848'),
-        eth('0.02'),
+        eth('0.391316254722209097'),
+        eth('0.06'),
       );
     });
     it('contributor power is calculated correctly for different users in the same garden with the same power ', async function () {
