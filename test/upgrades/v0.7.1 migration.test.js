@@ -368,6 +368,26 @@ describe('v0.7.1', function () {
           expect(creatorBeforeUpdate[9].toString()).to.equal(creatorAfterUpdate[9].toString());
         }
       });
+      it('should successfully keep user rewards the same after migration of users and gardens', async function () {
+        for (let i = 0; i < gardens.length; i++) {
+          const garden = await ethers.getContractAt('Garden', gardens[i]);
+          const creator = await garden.creator();
+          const finalizedStrategies = await garden.getFinalizedStrategies();
+          const rewardsBefore = await distributor.getRewards(garden.address, creator, finalizedStrategies);
+          // We launch the migration for each garden and its creator
+          await distributor.connect(deployer).migrateBetaUsers(gardens[i], [creator]);
+
+          const rewardsAfter = await distributor.getRewards(garden.address, creator, finalizedStrategies);
+          // Total BABL rewards (before mining === 0)
+          expect(rewardsBefore[5].toString()).to.equal(rewardsAfter[5].toString());
+          // Profit rewards as strategist
+          expect(rewardsBefore[1].toString()).to.equal(rewardsAfter[1].toString());
+          // Profit rewards as steward
+          expect(rewardsBefore[3].toString()).to.equal(rewardsAfter[3].toString());
+          // Total profit rewards
+          expect(rewardsBefore[6].toString()).to.equal(rewardsAfter[6].toString());
+        }
+      });
       it('should successfully migrate an empty garden and re-deposit/join will restart contributor power', async function () {
         // We use Test YOLO Garden which is empty
         const garden = await ethers.getContractAt('Garden', '0x8DeA590BA32511f2abF57064423B5630738bA36A');

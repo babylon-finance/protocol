@@ -227,11 +227,11 @@ contract DepositVaultOperation is Operation {
             address(msg.sender) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935
         ) {
             uint256 nav =
-                _getPrice(_reserveAsset, CRV).preciseMul(
+                _getPrice(CRV, _reserveAsset).preciseMul(
                     IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
                 );
             nav = nav.add(
-                _getPrice(_reserveAsset, LDO).preciseMul(
+                _getPrice(LDO, _reserveAsset).preciseMul(
                     IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
                 )
             );
@@ -240,13 +240,13 @@ contract DepositVaultOperation is Operation {
         // Patching 3Pool
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
             return
-                _getPrice(_reserveAsset, CRV).preciseMul(
+                _getPrice(CRV, _reserveAsset).preciseMul(
                     IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
                 );
         }
         try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
             if (rewardToken != address(0) && amount > 0) {
-                return _getPrice(_reserveAsset, rewardToken).preciseMul(amount);
+                return _getPrice(rewardToken, _reserveAsset).preciseMul(amount);
             }
             return 0;
         } catch {

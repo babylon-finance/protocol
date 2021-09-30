@@ -53,7 +53,6 @@ module.exports = async ({
     ['BABLToken', ''],
     ['RewardsDistributor', 'RewardsDistributorProxy'],
     ['Treasury', ''],
-    ['PriceOracle', ''],
     ['TimeLockRegistry', ''],
     ['IshtarGate', ''],
     ['MardukGate', ''],
