@@ -18,8 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -136,7 +134,6 @@ contract AddLiquidityOperation is Operation {
         )
     {
         require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
-        console.log('addliquidityop percentage', _percentage, _percentage <= 1e18);
         address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =

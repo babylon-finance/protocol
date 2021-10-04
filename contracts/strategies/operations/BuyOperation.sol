@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Operation} from './Operation.sol';
@@ -121,7 +120,6 @@ contract BuyOperation is Operation {
     {
         address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
-        console.log('buyop percentage', _percentage, _percentage <= 1e18);
         ITradeIntegration(_integration).trade(
             msg.sender,
             token,
