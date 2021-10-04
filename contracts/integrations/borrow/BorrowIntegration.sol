@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
@@ -258,7 +258,10 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
                 ? address(_debtInfo.strategy).balance
                 : IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy));
         require(balance >= _debtInfo.amount, 'We do not have enough to repay debt');
-        require(getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset) > 0, 'No debt to repay');
+        require(
+            balance >= getBorrowBalance(address(_debtInfo.strategy), _debtInfo.asset),
+            'No enough balance to repay'
+        );
     }
 
     /**
