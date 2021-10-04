@@ -283,6 +283,7 @@ describe('RewardsDistributor', function () {
       await babController.connect(owner).enableBABLMiningProgram();
       expect(await long.strategyRewards()).to.be.equal(0);
     });
+
     it('should get proportional BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       // Mining program has to be enabled before the strategy is created
@@ -295,7 +296,8 @@ describe('RewardsDistributor', function () {
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
       expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
-    it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+
+    it.only('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
@@ -304,6 +306,8 @@ describe('RewardsDistributor', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 30);
       // Mining program has to be enabled before the strategy is finished
       await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
+
       await finalizeStrategyAfter30Days(long);
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
 
@@ -311,6 +315,7 @@ describe('RewardsDistributor', function () {
       expect(await long.strategyRewards()).to.be.lt(value);
       expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
     });
+
     it('should get proportional 66% BABL rewards if the Mining Program starts 1/3 after of an strategy execution duration', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       const block = await ethers.provider.getBlock();

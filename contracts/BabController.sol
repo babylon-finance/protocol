@@ -312,22 +312,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         if (bablMiningProgramEnabled == false) {
             // Can only be activated once
             bablMiningProgramEnabled = true;
-            address[] storage liveStrategies;
-            // Get all protocol gardens at initialization of mining program
-            for (uint256 i = 0; i < gardens.length; i++) {
-                // get all strategies at each garden and check whether or not are active strategies
-                address[] memory strategies = IGarden(gardens[i]).getStrategies();
-                if (strategies.length == 0) {
-                    continue;
-                }
-                for (uint256 j = 0; j < strategies.length; j++) {
-                    if (IStrategy(strategies[j]).isStrategyActive()) {
-                        // We pre-select eligible strategies to call rewards distributor
-                        liveStrategies.push(strategies[j]);
-                    }
-                }
-            }
-            IRewardsDistributor(rewardsDistributor).startBABLRewards(liveStrategies); // Sets the timestamp
+            IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
         }
     }
 

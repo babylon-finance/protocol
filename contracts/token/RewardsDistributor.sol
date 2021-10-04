@@ -288,6 +288,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ External Functions ============ */
 
     /**
+     * Add live strategies to the mining program (if any) during mining activation
+     * It is executed once by the controller
+     * @param _strategies         Array of live strategies during mining program activation
+     */
+    function addLiveStrategies(address[] memory _strategies) override external {
+        // Assumption:
+        // Strategies are "active" as they are checked at origin by BabController
+        uint256 quarter = _getQuarter(block.timestamp);
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            IStrategy strategy = IStrategy(_strategies[i]);
+            StrategyPerQuarter storage strategyCheckpoint =
+              strategyPerQuarter[address(strategy)][quarter];
+            if (_strategies[i] != address(0) && strategy.isStrategyActive() &&
+                !strategyCheckpoint.initialized) {
+              console.log('addded');
+                _updateProtocolPrincipal(_strategies[i], IStrategy(_strategies[i]).capitalAllocated(), true);
+            }
+        }
+    }
+
+
+    /**
      * Function that adds/substract the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in any type of asset to be normalized into DAI
      * @param _addOrSubstract         Whether we are adding or substracting capital
@@ -349,11 +371,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards(address[] memory _strategies) external override onlyController onlyUnpaused {
+    function startBABLRewards() external override onlyController onlyUnpaused {
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
-            _addLiveStrategies(_strategies);
         }
     }
 
@@ -681,21 +702,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Adding capital
             miningProtocolPrincipal = miningProtocolPrincipal.add(_capital);
             strategyPrincipal[_strategy] = strategyPrincipal[_strategy].add(_capital);
-        }
-    }
-
-    /**
-     * Add live strategies to the mining program (if any) during mining activation
-     * It is executed once by the controller
-     * @param _strategies         Array of live strategies during mining program activation
-     */
-    function _addLiveStrategies(address[] memory _strategies) internal {
-        // Assumption:
-        // Strategies are "active" as they are checked at origin by BabController
-        for (uint256 i = 0; i < _strategies.length; i++) {
-            if (_strategies[i] != address(0)) {
-                _updateProtocolPrincipal(_strategies[i], IStrategy(_strategies[i]).capitalAllocated(), true);
-            }
         }
     }
 
