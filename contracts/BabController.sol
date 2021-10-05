@@ -670,7 +670,8 @@ contract BabController is OwnableUpgradeable, IBabController {
             address garden = address(IStrategy(_strategies[i]).garden());
             // Only protocol strategies security cross-check
             require(isGarden[garden] && IGarden(garden).isGardenStrategy(_strategies[i]), 'not a protocol strategy');
-            // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+            // ts[0]: executedAt, ts[1]: updatedAt
+            // isStrategyActive implies exitedAt == 0 (not finished yet)
             uint256[] memory ts = new uint256[](2);
             (, , , , ts[0], , ts[1]) = IStrategy(_strategies[i]).getStrategyState();
             isABetaStrategy[i] =

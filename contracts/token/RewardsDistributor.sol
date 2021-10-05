@@ -313,7 +313,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
         _onlyMiningActive();
         _onlyStrategy(msg.sender);
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
+        // ts[0]: executedAt, ts[1]: exitedAt
         uint256[] memory ts = new uint256[](2);
         (, , , , ts[0], ts[1], ) = IStrategy(msg.sender).getStrategyState();
         if ((ts[0] >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
