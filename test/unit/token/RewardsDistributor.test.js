@@ -297,7 +297,7 @@ describe('RewardsDistributor', function () {
       expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
 
-    it.only('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+    it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
@@ -325,6 +325,7 @@ describe('RewardsDistributor', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 15);
       // Mining program has to be enabled before the strategy is finished
       await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
       await finalizeStrategyAfter30Days(long);
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
 
@@ -341,6 +342,7 @@ describe('RewardsDistributor', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 60);
       // Mining program has to be enabled before the strategy is finished
       await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
       await finalizeStrategyAfter30Days(long);
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
 
