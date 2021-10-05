@@ -313,7 +313,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 IStrategy(_strategies[i]).isStrategyActive() &&
                 START_TIME != 0
             ) {
-                console.log('added', _strategies[i]);
                 _updateProtocolPrincipal(_strategies[i], IStrategy(_strategies[i]).capitalAllocated(), true);
             }
         }
@@ -506,8 +505,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // We calculate each epoch
                 uint256 strategyPower = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
                 uint256 protocolPower = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
-                console.log('strategyPower', strategyPower);
-                console.log('protocolPower', protocolPower);
                 _require(strategyPower <= protocolPower, Errors.OVERFLOW_IN_POWER);
                 if (i.add(1) == numQuarters) {
                     // last quarter - we need to take proportional supply for that timeframe despite
@@ -925,12 +922,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[2] = block.timestamp.sub(miningUpdatedAt);
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[data[1]];
         data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal.mul(data[2]);
-        console.log('---PROTOCOL----data[0]', data[0]);
-        console.log('---PROTOCOL----data[1]', data[1]);
-        console.log('---PROTOCOL----data[2]', data[2]);
-        console.log('---PROTOCOL----data[3]', data[3]);
-        console.log('---PROTOCOL---CONDITIONAL', !isProtocolPerQuarter[data[1].sub(1)]);
-
         if (!isProtocolPerQuarter[data[1].sub(1)]) {
             // The quarter is not initialized yet, we then create it
             if (miningUpdatedAt > 0) {
@@ -994,14 +985,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // data[0]: executedAt, data[1]: updatedAt, data[2]: time difference, data[3]: quarter, data[4]: debtPower
         (, , , , data[0], , data[1]) = IStrategy(_strategy).getStrategyState();
         if (data[1] < START_TIME) {
-            // We check the initialization only for beta gardens quarter = 1
+            // We check the initialization only for beta gardens, quarter = 1
             StrategyPerQuarter storage betaStrategyCheckpoint = strategyPerQuarter[_strategy][1];
             if (betaStrategyCheckpoint.betaInitializedAt == 0) {
                 betaStrategyCheckpoint.betaInitializedAt = block.timestamp;
             }
             // Only for strategies starting before mining and still executing, get proportional
             // Exited strategies before the mining starts, are not eligible of this standard setup
-            console.log('CHANGING UPDATED BY START_TIME', data[1], betaStrategyCheckpoint.betaInitializedAt);
             data[1] = betaStrategyCheckpoint.betaInitializedAt;
         }
         data[2] = block.timestamp.sub(data[1]);
@@ -1009,13 +999,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][data[3]];
         // We calculate the debt Power since last checkpoint (if any)
         data[4] = strategyPrincipal[_strategy].mul(data[2]);
-        console.log('---STRATEGY----data[0]', data[0]);
-        console.log('---STRATEGY----data[1]', data[1]);
-        console.log('---STRATEGY----data[2]', data[2]);
-        console.log('---STRATEGY----data[3]', data[3]);
-        console.log('---STRATEGY----data[4]', data[4]);
-        console.log('---STRATEGY---CONDITIONAL', !strategyCheckpoint.initialized);
-
         if (!strategyCheckpoint.initialized) {
             // The strategy quarter is not yet initialized then we create it
             // If it the first checkpoint in the first executing epoch - keep power 0
