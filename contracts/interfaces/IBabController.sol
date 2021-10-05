@@ -157,6 +157,8 @@ interface IBabController {
 
     function getOperations() external view returns (address[20] memory);
 
+    function getLiveStrategies(uint256 _size) external view returns (address[] memory);
+
     function isGarden(address _garden) external view returns (bool);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
@@ -164,6 +166,8 @@ interface IBabController {
     function isValidKeeper(address _keeper) external view returns (bool);
 
     function isSystemContract(address _contractAddress) external view returns (bool);
+
+    function isBetaStrategy(address[] memory _strategies) external view returns (bool[] memory, uint256[] memory);
 
     function protocolPerformanceFee() external view returns (uint256);
 

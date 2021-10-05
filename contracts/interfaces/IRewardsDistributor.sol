@@ -82,7 +82,5 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function migrateBetaGardens(address[] memory _gardens) external;
-
     function migrateBetaUsers(address _garden, address[] memory _contributors) external;
 }

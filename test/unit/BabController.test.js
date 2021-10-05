@@ -2,7 +2,7 @@ const { expect } = require('chai');
 
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_ETH } = require('lib/constants');
+const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_ETH, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { impersonateAddress } = require('lib/rpc');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
@@ -220,6 +220,34 @@ describe('BabController', function () {
       await ethers.provider.send('evm_mine');
       await expect(babController.connect(owner).enableGardenTokensTransfers()).not.to.be.reverted;
       expect(await babController.gardenTokensTransfersEnabled()).to.equal(true);
+    });
+    it('should get live strategies', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      const strategies = await babController.getLiveStrategies(2);
+      expect(strategies.length).to.equal(2);
+    });
+    it('should get a number of live strategies below the total number of live strategies', async function () {
+      const [long1, long2, long3] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden2 },
+      ]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      const strategies = await babController.getLiveStrategies(2);
+      expect(strategies.length).to.equal(2);
     });
   });
   describe('Pause guardian', function () {

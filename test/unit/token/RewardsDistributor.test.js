@@ -360,7 +360,29 @@ describe('RewardsDistributor', function () {
 
       await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('BAB#049');
     });
+    it('should not add the same live strategy twice', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
 
+      await executeStrategy(long, ONE_ETH);
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      // Do nothing as strategyPrincipal > 0
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      await finalizeStrategyImmediate(long);
+      // Do nothing as is no longer a beta strategy
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+
+      expect(await long.strategyRewards()).to.be.gt(0);
+      expect(await long.strategyRewards()).to.be.lt(value);
+      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
+    });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();

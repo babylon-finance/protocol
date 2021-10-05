@@ -12,6 +12,7 @@ const { getVoters, getGovernorMock, getProposal, castVotes, claimTokens } = requ
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
+const { finalizeStrategy, finalizeStrategyImmediate } = require('fixtures/StrategyHelper');
 
 describe('governor', function () {
   let deployer;
@@ -110,11 +111,12 @@ describe('governor', function () {
       description: 'enable tokenTrasfers and miningProgram',
     });
   });
-  it('can enable miningProgram and include all active strategies on it', async function () {
+  it.only('can enable miningProgram and include all active strategies on it', async function () {
     const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
     const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
     const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
     const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
+    const keeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
 
     const controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
     await claimTokens(token, voters);
@@ -154,8 +156,25 @@ describe('governor', function () {
           'enableBABLMiningProgram',
         ),
       ],
-      description: 'enable miningProgram and include live strategies',
+      description: 'enable miningProgram',
     });
+    const strategies = await controller.getLiveStrategies(50);
+
+    for (let i = 0; i < strategies.length; i++) {
+      console.log('strategies governor', i, strategies[i]);
+    }
+    // from 19 to 50 are empty (ADDRESS(0))
+    await distributor.addLiveStrategies(strategies.slice(0, 18));
+    increaseTime(ONE_DAY_IN_SECONDS * 30);
+    // We check that we can finalize strategies and all get rewards
+    /* for (let i = 0; i < 18; i++) {
+      console.log('finalized strategy i', i, strategies[i]);
+      const strategyContract = await ethers.getContractAt('IStrategy', strategies[i], owner);
+
+      console.log('---check---1');
+      await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      // expect(await strategy.strategyRewards()).to.be.gt(0);
+    } */
   });
 
   it('can upgrade Governor to a new one', async function () {

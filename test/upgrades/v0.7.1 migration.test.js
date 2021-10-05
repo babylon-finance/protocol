@@ -318,23 +318,6 @@ describe('v0.7.1', function () {
       });
     });
     describe('can migrate all gardens', function () {
-      it('should successfully migrate all protocol beta gardens', async function () {
-        for (let i = 0; i < gardens.length; i++) {
-          const garden = await ethers.getContractAt('Garden', gardens[i]);
-          const creator = await garden.creator();
-          const [, betaPowerBeforeBool] = await distributor.getBetaMigration(garden.address, creator);
-          expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration
-        }
-        // We launch the migration
-        await distributor.connect(deployer).migrateBetaGardens(gardens);
-
-        for (let i = 0; i < gardens.length; i++) {
-          const garden = await ethers.getContractAt('Garden', gardens[i]);
-          const creator = await garden.creator();
-          const [, betaPowerAfterBool] = await distributor.getBetaMigration(garden.address, creator);
-          expect(betaPowerAfterBool[0]).to.equal(true); // migration completed
-        }
-      });
       it('should successfully migrate all beta creators and their beta gardens', async function () {
         for (let i = 0; i < gardens.length; i++) {
           const garden = await ethers.getContractAt('Garden', gardens[i]);
@@ -440,6 +423,41 @@ describe('v0.7.1', function () {
         expect(
           await distributor.getContributorPower(garden.address, creator, from(block.timestamp).add(from(3600))),
         ).to.equal(eth(1));
+      });
+    });
+    describe('can include all strategies after migration', function () {
+      it('should successfully migrate all beta creators and their beta gardens', async function () {
+        for (let i = 0; i < gardens.length; i++) {
+          const garden = await ethers.getContractAt('Garden', gardens[i]);
+          const creator = await garden.creator();
+          const [, betaPowerBeforeBool] = await distributor.getBetaMigration(garden.address, creator);
+
+          const creatorBeforeUpdate = await garden.getContributor(creator);
+          expect(betaPowerBeforeBool[0]).to.equal(false); // pending migration of the garden
+          expect(betaPowerBeforeBool[1]).to.equal(false); // pending migration of the creator
+          // We launch the migration for each garden and its creator
+          await distributor.connect(deployer).migrateBetaUsers(gardens[i], [creator]);
+
+          const [, betaPowerAfterBool] = await distributor.getBetaMigration(garden.address, creator);
+          const creatorAfterUpdate = await garden.getContributor(creator);
+
+          expect(betaPowerAfterBool[0]).to.equal(true); // garden migration completed
+          expect(betaPowerAfterBool[1]).to.equal(true); // user migration completed
+          expect(creatorBeforeUpdate[0].toString()).to.equal(creatorAfterUpdate[0].toString());
+          expect(creatorBeforeUpdate[1].toString()).to.equal(creatorAfterUpdate[1].toString());
+          expect(creatorBeforeUpdate[2].toString()).to.equal(creatorAfterUpdate[2].toString());
+          expect(creatorBeforeUpdate[3].toString()).to.equal(creatorAfterUpdate[3].toString());
+          expect(creatorBeforeUpdate[4].toString()).to.equal(creatorAfterUpdate[4].toString());
+          expect(creatorBeforeUpdate[5].toString()).to.equal(creatorAfterUpdate[5].toString());
+          expect(creatorBeforeUpdate[6].toString()).to.equal(creatorAfterUpdate[6].toString());
+          expect(creatorBeforeUpdate[7].toString()).to.equal(creatorAfterUpdate[7].toString());
+          // Contributor power might be higher or lower depending on the position the user is getting in the garden along the time. As there are some seconds of difference between measures, it is not equal.
+          expect(from(creatorBeforeUpdate[8])).to.closeTo(
+            from(creatorAfterUpdate[8]),
+            from(creatorBeforeUpdate[8].div(100)),
+          );
+          expect(creatorBeforeUpdate[9].toString()).to.equal(creatorAfterUpdate[9].toString());
+        }
       });
     });
   });
