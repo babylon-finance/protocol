@@ -111,7 +111,7 @@ describe('governor', function () {
       description: 'enable tokenTrasfers and miningProgram',
     });
   });
-  it.only('can enable miningProgram and include all active strategies on it', async function () {
+  it.only('can enable miningProgram and include all active strategies on it and they all get proportional rewards after finishing it', async function () {
     const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
     const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
     const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
@@ -121,23 +121,37 @@ describe('governor', function () {
     const controller = await ethers.getContractAt('BabController', '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f', owner);
     await claimTokens(token, voters);
 
+    const ishtarGate = await ethers.getContractAt('MardukGate', '0x77d200eca7fd0a3db27e96d7b24cf7613b0a2a12', owner);
     const distributor = await ethers.getContractAt(
       'RewardsDistributor',
       '0x40154ad8014df019a53440a60ed351dfba47574e',
       owner,
     );
+
     await fund([owner.address, deployer.address], {
       tokens: [addresses.tokens.ETH],
     });
 
     const signers = await ethers.getSigners();
     const signer = signers[0];
+    //
     // upgrade controller
     const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+
     const controllerNewImpl = await deploy('BabController', {
       from: signer.address,
     });
+
     await proxyAdmin.upgrade(controller.address, controllerNewImpl.address);
+
+    const mardukGate = await deploy('MardukGate', {
+      from: signer.address,
+      args: [controller.address, ishtarGate.address],
+      log: true,
+    });
+
+    // edit marduk gate
+    await controller.editMardukGate(mardukGate.address);
 
     // upgrade rewards distributor
     const distributorNewImpl = await deploy('RewardsDistributor', {
@@ -145,6 +159,106 @@ describe('governor', function () {
     });
 
     await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+
+    // deploy new contracts
+    for (const { contract, type, operation, args } of [
+      {
+        contract: 'ConvexStakeIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+      {
+        contract: 'CurvePoolIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+      {
+        contract: 'CurveTradeIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+      {
+        contract: 'SynthetixTradeIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+      {
+        contract: 'UniswapV2TradeIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+      {
+        contract: 'UniswapV3TradeIntegration',
+        type: 'integration',
+        args: [controller.address],
+      },
+
+      { contract: 'AddLiquidityOperation', type: 'operation', operation: 1, args: ['lp', controller.address] },
+      { contract: 'DepositVaultOperation', type: 'operation', operation: 2, args: ['vault', controller.address] },
+      { contract: 'LendOperation', type: 'operation', operation: 3, args: ['lend', controller.address] },
+      { contract: 'BuyOperation', type: 'operation', operation: 0, args: ['buy', controller.address] },
+    ]) {
+      const deployment = await deploy(contract, {
+        from: signer.address,
+        args,
+      });
+      if (type === 'integration') {
+      }
+      if (type === 'operation') {
+        await controller.setOperation(operation, deployment.address);
+      }
+    }
+
+    // deploy MasterSwapper
+    const masterSwapper = await deploy('MasterSwapper', {
+      from: signer.address,
+      args: [
+        controller.address,
+        (await deployments.get('CurveTradeIntegration')).address,
+        (await deployments.get('UniswapV3TradeIntegration')).address,
+        (await deployments.get('SynthetixTradeIntegration')).address,
+        (await deployments.get('UniswapV2TradeIntegration')).address,
+      ],
+    });
+
+    // deploy PriceOracle
+    const priceOracle = await deploy('PriceOracle', {
+      from: signer.address,
+      args: [],
+    });
+
+    await controller.setMasterSwapper(masterSwapper.address);
+    await controller.editPriceOracle(priceOracle.address);
+
+    // upgrade strategy
+    const strategyBeacon = await ethers.getContractAt(
+      'UpgradeableBeacon',
+      '0x31946680978CEFB010e5f5Fa8b8134c058cba7dC',
+      deployer,
+    );
+
+    const strategyNewImpl = await deploy('Strategy', {
+      from: signer.address,
+      args: [],
+      log: true,
+    });
+
+    await strategyBeacon.connect(deployer).upgradeTo(strategyNewImpl.address);
+
+    // upgrade garden
+    const gardenBeacon = await ethers.getContractAt(
+      'UpgradeableBeacon',
+      '0xc8f44C560efe396a6e57e48fF07205bD28AF5E75',
+      deployer,
+    );
+
+    const gardenNewImpl = await deploy('Garden', {
+      from: signer.address,
+      args: [],
+      log: true,
+    });
+
+    await gardenBeacon.connect(deployer).upgradeTo(gardenNewImpl.address);
 
     // We transfer ownership of BabController to TimelockController
     await controller.transferOwnership('0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193');
@@ -158,23 +272,23 @@ describe('governor', function () {
       ],
       description: 'enable miningProgram',
     });
+
     const strategies = await controller.getLiveStrategies(50);
 
-    for (let i = 0; i < strategies.length; i++) {
-      console.log('strategies governor', i, strategies[i]);
-    }
-    // from 19 to 50 are empty (ADDRESS(0))
+    // we only have 18 active strategies from 19 to 50 are empty (ADDRESS(0))
     await distributor.addLiveStrategies(strategies.slice(0, 18));
-    increaseTime(ONE_DAY_IN_SECONDS * 30);
+    await increaseTime(ONE_DAY_IN_SECONDS * 360);
+
     // We check that we can finalize strategies and all get rewards
-    /* for (let i = 0; i < 18; i++) {
-      console.log('finalized strategy i', i, strategies[i]);
+    for (let i = 0; i < 18; i++) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategies[i], owner);
 
-      console.log('---check---1');
-      await strategyContract.connect(keeper).finalizeStrategy(0, '');
-      // expect(await strategy.strategyRewards()).to.be.gt(0);
-    } */
+      if (i !== 8) {
+        // AVT Strategy i=8 has a problem finalizing possibly due to the rug pull
+        await strategyContract.connect(keeper).finalizeStrategy(0, '');
+        expect(await strategyContract.strategyRewards()).to.be.gt(0);
+      }
+    }
   });
 
   it('can upgrade Governor to a new one', async function () {
