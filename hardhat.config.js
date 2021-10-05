@@ -28,6 +28,7 @@ require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/tvl');
+require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/strategy-expire');
 
