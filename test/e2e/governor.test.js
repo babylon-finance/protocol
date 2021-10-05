@@ -111,7 +111,7 @@ describe('governor', function () {
       description: 'enable tokenTrasfers and miningProgram',
     });
   });
-  it.only('can enable miningProgram and include all active strategies on it and they all get proportional rewards after finishing it', async function () {
+  it('can enable miningProgram and include all active strategies on it and they all get proportional rewards after finishing them', async function () {
     const deployer = await impersonateAddress('0x040cC3AF8455F3c34D1df1D2a305e047a062BeBf');
     const owner = await impersonateAddress('0xeA4E1d01Fad05465a84bAd319c93B73Fa12756fB');
     const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
