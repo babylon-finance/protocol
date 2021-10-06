@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
@@ -43,6 +44,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     event GardenAdded(address indexed _garden, address indexed _factory);
@@ -236,8 +238,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _publicGardenStrategistsStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
-            IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
-            IERC20(_reserveAsset).approve(newGarden, _initialContribution);
+            IERC20(_reserveAsset).safeTransferFrom(msg.sender, address(this), _initialContribution);
+            IERC20(_reserveAsset).safeApprove(newGarden, _initialContribution);
         }
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
