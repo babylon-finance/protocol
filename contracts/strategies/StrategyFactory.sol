@@ -26,6 +26,7 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 
 /**
  * @title StrategyFactory
@@ -34,6 +35,14 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
  * Factory to create investment strategy contracts
  */
 contract StrategyFactory is IStrategyFactory {
+    modifier onlyGarden {
+        require(
+            controller.isGarden(msg.sender) && IGarden(msg.sender).controller() == address(controller),
+            'Only the garden can create strategies'
+        );
+        _;
+    }
+
     IBabController private immutable controller;
     UpgradeableBeacon private immutable beacon;
 
@@ -60,7 +69,7 @@ contract StrategyFactory is IStrategyFactory {
         address _strategist,
         address _garden,
         uint256[] calldata _stratParams
-    ) external override returns (address) {
+    ) external override onlyGarden returns (address) {
         address payable proxy =
             payable(
                 new SafeBeaconProxy(
