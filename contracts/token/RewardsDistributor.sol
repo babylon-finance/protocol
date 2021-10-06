@@ -17,8 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
-
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -74,41 +72,38 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Throws if the call is not from a valid strategy
      */
-    modifier onlyStrategy {
-        address garden = address(IStrategy(msg.sender).garden());
-        _require(controller.isSystemContract(garden), Errors.ONLY_STRATEGY);
-        _require(IGarden(garden).isGardenStrategy(msg.sender), Errors.STRATEGY_GARDEN_MISMATCH);
-        _;
-    }
-    /**
-     * Throws if the call is not from a valid active garden
-     */
-    modifier onlyActiveGarden() {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        _;
+    function _onlyStrategy(address _strategy) private view {
+        address garden = address(IStrategy(_strategy).garden());
+        _require(IBabController(controller).isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
+        _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
     }
 
     /**
      * Throws if the BABL Rewards mining program is not active
      */
-    modifier onlyMiningActive() {
+    function _onlyMiningActive() private view {
         _require(IBabController(controller).bablMiningProgramEnabled(), Errors.ONLY_MINING_ACTIVE);
-        _;
     }
+
     /**
      * Throws if the sender is not the controller
      */
-    modifier onlyController() {
+    function _onlyController() private view {
         _require(IBabController(controller).isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
         _require(address(controller) == msg.sender, Errors.ONLY_CONTROLLER);
-        _;
-    }
-    modifier onlyUnpaused() {
-        // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-        _;
     }
 
+    /**
+     * Throws if Rewards Distributor is paused
+     */
+    function _onlyUnpaused() private view {
+        // Do not execute if Globally or individually paused
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+    }
+
+    /**
+     * Throws if a malicious reentrant call is detected
+     */
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
         _require(status != ENTERED, Errors.REENTRANT_CALL);
@@ -239,7 +234,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     struct StrategyPerQuarter {
         // Acumulated strategy power per each quarter along the time
         uint256 quarterPrincipal; // DEPRECATED
-        uint256 quarterNumber; // DEPRECATED
+        uint256 betaInitializedAt; // Only used for beta strategies
         uint256 quarterPower; //  Accumulated strategy power for each quarter
         bool initialized; // True if the strategy has checkpoints in that quarter already
     }
@@ -273,8 +268,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
-        _require(address(_bablToken) != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_bablToken) != address(0) && address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
         controller = _controller;
 
@@ -288,30 +282,46 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ External Functions ============ */
 
     /**
-     * Function that adds/substract the capital received to the total principal of the protocol per timestamp
-     * @param _capital                Amount of capital in any type of asset to be normalized into DAI
-     * @param _addOrSubstract         Whether we are adding or substracting capital
+     * Add protocol live strategies to the mining program (if any)
+     * @param _strategies         Array of live strategies during mining program activation
      */
-    function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract)
-        external
-        override
-        onlyStrategy
-        onlyMiningActive
-    {
-        IStrategy strategy = IStrategy(msg.sender);
-        if (strategy.enteredAt() >= START_TIME) {
-            // onlyMiningActive control, it does consider all strategies created after the Mining Program is activated
-            _updateProtocolPrincipal(address(strategy), _capital, _addOrSubstract);
+    function addLiveStrategies(address[] memory _strategies) external override {
+        // Strategies must be "active"
+        uint256[] memory capitalAllocated = new uint256[](_strategies.length);
+        bool[] memory isBetaStrategy = new bool[](_strategies.length);
+        // We check if strategies are protocol strategies by controller external validation
+        // We also check that they deserve activation on the mining program (need to be live)
+        (isBetaStrategy, capitalAllocated) = controller.isBetaStrategy(_strategies);
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            if (strategyPrincipal[_strategies[i]] != 0) {
+                // Already updated, do nothing
+                continue;
+            }
+            // Only pending updated strategies can be set
+            // If the strategy exited already or was previously updated, it does not create new checkpoint
+            if (isBetaStrategy[i]) {
+                _updateProtocolPrincipal(_strategies[i], capitalAllocated[i], true);
+            }
         }
     }
 
     /**
-     * Function that set each contributor power update per garden
-     * @param _garden                Address of the garden the contributor belongs to
-     * @param _contributor           Address of the contributor
-     * @param _previousBalance       Previous balance of the contributor
-     * @param _previousSupply        Previous supply of the
+     * Function that adds/substract the capital received to the total principal of the protocol per timestamp
+     * @param _capital                Amount of capital in any type of asset to be normalized into DAI
+     * @param _addOrSubstract         Whether we are adding or substracting capital
      */
+    function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
+        _onlyMiningActive();
+        _onlyStrategy(msg.sender);
+        // ts[0]: executedAt, ts[1]: exitedAt
+        uint256[] memory ts = new uint256[](2);
+        (, , , , ts[0], ts[1], ) = IStrategy(msg.sender).getStrategyState();
+        if ((ts[0] >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
+            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
+            _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
+        }
+    }
+
     function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
@@ -319,7 +329,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _previousSupply,
         uint256 _tokenDiff,
         bool _addOrSubstract
-    ) external override nonReentrant onlyActiveGarden {
+    ) external override nonReentrant {
+        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
         // Temporal beta migrations for beta gardens and beta users
@@ -337,15 +348,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to                Address to send the tokens to
      * @param _amount            Amount of tokens to send the address to
      */
-    function sendTokensToContributor(address _to, uint256 _amount)
-        external
-        override
-        nonReentrant
-        onlyMiningActive
-        onlyUnpaused
-    {
-        // TODO Make it more restrictive e.g. only Gardens and contributor part of the Garden
-        _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
+    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant {
+        _onlyUnpaused();
+        _onlyMiningActive();
+        // Restrictive only to gardens when claiming BABL
+        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         _safeBABLTransfer(_to, amount);
     }
@@ -353,7 +360,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Starts BABL Rewards Mining Program from the controller.
      */
-    function startBABLRewards() external override onlyController onlyUnpaused {
+    function startBABLRewards() external override {
+        _onlyUnpaused();
+        _onlyController();
         if (START_TIME == 0) {
             // It can only be activated once to avoid overriding START_TIME
             START_TIME = block.timestamp;
@@ -371,19 +380,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare
-    ) external override onlyController {
+    ) external override {
+        _onlyController();
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
-    }
-
-    /**
-     * PRIVILEGE FUNCTION to migrate beta gardens into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called once for each garden and can be removed
-     * after all beta gardens data are migrated
-     * @param _gardens     Array of protocol gardens to perform beta data migration
-     */
-    function migrateBetaGardens(address[] memory _gardens) external override onlyOwner {
-        _migrateBetaGardens(_gardens);
     }
 
     /**
@@ -459,7 +459,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
-        if ((strategy.enteredAt() >= START_TIME) && (START_TIME != 0)) {
+        if ((strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
@@ -895,7 +895,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[2] = block.timestamp.sub(miningUpdatedAt);
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[data[1]];
         data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal.mul(data[2]);
-
         if (!isProtocolPerQuarter[data[1].sub(1)]) {
             // The quarter is not initialized yet, we then create it
             if (miningUpdatedAt > 0) {
@@ -958,6 +957,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory data = new uint256[](5);
         // data[0]: executedAt, data[1]: updatedAt, data[2]: time difference, data[3]: quarter, data[4]: debtPower
         (, , , , data[0], , data[1]) = IStrategy(_strategy).getStrategyState();
+        if (data[1] < START_TIME) {
+            // We check the initialization only for beta gardens, quarter = 1
+            StrategyPerQuarter storage betaStrategyCheckpoint = strategyPerQuarter[_strategy][1];
+            if (betaStrategyCheckpoint.betaInitializedAt == 0) {
+                betaStrategyCheckpoint.betaInitializedAt = block.timestamp;
+            }
+            // Only for strategies starting before mining and still executing, get proportional
+            // Exited strategies before the mining starts, are not eligible of this standard setup
+            data[1] = betaStrategyCheckpoint.betaInitializedAt;
+        }
         data[2] = block.timestamp.sub(data[1]);
         data[3] = _getQuarter(block.timestamp);
         StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][data[3]];
@@ -1012,7 +1021,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to               The receiver address of the contributor to send
      * @param _amount           The amount of BABL tokens to be rewarded during this claim
      */
-    function _safeBABLTransfer(address _to, uint96 _amount) private onlyMiningActive {
+    function _safeBABLTransfer(address _to, uint96 _amount) private {
         uint256 bablBal = babltoken.balanceOf(address(this));
         if (_amount > bablBal) {
             SafeERC20.safeTransfer(babltoken, _to, bablBal);
@@ -1346,7 +1355,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _now      Timestamp to calculate its quarter
      */
     function _getQuarter(uint256 _now) internal view returns (uint256) {
-        uint256 quarter = (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);
+        // Avoid underflow for active strategies during mining activation
+        uint256 quarter = _now >= START_TIME ? (_now.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18) : 0;
         return quarter.add(1);
     }
 
@@ -1356,6 +1366,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _to     Ending timestamp
      */
     function _getRewardsWindow(uint256 _from, uint256 _to) internal view returns (uint256, uint256) {
+        // Avoid underflow for active strategies during mining activation
+        if (_from < START_TIME) {
+            _from = START_TIME;
+        }
         uint256 quarters = (_to.sub(_from).preciseDivCeil(EPOCH_DURATION)).div(1e18);
 
         uint256 startingQuarter = (_from.sub(START_TIME).preciseDivCeil(EPOCH_DURATION)).div(1e18);

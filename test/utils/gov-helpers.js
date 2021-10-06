@@ -39,7 +39,10 @@ export async function castVotes(id, votes, governor) {
 
 export async function claimTokens(bablToken, voters) {
   for (const voter of voters) {
-    await bablToken.connect(voter).claimMyTokens({ gasPrice: 0 });
+    if ((await bablToken.balanceOf(voter.address)).toString() === '0') {
+      // We avoid 'not registered user error' for users that already claimed their tokens
+      await bablToken.connect(voter).claimMyTokens({ gasPrice: 0 });
+    }
     await bablToken.connect(voter).delegate(voter.address, { gasPrice: 0 });
   }
 }

@@ -280,27 +280,75 @@ describe('RewardsDistributor', function () {
 
       await executeStrategy(long, ONE_ETH);
       await finalizeStrategyAfter30Days(long);
-      expect((await long.strategyRewards()).toString()).to.be.equal('0');
+      await babController.connect(owner).enableBABLMiningProgram();
+      expect(await long.strategyRewards()).to.be.equal(0);
     });
-    it('should get 0 BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
+
+    it('should get proportional BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       // Mining program has to be enabled before the strategy is created
       await babController.connect(owner).enableBABLMiningProgram();
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
       await executeStrategy(long, ONE_ETH);
 
       await finalizeStrategyAfter30Days(long);
-
-      expect((await long.strategyRewards()).toString()).to.be.equal('0');
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+      expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
-    it('should get 0 BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+
+    it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
 
       await executeStrategy(long, ONE_ETH);
-      // Mining program has to be enabled before the strategy is created
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
       await babController.connect(owner).enableBABLMiningProgram();
-      await finalizeStrategyAfter30Days(long);
+      await rewardsDistributor.addLiveStrategies([long.address]);
 
-      expect((await long.strategyRewards()).toString()).to.be.equal('0');
+      await finalizeStrategyAfter30Days(long);
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+
+      expect(await long.strategyRewards()).to.be.gt(0);
+      expect(await long.strategyRewards()).to.be.lt(value);
+      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
+    });
+
+    it('should get proportional 66% BABL rewards if the Mining Program starts 1/3 after of an strategy execution duration', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
+
+      await executeStrategy(long, ONE_ETH);
+      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      await finalizeStrategyAfter30Days(long);
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+
+      expect(await long.strategyRewards()).to.be.gt(0);
+      expect(await long.strategyRewards()).to.be.lt(value);
+      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(2), value.div(50));
+    });
+    it('should get proportional 33% BABL rewards if the Mining Program starts 2/3 after of an strategy execution duration', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
+
+      await executeStrategy(long, ONE_ETH);
+      increaseTime(ONE_DAY_IN_SECONDS * 60);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      await finalizeStrategyAfter30Days(long);
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+
+      expect(await long.strategyRewards()).to.be.gt(0);
+      expect(await long.strategyRewards()).to.be.lt(value);
+      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(1), value.div(50));
     });
     it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
@@ -312,7 +360,29 @@ describe('RewardsDistributor', function () {
 
       await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('BAB#049');
     });
+    it('should not add the same live strategy twice', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      const block = await ethers.provider.getBlock();
+      const now = block.timestamp;
 
+      await executeStrategy(long, ONE_ETH);
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      // Mining program has to be enabled before the strategy is finished
+      await babController.connect(owner).enableBABLMiningProgram();
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      // Do nothing as strategyPrincipal > 0
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      await finalizeStrategyImmediate(long);
+      // Do nothing as is no longer a beta strategy
+      await rewardsDistributor.addLiveStrategies([long.address]);
+      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+
+      expect(await long.strategyRewards()).to.be.gt(0);
+      expect(await long.strategyRewards()).to.be.lt(value);
+      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
+    });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
       await babController.connect(owner).enableBABLMiningProgram();
