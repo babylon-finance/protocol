@@ -119,7 +119,7 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
+        require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
         ITradeIntegration(_integration).trade(
             msg.sender,
             token,
