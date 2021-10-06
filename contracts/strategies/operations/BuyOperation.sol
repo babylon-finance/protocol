@@ -22,7 +22,6 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -161,7 +160,7 @@ contract BuyOperation is Operation {
 
     function _trade(
         bytes calldata _data,
-        address, /* _integration */
+        address _integration,
         address _asset,
         uint256 _capital
     ) private {
@@ -178,7 +177,6 @@ contract BuyOperation is Operation {
                 minimum = 2;
             }
         }
-        address tradeIntegration = IBabController(controller).masterSwapper();
-        ITradeIntegration(tradeIntegration).trade(msg.sender, _asset, _capital, token, minimum);
+        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }
