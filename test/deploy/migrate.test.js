@@ -20,8 +20,8 @@ describe('migrate', function () {
 
         await distributor.connect(owner).migrateBetaUsers(garden, users);
         for (const user of users) {
-          const [, beta] = await distributor.getBetaMigration(garden.address, creator);
-          expect(beta).to.eq([true, true]);
+          const [, beta] = await distributor.getBetaMigration(garden, user);
+          expect(beta).to.eql([true, true]);
         }
       }
     });
