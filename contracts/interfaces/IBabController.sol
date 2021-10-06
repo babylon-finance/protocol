@@ -130,6 +130,13 @@ interface IBabController {
 
     function bablMiningProgramEnabled() external view returns (bool);
 
+    function setBABLShareForMiningProgram(
+        uint256 _newStrategistBABLPercentage,
+        uint256 _newStewardsBABLPercentage,
+        uint256 _newLpsBABLPercentage,
+        uint256 _newGardenCreatorBonus
+    ) external;
+
     function allowPublicGardens() external view returns (bool);
 
     function enabledOperations(uint256 _kind) external view returns (address);

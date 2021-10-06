@@ -47,7 +47,7 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
  * The supply curve is designed to optimize the long-term sustainability of the protocol.
  * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
  * For that, it houses the state of the protocol power along the time as each strategy power is compared
- * to the whole protocol usage.
+ * to the whole protocol usage as well as profits of each strategy counts.
  * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses
  * to specific profiles, which are actively contributing to the protocol growth and their communities
  * (Garden creators, Strategists and Stewards).
@@ -371,6 +371,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Set customized profit shares for a specific garden by the gardener
+     * @param _garden               Address of the garden
      * @param _strategistShare      New % of strategistShare
      * @param _stewardsShare        New % of stewardsShare
      * @param _lpShare              New % of lpShare
@@ -384,6 +385,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyController();
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
+    }
+
+    /**
+     * Change default BABL shares % by the governance
+     * @param _strategistShare      New % of BABL strategist share
+     * @param _stewardsShare        New % of BABL stewards share
+     * @param _lpShare              New % of BABL lp share
+     * @param _creatorBonus         New % of creator bonus
+     */
+    function setBABLRewards(
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare,
+        uint256 _creatorBonus
+    ) external override {
+        _onlyController();
+        BABL_STRATEGIST_SHARE = _strategistShare;
+        BABL_STEWARD_SHARE = _stewardsShare;
+        BABL_LP_SHARE = _lpShare;
+        CREATOR_BONUS = _creatorBonus;
     }
 
     /**

@@ -180,9 +180,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         stewardsProfitPercentage = 5e16;
         lpsProfitPercentage = 80e16;
 
-        strategistBABLPercentage = 8e16;
-        stewardsBABLPercentage = 17e16;
-        lpsBABLPercentage = 75e16;
+        strategistBABLPercentage = 10e16;
+        stewardsBABLPercentage = 10e16;
+        lpsBABLPercentage = 80e16;
 
         gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
@@ -314,6 +314,31 @@ contract BabController is OwnableUpgradeable, IBabController {
             bablMiningProgramEnabled = true;
             IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
         }
+    }
+
+    /**  PRIVILEGED GOVERNANCE FUNCTION. Set new % share between participants for BABL mining program
+     */
+    function setBABLShareForMiningProgram(
+        uint256 _newStrategistBABLPercentage,
+        uint256 _newStewardsBABLPercentage,
+        uint256 _newLpsBABLPercentage,
+        uint256 _newGardenCreatorBonus
+    ) external override onlyOwner {
+        require(
+            _newStrategistBABLPercentage.add(_newStewardsBABLPercentage).add(_newLpsBABLPercentage) == 1e18 &&
+                _newGardenCreatorBonus <= 1e18,
+            'new sharing % does not match'
+        );
+        strategistBABLPercentage = _newStrategistBABLPercentage;
+        stewardsBABLPercentage = _newStewardsBABLPercentage;
+        lpsBABLPercentage = _newLpsBABLPercentage;
+        gardenCreatorBonus = _newGardenCreatorBonus;
+        IRewardsDistributor(rewardsDistributor).setBABLRewards(
+            _newStrategistBABLPercentage,
+            _newStewardsBABLPercentage,
+            _newLpsBABLPercentage,
+            _newGardenCreatorBonus
+        ); // Sets the new % share at Rewards Distributor
     }
 
     /**

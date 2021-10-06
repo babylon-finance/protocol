@@ -1970,7 +1970,7 @@ describe('RewardsDistributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('37701789043050854045289', signer1BABL3.div(100));
+      expect(signer1BABL3.toString()).to.be.closeTo('40397766929011319631770', signer1BABL3.div(100));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
@@ -2038,7 +2038,7 @@ describe('RewardsDistributor', function () {
       const signer1Profit = signer1Rewards[6];
       // TODO: Add calculations of profits and BABL
       expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
-      expect(signer1BABL).to.be.closeTo('83465698586246333338582', signer1BABL.div(100));
+      expect(signer1BABL).to.be.closeTo('86260329823881224566109', signer1BABL.div(100));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {

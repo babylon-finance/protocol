@@ -645,9 +645,10 @@ describe('Garden', function () {
       await increaseTime(ONE_DAY_IN_SECONDS * 365 * 2); // Getting some unlocked tokens
       const start = NOW + 59986244;
       const end = start + 259200;
-      await expect(
-        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).toString(),
-      ).to.be.closeTo((101721964558220880).toString(), eth('0.005'));
+      await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
+        eth('0.106735951132264850'),
+        eth('0.01'),
+      );
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
