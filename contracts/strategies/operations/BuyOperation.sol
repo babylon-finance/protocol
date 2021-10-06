@@ -120,7 +120,8 @@ contract BuyOperation is Operation {
     {
         address token = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
-        ITradeIntegration(_integration).trade(
+
+        ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             msg.sender,
             token,
             ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
@@ -177,6 +178,6 @@ contract BuyOperation is Operation {
                 minimum = 2;
             }
         }
-        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
+        ITradeIntegration(IBabController(controller).masterSwapper()).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }
