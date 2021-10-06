@@ -90,7 +90,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
             path = abi.encodePacked(_sendToken, fee, _receiveToken);
         } else {
             (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
-            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
+            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_receiveToken, WETH);
             path = abi.encodePacked(_sendToken, fee0, WETH, fee1, _receiveToken);
         }
         ISwapRouter.ExactInputParams memory params =
