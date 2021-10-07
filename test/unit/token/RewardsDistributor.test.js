@@ -165,12 +165,10 @@ describe('RewardsDistributor', function () {
           // First
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = bablTokenQi[i];
@@ -178,12 +176,10 @@ describe('RewardsDistributor', function () {
           // intermediate quarters
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = rewards.add(bablTokenQi[i]);
@@ -195,12 +191,10 @@ describe('RewardsDistributor', function () {
             .mul(ONE_ETH)
             .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = rewards.add(bablTokenQi[i]);
@@ -212,21 +206,18 @@ describe('RewardsDistributor', function () {
         .mul(ONE_ETH)
         .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
       const bablTokensQ1 = powerRatio[0]
-        .mul(profit)
         .mul(bablSupplyQ1)
         .mul(timePercent)
         .div(ONE_ETH)
         .mul(ONE_ETH)
         .div(ONE_ETH)
-        .div(ONE_ETH)
         .div(ONE_ETH);
       rewards = bablTokensQ1;
     }
-
-    /* rewards = rewards.mul(40).div(100).add(rewards.mul(60).div(100).mul(profit).div(ONE_ETH));
-    if (profit > eth('1')) {
-      rewards = rewards.mul(profit).div(ONE_ETH);
-    } */
+    // Default params profitWeight = 60% and principalWeigth = 40%
+    rewards = from(rewards).mul(40).div(100).add(from(rewards).mul(60).div(100).mul(profit).div(ONE_ETH));
+    // Extra bonus based on profit (capped x2 - 200%)
+    rewards = from(rewards).mul(profit).div(ONE_ETH);
     return rewards;
   }
 
@@ -740,7 +731,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
@@ -771,7 +762,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
@@ -800,7 +791,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
 
       expect(rewardsLong1).to.be.closeTo('143814823688624358512181', rewardsLong1.div(100));
     });
@@ -1031,17 +1022,17 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14507.72');
-      const rewards2 = parse('36027.27');
-      const rewards3 = parse('103496.84');
-      const rewards4 = parse('116777.46');
-      const rewards5 = parse('146632.70');
+      const rewards1 = parse('14658.62');
+      const rewards2 = parse('36063.46');
+      const rewards3 = parse('103948.39');
+      const rewards4 = parse('117336.84');
+      const rewards5 = parse('147391.99');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('50'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('50'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('50'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('50'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('50'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.05'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.05'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.05'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -1084,17 +1075,17 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15411.51');
-      const rewards2 = parse('36084.52');
-      const rewards3 = parse('109290.88');
-      const rewards4 = parse('123369.37');
-      const rewards5 = parse('155795.75');
+      const rewards1 = parse('15871.72');
+      const rewards2 = parse('36063.46');
+      const rewards3 = parse('112550.87');
+      const rewards4 = parse('127047.27');
+      const rewards5 = parse('160959.24');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('50'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('50'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('50'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('50'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('50'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.05'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.05'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.05'));
     });
   });
 

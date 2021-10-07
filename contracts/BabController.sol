@@ -186,8 +186,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         strategistBABLPercentage = 10e16;
         stewardsBABLPercentage = 10e16;
         lpsBABLPercentage = 80e16;
-        profitWeight = 50e16;
-        principalWeight = 50e16;
+        profitWeight = 60e16;
+        principalWeight = 40e16;
 
         gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;

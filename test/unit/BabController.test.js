@@ -227,7 +227,8 @@ describe('BabController', function () {
         BABL_STEWARD_SHARE,
         BABL_LP_SHARE,
         CREATOR_BONUS,
-      ] = await babController.getBABLSharing();
+        ,
+      ] = await babController.getBABLMiningParameters();
       const BABL_STRATEGIST_SHARE_1 = eth('0.15');
       const BABL_STEWARD_SHARE_1 = eth('0.15');
       const BABL_LP_SHARE_1 = eth('0.15');
@@ -235,11 +236,13 @@ describe('BabController', function () {
       await expect(
         babController
           .connect(owner)
-          .setBABLShareForMiningProgram(
+          .setBABLMiningParameters(
             BABL_STRATEGIST_SHARE_1,
             BABL_STEWARD_SHARE_1,
             BABL_LP_SHARE_1,
             CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
           ),
       ).to.be.revertedWith('new sharing % does not match');
       const [
@@ -247,7 +250,8 @@ describe('BabController', function () {
         NEW_BABL_STEWARD_SHARE,
         NEW_BABL_LP_SHARE,
         NEW_CREATOR_BONUS,
-      ] = await babController.getBABLSharing();
+        ,
+      ] = await babController.getBABLMiningParameters();
       expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE);
       expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE);
       expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE);
@@ -259,7 +263,8 @@ describe('BabController', function () {
         BABL_STEWARD_SHARE,
         BABL_LP_SHARE,
         CREATOR_BONUS,
-      ] = await babController.getBABLSharing();
+        ,
+      ] = await babController.getBABLMiningParameters();
       const BABL_STRATEGIST_SHARE_1 = eth('0.08');
       const BABL_STEWARD_SHARE_1 = eth('0.12');
       const BABL_LP_SHARE_1 = eth('0.80');
@@ -268,11 +273,13 @@ describe('BabController', function () {
       await expect(
         babController
           .connect(owner)
-          .setBABLShareForMiningProgram(
+          .setBABLMiningParameters(
             BABL_STRATEGIST_SHARE_1,
             BABL_STEWARD_SHARE_1,
             BABL_LP_SHARE_1,
             CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
           ),
       ).not.to.be.reverted;
       const [
@@ -280,18 +287,12 @@ describe('BabController', function () {
         NEW_BABL_STEWARD_SHARE,
         NEW_BABL_LP_SHARE,
         NEW_CREATOR_BONUS,
-      ] = await babController.getBABLSharing();
+        ,
+      ] = await babController.getBABLMiningParameters();
       expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE_1);
       expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE_1);
       expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE_1);
       expect(NEW_CREATOR_BONUS).to.equal(CREATOR_BONUS_1);
-      console.log(
-        'NEW %',
-        BABL_STRATEGIST_SHARE.toString(),
-        BABL_STEWARD_SHARE.toString(),
-        BABL_LP_SHARE.toString(),
-        CREATOR_BONUS.toString(),
-      );
     });
     it('should get live strategies', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
