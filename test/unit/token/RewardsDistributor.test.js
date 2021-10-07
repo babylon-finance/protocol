@@ -289,7 +289,7 @@ describe('RewardsDistributor', function () {
 
       await finalizeStrategyAfter30Days(long);
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-      expect(await long.strategyRewards()).to.be.closeTo(value, eth('10'));
+      expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
 
     it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
