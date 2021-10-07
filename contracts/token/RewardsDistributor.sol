@@ -129,21 +129,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 public override START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
-    uint256 private BABL_STRATEGIST_SHARE;
+    uint256 private strategistBABLPercentage;
     // solhint-disable-next-line
-    uint256 private BABL_STEWARD_SHARE;
+    uint256 private stewardsBABLPercentage;
     // solhint-disable-next-line
-    uint256 private BABL_LP_SHARE;
+    uint256 private lpsBABLPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_STRATEGIST_SHARE;
+    uint256 private strategistProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_STEWARD_SHARE;
+    uint256 private stewardsProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_LP_SHARE;
+    uint256 private lpsProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_PROTOCOL_FEE;
+    uint256 private profitProtocolFee;
     // solhint-disable-next-line
-    uint256 private CREATOR_BONUS;
+    uint256 private gardenCreatorBonus;
 
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -264,8 +264,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => mapping(address => bool)) private betaUserMigrated;
     mapping(address => bool) private betaGardenMigrated;
 
-    uint256 private BABL_PROFIT_WEIGHT;
-    uint256 private BABL_PRINCIPAL_WEIGHT;
+    uint256 private bablProfitWeight;
+    uint256 private bablPrincipalWeight;
 
     /* ============ Constructor ============ */
 
@@ -275,16 +275,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         babltoken = _bablToken;
         controller = _controller;
 
-        (
-            BABL_STRATEGIST_SHARE,
-            BABL_STEWARD_SHARE,
-            BABL_LP_SHARE,
-            CREATOR_BONUS,
-            BABL_PROFIT_WEIGHT,
-            BABL_PRINCIPAL_WEIGHT
-        ) = controller.getBABLMiningParameters();
-        (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
-        PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+        profitProtocolFee = controller.protocolPerformanceFee();
+
+        strategistProfitPercentage = 10e16; // 10%
+        stewardsProfitPercentage = 5e16; // 5%
+        lpsProfitPercentage = 80e16; // 80%
+
+        strategistBABLPercentage = 10e16; // 10%
+        stewardsBABLPercentage = 10e16; // 10%
+        lpsBABLPercentage = 80e16; // 80%
+        gardenCreatorBonus = 15e16; // 15%
+
+        bablProfitWeight = 60e16; // 60%
+        bablPrincipalWeight = 40e16; // 40%
 
         status = NOT_ENTERED;
     }
@@ -403,22 +406,29 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _stewardsShare        New % of BABL stewards share
      * @param _lpShare              New % of BABL lp share
      * @param _creatorBonus         New % of creator bonus
+     * @param _profitWeight         New % of profit weigth for strategy rewards
+     * @param _principalWeight      New % of principal weigth for strategy rewards
      */
-    function setBABLRewards(
+    function setBABLMiningParameters(
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare,
         uint256 _creatorBonus,
         uint256 _profitWeight,
         uint256 _principalWeight
-    ) external override {
-        _onlyController();
-        BABL_STRATEGIST_SHARE = _strategistShare;
-        BABL_STEWARD_SHARE = _stewardsShare;
-        BABL_LP_SHARE = _lpShare;
-        CREATOR_BONUS = _creatorBonus;
-        BABL_PROFIT_WEIGHT = _profitWeight;
-        BABL_PRINCIPAL_WEIGHT = _principalWeight;
+    ) external override onlyOwner {
+        _require(
+            _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
+                _creatorBonus <= 1e18 &&
+                _profitWeight.add(_principalWeight) == 1e18,
+            Errors.INVALID_MINING_VALUES
+        );
+        strategistBABLPercentage = _strategistShare;
+        stewardsBABLPercentage = _stewardsShare;
+        lpsBABLPercentage = _lpShare;
+        gardenCreatorBonus = _creatorBonus;
+        bablProfitWeight = _profitWeight;
+        bablPrincipalWeight = _principalWeight;
     }
 
     /**
@@ -532,8 +542,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Profit weight must be higher than principal
             // profitWeight + principalWeight must always sum 1e18 (100%)
             // Backward compatible with default values (avoid division by zero in case it is not set yet)
-            uint256 profitWeight = BABL_PROFIT_WEIGHT == 0 ? 60e16 : BABL_PROFIT_WEIGHT;
-            uint256 principalWeight = BABL_PRINCIPAL_WEIGHT == 0 ? 40e16 : BABL_PRINCIPAL_WEIGHT;
+            uint256 profitWeight = bablProfitWeight == 0 ? 60e16 : bablProfitWeight;
+            uint256 principalWeight = bablPrincipalWeight == 0 ? 40e16 : bablPrincipalWeight;
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
             // Proportional to returns, it then allow extra bonus with a max cap of x2 (200%)
@@ -675,8 +685,37 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // It has customized values
             return gardenProfitSharing[_garden];
         } else {
-            return [PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE];
+            return [strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage];
         }
+    }
+
+    /**
+     * Returns the percentages of BABL Mining program
+     *
+     * @return   Strategist, Stewards, Lps, creator bonus, bablProfit weight, babl principal weigth
+     *
+     */
+    function getBABLMiningParameters()
+        external
+        view
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            strategistBABLPercentage,
+            stewardsBABLPercentage,
+            lpsBABLPercentage,
+            gardenCreatorBonus,
+            bablProfitWeight,
+            bablPrincipalWeight
+        );
     }
 
     /* ============ Internal Functions ============ */
@@ -1089,9 +1128,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(_strategistShare.add(_stewardsShare).add(_lpShare) == 95e16, Errors.PROFIT_SHARING_MISMATCH);
         // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
         if (
-            _strategistShare != PROFIT_STRATEGIST_SHARE ||
-            _stewardsShare != PROFIT_STEWARD_SHARE ||
-            _lpShare != PROFIT_LP_SHARE
+            _strategistShare != strategistProfitPercentage ||
+            _stewardsShare != stewardsProfitPercentage ||
+            _lpShare != lpsProfitPercentage
         ) {
             // Different from standard %
             gardenCustomProfitSharing[_garden] = true;
@@ -1154,7 +1193,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
             // In case of profits, the distribution of profits might substract the protocol fee beforehand:
             strategyDetails[10] = profitData[0] == true
-                ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(PROFIT_PROTOCOL_FEE))
+                ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(profitProtocolFee))
                 : 0;
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
@@ -1206,12 +1245,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (userVotes > 0 && _profitData[0] == true && _profitData[1] == true) {
             // Voting in favor of the execution of the strategy with profits and positive distance
             // Negative votes in this case will not receive BABL so we divide only by positive votes
-            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+            babl = _strategyDetails[9].multiplyDecimal(stewardsBABLPercentage).preciseMul(
                 uint256(userVotes).preciseDiv(_strategyDetails[4])
             );
         } else if (userVotes > 0 && _profitData[0] == true && _profitData[1] == false) {
             // Voting in favor positive profits but below expected return
-            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+            babl = _strategyDetails[9].multiplyDecimal(stewardsBABLPercentage).preciseMul(
                 uint256(userVotes).preciseDiv(totalVotes)
             );
             // We discount the error of expected return vs real returns
@@ -1224,7 +1263,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // to the voter (helping the protocol to only have good strategies)
             // If no profit at all, the whole steward benefit goes to those voting against
             uint256 votesAccounting = _profitData[0] ? totalVotes : _strategyDetails[5];
-            babl = _strategyDetails[9].multiplyDecimal(BABL_STEWARD_SHARE).preciseMul(
+            babl = _strategyDetails[9].multiplyDecimal(stewardsBABLPercentage).preciseMul(
                 uint256(Math.abs(userVotes)).preciseDiv(votesAccounting)
             );
 
@@ -1260,7 +1299,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
 
         uint256 profitShare =
-            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : PROFIT_STEWARD_SHARE;
+            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][1] : stewardsProfitPercentage;
         if (userVotes > 0) {
             // If the strategy got profits equal or above expected return only positive votes counts,
             // so we divide by only positive
@@ -1296,7 +1335,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
         uint256 bablCap;
-        babl = _strategyDetails[9].multiplyDecimal(BABL_STRATEGIST_SHARE); // Standard calculation to be ponderated
+        babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
         if (_profitData[0] == true && _profitData[1] == true) {
             // Strategy with equal or higher profits than expected
             bablCap = babl.mul(2); // Max cap
@@ -1324,7 +1363,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Only executes if the contributor was the strategist of the strategy
         // AND the strategy had profits
         uint256 profitShare =
-            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : PROFIT_STRATEGIST_SHARE;
+            gardenCustomProfitSharing[_garden] ? gardenProfitSharing[_garden][0] : strategistProfitPercentage;
         return _profitValue.multiplyDecimal(profitShare);
     }
 
@@ -1336,7 +1375,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorPower) private view returns (uint256) {
         uint256 babl;
         // All params must have 18 decimals precision
-        babl = _strategyRewards.multiplyDecimal(BABL_LP_SHARE).preciseMul(_contributorPower);
+        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorPower);
         return babl;
     }
 
@@ -1454,12 +1493,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If there is no creator divide the 15% bonus across al members
             return
                 _contributorBABL.add(
-                    _contributorBABL.multiplyDecimal(CREATOR_BONUS).div(IGarden(_garden).totalContributors())
+                    _contributorBABL.multiplyDecimal(gardenCreatorBonus).div(IGarden(_garden).totalContributors())
                 );
         } else {
             if (isCreator) {
                 // Check other creators and divide by number of creators or members if creator address is 0
-                return _contributorBABL.add(_contributorBABL.multiplyDecimal(CREATOR_BONUS).div(creatorCount));
+                return _contributorBABL.add(_contributorBABL.multiplyDecimal(gardenCreatorBonus).div(creatorCount));
             }
         }
         return _contributorBABL;

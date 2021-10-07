@@ -126,16 +126,16 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override treasury;
 
     // Strategy Profit Sharing
-    uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsProfitPercentage; //
+    uint256 private strategistProfitPercentage; // DEPRECATED
+    uint256 private stewardsProfitPercentage; // DEPRECATED
+    uint256 private lpsProfitPercentage; // DEPRECATED
 
     // Strategy BABL Rewards Sharing
-    uint256 public strategistBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsBABLPercentage; //
+    uint256 private strategistBABLPercentage; // DEPRECATED
+    uint256 private stewardsBABLPercentage; // DEPRECATED
+    uint256 private lpsBABLPercentage; // DEPRECATED
 
-    uint256 public gardenCreatorBonus;
+    uint256 private gardenCreatorBonus; // DEPRECATED
 
     // Assets
 
@@ -165,9 +165,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override guardianGlobalPaused;
     address public override mardukGate;
 
-    uint256 private profitWeight;
-    uint256 private principalWeight;
-
     /* ============ Constructor ============ */
 
     /**
@@ -181,17 +178,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-        strategistProfitPercentage = 10e16;
-        stewardsProfitPercentage = 5e16;
-        lpsProfitPercentage = 80e16;
 
-        strategistBABLPercentage = 10e16;
-        stewardsBABLPercentage = 10e16;
-        lpsBABLPercentage = 80e16;
-        profitWeight = 60e16;
-        principalWeight = 40e16;
-
-        gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
         gardenCreationIsOpen = false;
     }
@@ -321,38 +308,6 @@ contract BabController is OwnableUpgradeable, IBabController {
             bablMiningProgramEnabled = true;
             IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
         }
-    }
-
-    /**  PRIVILEGED GOVERNANCE FUNCTION. Set new % share between participants for BABL mining program
-     */
-    function setBABLMiningParameters(
-        uint256 _newStrategistBABLPercentage,
-        uint256 _newStewardsBABLPercentage,
-        uint256 _newLpsBABLPercentage,
-        uint256 _newGardenCreatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external override onlyOwner {
-        require(
-            _newStrategistBABLPercentage.add(_newStewardsBABLPercentage).add(_newLpsBABLPercentage) == 1e18 &&
-                _newGardenCreatorBonus <= 1e18,
-            'new sharing % does not match'
-        );
-        require(_profitWeight.add(_principalWeight) == 1e18, 'principal and profit weigth do not match');
-        strategistBABLPercentage = _newStrategistBABLPercentage;
-        stewardsBABLPercentage = _newStewardsBABLPercentage;
-        lpsBABLPercentage = _newLpsBABLPercentage;
-        gardenCreatorBonus = _newGardenCreatorBonus;
-        profitWeight = _profitWeight;
-        principalWeight = _principalWeight;
-        IRewardsDistributor(rewardsDistributor).setBABLRewards(
-            _newStrategistBABLPercentage,
-            _newStewardsBABLPercentage,
-            _newLpsBABLPercentage,
-            _newGardenCreatorBonus,
-            _profitWeight,
-            _principalWeight
-        ); // Sets the new % share at Rewards Distributor
     }
 
     /**
@@ -751,7 +706,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @return            Strategist, Stewards, Lps, creator bonus
      */
-    function getProfitSharing()
+    /*  function getProfitSharing()
         external
         view
         override
@@ -762,20 +717,18 @@ contract BabController is OwnableUpgradeable, IBabController {
         )
     {
         return (strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage);
-    }
+    } */
 
     /**
      * Returns the percentages of BABL Profit Sharing
      *
      * @return            Strategist, Stewards, Lps, creator bonus
      */
-    function getBABLMiningParameters()
+    /* function getBABLMiningParameters()
         external
         view
         override
         returns (
-            uint256,
-            uint256,
             uint256,
             uint256,
             uint256,
@@ -786,11 +739,9 @@ contract BabController is OwnableUpgradeable, IBabController {
             strategistBABLPercentage,
             stewardsBABLPercentage,
             lpsBABLPercentage,
-            gardenCreatorBonus,
-            profitWeight,
-            principalWeight
+            gardenCreatorBonus
         );
-    }
+    } */
 
     /**
      * Check if a contract address is a garden or one of the system contracts

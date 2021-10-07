@@ -255,6 +255,79 @@ describe('RewardsDistributor', function () {
     });
   });
   describe('Strategy BABL Mining Rewards Calculation', async function () {
+    it('can NOT change BABL % share if it does not sum 100%', async function () {
+      const [
+        BABL_STRATEGIST_SHARE,
+        BABL_STEWARD_SHARE,
+        BABL_LP_SHARE,
+        CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      const BABL_STRATEGIST_SHARE_1 = eth('0.15');
+      const BABL_STEWARD_SHARE_1 = eth('0.15');
+      const BABL_LP_SHARE_1 = eth('0.15');
+      const CREATOR_BONUS_1 = eth('0.15');
+      await expect(
+        rewardsDistributor
+          .connect(owner)
+          .setBABLMiningParameters(
+            BABL_STRATEGIST_SHARE_1,
+            BABL_STEWARD_SHARE_1,
+            BABL_LP_SHARE_1,
+            CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
+          ),
+      ).to.be.revertedWith('BAB#101');
+      const [
+        NEW_BABL_STRATEGIST_SHARE,
+        NEW_BABL_STEWARD_SHARE,
+        NEW_BABL_LP_SHARE,
+        NEW_CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE);
+      expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE);
+      expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE);
+      expect(NEW_CREATOR_BONUS).to.equal(CREATOR_BONUS);
+    });
+    it('can change BABL % share ', async function () {
+      const [
+        BABL_STRATEGIST_SHARE,
+        BABL_STEWARD_SHARE,
+        BABL_LP_SHARE,
+        CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      const BABL_STRATEGIST_SHARE_1 = eth('0.08');
+      const BABL_STEWARD_SHARE_1 = eth('0.12');
+      const BABL_LP_SHARE_1 = eth('0.80');
+      const CREATOR_BONUS_1 = eth('0.10');
+      expect(BABL_STRATEGIST_SHARE).to.not.be.equal(BABL_STRATEGIST_SHARE_1);
+      await expect(
+        rewardsDistributor
+          .connect(owner)
+          .setBABLMiningParameters(
+            BABL_STRATEGIST_SHARE_1,
+            BABL_STEWARD_SHARE_1,
+            BABL_LP_SHARE_1,
+            CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
+          ),
+      ).not.to.be.reverted;
+      const [
+        NEW_BABL_STRATEGIST_SHARE,
+        NEW_BABL_STEWARD_SHARE,
+        NEW_BABL_LP_SHARE,
+        NEW_CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE_1);
+      expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE_1);
+      expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE_1);
+      expect(NEW_CREATOR_BONUS).to.equal(CREATOR_BONUS_1);
+    });
     it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
       let [supply] = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(2);

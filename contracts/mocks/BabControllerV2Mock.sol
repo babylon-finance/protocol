@@ -87,16 +87,16 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     uint256 public constant MAX_COOLDOWN_PERIOD = 7 days;
 
     // Strategy Profit Sharing
-    uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsProfitPercentage; //
+    uint256 private strategistProfitPercentage; // DEPRECATED
+    uint256 private stewardsProfitPercentage; // DEPRECATED
+    uint256 private lpsProfitPercentage; // DEPRECATED
 
     // Strategy BABL Rewards Sharing
-    uint256 public strategistBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsBABLPercentage; //
+    uint256 private strategistBABLPercentage; // DEPRECATED
+    uint256 private stewardsBABLPercentage; // DEPRECATED
+    uint256 private lpsBABLPercentage; // DEPRECATED
 
-    uint256 public gardenCreatorBonus;
+    uint256 private gardenCreatorBonus; // DEPRECATED
 
     // Enable Transfer of ERC20 gardenTokens
     // Only members can transfer tokens until the protocol is fully decentralized
@@ -142,23 +142,7 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-        gardenTokensTransfersEnabled = false;
-        bablMiningProgramEnabled = false;
-        guardianGlobalPaused = false;
 
-        uniswapFactory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-
-        strategistProfitPercentage = 10e16;
-        stewardsProfitPercentage = 5e16;
-        lpsProfitPercentage = 80e16;
-
-        strategistBABLPercentage = 10e16;
-        stewardsBABLPercentage = 10e16;
-        lpsBABLPercentage = 80e16;
-        profitWeight = 50e16;
-        principalWeight = 50e16;
-
-        gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
         gardenCreationIsOpen = false;
     }

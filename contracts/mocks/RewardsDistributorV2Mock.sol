@@ -81,21 +81,21 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     uint256 public START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
-    uint256 private BABL_STRATEGIST_SHARE;
+    uint256 private strategistBABLPercentage;
     // solhint-disable-next-line
-    uint256 private BABL_STEWARD_SHARE;
+    uint256 private stewardsBABLPercentage;
     // solhint-disable-next-line
-    uint256 private BABL_LP_SHARE;
+    uint256 private lpsBABLPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_STRATEGIST_SHARE;
+    uint256 private strategistProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_STEWARD_SHARE;
+    uint256 private stewardsProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_LP_SHARE;
+    uint256 private lpsProfitPercentage;
     // solhint-disable-next-line
-    uint256 private PROFIT_PROTOCOL_FEE;
+    uint256 private profitProtocolFee;
     // solhint-disable-next-line
-    uint256 private CREATOR_BONUS;
+    uint256 private gardenCreatorBonus;
 
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -212,29 +212,30 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     mapping(address => mapping(address => bool)) private betaUserMigrated;
     mapping(address => bool) private betaGardenMigrated;
 
-    uint256 private BABL_PROFIT_WEIGHT;
-    uint256 private BABL_PRINCIPAL_WEIGHT;
+    uint256 private bablProfitWeight;
+    uint256 private bablPrincipalWeight;
 
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
-
-        _require(address(_bablToken) != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_bablToken) != address(0) && address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
         controller = _controller;
 
-        (
-            BABL_STRATEGIST_SHARE,
-            BABL_STEWARD_SHARE,
-            BABL_LP_SHARE,
-            CREATOR_BONUS,
-            BABL_PROFIT_WEIGHT,
-            BABL_PRINCIPAL_WEIGHT
-        ) = controller.getBABLMiningParameters();
-        (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
-        PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
+        profitProtocolFee = controller.protocolPerformanceFee();
+
+        strategistProfitPercentage = 10e16; // 10%
+        stewardsProfitPercentage = 5e16; // 5%
+        lpsProfitPercentage = 80e16; // 80%
+
+        strategistBABLPercentage = 10e16; // 10%
+        stewardsBABLPercentage = 10e16; // 10%
+        lpsBABLPercentage = 80e16; // 80%
+        gardenCreatorBonus = 15e16; // 15%
+
+        bablProfitWeight = 60e16; // 60%
+        bablPrincipalWeight = 40e16; // 40%
 
         status = NOT_ENTERED;
     }
