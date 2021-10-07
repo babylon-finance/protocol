@@ -685,8 +685,8 @@ describe('Garden', function () {
       await increaseTime(100);
       // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 7% of contribution power within the time period
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.082407691455993132'),
-        eth('0.02'),
+        eth('0.104717226067404400'),
+        eth('0.05'),
       );
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power (2 big deposits) ', async function () {
