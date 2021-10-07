@@ -323,7 +323,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /**  PRIVILEGED GOVERNANCE FUNCTION. Set new % share between participants for BABL mining program
      */
-    function setBABLShareForMiningProgram(
+    function setBABLMiningParameters(
         uint256 _newStrategistBABLPercentage,
         uint256 _newStewardsBABLPercentage,
         uint256 _newLpsBABLPercentage,
@@ -767,7 +767,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @return            Strategist, Stewards, Lps, creator bonus
      */
-    function getBABLSharing()
+    function getBABLMiningParameters()
         external
         view
         override

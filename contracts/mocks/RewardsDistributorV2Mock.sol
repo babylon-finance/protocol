@@ -232,7 +232,7 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
             CREATOR_BONUS,
             BABL_PROFIT_WEIGHT,
             BABL_PRINCIPAL_WEIGHT
-        ) = controller.getBABLSharing();
+        ) = controller.getBABLMiningParameters();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
 

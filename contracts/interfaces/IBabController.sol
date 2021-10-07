@@ -130,7 +130,7 @@ interface IBabController {
 
     function bablMiningProgramEnabled() external view returns (bool);
 
-    function setBABLShareForMiningProgram(
+    function setBABLMiningParameters(
         uint256 _newStrategistBABLPercentage,
         uint256 _newStewardsBABLPercentage,
         uint256 _newLpsBABLPercentage,
@@ -152,7 +152,7 @@ interface IBabController {
             uint256
         );
 
-    function getBABLSharing()
+    function getBABLMiningParameters()
         external
         view
         returns (
