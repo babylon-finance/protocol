@@ -1910,14 +1910,8 @@ describe('RewardsDistributor', function () {
       expect(signer2Profits2.toString()).to.be.equal('0');
       expect(signer2BABL2.toString()).to.be.equal('0');
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
-        signer1BABL,
-        ethers.utils.parseEther('0.005'),
-      );
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.closeTo(
-        signer2BABL,
-        ethers.utils.parseEther('0.005'),
-      );
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.05'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, ethers.utils.parseEther('0.05'));
       expect((await garden1.balanceOf(signer1.address)).toString()).to.be.equal(signer1GardenBalance);
       expect((await garden1.balanceOf(signer2.address)).toString()).to.be.equal(signer2GardenBalance);
     });
