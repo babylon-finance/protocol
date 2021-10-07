@@ -134,7 +134,9 @@ interface IBabController {
         uint256 _newStrategistBABLPercentage,
         uint256 _newStewardsBABLPercentage,
         uint256 _newLpsBABLPercentage,
-        uint256 _newGardenCreatorBonus
+        uint256 _newGardenCreatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeigth
     ) external;
 
     function allowPublicGardens() external view returns (bool);
@@ -154,6 +156,8 @@ interface IBabController {
         external
         view
         returns (
+            uint256,
+            uint256,
             uint256,
             uint256,
             uint256,

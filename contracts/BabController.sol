@@ -163,6 +163,9 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override guardianGlobalPaused;
     address public override mardukGate;
 
+    uint256 private profitWeight;
+    uint256 private principalWeight;
+
     /* ============ Constructor ============ */
 
     /**
@@ -183,6 +186,8 @@ contract BabController is OwnableUpgradeable, IBabController {
         strategistBABLPercentage = 10e16;
         stewardsBABLPercentage = 10e16;
         lpsBABLPercentage = 80e16;
+        profitWeight = 50e16;
+        principalWeight = 50e16;
 
         gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
@@ -322,22 +327,29 @@ contract BabController is OwnableUpgradeable, IBabController {
         uint256 _newStrategistBABLPercentage,
         uint256 _newStewardsBABLPercentage,
         uint256 _newLpsBABLPercentage,
-        uint256 _newGardenCreatorBonus
+        uint256 _newGardenCreatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeight
     ) external override onlyOwner {
         require(
             _newStrategistBABLPercentage.add(_newStewardsBABLPercentage).add(_newLpsBABLPercentage) == 1e18 &&
                 _newGardenCreatorBonus <= 1e18,
             'new sharing % does not match'
         );
+        require(_profitWeight.add(_principalWeight) == 1e18, 'principal and profit weigth do not match');
         strategistBABLPercentage = _newStrategistBABLPercentage;
         stewardsBABLPercentage = _newStewardsBABLPercentage;
         lpsBABLPercentage = _newLpsBABLPercentage;
         gardenCreatorBonus = _newGardenCreatorBonus;
+        profitWeight = _profitWeight;
+        principalWeight = _principalWeight;
         IRewardsDistributor(rewardsDistributor).setBABLRewards(
             _newStrategistBABLPercentage,
             _newStewardsBABLPercentage,
             _newLpsBABLPercentage,
-            _newGardenCreatorBonus
+            _newGardenCreatorBonus,
+            _profitWeight,
+            _principalWeight
         ); // Sets the new % share at Rewards Distributor
     }
 
@@ -763,10 +775,19 @@ contract BabController is OwnableUpgradeable, IBabController {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
             uint256
         )
     {
-        return (strategistBABLPercentage, stewardsBABLPercentage, lpsBABLPercentage, gardenCreatorBonus);
+        return (
+            strategistBABLPercentage,
+            stewardsBABLPercentage,
+            lpsBABLPercentage,
+            gardenCreatorBonus,
+            profitWeight,
+            principalWeight
+        );
     }
 
     /**

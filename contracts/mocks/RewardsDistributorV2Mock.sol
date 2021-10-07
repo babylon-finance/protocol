@@ -199,6 +199,22 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
     // Reentrancy guard countermeasure
     uint256 private status;
 
+    // Customized profit sharing (if any)
+    // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
+    mapping(address => uint256[3]) private gardenProfitSharing;
+    mapping(address => bool) private gardenCustomProfitSharing;
+
+    uint256 private miningUpdatedAt; // Timestamp of last strategy capital update
+    mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
+
+    // Only for beta gardens and users as they need migration into new gas-optimized data structure
+    // Boolean check to control users and garden migration into to new mapping architecture without checkpoints
+    mapping(address => mapping(address => bool)) private betaUserMigrated;
+    mapping(address => bool) private betaGardenMigrated;
+
+    uint256 private BABL_PROFIT_WEIGHT;
+    uint256 private BABL_PRINCIPAL_WEIGHT;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -209,7 +225,14 @@ contract RewardsDistributorV2Mock is OwnableUpgradeable {
         babltoken = _bablToken;
         controller = _controller;
 
-        (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
+        (
+            BABL_STRATEGIST_SHARE,
+            BABL_STEWARD_SHARE,
+            BABL_LP_SHARE,
+            CREATOR_BONUS,
+            BABL_PROFIT_WEIGHT,
+            BABL_PRINCIPAL_WEIGHT
+        ) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
 

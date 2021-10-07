@@ -122,6 +122,10 @@ contract BabControllerV2Mock is OwnableUpgradeable {
     address public guardian;
     mapping(address => bool) public guardianPaused;
     bool public guardianGlobalPaused;
+    address public mardukGate;
+
+    uint256 private profitWeight;
+    uint256 private principalWeight;
 
     bool public newVar;
 
@@ -148,9 +152,11 @@ contract BabControllerV2Mock is OwnableUpgradeable {
         stewardsProfitPercentage = 5e16;
         lpsProfitPercentage = 80e16;
 
-        strategistBABLPercentage = 8e16;
-        stewardsBABLPercentage = 17e16;
-        lpsBABLPercentage = 75e16;
+        strategistBABLPercentage = 10e16;
+        stewardsBABLPercentage = 10e16;
+        lpsBABLPercentage = 80e16;
+        profitWeight = 50e16;
+        principalWeight = 50e16;
 
         gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;

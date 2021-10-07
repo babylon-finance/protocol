@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -264,6 +263,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     mapping(address => mapping(address => bool)) private betaUserMigrated;
     mapping(address => bool) private betaGardenMigrated;
 
+    uint256 private BABL_PROFIT_WEIGHT;
+    uint256 private BABL_PRINCIPAL_WEIGHT;
+
     /* ============ Constructor ============ */
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
@@ -272,7 +274,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         babltoken = _bablToken;
         controller = _controller;
 
-        (BABL_STRATEGIST_SHARE, BABL_STEWARD_SHARE, BABL_LP_SHARE, CREATOR_BONUS) = controller.getBABLSharing();
+        (
+            BABL_STRATEGIST_SHARE,
+            BABL_STEWARD_SHARE,
+            BABL_LP_SHARE,
+            CREATOR_BONUS,
+            BABL_PROFIT_WEIGHT,
+            BABL_PRINCIPAL_WEIGHT
+        ) = controller.getBABLSharing();
         (PROFIT_STRATEGIST_SHARE, PROFIT_STEWARD_SHARE, PROFIT_LP_SHARE) = controller.getProfitSharing();
         PROFIT_PROTOCOL_FEE = controller.protocolPerformanceFee();
 
@@ -398,13 +407,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare,
-        uint256 _creatorBonus
+        uint256 _creatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeight
     ) external override {
         _onlyController();
         BABL_STRATEGIST_SHARE = _strategistShare;
         BABL_STEWARD_SHARE = _stewardsShare;
         BABL_LP_SHARE = _lpShare;
         CREATOR_BONUS = _creatorBonus;
+        BABL_PROFIT_WEIGHT = _profitWeight;
+        BABL_PRINCIPAL_WEIGHT = _principalWeight;
     }
 
     /**
@@ -514,13 +527,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                         .preciseMul(percentage);
                 rewards = rewards.add(rewardsPerQuarter);
             }
-            uint256 mantissa = uint256(18).sub(ERC20(IGarden(strategy.garden()).reserveAsset()).decimals());
-            // Babl rewards will be proportional to the total return (profits) with a max cap of x2
-            // PercentageMul must always have 18 decimals
-            uint256 percentageMul = str[1].mul(10**mantissa).preciseDiv(str[0].mul(10**mantissa));
-
-            if (percentageMul > 2e18) percentageMul = 2e18;
-            rewards = rewards.preciseMul(percentageMul);
+            // Governance has decided to have different weights for principal and profit
+            // Profit weight must be higher than principal
+            // profitWeight + principalWeight must always sum 1e18 (100%)
+            // Backward compatible with default values (avoid division by zero in case it is not set yet)
+            uint256 profitWeight = BABL_PROFIT_WEIGHT == 0 ? 60e16 : BABL_PROFIT_WEIGHT;
+            uint256 principalWeight = BABL_PRINCIPAL_WEIGHT == 0 ? 40e16 : BABL_PRINCIPAL_WEIGHT;
+            // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
+            uint256 percentageProfit = str[1].preciseDiv(str[0]);
+            // Proportional to returns, it then allow extra bonus with a max cap of x2 (200%)
+            if (percentageProfit > 2e18) percentageProfit = 2e18;
+            rewards = rewards.preciseMul(principalWeight).add(
+                rewards.preciseMul(profitWeight).preciseMul(percentageProfit)
+            );
+            // Extra bonus proportional to the profit (or penalty if has losses)
+            rewards = rewards.preciseMul(percentageProfit);
             return Safe3296.safe96(rewards, 'overflow 96 bits');
         } else {
             return 0;

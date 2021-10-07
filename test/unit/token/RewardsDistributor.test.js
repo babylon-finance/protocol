@@ -223,6 +223,10 @@ describe('RewardsDistributor', function () {
       rewards = bablTokensQ1;
     }
 
+    /* rewards = rewards.mul(40).div(100).add(rewards.mul(60).div(100).mul(profit).div(ONE_ETH));
+    if (profit > eth('1')) {
+      rewards = rewards.mul(profit).div(ONE_ETH);
+    } */
     return rewards;
   }
 
@@ -294,7 +298,7 @@ describe('RewardsDistributor', function () {
 
       await finalizeStrategyAfter30Days(long);
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-      expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
+      expect(await long.strategyRewards()).to.be.closeTo(value, eth('10'));
     });
 
     it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
@@ -412,7 +416,7 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should calculate correct BABL in an active strategy that was unwind before finishing (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -444,7 +448,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewards = await strategyContract.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter but crossing edges (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -472,7 +476,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
@@ -499,7 +503,7 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should not count malicious injected profit in BABL rewards calculation in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -531,7 +535,7 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
@@ -736,7 +740,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
@@ -767,7 +771,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
@@ -796,7 +800,7 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('50'));
 
       expect(rewardsLong1).to.be.closeTo('143814823688624358512181', rewardsLong1.div(100));
     });
@@ -1033,11 +1037,11 @@ describe('RewardsDistributor', function () {
       const rewards4 = parse('116777.46');
       const rewards5 = parse('146632.70');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, rewards1.div(50));
-      expect(rewardsLong2).to.be.closeTo(rewards2, rewards2.div(50));
-      expect(rewardsLong3).to.be.closeTo(rewards3, rewards3.div(50));
-      expect(rewardsLong4).to.be.closeTo(rewards4, rewards4.div(50));
-      expect(rewardsLong5).to.be.closeTo(rewards5, rewards5.div(50));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('50'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('50'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('50'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('50'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('50'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -1086,11 +1090,11 @@ describe('RewardsDistributor', function () {
       const rewards4 = parse('123369.37');
       const rewards5 = parse('155795.75');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, rewards1.div(50));
-      expect(rewardsLong2).to.be.closeTo(rewards2, rewards2.div(50));
-      expect(rewardsLong3).to.be.closeTo(rewards3, rewards3.div(50));
-      expect(rewardsLong4).to.be.closeTo(rewards4, rewards4.div(50));
-      expect(rewardsLong5).to.be.closeTo(rewards5, rewards5.div(50));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('50'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('50'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('50'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('50'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('50'));
     });
   });
 
@@ -2038,7 +2042,7 @@ describe('RewardsDistributor', function () {
       const signer1Profit = signer1Rewards[6];
       // TODO: Add calculations of profits and BABL
       expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
-      expect(signer1BABL).to.be.closeTo('86260329823881224566109', signer1BABL.div(100));
+      expect(signer1BABL).to.be.closeTo('88996959737860185934332', signer1BABL.div(100));
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
