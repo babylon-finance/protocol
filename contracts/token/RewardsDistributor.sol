@@ -284,7 +284,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         strategistBABLPercentage = 10e16; // 10%
         stewardsBABLPercentage = 10e16; // 10%
         lpsBABLPercentage = 80e16; // 80%
-        gardenCreatorBonus = 15e16; // 15%
+        gardenCreatorBonus = 10e16; // 10%
 
         bablProfitWeight = 60e16; // 60%
         bablPrincipalWeight = 40e16; // 40%
