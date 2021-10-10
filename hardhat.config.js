@@ -27,7 +27,9 @@ require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
+require('./lib/tasks/migrate-users');
 require('./lib/tasks/tvl');
+require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/strategy-expire');
 
@@ -75,7 +77,7 @@ module.exports = {
     },
     mainnet: {
       chainId: CHAIN_IDS.mainnet,
-      url: 'https://nameless-polished-dawn.quiknode.pro/1c4b67dd2b4a57754e6b6dc0e5f81e5c457f399f/',
+      url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`, `0x${OWNER_PRIVATE_KEY}`],
       saveDeployments: true,
     },

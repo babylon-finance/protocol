@@ -286,4 +286,6 @@ library Errors {
     uint256 internal constant NO_PRICE_FOR_TRADE = 98;
     // Max capital requested
     uint256 internal constant ZERO_CAPITAL_REQUESTED = 99;
+    // Unwind capital above the limit
+    uint256 internal constant INVALID_CAPITAL_TO_UNWIND = 100;
 }

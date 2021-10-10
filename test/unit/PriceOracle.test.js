@@ -12,6 +12,12 @@ const tokens = [
     value: parse('445.4663380'),
   },
   {
+    name: 'CRV->LDO',
+    tokenIn: addresses.tokens.CRV,
+    tokenOut: '0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32',
+    value: parse('8.909326760000000000'),
+  },
+  {
     name: 'USDC->DPI',
     tokenIn: addresses.tokens.USDC,
     tokenOut: addresses.tokens.DPI,
