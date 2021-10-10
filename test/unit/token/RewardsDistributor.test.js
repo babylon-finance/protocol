@@ -1243,6 +1243,119 @@ describe('RewardsDistributor', function () {
       expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
       expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
     });
+    it('should NOT get BABL rewards in a claim if it is not a contributor', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#015');
+
+      expect(await bablToken.balanceOf(signer3.address)).to.equal(0);
+    });
+    it('should get (little) BABL rewards despite the user joined after the strategy execution (must join before strategy is exited anyway)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+
+      await depositFunds(token, garden1);
+
+      await finalizeStrategyAfterQuarter(long1);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      await expect(rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address])).to.be.not.reverted;
+      const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long1.address]);
+      const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
+
+      await garden1.connect(signer3).claimReturns([long1.address]);
+      await garden1.connect(signer1).claimReturns([long1.address]);
+      const balanceSigner1 = await bablToken.balanceOf(signer1.address);
+      const balanceSigner3 = await bablToken.balanceOf(signer3.address);
+      expect(balanceSigner1).to.be.gt(0);
+      expect(balanceSigner3).to.be.gt(0);
+      expect(balanceSigner1).to.be.gt(balanceSigner3);
+      expect(rewardsSigner1[4]).to.be.gt(rewardsSigner3[4].mul(3));
+      expect(balanceSigner1).to.be.gt(balanceSigner3.mul(4));
+    });
+    it('should NOT get BABL rewards if the user joined after the strategy exited', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+
+      await finalizeStrategyAfterQuarter(long1);
+      // still not contributor, becoming contributor
+      await depositFunds(token, garden1);
+
+      // It is already a contributor but get no rewards as he joined after the strategy exited
+      await expect(rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address])).to.be.not.reverted;
+      const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
+      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#082');
+      const balanceSigner3 = await bablToken.balanceOf(signer3.address);
+
+      expect(balanceSigner3).to.equal(0);
+      expect(rewardsSigner3[0]).to.equal(0);
+      expect(rewardsSigner3[1]).to.equal(0);
+      expect(rewardsSigner3[2]).to.equal(0);
+      expect(rewardsSigner3[3]).to.equal(0);
+      expect(rewardsSigner3[4]).to.equal(0);
+      expect(rewardsSigner3[5]).to.equal(0);
+      expect(rewardsSigner3[6]).to.equal(0);
+    });
+    it('should only get BABL rewards of one strategy out of 2 depending on deposit before/after strategy end', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+      await babController.connect(owner).enableBABLMiningProgram();
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+
+      await finalizeStrategyAfterQuarter(long1);
+      await depositFunds(token, garden1);
+      await finalizeStrategyAfterQuarter(long2);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      const rewards1Signer3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const rewards2Signer3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long2.address]);
+      // long1 does not provide rewards to signer3
+      expect(rewards1Signer3[0]).to.equal(rewards2Signer3[0]);
+      expect(rewards1Signer3[1]).to.equal(rewards2Signer3[1]);
+      expect(rewards1Signer3[2]).to.equal(rewards2Signer3[2]);
+      expect(rewards1Signer3[3]).to.equal(rewards2Signer3[3]);
+      expect(rewards1Signer3[4]).to.equal(rewards2Signer3[4]);
+      expect(rewards1Signer3[5]).to.equal(rewards2Signer3[5]);
+      expect(rewards1Signer3[6]).to.equal(rewards2Signer3[6]);
+      expect(rewards1Signer3[5]).to.be.gt(0);
+      expect(rewards1Signer3[6]).to.equal(0); // get no profit rewards as it was not able to vote or be the strategist
+    });
 
     it('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI

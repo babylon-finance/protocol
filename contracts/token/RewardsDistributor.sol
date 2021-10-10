@@ -1190,7 +1190,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[1]: distance
 
         // Positive strategies not yet claimed
-        if (strategyDetails[1] > _claimedAt && strategyDetails[0] >= _initialDepositAt) {
+        // Users might get BABL rewards if they join the garden before the strategy ends
+        // Contributor power will check their exact contribution (avoiding flashloans)
+        if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // In case of profits, the distribution of profits might substract the protocol fee beforehand:
             strategyDetails[10] = profitData[0] == true
                 ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(profitProtocolFee))
