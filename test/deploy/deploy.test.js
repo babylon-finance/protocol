@@ -60,7 +60,7 @@ describe('deploy', function () {
       ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
-    it.skip('can finalize all active strategies', async () => {
+    it.only('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
