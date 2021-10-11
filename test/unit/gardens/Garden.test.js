@@ -30,7 +30,15 @@ const {
   injectFakeProfits,
 } = require('fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
+const {
+  createGarden,
+  getDepositSigHash,
+  getDepositSig,
+  getWithdrawSig,
+  getWithdrawSigHash,
+  transferFunds,
+  depositFunds,
+} = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
@@ -44,7 +52,7 @@ async function createWallets(number) {
   return walletAddresses;
 }
 
-describe('Garden', function () {
+describe.only('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -1385,6 +1393,7 @@ describe('Garden', function () {
       const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
       await garden
         .connect(keeper)
         .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
