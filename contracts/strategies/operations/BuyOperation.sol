@@ -119,7 +119,7 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,
             ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
