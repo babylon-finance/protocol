@@ -22,6 +22,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -107,7 +108,7 @@ contract BuyOperation is Operation {
         uint256 _percentage,
         bytes calldata _data,
         IGarden _garden,
-        address _integration
+        address /* _integration */
     )
         external
         override
@@ -119,14 +120,8 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
-        ITradeIntegration(_integration).trade(
-            msg.sender,
-            token,
-            ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset(),
-            2 // TO be able to get back an univ2. Univ2 checks more than 1
-        );
+        require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
+        _tradeOut(token, _garden, _percentage);
         return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
@@ -158,12 +153,25 @@ contract BuyOperation is Operation {
 
     /* Private Function */
 
+    function _tradeOut(address _token, address _garden, uint256 _percentage) private {
+      address tradeIntegration = IBabController(controller).masterSwapper();
+      ITradeIntegration(tradeIntegration).trade(
+          msg.sender,
+          _token,
+          ERC20(_token).balanceOf(address(msg.sender)).preciseMul(_percentage),
+          _garden.reserveAsset(),
+          2 // TO be able to get back an univ2. Univ2 checks more than 1
+      );
+    }
+
     function _trade(
         bytes calldata _data,
-        address _integration,
+        address /* _integration */,
         address _asset,
         uint256 _capital
     ) private {
+        address tradeIntegration = IBabController(controller).masterSwapper();
+
         (address token, uint256 minimumPerBigUnit) = BytesLib.decodeOpDataAddressAndUint(_data);
         uint256 minimum = 0;
         if (minimumPerBigUnit > 0) {
@@ -177,6 +185,6 @@ contract BuyOperation is Operation {
                 minimum = 2;
             }
         }
-        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
+        ITradeIntegration(tradeIntegration).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }
