@@ -977,7 +977,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[2] = block.timestamp.sub(miningUpdatedAt);
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[data[1]];
         data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal.mul(data[2]);
-        if (!isProtocolPerQuarter[data[1].sub(1)]) {
+        if (!isProtocolPerQuarter[data[1]]) {
             // The quarter is not initialized yet, we then create it
             if (miningUpdatedAt > 0) {
                 // A new epoch has started with either a new strategy execution or finalization checkpoint
@@ -1021,7 +1021,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     }
                 }
             }
-            isProtocolPerQuarter[data[1].sub(1)] = true;
+            isProtocolPerQuarter[data[1]] = true;
         } else {
             // Quarter checkpoint already created
             // We update the power of the quarter by adding the new difference between last quarter
