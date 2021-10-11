@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -144,6 +145,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         address _tokenOut,
         uint256 _minAmountOut
     ) external override nonReentrant onlySystemContract {
+        console.log('in exit investment');
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         _validatePreExitInvestmentData(investmentInfo);
@@ -153,6 +155,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1);
 
         if (targetAddressP != address(0)) {
+            console.log('pre action');
             // Approve spending of the pre action token
             if (_preActionNeedsApproval()) {
                 investmentInfo.strategy.invokeApprove(
@@ -166,7 +169,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             _investmentAddress = _getAssetAfterExitPreAction(_investmentAddress);
             _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
-
+        console.log('before approve', _getSpender(_investmentAddress, 1), _investmentTokenIn);
         // Approve spending of the investment token
         investmentInfo.strategy.invokeApprove(
             _getSpender(_investmentAddress, 1),
@@ -175,9 +178,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         );
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
-        investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
-        _validatePostExitInvestmentData(investmentInfo);
+        console.log('after approve', targetInvestment, callValue);
 
+        investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+        console.log('after invoke');
+        _validatePostExitInvestmentData(investmentInfo);
         emit InvestmentExited(
             address(investmentInfo.garden),
             address(investmentInfo.strategy),

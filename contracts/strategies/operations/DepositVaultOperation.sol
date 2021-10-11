@@ -20,7 +20,7 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-
+import 'hardhat/console.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
@@ -165,7 +165,9 @@ contract DepositVaultOperation is Operation {
                     10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                 )
             );
-        IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        console.log('exit deposit', vaultAsset, amountVault, minAmount);
+        IPassiveIntegration(0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        console.log('after exit');
         return (
             vaultAsset,
             vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,

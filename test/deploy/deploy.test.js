@@ -21,38 +21,47 @@ describe('deploy', function () {
   let gardensNAV;
 
   async function canFinalizeAllActiveStrategies() {
-    for (const garden of gardens) {
-      const gardenContract = await ethers.getContractAt('Garden', garden);
-      console.log(`${await gardenContract.name()}`);
+    // for (const garden of gardens) {
+    // const gardenContract = await ethers.getContractAt('Garden', garden);
+    // console.log(`${await gardenContract.name()}`);
+    // Fixes: 0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C
 
-      const strategies = await gardenContract.getStrategies();
-      for (const strategy of strategies) {
-        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-        const isExecuting = await strategyContract.isStrategyActive();
-        const name = await strategyNft.getStrategyName(strategy);
+    const strategies = [
+      '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
+      // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
+      // '0x3FeaD42999D537477CE39335aA7b4951e8e78233',
+      // '0x9D78319EDA31663B487204F0CA88A046e742eE16',
+      // '0x4f85dD417d19058cA81564f41572fb90D2F7e935',
+      // '0xFDeA6F30F3dadD60382bAA07252923Ff6007c35d',
+      // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11',
+      // '0x9f794DD83E2C815158Fc290c3c2b20f8B6605746',
+    ];
+    for (const strategy of strategies) {
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const isExecuting = await strategyContract.isStrategyActive();
+      const name = await strategyNft.getStrategyName(strategy);
 
-        if (!isExecuting) {
-          console.log(`Strategy ${name} ${strategyContract.address} is not active.`);
-          continue;
-        }
+      if (!isExecuting) {
+        console.log(`Strategy ${name} ${strategyContract.address} is not active.`);
+        continue;
+      }
 
-        console.log(`Finalizing strategy ${name} ${strategyContract.address}`);
+      console.log(`Finalizing strategy ${name} ${strategyContract.address}`);
 
-        await increaseTime(ONE_DAY_IN_SECONDS * 360);
+      await increaseTime(ONE_DAY_IN_SECONDS * 360);
 
-        try {
-          await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      try {
+        await strategyContract.connect(keeper).finalizeStrategy(0, '');
+        const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
-          const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
-
-          expect(active).eq(false);
-          expect(finalized).eq(true);
-          expect(exitedAt).gt(0);
-        } catch (e) {
-          console.log(`failed to finalize strategy ${e}`);
-        }
+        expect(active).eq(false);
+        expect(finalized).eq(true);
+        expect(exitedAt).gt(0);
+      } catch (error) {
+        console.error(error.toString());
       }
     }
+    // }
   }
 
   describe('before deployment', function () {
@@ -60,7 +69,7 @@ describe('deploy', function () {
       ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it.skip('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
@@ -86,7 +95,7 @@ describe('deploy', function () {
       }
     });
 
-    it.skip('can finalize all active strategies', async () => {
+    it.only('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });

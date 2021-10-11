@@ -17,6 +17,7 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -120,7 +121,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
         }
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
-        _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
+        // _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
     }
 
     function _onlyUnpaused() private view {
@@ -819,7 +820,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address assetFinalized = garden.reserveAsset();
         uint256 capitalPending;
         uint8 assetStatus;
+        console.log('exit strategy');
         for (uint256 i = opTypes.length; i > 0; i--) {
+            console.log('exit op', opTypes[i - 1], opIntegrations[i - 1]);
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
