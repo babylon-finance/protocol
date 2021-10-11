@@ -183,7 +183,7 @@ async function transferFunds(address) {
   }
 }
 
-async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
+function getDepositSigHash(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(
       'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)',
@@ -195,13 +195,17 @@ async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, no
     [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, mintNft, nonce, maxFee],
   );
 
-  let payloadHash = ethers.utils.keccak256(payload);
+  return ethers.utils.keccak256(payload);
+}
+
+async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
+  let payloadHash = getDepositSigHash(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee);
 
   let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
   return ethers.utils.splitSignature(signature);
 }
 
-async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
+function getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)'),
   );
@@ -211,7 +215,11 @@ async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, max
     [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce, maxFee],
   );
 
-  let payloadHash = ethers.utils.keccak256(payload);
+  return ethers.utils.keccak256(payload);
+}
+
+async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
+  let payloadHash = getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFee);
 
   let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
   return ethers.utils.splitSignature(signature);
@@ -222,5 +230,7 @@ module.exports = {
   depositFunds,
   transferFunds,
   getDepositSig,
+  getDepositSigHash,
   getWithdrawSig,
+  getWithdrawSigHash,
 };

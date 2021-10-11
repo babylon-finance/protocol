@@ -30,7 +30,15 @@ const {
   injectFakeProfits,
 } = require('fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
+const {
+  createGarden,
+  getDepositSigHash,
+  getDepositSig,
+  getWithdrawSig,
+  getWithdrawSigHash,
+  transferFunds,
+  depositFunds,
+} = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
@@ -583,7 +591,7 @@ describe('Garden', function () {
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, value.add(10)),
       ).to.be.closeTo(from('12999914174545925'), eth(0.06));
     });
-    it('the contributor power is calculated correctly if _from and _to are between two deposits', async function () {
+    it('the contributor power is calculated correctly if time is between two deposits', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
@@ -593,7 +601,7 @@ describe('Garden', function () {
       });
       await increaseTime(1000);
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, NOW)).to.be.closeTo(
-        from('223358366622324742'),
+        from('285952518518305888'),
         eth('0.06'),
       );
     });
@@ -1385,6 +1393,7 @@ describe('Garden', function () {
       const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
       await garden
         .connect(keeper)
         .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
