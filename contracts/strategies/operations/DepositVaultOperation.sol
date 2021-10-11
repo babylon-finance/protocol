@@ -165,8 +165,9 @@ contract DepositVaultOperation is Operation {
                     10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                 )
             );
+        console.log('_integration', _integration);
         console.log('exit deposit', vaultAsset, amountVault, minAmount);
-        IPassiveIntegration(0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        IPassiveIntegration(0xDcCDf2D78239aBB788aD728D63ac45d90dEfe24A).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         console.log('after exit');
         return (
             vaultAsset,

@@ -27,8 +27,8 @@ describe('deploy', function () {
     // Fixes: 0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C
 
     const strategies = [
-      '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
-      // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
+      // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
+      '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
       // '0x3FeaD42999D537477CE39335aA7b4951e8e78233',
       // '0x9D78319EDA31663B487204F0CA88A046e742eE16',
       // '0x4f85dD417d19058cA81564f41572fb90D2F7e935',
@@ -50,16 +50,12 @@ describe('deploy', function () {
 
       await increaseTime(ONE_DAY_IN_SECONDS * 360);
 
-      try {
-        await strategyContract.connect(keeper).finalizeStrategy(0, '');
-        const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
+      await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
-        expect(active).eq(false);
-        expect(finalized).eq(true);
-        expect(exitedAt).gt(0);
-      } catch (error) {
-        console.error(error.toString());
-      }
+      expect(active).eq(false);
+      expect(finalized).eq(true);
+      expect(exitedAt).gt(0);
     }
     // }
   }

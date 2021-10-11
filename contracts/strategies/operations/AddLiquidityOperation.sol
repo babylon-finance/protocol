@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -138,6 +139,7 @@ contract AddLiquidityOperation is Operation {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =
             IERC20(IPoolIntegration(_integration).getLPToken(pool)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+        console.log('lpTokens', lpTokens);
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,

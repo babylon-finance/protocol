@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -132,6 +133,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         uint256[] calldata _minAmountsOut
     ) external override nonReentrant onlySystemContract {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        console.log('pool tokens in', _poolTokensIn);
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token

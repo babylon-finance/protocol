@@ -123,7 +123,7 @@ contract BuyOperation is Operation {
         require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
           token,
-          IERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
+          ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
           _garden.reserveAsset()
         );
         return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
