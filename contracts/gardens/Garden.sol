@@ -152,7 +152,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Contributors
     mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
-    uint256 public override maxContributors;
+    uint256 private maxContributors; // DEPRECATED
     uint256 public override maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
@@ -831,11 +831,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.DURATION_RANGE
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
-        _require(
-            _maxContributors > 0 && _maxContributors <= IBabController(controller).maxContributorsPerGarden(),
-            Errors.MAX_CONTRIBUTORS_SET
-        );
-        maxContributors = _maxContributors;
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;
@@ -913,7 +908,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
-        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
@@ -1005,7 +999,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-            _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }

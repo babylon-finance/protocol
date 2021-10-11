@@ -158,7 +158,7 @@ contract BabylonViewer {
             [
                 garden.depositHardlock(),
                 garden.minVotesQuorum(),
-                garden.maxContributors(),
+                0,
                 garden.maxDepositLimit(),
                 garden.minVoters(),
                 garden.minStrategyDuration(),
