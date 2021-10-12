@@ -49,36 +49,27 @@ describe('UniswapV3TradeIntegration', function () {
             specificParams: [asset, 0],
             garden: garden1,
           });
-          // Workaround for a pool DAI/WBTC which has no liquidity at this block
-          if (
-            (token === addresses.tokens.DAI || token === addresses.tokens.WBTC) &&
-            (asset === addresses.tokens.DAI || asset === addresses.tokens.WBTC)
-          ) {
-            // Not enough liquidity at pool https://info.uniswap.org/#/pools/0x391e8501b626c623d39474afca6f9e46c2686649
-            await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
-          } else {
-            await executeStrategy(strategyContract);
-            const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
+          await executeStrategy(strategyContract);
+          const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, asset);
 
-            const assetDecimals = await assetContract.decimals();
-            const assetDecimalsDelta = 10 ** (18 - assetDecimals);
+          const assetDecimals = await assetContract.decimals();
+          const assetDecimalsDelta = 10 ** (18 - assetDecimals);
 
-            const tokenDecimals = await tokenContract.decimals();
-            const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
+          const tokenDecimals = await tokenContract.decimals();
+          const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
 
-            const assetBalance = await assetContract.balanceOf(strategyContract.address);
-            const expectedBalance = tokenPriceInAsset
-              .mul(tokenDecimalsDelta)
-              .mul(STRATEGY_EXECUTE_MAP[token])
-              .div(eth())
-              .div(assetDecimalsDelta);
+          const assetBalance = await assetContract.balanceOf(strategyContract.address);
+          const expectedBalance = tokenPriceInAsset
+            .mul(tokenDecimalsDelta)
+            .mul(STRATEGY_EXECUTE_MAP[token])
+            .div(eth())
+            .div(assetDecimalsDelta);
 
-            expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
+          expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
 
-            await finalizeStrategy(strategyContract, 0);
+          await finalizeStrategy(strategyContract, 0);
 
-            expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
-          }
+          expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
         });
       });
     });
