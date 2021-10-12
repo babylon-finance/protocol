@@ -91,30 +91,4 @@ describe('UniswapV2TradeIntegration', function () {
       });
     });
   });
-
-  describe('fails to execute without min amount', function () {
-    it(`exchange fails with minAmount as 0`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
-      const strategyContract = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        integrations: univ2TradeIntegration.address,
-        garden: garden,
-        specificParams: [addresses.tokens.DAI, 0],
-      });
-      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
-    });
-    it(`exchange fails with minAmount as 1`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
-
-      const strategyContract = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        integrations: univ2TradeIntegration.address,
-        garden: garden,
-        specificParams: [addresses.tokens.DAI, 1],
-      });
-      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
-    });
-  });
 });
