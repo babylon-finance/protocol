@@ -20,6 +20,78 @@ describe('deploy', function () {
   let valuer;
   let gardensNAV;
 
+  async function canUnwindAllActiveStrategies() {
+    for (const garden of gardens) {
+      const gardenContract = await ethers.getContractAt('Garden', garden);
+      console.log(`${await gardenContract.name()}`);
+
+      const reserveAsset = await gardenContract.reserveAsset();
+
+      const strategies = await gardenContract.getStrategies();
+      for (const strategy of strategies) {
+        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+        const isExecuting = await strategyContract.isStrategyActive();
+        const name = await strategyNft.getStrategyName(strategy);
+
+        if (!isExecuting) {
+          console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
+          continue;
+        }
+
+        console.log(`  Unwinding capital ${name} ${strategyContract.address}`);
+
+        try {
+          const capital = reserveAsset === addresses.tokens.DAI ? eth(3000) : eth(1);
+          await strategyContract.connect(owner).unwindStrategy(capital);
+
+          const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
+
+          expect(active).eq(true);
+          expect(finalized).eq(false);
+          expect(exitedAt).eq(0);
+        } catch (e) {
+          console.log(`  failed to unwind capital ${e}`);
+        }
+      }
+    }
+  }
+
+  async function canAllocateCapitalToAllActiveStrategies() {
+    for (const garden of gardens) {
+      const gardenContract = await ethers.getContractAt('Garden', garden);
+      console.log(`${await gardenContract.name()}`);
+
+      const reserveAsset = await gardenContract.reserveAsset();
+
+      const strategies = await gardenContract.getStrategies();
+      for (const strategy of strategies) {
+        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+        const isExecuting = await strategyContract.isStrategyActive();
+        const name = await strategyNft.getStrategyName(strategy);
+
+        if (!isExecuting) {
+          console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
+          continue;
+        }
+
+        console.log(`  Adding capital to the strategy ${name} ${strategyContract.address}`);
+
+        try {
+          const capital = reserveAsset === addresses.tokens.DAI ? eth(3000) : eth(1);
+          await strategyContract.connect(keeper).executeStrategy(capital, 1);
+
+          const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
+
+          expect(active).eq(true);
+          expect(finalized).eq(false);
+          expect(exitedAt).eq(0);
+        } catch (e) {
+          console.log(`  failed to allocate capital to the strategy ${e}`);
+        }
+      }
+    }
+  }
+
   async function canFinalizeAllActiveStrategies() {
     for (const garden of gardens) {
       const gardenContract = await ethers.getContractAt('Garden', garden);
@@ -32,16 +104,15 @@ describe('deploy', function () {
         const name = await strategyNft.getStrategyName(strategy);
 
         if (!isExecuting) {
-          console.log(`Strategy ${name} ${strategyContract.address} is not active.`);
+          console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
           continue;
         }
 
-        console.log(`Finalizing strategy ${name} ${strategyContract.address}`);
-
-        await increaseTime(ONE_DAY_IN_SECONDS * 360);
+        console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
+        await strategyContract.connect(owner).changeStrategyDuration(1);
 
         try {
-          await strategyContract.connect(keeper).finalizeStrategy(0, '');
+          await strategyContract.connect(keeper).finalizeStrategy(1, '');
 
           const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
@@ -60,12 +131,19 @@ describe('deploy', function () {
       ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
-    it.skip('can finalize all active strategies', async () => {
+    it('can unwind all active strategies', async () => {
+      await canUnwindAllActiveStrategies();
+    });
+
+    it('can allocate all active strategies', async () => {
+      await canAllocateCapitalToAllActiveStrategies();
+    });
+
+    it.only('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
 
-  // TODO: Check that NAV is not changed after deploy
   // TODO: Check that users can deposit/withdraw to all gardens
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
