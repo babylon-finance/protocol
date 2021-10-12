@@ -15,5 +15,8 @@ interface IBasicRewards {
 
     function rewardToken() external view returns (address);
 
+    function withdrawAllAndUnwrap(bool claim) external;
+    function withdrawAll(bool claim) external;
+
     function extraRewards(uint256 _index) external view returns (address);
 }

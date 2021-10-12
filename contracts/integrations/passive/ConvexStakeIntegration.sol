@@ -161,6 +161,40 @@ contract ConvexStakeIntegration is PassiveIntegration {
     }
 
     /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _borrowOp                Type of Borrow op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address _asset,
+        uint256  /* _amount */,
+        uint256 _depositOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_depositOp == 1) {
+          bytes memory methodData = abi.encodeWithSignature('withdrawAll(bool)', true);
+          // Go through the reward pool instead of the booster
+          console.log('in pre exit', _getRewardPool(_asset), _asset);
+          return (_getRewardPool(_asset), 0, methodData);
+        }
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
      * Return exit investment calldata which is already generated from the investment API
      *
      * hparam  _strategy                       Address of the strategy
@@ -189,11 +223,13 @@ contract ConvexStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
+        (bool found, uint256 pid) = getPid(_asset);
+        require(found, 'Convex pool does not exist');
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true);
+        bytes memory methodData = abi.encodeWithSignature('withdrawAll(uint256)', pid);
         // Go through the reward pool instead of the booster
-        console.log('in exit', _getRewardPool(_asset), _asset);
-        return (_getRewardPool(_asset), 0, methodData);
+        console.log('in exit', pid);
+        return (address(booster), 0, methodData);
     }
 
     function _getRewardPool(address _asset) private view returns (address reward) {

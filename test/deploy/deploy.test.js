@@ -50,12 +50,17 @@ describe('deploy', function () {
 
       await increaseTime(ONE_DAY_IN_SECONDS * 360);
 
-      await strategyContract.connect(keeper).finalizeStrategy(0, '');
-      const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
-
-      expect(active).eq(false);
-      expect(finalized).eq(true);
-      expect(exitedAt).gt(0);
+      const strategyC = await impersonateAddress(strategy);
+      const rewards = await ethers.getContractAt('IBasicRewards', '0x0A760466E1B4621579a82a39CB56Dda2F4E70f03', owner);
+      const booster = await ethers.getContractAt('IBooster', '0xf403c135812408bfbe8713b5a23a04b3d48aae31', owner);
+      await rewards.connect(strategyC).withdrawAll(true, { gasPrice: 0 });
+      await booster.connect(strategyC).withdrawAll(25, { gasPrice: 0 });
+      //
+      // await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      // const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
+      // expect(active).eq(false);
+      // expect(finalized).eq(true);
+      // expect(exitedAt).gt(0);
     }
     // }
   }
