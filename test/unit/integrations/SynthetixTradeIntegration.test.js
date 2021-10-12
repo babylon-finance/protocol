@@ -9,7 +9,7 @@ const { getStrategy, executeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe('SynthetixTradeIntegration', function () {
+describe.only('SynthetixTradeIntegration', function () {
   let synthetixTradeIntegration;
   let priceOracle;
   let owner;
@@ -23,19 +23,6 @@ describe('SynthetixTradeIntegration', function () {
   });
 
   describe('exchanges synthetic assets', function () {
-    it(`cannot exchange between non synths (except DAI & synth)`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
-
-      const strategyContract = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        integrations: synthetixTradeIntegration.address,
-        garden: garden,
-        specificParams: [addresses.tokens.sUSD, 0],
-      });
-      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Syntetix needs synth or DAI or USDC');
-    });
-
     // Synthetix from WETH garden
     [
       {

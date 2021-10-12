@@ -9,8 +9,7 @@ const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/Str
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe('UniswapV2TradeIntegration', function () {
-  let univ2TradeIntegration;
+describe('UniswapV2TradeIntegration', function () { let univ2TradeIntegration;
   let priceOracle;
   let owner;
   let signer1;
@@ -89,32 +88,6 @@ describe('UniswapV2TradeIntegration', function () {
           expect(assetBalanceAfter).to.be.lt(1000000); // Almost 0
         });
       });
-    });
-  });
-
-  describe('fails to execute without min amount', function () {
-    it(`exchange fails with minAmount as 0`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
-      const strategyContract = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        integrations: univ2TradeIntegration.address,
-        garden: garden,
-        specificParams: [addresses.tokens.DAI, 0],
-      });
-      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
-    });
-    it(`exchange fails with minAmount as 1`, async function () {
-      const garden = await createGarden({ reserveAsset: addresses.tokens.WETH, signer: signer1 });
-
-      const strategyContract = await getStrategy({
-        kind: 'buy',
-        state: 'vote',
-        integrations: univ2TradeIntegration.address,
-        garden: garden,
-        specificParams: [addresses.tokens.DAI, 1],
-      });
-      await expect(executeStrategy(strategyContract)).to.be.revertedWith('Not enough liquidity');
     });
   });
 });
