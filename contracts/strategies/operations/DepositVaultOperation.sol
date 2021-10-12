@@ -167,7 +167,7 @@ contract DepositVaultOperation is Operation {
             );
         console.log('_integration', _integration);
         console.log('exit deposit', vaultAsset, amountVault, minAmount);
-        IPassiveIntegration(0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
         console.log('after exit');
         return (
             vaultAsset,
