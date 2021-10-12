@@ -9,7 +9,8 @@ const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/Str
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe('UniswapV2TradeIntegration', function () { let univ2TradeIntegration;
+describe('UniswapV2TradeIntegration', function () {
+  let univ2TradeIntegration;
   let priceOracle;
   let owner;
   let signer1;
