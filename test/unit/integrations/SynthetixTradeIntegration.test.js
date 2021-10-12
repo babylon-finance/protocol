@@ -9,7 +9,7 @@ const { getStrategy, executeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe.only('SynthetixTradeIntegration', function () {
+describe('SynthetixTradeIntegration', function () {
   let synthetixTradeIntegration;
   let priceOracle;
   let owner;
