@@ -43,6 +43,8 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13171630;
+
 
 const CHAIN_IDS = {
   hardhat: 31337,
@@ -69,7 +71,7 @@ module.exports = {
       allowUnlimitedContractSize: true,
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: 13171630,
+        blockNumber: BLOCK_NUMBER,
       },
       saveDeployments: true,
       gas: 9e6,
