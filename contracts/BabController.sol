@@ -702,48 +702,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * Returns the percentages of a strategy Profit Sharing
-     *
-     * @return            Strategist, Stewards, Lps, creator bonus
-     */
-    /*  function getProfitSharing()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage);
-    } */
-
-    /**
-     * Returns the percentages of BABL Profit Sharing
-     *
-     * @return            Strategist, Stewards, Lps, creator bonus
-     */
-    /* function getBABLMiningParameters()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            strategistBABLPercentage,
-            stewardsBABLPercentage,
-            lpsBABLPercentage,
-            gardenCreatorBonus
-        );
-    } */
-
-    /**
      * Check if a contract address is a garden or one of the system contracts
      *
      * @param  _contractAddress           The contract address to check
