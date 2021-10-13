@@ -417,20 +417,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   The Keeper fee is paid out of user's shares.
      *   The true _minAmountOut is actually _minAmountOut - _maxFee due to the
      *   Keeper fee.
-     * @param _amountIn       Quantity of the garden tokens to withdraw.
-     * @param _minAmountOut   Min quantity of reserve asset to receive.
-     * @param _nonce          Current nonce to prevent replay attacks.
-     * @param _maxFee         Max fee user is willing to pay keeper. Fee is
-     *                        substracted from the withdrawn amount. Fee is
-     *                        expressed in reserve asset.
-     * @param _pricePerShare  Price per share of the garden calculated off-chain by Keeper.
-     * @param _fee            Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _amountIn        Quantity of the garden tokens to withdraw.
+     * @param _minAmountOut    Min quantity of reserve asset to receive.
+     * @param _nonce           Current nonce to prevent replay attacks.
+     * @param _maxFee          Max fee user is willing to pay keeper. Fee is
+     *                         substracted from the withdrawn amount. Fee is
+     *                         expressed in reserve asset.
+     * @param _withPenalty     Whether or not this is an immediate withdrawal
+     * @param _unwindStrategy  Strategy to unwind
+     * @param _pricePerShare   Price per share of the garden calculated off-chain by Keeper.
+     * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
      */
     function withdrawBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        bool _withPenalty,
+        address _unwindStrategy,
         uint256 _pricePerShare,
         uint256 _fee,
         uint8 v,
@@ -440,13 +444,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyKeeper();
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
 
-        bytes32 hash =
-            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        _require(signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay attacks
-        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
+        address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce,
+                                            _maxFee, v, r, s);
 
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
@@ -457,17 +456,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _amountIn.sub(feeShares),
                 _minAmountOut.sub(_maxFee),
                 payable(signer),
-                false,
-                address(0),
+                _withPenalty,
+                _unwindStrategy,
                 _pricePerShare
             );
             // burn shares paid to Keeper
             _burn(signer, feeShares);
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         } else {
-            _withdrawInternal(_amountIn, _minAmountOut, payable(signer), false, address(0), _pricePerShare);
+            _withdrawInternal(_amountIn, _minAmountOut, payable(signer),
+                              _withPenalty, _unwindStrategy, _pricePerShare);
         }
     }
+
 
     /**
      * User can claim the rewards from the strategies that his principal
@@ -894,6 +895,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
+    }
+
+    function _getWithdrawSigner(uint256 _amountIn, uint256 _minAmountOut,
+                                uint256 _nonce, uint256 _maxFee, uint8 v,
+                                bytes32 r, bytes32 s) internal view returns (address) {
+        bytes32 hash =
+            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
+                .toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        _require(signer != address(0), Errors.INVALID_SIGNER);
+        // to prevent replay attacks
+        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
+        return signer;
     }
 
     function _internalDeposit(

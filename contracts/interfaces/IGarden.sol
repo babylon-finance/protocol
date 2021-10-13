@@ -162,6 +162,8 @@ interface IGarden {
         uint256 _minReserveReceiveQuantity,
         uint256 _nonce,
         uint256 _maxFee,
+        bool _withPenalty,
+        address _unwindStrategy,
         uint256 _pricePerShare,
         uint256 _fee,
         uint8 v,
