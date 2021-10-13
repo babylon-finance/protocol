@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
@@ -43,6 +44,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     event GardenAdded(address indexed _garden, address indexed _factory);
@@ -236,8 +238,8 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _publicGardenStrategistsStewards
             );
         if (_reserveAsset != WETH || msg.value == 0) {
-            IERC20(_reserveAsset).transferFrom(msg.sender, address(this), _initialContribution);
-            IERC20(_reserveAsset).approve(newGarden, _initialContribution);
+            IERC20(_reserveAsset).safeTransferFrom(msg.sender, address(this), _initialContribution);
+            IERC20(_reserveAsset).safeApprove(newGarden, _initialContribution);
         }
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
@@ -653,6 +655,61 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * Check whether or not the strategies are beta protocol strategies deserving rewards
+     * @param _strategies              Smartcontract address to check for a global or specific pause
+     */
+    function isBetaStrategy(address[] memory _strategies)
+        external
+        view
+        override
+        returns (bool[] memory, uint256[] memory)
+    {
+        uint256[] memory capitalAllocated = new uint256[](_strategies.length);
+        bool[] memory isABetaStrategy = new bool[](_strategies.length);
+        uint256 startTime = IRewardsDistributor(rewardsDistributor).START_TIME();
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            require(_strategies[i] != address(0), 'not a valid address');
+            address garden = address(IStrategy(_strategies[i]).garden());
+            // Only protocol strategies security cross-check
+            require(isGarden[garden] && IGarden(garden).isGardenStrategy(_strategies[i]), 'not a protocol strategy');
+            // ts[0]: executedAt, ts[1]: updatedAt
+            // isStrategyActive implies exitedAt == 0 (not finished yet)
+            uint256[] memory ts = new uint256[](2);
+            (, , , , ts[0], , ts[1]) = IStrategy(_strategies[i]).getStrategyState();
+            isABetaStrategy[i] =
+                ts[0] < startTime &&
+                ts[1] < startTime &&
+                IStrategy(_strategies[i]).isStrategyActive() &&
+                startTime != 0;
+            capitalAllocated[i] = IStrategy(_strategies[i]).capitalAllocated();
+        }
+        return (isABetaStrategy, capitalAllocated);
+    }
+
+    function getLiveStrategies(uint256 _size) external view override returns (address[] memory) {
+        uint256 pid;
+        address[] memory liveStrategies = new address[](_size);
+        // Get all protocol gardens at initialization of mining program
+        for (uint256 i = 0; i < gardens.length; i++) {
+            // get all strategies at each garden and check whether or not are active strategies
+            address[] memory strategies = IGarden(gardens[i]).getStrategies();
+            if (strategies.length == 0) {
+                continue;
+            }
+            for (uint256 j = 0; j < strategies.length; j++) {
+                if (IStrategy(strategies[j]).isStrategyActive()) {
+                    // We pre-select eligible strategies to call rewards distributor
+                    liveStrategies[pid] = address(strategies[j]);
+                    pid++;
+                }
+                if (pid == _size) break;
+            }
+            if (pid == _size) break;
+        }
+        return liveStrategies;
+    }
+
+    /**
      * Returns the percentages of a strategy Profit Sharing
      *
      * @return            Strategist, Stewards, Lps, creator bonus
@@ -730,4 +787,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV6 is BabController {}
+contract BabControllerV7 is BabController {}

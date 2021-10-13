@@ -60,6 +60,8 @@ interface IRewardsDistributor {
 
     function startBABLRewards() external;
 
+    function addLiveStrategies(address[] memory _strategies) external;
+
     function sendTokensToContributor(address _to, uint256 _amount) external;
 
     function setProfitRewards(
@@ -79,8 +81,6 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
-
-    function migrateBetaGardens(address[] memory _gardens) external;
 
     function migrateBetaUsers(address _garden, address[] memory _contributors) external;
 }

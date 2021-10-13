@@ -413,13 +413,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-
+        // An unwind should not allow users to remove all capital from a strategy
+        _require(_amountToUnwind < capitalAllocated, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
 
-        // Removes protocol principal for the calculation of rewards
-        if (hasMiningStarted) {
+        // Accounting of strategy power contribution along the time
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
         }
@@ -770,7 +774,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (executedAt == 0) {
             executedAt = block.timestamp;
         }
-        if (hasMiningStarted) {
+        // We consider also strategies on candidate state when mining program is activated
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // The Mining program has not started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(_capital, true);
         }
@@ -940,7 +948,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             burningAmount
         );
         // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (hasMiningStarted) {
+        if (
+            hasMiningStarted ||
+            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
+        ) {
             // Only if the Mining program started on time for this strategy
             rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
             // Must be zero in case the mining program didnt started on time
@@ -978,4 +989,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV10 is Strategy {}
+contract StrategyV11 is Strategy {}

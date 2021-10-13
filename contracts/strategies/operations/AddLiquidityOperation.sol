@@ -133,7 +133,7 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        require(_percentage <= 100e18, 'Unwind Percentage <= 100%');
+        require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
         address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =
