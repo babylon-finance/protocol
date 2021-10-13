@@ -102,7 +102,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
         keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
-        keccak256('WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)');
+        keccak256(
+            'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256,_nonce,uint256 _maxFee,uint256 _withPenalty)'
+        );
 
     /* ============ Structs ============ */
 
@@ -444,8 +446,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyKeeper();
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
 
-        address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce,
-                                            _maxFee, v, r, s);
+        address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce, _maxFee, _withPenalty, v, r, s);
 
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
@@ -464,11 +465,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _burn(signer, feeShares);
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         } else {
-            _withdrawInternal(_amountIn, _minAmountOut, payable(signer),
-                              _withPenalty, _unwindStrategy, _pricePerShare);
+            _withdrawInternal(_amountIn, _minAmountOut, payable(signer), _withPenalty, _unwindStrategy, _pricePerShare);
         }
     }
-
 
     /**
      * User can claim the rewards from the strategies that his principal
@@ -897,11 +896,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
 
-    function _getWithdrawSigner(uint256 _amountIn, uint256 _minAmountOut,
-                                uint256 _nonce, uint256 _maxFee, uint8 v,
-                                bytes32 r, bytes32 s) internal view returns (address) {
+    function _getWithdrawSigner(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _maxFee,
+        bool _withPenalty,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view returns (address) {
         bytes32 hash =
-            keccak256(abi.encode(WITHDRAW_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
+            keccak256(
+                abi.encode(
+                    WITHDRAW_BY_SIG_TYPEHASH,
+                    address(this),
+                    _amountIn,
+                    _minAmountOut,
+                    _nonce,
+                    _maxFee,
+                    _withPenalty
+                )
+            )
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
         _require(signer != address(0), Errors.INVALID_SIGNER);

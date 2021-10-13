@@ -15,6 +15,7 @@ const {
   GARDEN_PARAMS_STABLE,
   GARDEN_PARAMS,
   ADDRESS_ZERO,
+  ONE_YEAR_IN_SECONDS,
 } = require('lib/constants.js');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
@@ -41,7 +42,6 @@ const {
 } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
-const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
 async function createWallets(number) {
   const walletAddresses = [];
@@ -52,7 +52,7 @@ async function createWallets(number) {
   return walletAddresses;
 }
 
-describe('Garden', function () {
+describe.only('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
@@ -970,8 +970,10 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
-      await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, false);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(amountIn, minAmountOut, 1, 0, false, ADDRESS_ZERO, eth(), 0, sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
@@ -1032,7 +1034,9 @@ describe('Garden', function () {
 
         if (token === addresses.tokens.WETH) {
           await expect(() =>
-            garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+            garden
+              .connect(keeper)
+              .withdrawBySig(amountIn, minAmountOut, 1, maxFee, false, ADDRESS_ZERO, eth(), fee, sig.v, sig.r, sig.s),
           ).to.changeTokenBalances(erc20, [keeper, garden], [fee, minAmountOut.mul(-1)]);
 
           expect((await ethers.provider.getBalance(signer3.address)).sub(balanceBefore)).to.be.eq(
@@ -1040,7 +1044,9 @@ describe('Garden', function () {
           );
         } else {
           await expect(() =>
-            garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+            garden
+              .connect(keeper)
+              .withdrawBySig(amountIn, minAmountOut, 1, maxFee, false, ADDRESS_ZERO, eth(), fee, sig.v, sig.r, sig.s),
           ).to.changeTokenBalances(
             erc20,
             [keeper, garden, signer3],
@@ -1069,9 +1075,11 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, false);
       await expect(
-        garden.connect(signer3).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s),
+        garden
+          .connect(signer3)
+          .withdrawBySig(amountIn, minAmountOut, 1, 0, false, ADDRESS_ZERO, eth(), 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -1094,10 +1102,12 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8, 0);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8, 0, false);
 
       await expect(
-        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, 0, eth(), 0, sig.v, sig.r, sig.s),
+        garden
+          .connect(keeper)
+          .withdrawBySig(amountIn, minAmountOut, 8, 0, false, ADDRESS_ZERO, eth(), 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
@@ -1848,6 +1858,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
   });
+
   describe('avg share price per user', async function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
