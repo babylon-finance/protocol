@@ -277,8 +277,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8],
-            _gardenParams[9]
+            _gardenParams[8]
         );
     }
 
@@ -805,7 +804,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
-        uint256 _minVoters,
+        uint256 _minVoters
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(

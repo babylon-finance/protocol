@@ -54,7 +54,8 @@ contract GardenFactory is IGardenFactory {
      * @param _seed                     Seed to regenerate the garden NFT
      * @param _gardenParams             Array of numeric params in the garden
      * @param _initialContribution      Initial Contribution by the Gardener
-     * @param _publicGardenStrategists  Stewards  Public garden, public strategist rights and public stewards rights
+     * @param _publicGardenStrategistsStewards Public strategist rights and
+     * public stewards rights
      */
     function createGarden(
         address _reserveAsset,

@@ -8,7 +8,7 @@ const { from, eth, parse } = require('lib/helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
 
-describe('Babylon Viewer', function () {
+describe.only('Babylon Viewer', function () {
   let garden1;
   let signer1;
   let signer2;
@@ -34,15 +34,14 @@ describe('Babylon Viewer', function () {
       const paramsCreation = gardenDetails[7];
       expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock
       expect(paramsCreation[1]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
-      expect(paramsCreation[2]).to.equal(100); // Max contributors
-      expect(paramsCreation[3]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
-      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[8]); // Min Voters
-      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
-      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
-      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
-      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[3]); // Min contribution
-      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
-      expect(paramsCreation[10]).to.equal(0); // Keeper fees
+      expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
+      expect(paramsCreation[3]).to.equal(GARDEN_PARAMS[8]); // Min Voters
+      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
+      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
+      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
+      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[3]); // Min contribution
+      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
+      expect(paramsCreation[9]).to.equal(0); // Keeper fees
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
