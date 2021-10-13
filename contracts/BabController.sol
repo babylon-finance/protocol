@@ -154,7 +154,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
-    uint256 private override maxContributorsPerGarden; // DEPRECATED
+    uint256 private maxContributorsPerGarden; // DEPRECATED
 
     // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
     bool public override gardenCreationIsOpen;

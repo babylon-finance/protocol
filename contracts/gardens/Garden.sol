@@ -794,7 +794,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minStrategyDuration         Min duration of an strategy
      * @param _maxStrategyDuration         Max duration of an strategy
      * @param _minVoters                   The minimum amount of voters needed for quorum
-     * @param _maxContributors             The maximum amount of contributors allowed in this garden
      */
     function _start(
         uint256 _creatorDeposit,
@@ -807,7 +806,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
         uint256 _minVoters,
-        uint256 _maxContributors
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(
