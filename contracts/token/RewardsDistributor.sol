@@ -545,14 +545,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 principalWeight = bablPrincipalWeight == 0 ? 40e16 : bablPrincipalWeight;
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
-            // Set the max cap bonus x2 (200%) of baseline
+            // Set the max cap bonus x2
             uint256 maxRewards = rewards.preciseMul(2e18);
             // Apply rewards weight related to principal and profit
             rewards = rewards.preciseMul(principalWeight).add(
                 rewards.preciseMul(profitWeight).preciseMul(percentageProfit)
             );
-            // We add a 2nd extra bonus proportional to the profit (or penalty if has losses)
-            rewards = rewards.preciseMul(percentageProfit);
             // Check max cap
             if (rewards >= maxRewards) {
                 rewards = maxRewards;
