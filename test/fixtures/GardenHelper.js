@@ -220,8 +220,8 @@ function getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFe
   return ethers.utils.keccak256(payload);
 }
 
-async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
-  let payloadHash = getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFee);
+async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee, withPenalty) {
+  let payloadHash = getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFee, withPenalty);
 
   let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
   return ethers.utils.splitSignature(signature);

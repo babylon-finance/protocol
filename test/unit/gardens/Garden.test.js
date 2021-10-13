@@ -1110,7 +1110,69 @@ describe.only('Garden', function () {
           .withdrawBySig(amountIn, minAmountOut, 8, 0, false, ADDRESS_ZERO, eth(), 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#089');
     });
-    // TODO: Test minAmountOut is respected
+
+    it('can withdraw with a penalty', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const supplyBefore = await garden.totalSupply();
+
+      const balanceBefore = await garden.balanceOf(signer3.address);
+
+      const strategy = await getStrategy();
+      await vote(strategy, [signer1, signer2, signer3]);
+
+      await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
+
+      const gardenBalanceBefore = await usdc.balanceOf(garden.address);
+      const beforeWithdrawal = await usdc.balanceOf(signer3.address);
+
+      amountIn = eth(500);
+      minAmountOut = from(475 * 1e6);
+
+      const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.USDC);
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(
+          amountIn,
+          minAmountOut,
+          1,
+          0,
+          true,
+          strategy.address,
+          pricePerShare,
+          0,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalanceBefore)).to.be.closeTo(from(0), from(25 * 1e6));
+
+      // check users garden shares
+      const balanceAfter = await garden.balanceOf(signer3.address);
+      expect(balanceBefore.sub(balanceAfter)).to.eq(amountIn);
+      expect(balanceAfter).to.equal(amountIn);
+
+      // check user USDC balance; account for 2.5% penalty
+      expect((await usdc.balanceOf(signer3.address)).sub(beforeWithdrawal)).to.be.gte(minAmountOut);
+    });
   });
 
   describe('withdraw', async function () {
