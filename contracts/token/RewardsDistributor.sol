@@ -1492,7 +1492,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // Get a multiplier bonus in case the contributor is the garden creator
         if (creatorCount == 0) {
-            // If there is no creator divide the 15% bonus across al members
+            // If there is no creator divide the creator bonus across al members
             return
                 _contributorBABL.add(
                     _contributorBABL.multiplyDecimal(gardenCreatorBonus).div(IGarden(_garden).totalContributors())
