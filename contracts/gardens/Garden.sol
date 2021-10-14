@@ -491,10 +491,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             emit RewardsForContributor(msg.sender, rewards[6]);
         }
         if (rewards[5] > 0) {
-            contributor.claimedBABL = contributor.claimedBABL.add(rewards[5]); // BABL Rewards claimed properly
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             // Send BABL rewards
-            rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
+            uint256 amount = rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
+            contributor.claimedBABL = contributor.claimedBABL.add(amount); // BABL Rewards claimed properly
             emit BABLRewardsForContributor(msg.sender, rewards[5]);
         }
     }
