@@ -541,8 +541,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Profit weight must be higher than principal
             // profitWeight + principalWeight must always sum 1e18 (100%)
             // Backward compatible with default values (avoid division by zero in case it is not set yet)
-            uint256 profitWeight = bablProfitWeight == 0 ? 70e16 : bablProfitWeight;
-            uint256 principalWeight = bablPrincipalWeight == 0 ? 30e16 : bablPrincipalWeight;
+            uint256 profitWeight = bablProfitWeight == 0 ? 65e16 : bablProfitWeight;
+            uint256 principalWeight = bablPrincipalWeight == 0 ? 35e16 : bablPrincipalWeight;
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
             // Set the max cap bonus x2
