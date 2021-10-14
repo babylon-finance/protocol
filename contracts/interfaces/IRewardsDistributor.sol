@@ -51,10 +51,10 @@ interface IRewardsDistributor {
         view
         returns (uint256[] memory, bool[] memory);
 
-    function getBetaMigration(address _garden, address _contributor)
+    /* function getBetaMigration(address _garden, address _contributor)
         external
         view
-        returns (uint256[] memory, bool[] memory);
+        returns (uint256[] memory, bool[] memory); */
 
     /* ============ External Functions ============ */
 
@@ -82,5 +82,6 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function migrateBetaUsers(address _garden, address[] memory _contributors) external;
+    /*     function migrateBetaUsers(address _garden, address[] memory _contributors) external;
+     */
 }
