@@ -62,7 +62,7 @@ interface IRewardsDistributor {
 
     function addLiveStrategies(address[] memory _strategies) external;
 
-    function sendTokensToContributor(address _to, uint256 _amount) external returns (uint256);
+    function sendTokensToContributor(address _to, uint256 _amount) external;
 
     function setProfitRewards(
         address _garden,
