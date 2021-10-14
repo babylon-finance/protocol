@@ -215,9 +215,7 @@ describe('RewardsDistributor', function () {
       rewards = bablTokensQ1;
     }
     // Default params profitWeight = 60% and principalWeigth = 40%
-    rewards = from(rewards).mul(40).div(100).add(from(rewards).mul(60).div(100).mul(profit).div(ONE_ETH));
-    // Extra bonus based on profit (capped x2 - 200%)
-    rewards = from(rewards).mul(profit).div(ONE_ETH);
+    rewards = from(rewards).mul(30).div(100).add(from(rewards).mul(70).div(100).mul(profit).div(ONE_ETH));
     return rewards;
   }
 
