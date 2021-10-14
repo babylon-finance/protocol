@@ -333,11 +333,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
-        // Temporal beta migrations for beta gardens and beta users
-        // If already migrated, it does nothing
-        /* address[] memory betaContributor = new address[](1);
-        betaContributor[0] = _contributor;
-        _migrateBetaUsers(_garden, betaContributor); */
         // End of temporal beta migrations for users and gardens
         _updateGardenPower(_garden, _previousSupply, newSupply);
         _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
@@ -385,18 +380,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
-
-    /**
-     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure
-     * without checkpoints.
-     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and
-     * can be removed after all beta garden users data of all gardens are migrated
-     * @param _garden       Address of a protocol beta garden whose contributors belong to
-     * @param _contributors Array of beta contributor addresses to migrate data
-     */
-    /* function migrateBetaUsers(address _garden, address[] memory _contributors) external override onlyOwner {
-        _migrateBetaUsers(_garden, _contributors);
-    } */
 
     /* ========== View functions ========== */
 
@@ -539,18 +522,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (_time > block.timestamp) {
                 _time = block.timestamp;
             }
-
-            // Backward compatibility module for beta gardens and beta users
-            // First we check the contributor in case of a beta user pending migration
-            /* if (powerData[4] == 0 && gardenPid[_garden] > 0) {
-                // pending contributor migration - backward compatible
-                (, powerData[3], powerData[4], ) = _getContributorBetaMigrationData(_garden, _contributor);
-            } */
-            // Second we check the garden in case of a beta garden pending migration
-            /* if (powerData[7] == 0 && gardenPid[_garden] > 0) {
-                // pending garden migration - backward compatible
-                (powerData[5], powerData[6], powerData[7], ) = _getGardenBetaMigrationData(_garden);
-            } */
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
@@ -570,28 +541,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return virtualPower;
         }
     }
-
-    /**
-     * Check the beta migration data state
-     * @param _garden       Address of garden
-     * @param _contributor  Address of contributor
-     */
-
-    /* function getBetaMigration(address _garden, address _contributor)
-        external
-        view
-        override
-        returns (uint256[] memory, bool[] memory)
-    {
-        uint256[] memory migrationData = new uint256[](6);
-        bool[] memory migrationBool = new bool[](2);
-        (migrationData[0], migrationData[1], migrationData[2], migrationBool[0]) = _getGardenBetaMigrationData(_garden);
-        (migrationData[3], migrationData[4], migrationData[5], migrationBool[1]) = _getContributorBetaMigrationData(
-            _garden,
-            _contributor
-        );
-        return (migrationData, migrationBool);
-    } */
 
     /**
      * Check the mining program state for a specific quarter and strategy
@@ -811,78 +760,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return strPpt.pricePerTokenUnit;
         }
     }
-
-    /**
-     * PRIVILEGE FUNCTION to migrate beta gardens into the new optimized gas data structure without checkpoints
-     * @dev Can be called by anyone, should be called once for each garden and can be removed after
-     * all beta gardens data are migrated
-     * @param _gardens     Array of protocol gardens to perform beta data migration
-     */
-    /*     function _migrateBetaGardens(address[] memory _gardens) internal {
-        for (uint256 i = 0; i < _gardens.length; i++) {
-            _require(IBabController(controller).isGarden(_gardens[i]), Errors.ONLY_ACTIVE_GARDEN);
-            GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_gardens[i]][0];
-            // Check if still migration is pending and it is a beta garden
-            if (!betaGardenMigrated[_gardens[i]] && gardenPower.avgGardenBalance == 0) {
-                (
-                    gardenPower.lastDepositAt,
-                    gardenPower.accGardenPower,
-                    gardenPower.avgGardenBalance,
-
-                ) = _getGardenBetaMigrationData(_gardens[i]);
-                // Special case of abandoned garden without any funds, need reset
-                if (ERC20(_gardens[i]).totalSupply() == 0) {
-                    // reset Garden power if all funds are removed
-                    gardenPower.lastDepositAt = 0;
-                    gardenPower.avgGardenBalance = 0;
-                    gardenPower.accGardenPower = 0;
-                }
-                // We set the flag of migration complete to true to avoid new updates that might corrupt data
-                betaGardenMigrated[_gardens[i]] = true;
-            }
-        }
-    } */
-
-    /**
-     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure
-     * without checkpoints
-     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and
-     * can be removed after all beta garden users data of all gardens are migrated
-     * @param _garden       Address of a protocol beta garden whose contributors belong to
-     * @param _contributors Array of beta contributor addresses to migrate data
-     */
-    /*    function _migrateBetaUsers(address _garden, address[] memory _contributors) internal {
-        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        if (!betaGardenMigrated[_garden] && gardenPowerByTimestamp[_garden][0].avgGardenBalance == 0) {
-            // we need to update the garden first if still not migrated
-            address[] memory gardens = new address[](1);
-            gardens[0] = _garden;
-            _migrateBetaGardens(gardens);
-        }
-        // Then we migrate users, one by one
-        for (uint256 i = 0; i < _contributors.length; i++) {
-            ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributors[i]];
-            // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
-            TimestampContribution storage contributorDetail = contributor.tsContributions[0];
-            // Check if still migration is pending and it is a beta contributor
-            // We consider those who were part of the beta but removed all their funds
-            if (
-                !betaUserMigrated[_garden][_contributors[i]] &&
-                contributorDetail.avgBalance == 0 &&
-                (contributor.lastDepositAt > 0 || contributor.pid > 0)
-            ) {
-                // It is a beta user that need data migration
-                (
-                    contributor.lastDepositAt,
-                    contributorDetail.power,
-                    contributorDetail.avgBalance,
-
-                ) = _getContributorBetaMigrationData(_garden, _contributors[i]);
-                // Beta user data already migrated
-                betaUserMigrated[_garden][_contributors[i]] = true;
-            }
-        }
-    } */
 
     /**
      * Add protocol power timestamps for each quarter
@@ -1300,11 +1177,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getGardenAndContributor(address _garden, address _contributor) private view returns (uint256[] memory) {
         uint256[] memory powerData = new uint256[](9);
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        // We take care if a beta user is already migrated or not to the new optimized-gas architecture
-        /* GardenPowerByTimestamp storage garden =
-            (!betaGardenMigrated[_garden] && gardenPid[_garden] > 0)
-                ? gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]]
-                : gardenPowerByTimestamp[_garden][0]; */
         GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
 
         // powerData[0]: lastDepositAt (contributor)
@@ -1319,16 +1191,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         powerData[0] = contributor.lastDepositAt;
         powerData[1] = contributor.initialDepositAt;
         powerData[2] = ERC20(_garden).balanceOf(_contributor);
-        /* bool stillBetaUser =
-            (!betaUserMigrated[_garden][_contributor] && contributor.pid > 0 && contributor.initialDepositAt > 0); */
-
-        /* powerData[3] = stillBetaUser
-            ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].power
-            : contributor.tsContributions[0].power; */
         powerData[3] = contributor.tsContributions[0].power;
-        /* powerData[4] = stillBetaUser
-            ? contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]].avgBalance
-            : contributor.tsContributions[0].avgBalance; */
         powerData[4] = contributor.tsContributions[0].avgBalance;
         powerData[5] = garden.lastDepositAt;
         powerData[6] = garden.accGardenPower;
@@ -1423,163 +1286,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         return _contributorBABL;
     }
-
-    /**
-     * Get the garden details of a beta Garden that needs migration into the new optimized-gas structure
-     * without checkpoints
-     * @dev Once all the beta gardens data are migrated, it will not longer need to execute this code again
-     * This code is needed until all beta gardens are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @return all data needed for the migration
-     */
-    /* function _getGardenBetaMigrationData(address _garden)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        if (gardenPid[_garden] > 0) {
-            return (
-                betaGardenMigrated[_garden]
-                    ? gardenPowerByTimestamp[_garden][0].lastDepositAt
-                    : gardenTimelist[_garden][gardenPid[_garden].sub(1)],
-                _getGardenBetaPower(_garden),
-                _getGardenBetaAvgBalance(_garden),
-                betaGardenMigrated[_garden]
-            );
-        } else {
-            return (0, 0, 0, false);
-        }
-    } */
-
-    /**
-     * Get the beta contributor details of a beta Garden that needs migration into the new optimized-gas
-     * structure without checkpoints
-     * @dev Once all the beta contributors of all beta gardens data are migrated, it will not longer need
-     * to execute this code again
-     * This code is needed until all beta users are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @param _contributor      Address of the beta contributor
-     * @return all data needed for the migration
-     */
-    /* function _getContributorBetaMigrationData(address _garden, address _contributor)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        if (gardenPid[_garden] > 0) {
-            return (
-                contributorPerGarden[_garden][_contributor].lastDepositAt,
-                _getContributorBetaPower(_garden, _contributor),
-                _getContributorBetaAvgBalance(_garden, _contributor),
-                betaUserMigrated[_garden][_contributor]
-            );
-        } else {
-            return (0, 0, 0, false);
-        }
-    } */
-
-    /**
-     * Get the garden power for a beta garden to migrate its power into the new gas-optimized
-     * gardenpower structure without checkpoints
-     * @dev Once the beta garden data is migrated, it will not longer need to execute this code again
-     * This code is needed until all beta gardens are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @return the last power measured in the last checkpoint of a garden
-     */
-    /* function _getGardenBetaPower(address _garden) internal view returns (uint256) {
-        // Only beta gardens have used gardenPid
-        if (gardenPid[_garden] > 0) {
-            // Assumes that the garden is a beta garden with checkpoints
-            GardenPowerByTimestamp storage garden =
-                gardenPowerByTimestamp[_garden][gardenTimelist[_garden][gardenPid[_garden].sub(1)]];
-            return garden.accGardenPower;
-        } else {
-            return 0;
-        }
-    } */
-
-    /**
-     * Calculate the garden average balance (totalSupply vs. time) for a beta garden as it is needed
-     *  for the new gas-optimized gardenpower structure without checkpoints
-     * @dev Once the beta garden data is migrated, it will not longer need to execute this code again
-     * This code is needed until all beta gardens are migrated into the new optimized-gas structure
-     * @param _garden           Address of the beta garden
-     * @return the real average balance of a beta garden until its last checkpoint
-     */
-    /* function _getGardenBetaAvgBalance(address _garden) internal view returns (uint256) {
-        uint256 avgBalance;
-        // Only beta gardens have used gardenPid
-        for (uint256 i = 0; i < gardenPid[_garden]; i++) {
-            GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][gardenTimelist[_garden][i]];
-            uint256 timeDiff = i > 0 ? gardenTimelist[_garden][i].sub(gardenTimelist[_garden][0]) : 0;
-
-            avgBalance = i == 0
-                ? garden.avgGardenBalance
-                : (avgBalance.mul(timeDiff)).add(garden.avgGardenBalance).div(timeDiff);
-        }
-        return avgBalance;
-    } */
-
-    /**
-     * Calculate the contributor power for a beta user by using previous checkpoints as it is
-     * needed for the new gas-optimized contributorpower structure without checkpoints
-     * The usage of the result will be used to migrate the user, which actually happens only once
-     * @dev Once the user data is migrated, it will not longer need to execute this code again
-     * This code is needed until all beta users are migrated into the new optimized-gas structure
-     * @param _garden             Address of the beta garden
-     * @param _contributor        Address of the beta contributor
-     * @return the last power measured in the last checkpoint of a beta contributor
-     */
-    /* function _getContributorBetaPower(address _garden, address _contributor) internal view returns (uint256) {
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        // Only beta users have used pid but we also take care of those who removed all their funds
-        TimestampContribution storage contributorLastCheckpoint =
-            (contributor.pid == 0 || contributor.initialDepositAt == 0)
-                ? contributor.tsContributions[contributor.initialDepositAt]
-                : contributor.tsContributions[contributor.timeListPointer[contributor.pid.sub(1)]];
-        return contributorLastCheckpoint.power;
-    } */
-
-    /**
-     * Calculate the contributor average balance (supply vs. time) for a beta user by using
-     * previous checkpoints as it is needed for the new gas-optimized contributorpower structure without checkpoints
-     * The usage of the result will be used to migrate the user, which actually happens only once
-     * @dev Once the user data is migrated, it will not longer need to execute this code again
-     * This code is needed until all beta users are migrated into the new optimized-gas structure
-     * @param _garden             Address of the beta garden
-     * @param _contributor        Address of the beta contributor
-     * @return the real average balance of a beta user until its last checkpoint
-     */
-    /* function _getContributorBetaAvgBalance(address _garden, address _contributor) internal view returns (uint256) {
-        uint256 avgBalance;
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        if (contributor.initialDepositAt == 0) {
-            // If a beta user has left the garden
-            return 0;
-        } else {
-            // Only beta users have used pid
-            for (uint256 i = 0; i < contributor.pid; i++) {
-                TimestampContribution storage contributorCheckpoint =
-                    contributor.tsContributions[contributor.timeListPointer[i]];
-                uint256 timeDiff = contributor.timeListPointer[i].sub(contributor.initialDepositAt);
-
-                avgBalance = i == 0
-                    ? contributorCheckpoint.avgBalance
-                    : avgBalance.mul(timeDiff).add(contributorCheckpoint.avgBalance).div(timeDiff);
-            }
-            return avgBalance;
-        }
-    } */
 }
 
 contract RewardsDistributorV6 is RewardsDistributor {}
