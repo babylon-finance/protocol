@@ -152,7 +152,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Contributors
     mapping(address => Contributor) private contributors;
     uint256 public override totalContributors;
-    uint256 public override maxContributors;
+    uint256 private maxContributors; // DEPRECATED
     uint256 public override maxDepositLimit; // Limits the amount of deposits
 
     uint256 public override gardenInitializedAt; // Garden Initialized at timestamp
@@ -277,8 +277,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8],
-            _gardenParams[9]
+            _gardenParams[8]
         );
     }
 
@@ -794,7 +793,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _minStrategyDuration         Min duration of an strategy
      * @param _maxStrategyDuration         Max duration of an strategy
      * @param _minVoters                   The minimum amount of voters needed for quorum
-     * @param _maxContributors             The maximum amount of contributors allowed in this garden
      */
     function _start(
         uint256 _creatorDeposit,
@@ -806,8 +804,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
-        uint256 _minVoters,
-        uint256 _maxContributors
+        uint256 _minVoters
     ) private {
         _require(_minContribution > 0 && _creatorDeposit >= _minContribution, Errors.MIN_CONTRIBUTION);
         _require(
@@ -831,11 +828,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.DURATION_RANGE
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
-        _require(
-            _maxContributors > 0 && _maxContributors <= IBabController(controller).maxContributorsPerGarden(),
-            Errors.MAX_CONTRIBUTORS_SET
-        );
-        maxContributors = _maxContributors;
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;
@@ -913,7 +905,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
-        _require(totalContributors <= maxContributors, Errors.MAX_CONTRIBUTORS);
         _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
@@ -1005,7 +996,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-            _require(totalContributors < maxContributors, Errors.MAX_CONTRIBUTORS);
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
