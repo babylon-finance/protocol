@@ -425,18 +425,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bablPrincipalWeight = _principalWeight;
     }
 
-    /**
-     * PRIVILEGE FUNCTION to migrate beta users of each garden into the new optimized gas data structure
-     * without checkpoints.
-     * @dev Can be called by anyone, should be called AFTER migrating gardens once for each user and
-     * can be removed after all beta garden users data of all gardens are migrated
-     * @param _garden       Address of a protocol beta garden whose contributors belong to
-     * @param _contributors Array of beta contributor addresses to migrate data
-     */
-    function migrateBetaUsers(address _garden, address[] memory _contributors) external override onlyOwner {
-        _migrateBetaUsers(_garden, _contributors);
-    }
-
     /* ========== View functions ========== */
 
     /**
