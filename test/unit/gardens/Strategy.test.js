@@ -315,7 +315,7 @@ describe('Strategy', function () {
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
-      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
