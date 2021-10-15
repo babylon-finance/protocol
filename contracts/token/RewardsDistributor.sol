@@ -1025,13 +1025,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _safeBABLTransfer(address _to, uint96 _amount) private returns (uint256) {
         uint256 bablBal = babltoken.balanceOf(address(this));
-        if (_amount > bablBal) {
-            SafeERC20.safeTransfer(babltoken, _to, bablBal);
-            return bablBal;
-        } else {
-            SafeERC20.safeTransfer(babltoken, _to, _amount);
-            return _amount;
-        }
+        uint256 amountToSend = _amount > bablBal ? bablBal : _amount;
+        SafeERC20.safeTransfer(babltoken, _to, amountToSend);
+        return amountToSend;
     }
 
     /**
