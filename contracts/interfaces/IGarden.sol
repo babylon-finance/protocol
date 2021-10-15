@@ -165,6 +165,7 @@ interface IGarden {
         bool _withPenalty,
         address _unwindStrategy,
         uint256 _pricePerShare,
+        uint256 _strategyNAV,
         uint256 _fee,
         uint8 v,
         bytes32 r,

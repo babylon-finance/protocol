@@ -403,9 +403,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Partially unwinds an strategy.
      * Triggered from an immediate withdraw in the Garden.
-     * @param _amountToUnwind              The amount of capital to unwind
+     * @param _amountToUnwind  The amount of capital to unwind
+     * @param _strategyNAV     NAV of the strategy to unwind.
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external override nonReentrant {
         _require(
             (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
                 msg.sender == controller.owner(),
@@ -414,9 +415,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         // An unwind should not allow users to remove all capital from a strategy
-        _require(_amountToUnwind < capitalAllocated, Errors.INVALID_CAPITAL_TO_UNWIND);
+        _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
-        _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
+        _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
 
         // Accounting of strategy power contribution along the time

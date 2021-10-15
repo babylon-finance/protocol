@@ -404,7 +404,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
-        _withdrawInternal(_amountIn, _minAmountOut, _to, _withPenalty, _unwindStrategy, pricePerShare);
+        _withdrawInternal(_amountIn, _minAmountOut, _to, _withPenalty,
+                          _unwindStrategy, pricePerShare, _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0);
     }
 
     /**
@@ -428,6 +429,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _withPenalty     Whether or not this is an immediate withdrawal
      * @param _unwindStrategy  Strategy to unwind
      * @param _pricePerShare   Price per share of the garden calculated off-chain by Keeper.
+     * @param _strategyNAV     NAV of the strategy to unwind.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
      */
     function withdrawBySig(
@@ -438,6 +440,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty,
         address _unwindStrategy,
         uint256 _pricePerShare,
+        uint256 _strategyNAV,
         uint256 _fee,
         uint8 v,
         bytes32 r,
@@ -451,21 +454,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
-            // account for non 18 decimals ERC20
-            uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
-            _withdrawInternal(
-                _amountIn.sub(feeShares),
-                _minAmountOut.sub(_maxFee),
-                payable(signer),
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare
-            );
-            // burn shares paid to Keeper
-            _burn(signer, feeShares);
-            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+            _withdrawInternalWithFee(_amountIn, _minAmountOut,_maxFee,
+                                     _withPenalty, _unwindStrategy,
+                                     _pricePerShare, _strategyNAV, _fee, signer);
         } else {
-            _withdrawInternal(_amountIn, _minAmountOut, payable(signer), _withPenalty, _unwindStrategy, _pricePerShare);
+            _withdrawInternal(_amountIn, _minAmountOut, payable(signer),
+                              _withPenalty, _unwindStrategy, _pricePerShare,
+                              _strategyNAV);
         }
     }
 
@@ -858,17 +853,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address payable _to,
         bool _withPenalty,
         address _unwindStrategy,
-        uint256 _pricePerShare
+        uint256 _pricePerShare,
+        uint256 _strategyNAV
     ) internal {
         _onlyUnpaused();
         _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
-        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
-        uint256 lockedAmount = getLockedBalance(_to);
         uint256 previousBalance = balanceOf(_to);
         // Strategists cannot withdraw locked stake while in active strategies
-        _require(_amountIn <= previousBalance.sub(lockedAmount), Errors.TOKENS_STAKED);
+        // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
+        _require(_amountIn <= previousBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
         // this value would have 18 decimals even for USDC
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
@@ -879,7 +874,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
-            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)));
+            // TODO: if there is more than 5% slippage that will block
+            // withdrawal
+            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)),
+                                                     _strategyNAV);
         }
 
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
@@ -891,9 +889,34 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _safeSendReserveAsset(_to, amountOut);
         _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
 
-        _require(amountOut >= _minAmountOut, Errors.BALANCE_TOO_LOW);
-
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
+    }
+
+    function _withdrawInternalWithFee(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        uint256 _maxFee,
+        bool _withPenalty,
+        address _unwindStrategy,
+        uint256 _pricePerShare,
+        uint256 _strategyNAV,
+        uint256 _fee,
+        address _signer
+    ) internal {
+            // account for non 18 decimals ERC20
+            uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
+            _withdrawInternal(
+                _amountIn.sub(feeShares),
+                _minAmountOut.sub(_maxFee),
+                payable(_signer),
+                _withPenalty,
+                _unwindStrategy,
+                _pricePerShare,
+                _strategyNAV
+            );
+            // burn shares paid to Keeper
+            _burn(_signer, feeShares);
+            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
     }
 
     function _getWithdrawSigner(
