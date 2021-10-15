@@ -82,13 +82,9 @@ interface IBabController {
 
     function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;
 
-    function maxContributorsPerGarden() external view returns (uint256);
-
     function gardenCreationIsOpen() external view returns (bool);
 
     function openPublicGardenCreation() external;
-
-    function setMaxContributorsPerGarden(uint256 _newMax) external;
 
     function owner() external view returns (address);
 
@@ -133,25 +129,6 @@ interface IBabController {
     function allowPublicGardens() external view returns (bool);
 
     function enabledOperations(uint256 _kind) external view returns (address);
-
-    function getProfitSharing()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
-
-    function getBABLSharing()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
 
     function getGardens() external view returns (address[] memory);
 

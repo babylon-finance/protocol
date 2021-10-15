@@ -126,16 +126,16 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override treasury;
 
     // Strategy Profit Sharing
-    uint256 public strategistProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsProfitPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsProfitPercentage; //
+    uint256 private strategistProfitPercentage; // DEPRECATED
+    uint256 private stewardsProfitPercentage; // DEPRECATED
+    uint256 private lpsProfitPercentage; // DEPRECATED
 
     // Strategy BABL Rewards Sharing
-    uint256 public strategistBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public stewardsBABLPercentage; // (0.01% = 1e14, 1% = 1e16)
-    uint256 public lpsBABLPercentage; //
+    uint256 private strategistBABLPercentage; // DEPRECATED
+    uint256 private stewardsBABLPercentage; // DEPRECATED
+    uint256 private lpsBABLPercentage; // DEPRECATED
 
-    uint256 public gardenCreatorBonus;
+    uint256 private gardenCreatorBonus; // DEPRECATED
 
     // Assets
 
@@ -154,7 +154,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
-    uint256 public override maxContributorsPerGarden;
+    uint256 private maxContributorsPerGarden; // DEPRECATED
 
     // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
     bool public override gardenCreationIsOpen;
@@ -178,15 +178,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         protocolPerformanceFee = 5e16; // 5% (0.01% = 1e14, 1% = 1e16) on profits
         protocolDepositGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
         protocolWithdrawalGardenTokenFee = 0; // 0% (0.01% = 1e14, 1% = 1e16) on profits
-        strategistProfitPercentage = 10e16;
-        stewardsProfitPercentage = 5e16;
-        lpsProfitPercentage = 80e16;
 
-        strategistBABLPercentage = 8e16;
-        stewardsBABLPercentage = 17e16;
-        lpsBABLPercentage = 75e16;
-
-        gardenCreatorBonus = 15e16;
         maxContributorsPerGarden = 100;
         gardenCreationIsOpen = false;
     }
@@ -295,14 +287,6 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
-     */
-    function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
-        require(_newMax >= 1, 'Contributors cannot be less than 1 per garden');
-        maxContributorsPerGarden = _newMax;
     }
 
     // ===========  Protocol related Gov Functions ======
@@ -707,43 +691,6 @@ contract BabController is OwnableUpgradeable, IBabController {
             if (pid == _size) break;
         }
         return liveStrategies;
-    }
-
-    /**
-     * Returns the percentages of a strategy Profit Sharing
-     *
-     * @return            Strategist, Stewards, Lps, creator bonus
-     */
-    function getProfitSharing()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage);
-    }
-
-    /**
-     * Returns the percentages of BABL Profit Sharing
-     *
-     * @return            Strategist, Stewards, Lps, creator bonus
-     */
-    function getBABLSharing()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (strategistBABLPercentage, stewardsBABLPercentage, lpsBABLPercentage, gardenCreatorBonus);
     }
 
     /**
