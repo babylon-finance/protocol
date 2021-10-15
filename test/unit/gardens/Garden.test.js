@@ -15,6 +15,7 @@ const {
   GARDEN_PARAMS_STABLE,
   GARDEN_PARAMS,
   ADDRESS_ZERO,
+  ONE_YEAR_IN_SECONDS,
 } = require('lib/constants.js');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
@@ -28,6 +29,7 @@ const {
   vote,
   finalizeStrategy,
   injectFakeProfits,
+  substractFakeProfits,
 } = require('fixtures/StrategyHelper');
 
 const {
@@ -41,7 +43,6 @@ const {
 } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
-const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
 async function createWallets(number) {
   const walletAddresses = [];
@@ -619,7 +620,7 @@ describe('Garden', function () {
         (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, NOW + 2180880)).toString(),
       ).to.be.closeTo((599976390091245353).toString(), eth('0.005'));
     });
-    it('the contributor power is calculated correctly if _to is 2 years after the last deposit', async function () {
+    it('the contributor power is calculated correctly if _from and _to are 2 years after the last deposit', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
@@ -636,7 +637,7 @@ describe('Garden', function () {
         eth('0.02'),
       );
     });
-    it('the contributor power is calculated correctly if_to is 2 years after the last deposit but several other deposits were taking place', async function () {
+    it('the contributor power is calculated correctly if _from and _to are 2 years after the last deposit but several other deposits were taking place', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
@@ -653,10 +654,9 @@ describe('Garden', function () {
       await increaseTime(ONE_DAY_IN_SECONDS * 365 * 2); // Getting some unlocked tokens
       const start = NOW + 59986244;
       const end = start + 259200;
-      await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.109304839546982447'),
-        eth('0.05'),
-      );
+      await expect(
+        (await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).toString(),
+      ).to.be.closeTo('109844061982424491', eth(0.005));
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
@@ -671,11 +671,10 @@ describe('Garden', function () {
       });
       const end = NOW + 103844;
       await increaseTime(100);
-      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 6% of contribution power within the time period
-      // Decrease precision as the curve is going fast and depends too much on the block-timestamp of the test
+      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 3% of contribution power within the time period
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.068955884678746129'),
-        eth('0.10'),
+        from('72337063437941770'),
+        eth(0.01),
       );
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
@@ -692,11 +691,10 @@ describe('Garden', function () {
       const start = NOW;
       const end = start + 7776000 / 3;
       await increaseTime(100);
-      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 11% of contribution power within the time period
-      // Decrease precision as the curve is going fast and depends too much on the block-timestamp of the test
+      // Despite malicious contributor deposit 10ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 7% of contribution power within the time period
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.112356833888076068'),
-        eth('0.10'),
+        from('115396664301579409'),
+        eth(0.02),
       );
     });
     it('a malicious contributor cannot make a flash loan to get maximum contributor power (2 big deposits) ', async function () {
@@ -973,8 +971,11 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
-      await garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s);
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, false);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(amountIn, minAmountOut, 1, 0, false, ADDRESS_ZERO, eth(), 0, 0, sig.v, sig.r, sig.s);
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
@@ -1035,7 +1036,22 @@ describe('Garden', function () {
 
         if (token === addresses.tokens.WETH) {
           await expect(() =>
-            garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+            garden
+              .connect(keeper)
+              .withdrawBySig(
+                amountIn,
+                minAmountOut,
+                1,
+                maxFee,
+                false,
+                ADDRESS_ZERO,
+                eth(),
+                0,
+                fee,
+                sig.v,
+                sig.r,
+                sig.s,
+              ),
           ).to.changeTokenBalances(erc20, [keeper, garden], [fee, minAmountOut.mul(-1)]);
 
           expect((await ethers.provider.getBalance(signer3.address)).sub(balanceBefore)).to.be.eq(
@@ -1043,7 +1059,22 @@ describe('Garden', function () {
           );
         } else {
           await expect(() =>
-            garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 1, maxFee, eth(), fee, sig.v, sig.r, sig.s),
+            garden
+              .connect(keeper)
+              .withdrawBySig(
+                amountIn,
+                minAmountOut,
+                1,
+                maxFee,
+                false,
+                ADDRESS_ZERO,
+                eth(),
+                0,
+                fee,
+                sig.v,
+                sig.r,
+                sig.s,
+              ),
           ).to.changeTokenBalances(
             erc20,
             [keeper, garden, signer3],
@@ -1072,9 +1103,11 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, false);
       await expect(
-        garden.connect(signer3).withdrawBySig(amountIn, minAmountOut, 1, 0, eth(), 0, sig.v, sig.r, sig.s),
+        garden
+          .connect(signer3)
+          .withdrawBySig(amountIn, minAmountOut, 1, 0, false, ADDRESS_ZERO, eth(), 0, 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -1097,13 +1130,148 @@ describe('Garden', function () {
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
-      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8, 0);
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 8, 0, false);
 
       await expect(
-        garden.connect(keeper).withdrawBySig(amountIn, minAmountOut, 8, 0, eth(), 0, sig.v, sig.r, sig.s),
+        garden
+          .connect(keeper)
+          .withdrawBySig(amountIn, minAmountOut, 8, 0, false, ADDRESS_ZERO, eth(), 0, 0, sig.v, sig.r, sig.s),
       ).to.be.revertedWith('BAB#089');
     });
-    // TODO: Test minAmountOut is respected
+
+    it('can withdraw with a penalty', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const supplyBefore = await garden.totalSupply();
+
+      const balanceBefore = await garden.balanceOf(signer3.address);
+
+      const strategy = await getStrategy();
+      await vote(strategy, [signer1, signer2, signer3]);
+
+      await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
+
+      const gardenBalanceBefore = await usdc.balanceOf(garden.address);
+      const beforeWithdrawal = await usdc.balanceOf(signer3.address);
+
+      amountIn = eth(500);
+      minAmountOut = from(475 * 1e6);
+
+      const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.USDC);
+      const strategyNAV = await strategy.getNAV();
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(
+          amountIn,
+          minAmountOut,
+          1,
+          0,
+          true,
+          strategy.address,
+          pricePerShare,
+          strategyNAV,
+          0,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalanceBefore)).to.be.closeTo(from(0), from(25 * 1e6));
+
+      // check users garden shares
+      const balanceAfter = await garden.balanceOf(signer3.address);
+      expect(balanceBefore.sub(balanceAfter)).to.eq(amountIn);
+      expect(balanceAfter).to.equal(amountIn);
+
+      // check user USDC balance; account for 2.5% penalty
+      expect((await usdc.balanceOf(signer3.address)).sub(beforeWithdrawal)).to.be.gte(minAmountOut);
+    });
+
+    it('can withdraw with a penalty from a strategy in losses', async function () {
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const supplyBefore = await garden.totalSupply();
+
+      const balanceBefore = await garden.balanceOf(signer3.address);
+
+      const strategy = await getStrategy();
+      await vote(strategy, [signer1, signer2, signer3]);
+
+      await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
+
+      // lose 500 DAI
+      await substractFakeProfits(strategy, eth(500));
+
+      const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.USDC);
+
+      const gardenBalanceBefore = await usdc.balanceOf(garden.address);
+      const beforeWithdrawal = await usdc.balanceOf(signer3.address);
+
+      amountIn = eth(500);
+      minAmountOut = eth(500).mul(975).div(1000).mul(pricePerShare).div(eth()).div(1e12);
+
+      const strategyNAV = await strategy.getNAV();
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(
+          amountIn,
+          minAmountOut,
+          1,
+          0,
+          true,
+          strategy.address,
+          pricePerShare,
+          strategyNAV,
+          0,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalanceBefore)).to.be.closeTo(from(0), from(25 * 1e6));
+
+      // check users garden shares
+      const balanceAfter = await garden.balanceOf(signer3.address);
+      expect(balanceBefore.sub(balanceAfter)).to.eq(amountIn);
+      expect(balanceAfter).to.equal(amountIn);
+
+      // check user USDC balance; account for 2.5% penalty
+      expect((await usdc.balanceOf(signer3.address)).sub(beforeWithdrawal)).to.be.gte(minAmountOut);
+    });
   });
 
   describe('withdraw', async function () {
@@ -1123,6 +1291,31 @@ describe('Garden', function () {
       });
 
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
+    });
+
+    it('can withdraw with a penalty from a straetgy with losses', async function () {
+      const garden = await createGarden();
+
+      const strategy = await getStrategy();
+      await vote(strategy, [signer1, signer2, signer3]);
+
+      await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
+
+      // lose 1000 DAI
+      await substractFakeProfits(strategy, eth(1000));
+
+      const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.WETH);
+
+      const beforeWithdrawal = await ethers.provider.getBalance(signer1.address);
+
+      const minAmountOut = eth(0.5).mul(975).div(1000).mul(pricePerShare).div(eth());
+
+      await garden
+        .connect(signer1)
+        .withdraw(eth(0.5), minAmountOut, signer1.getAddress(), true, strategy.address, { gasPrice: 0 });
+
+      // receive less due to penalty and strategy loss
+      expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.gte(minAmountOut);
     });
 
     it('can withdraw funds with a penalty', async function () {
@@ -1786,6 +1979,7 @@ describe('Garden', function () {
       ).to.be.reverted;
     });
   });
+
   describe('avg share price per user', async function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },

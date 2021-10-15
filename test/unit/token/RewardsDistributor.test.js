@@ -496,7 +496,7 @@ describe('RewardsDistributor', function () {
       expect(await weth.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
-      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await weth.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
@@ -1199,7 +1199,7 @@ describe('RewardsDistributor', function () {
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(50);
         // We unwind capital
-        await strategyContract.connect(owner).unwindStrategy(amount);
+        await strategyContract.connect(owner).unwindStrategy(amount, await strategyContract.getNAV());
         const [strategyData2] = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData2[6]).to.be.closeTo(amount, strategyData2[6].div(100));
         expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
