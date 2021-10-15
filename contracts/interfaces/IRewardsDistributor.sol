@@ -51,6 +51,11 @@ interface IRewardsDistributor {
         view
         returns (uint256[] memory, bool[] memory);
 
+    function getContributorPerGarden(address _garden, address _contributor)
+        external
+        view
+        returns (uint256[] memory, bool[] memory);
+
     /* ============ External Functions ============ */
 
     function startBABLRewards() external;

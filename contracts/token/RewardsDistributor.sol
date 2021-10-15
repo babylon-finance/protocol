@@ -573,6 +573,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
+     * Get contributor data per garden
+     * @param _garden       Address of the garden
+     * @param _contributor  Address of contributor
+     */
+
+    function getContributorPerGarden(address _garden, address _contributor)
+        external
+        view
+        override
+        returns (uint256[] memory, bool[] memory)
+    {
+        uint256[] memory contributorData = new uint256[](11);
+        bool[] memory contributorBool = new bool[](2);
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        TimestampContribution storage contributorDetail = contributor.tsContributions[0];
+        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
+
+        contributorData[0] = contributor.lastDepositAt;
+        contributorData[1] = contributor.initialDepositAt;
+        contributorData[2] = contributor.pid;
+        contributorData[3] = contributorDetail.avgBalance;
+        contributorData[4] = contributorDetail.power;
+        contributorData[5] = contributorDetail.timestamp;
+        contributorData[6] = contributorDetail.timePointer;
+        contributorData[7] = gardenPid[_garden];
+        contributorData[8] = garden.avgGardenBalance;
+        contributorData[9] = garden.lastDepositAt;
+        contributorData[10] = garden.accGardenPower;
+        contributorBool[0] = betaGardenMigrated[_garden];
+        contributorBool[1] = betaUserMigrated[_garden][_contributor];
+
+        return (contributorData, contributorBool);
+    }
+
+    /**
      * Check the garden profit sharing % if different from default
      * @param _garden     Address of the garden
      */
