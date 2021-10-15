@@ -130,25 +130,6 @@ interface IBabController {
 
     function enabledOperations(uint256 _kind) external view returns (address);
 
-    function getProfitSharing()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
-
-    function getBABLSharing()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
-
     function getGardens() external view returns (address[] memory);
 
     function getOperations() external view returns (address[20] memory);

@@ -21,7 +21,7 @@ pragma solidity 0.7.6;
  * @title IRewardsDistributor
  * @author Babylon Finance
  *
- * Interface for the distribute rewards of the BABL Mining Program.
+ * Interface for the rewards distributor in charge of the BABL Mining Program.
  */
 
 interface IRewardsDistributor {
@@ -46,12 +46,24 @@ interface IRewardsDistributor {
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
+    function getBABLMiningParameters()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
+
     function checkMining(uint256 _quarterNum, address _strategy)
         external
         view
         returns (uint256[] memory, bool[] memory);
 
-    function getBetaMigration(address _garden, address _contributor)
+    function getContributorPerGarden(address _garden, address _contributor)
         external
         view
         returns (uint256[] memory, bool[] memory);
@@ -71,6 +83,15 @@ interface IRewardsDistributor {
         uint256 _lpShare
     ) external;
 
+    function setBABLMiningParameters(
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare,
+        uint256 _creatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeight
+    ) external;
+
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
     function updateGardenPowerAndContributor(
@@ -81,6 +102,4 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
-
-    function migrateBetaUsers(address _garden, address[] memory _contributors) external;
 }

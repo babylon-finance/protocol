@@ -288,4 +288,6 @@ library Errors {
     uint256 internal constant ZERO_CAPITAL_REQUESTED = 99;
     // Unwind capital above the limit
     uint256 internal constant INVALID_CAPITAL_TO_UNWIND = 100;
+    // Mining % sharing does not match
+    uint256 internal constant INVALID_MINING_VALUES = 101;
 }
