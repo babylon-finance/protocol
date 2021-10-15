@@ -584,7 +584,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         override
         returns (uint256[] memory, bool[] memory)
     {
-        uint256[] memory contributorData = new uint256[](11);
+        uint256[] memory contributorData = new uint256[](12);
         bool[] memory contributorBool = new bool[](2);
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         TimestampContribution storage contributorDetail = contributor.tsContributions[0];
@@ -594,13 +594,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         contributorData[1] = contributor.initialDepositAt;
         contributorData[2] = contributor.pid;
         contributorData[3] = contributorDetail.avgBalance;
-        contributorData[4] = contributorDetail.power;
-        contributorData[5] = contributorDetail.timestamp;
-        contributorData[6] = contributorDetail.timePointer;
-        contributorData[7] = gardenPid[_garden];
-        contributorData[8] = garden.avgGardenBalance;
-        contributorData[9] = garden.lastDepositAt;
-        contributorData[10] = garden.accGardenPower;
+        contributorData[4] = ERC20(_garden).balanceOf(_contributor);
+        contributorData[5] = contributorDetail.power;
+        contributorData[6] = contributorDetail.timestamp;
+        contributorData[7] = contributorDetail.timePointer;
+        contributorData[8] = gardenPid[_garden];
+        contributorData[9] = garden.avgGardenBalance;
+        contributorData[10] = garden.lastDepositAt;
+        contributorData[11] = garden.accGardenPower;
         contributorBool[0] = betaGardenMigrated[_garden];
         contributorBool[1] = betaUserMigrated[_garden][_contributor];
 
