@@ -80,8 +80,6 @@ interface IGarden {
 
     function minContribution() external view returns (uint256);
 
-    function maxContributors() external view returns (uint256);
-
     function depositHardlock() external view returns (uint256);
 
     function minLiquidityAsset() external view returns (uint256);
