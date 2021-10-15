@@ -404,8 +404,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
-        _withdrawInternal(_amountIn, _minAmountOut, _to, _withPenalty,
-                          _unwindStrategy, pricePerShare, _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0);
+        _withdrawInternal(
+            _amountIn,
+            _minAmountOut,
+            _to,
+            _withPenalty,
+            _unwindStrategy,
+            pricePerShare,
+            _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0
+        );
     }
 
     /**
@@ -454,13 +461,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
-            _withdrawInternalWithFee(_amountIn, _minAmountOut,_maxFee,
-                                     _withPenalty, _unwindStrategy,
-                                     _pricePerShare, _strategyNAV, _fee, signer);
+            _withdrawInternalWithFee(
+                _amountIn,
+                _minAmountOut,
+                _maxFee,
+                _withPenalty,
+                _unwindStrategy,
+                _pricePerShare,
+                _strategyNAV,
+                _fee,
+                signer
+            );
         } else {
-            _withdrawInternal(_amountIn, _minAmountOut, payable(signer),
-                              _withPenalty, _unwindStrategy, _pricePerShare,
-                              _strategyNAV);
+            _withdrawInternal(
+                _amountIn,
+                _minAmountOut,
+                payable(signer),
+                _withPenalty,
+                _unwindStrategy,
+                _pricePerShare,
+                _strategyNAV
+            );
         }
     }
 
@@ -876,8 +897,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // than desired so we have have to account for this with a 5% slippage.
             // TODO: if there is more than 5% slippage that will block
             // withdrawal
-            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)),
-                                                     _strategyNAV);
+            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
@@ -903,20 +923,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _fee,
         address _signer
     ) internal {
-            // account for non 18 decimals ERC20
-            uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
-            _withdrawInternal(
-                _amountIn.sub(feeShares),
-                _minAmountOut.sub(_maxFee),
-                payable(_signer),
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare,
-                _strategyNAV
-            );
-            // burn shares paid to Keeper
-            _burn(_signer, feeShares);
-            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+        // account for non 18 decimals ERC20
+        uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
+        _withdrawInternal(
+            _amountIn.sub(feeShares),
+            _minAmountOut.sub(_maxFee),
+            payable(_signer),
+            _withPenalty,
+            _unwindStrategy,
+            _pricePerShare,
+            _strategyNAV
+        );
+        // burn shares paid to Keeper
+        _burn(_signer, feeShares);
+        IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
     }
 
     function _getWithdrawSigner(

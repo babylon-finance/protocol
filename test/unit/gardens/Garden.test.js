@@ -1038,7 +1038,20 @@ describe('Garden', function () {
           await expect(() =>
             garden
               .connect(keeper)
-              .withdrawBySig(amountIn, minAmountOut, 1, maxFee, false, ADDRESS_ZERO, eth(), 0,fee, sig.v, sig.r, sig.s),
+              .withdrawBySig(
+                amountIn,
+                minAmountOut,
+                1,
+                maxFee,
+                false,
+                ADDRESS_ZERO,
+                eth(),
+                0,
+                fee,
+                sig.v,
+                sig.r,
+                sig.s,
+              ),
           ).to.changeTokenBalances(erc20, [keeper, garden], [fee, minAmountOut.mul(-1)]);
 
           expect((await ethers.provider.getBalance(signer3.address)).sub(balanceBefore)).to.be.eq(
@@ -1048,7 +1061,20 @@ describe('Garden', function () {
           await expect(() =>
             garden
               .connect(keeper)
-              .withdrawBySig(amountIn, minAmountOut, 1, maxFee, false, ADDRESS_ZERO, eth(), 0, fee, sig.v, sig.r, sig.s),
+              .withdrawBySig(
+                amountIn,
+                minAmountOut,
+                1,
+                maxFee,
+                false,
+                ADDRESS_ZERO,
+                eth(),
+                0,
+                fee,
+                sig.v,
+                sig.r,
+                sig.s,
+              ),
           ).to.changeTokenBalances(
             erc20,
             [keeper, garden, signer3],
@@ -1148,7 +1174,20 @@ describe('Garden', function () {
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
       await garden
         .connect(keeper)
-        .withdrawBySig(amountIn, minAmountOut, 1, 0, true, strategy.address, pricePerShare, strategyNAV, 0, sig.v, sig.r, sig.s);
+        .withdrawBySig(
+          amountIn,
+          minAmountOut,
+          1,
+          0,
+          true,
+          strategy.address,
+          pricePerShare,
+          strategyNAV,
+          0,
+          sig.v,
+          sig.r,
+          sig.s,
+        );
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
@@ -1271,12 +1310,12 @@ describe('Garden', function () {
 
       const minAmountOut = eth(0.5).mul(975).div(1000).mul(pricePerShare).div(eth());
 
-      await garden.connect(signer1).withdraw(eth(0.5), minAmountOut, signer1.getAddress(), true, strategy.address, {gasPrice: 0});
+      await garden
+        .connect(signer1)
+        .withdraw(eth(0.5), minAmountOut, signer1.getAddress(), true, strategy.address, { gasPrice: 0 });
 
       // receive less due to penalty and strategy loss
-      expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.gte(
-        minAmountOut
-      );
+      expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.gte(minAmountOut);
     });
 
     it('can withdraw funds with a penalty', async function () {
