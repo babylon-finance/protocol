@@ -30,7 +30,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
  * @title GardenFactory
  * @author Babylon Finance
  *
- * Factory to create garden contracts
+ * Factory to deploy Gardens on-chain
  */
 contract GardenFactory is IGardenFactory {
     IBabController private immutable controller;
@@ -46,15 +46,16 @@ contract GardenFactory is IGardenFactory {
 
     /**
      * Creates a garden using minimal proxies
-     * @param _reserveAsset           Address of the reserve asset ERC20
-     * @param _creator                Address of the creator
-     * @param _name                   Name of the Garden
-     * @param _symbol                 Symbol of the Garden
-     * @param _tokenURI               URL of the garden NFT JSON
-     * @param _seed                   Seed to regenerate the garden NFT
-     * @param _gardenParams           Array of numeric params in the garden
-     * @param _initialContribution    Initial Contribution by the Gardener
-     * @param _publicGardenStrategistsStewards  Public garden, public strategist rights and public stewards rights
+     * @param _reserveAsset             Address of the reserve asset ERC20
+     * @param _creator                  Address of the creator
+     * @param _name                     Name of the Garden
+     * @param _symbol                   Symbol of the Garden
+     * @param _tokenURI                 URL of the garden NFT JSON
+     * @param _seed                     Seed to regenerate the garden NFT
+     * @param _gardenParams             Array of numeric params in the garden
+     * @param _initialContribution      Initial Contribution by the Gardener
+     * @param _publicGardenStrategistsStewards Public strategist rights and
+     * public stewards rights
      */
     function createGarden(
         address _reserveAsset,

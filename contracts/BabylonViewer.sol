@@ -117,7 +117,7 @@ contract BabylonViewer {
             bool[4] memory,
             address[] memory,
             address[] memory,
-            uint256[11] memory,
+            uint256[10] memory,
             uint256[10] memory,
             uint256[3] memory
         )
@@ -158,7 +158,6 @@ contract BabylonViewer {
             [
                 garden.depositHardlock(),
                 garden.minVotesQuorum(),
-                garden.maxContributors(),
                 garden.maxDepositLimit(),
                 garden.minVoters(),
                 garden.minStrategyDuration(),

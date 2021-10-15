@@ -154,7 +154,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint256 private protocolWithdrawalGardenTokenFee; // 0 (0.01% = 1e14, 1% = 1e16)
 
     // Maximum number of contributors per garden
-    uint256 public override maxContributorsPerGarden;
+    uint256 private maxContributorsPerGarden; // DEPRECATED
 
     // Enable garden creations to be fully open to the public (no need of Ishtar gate anymore)
     bool public override gardenCreationIsOpen;
@@ -287,14 +287,6 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function setAllowPublicGardens() external override onlyOwner {
         allowPublicGardens = true;
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Change the max number of contributors for new Gardens since the change
-     */
-    function setMaxContributorsPerGarden(uint256 _newMax) external override onlyOwner {
-        require(_newMax >= 1, 'Contributors cannot be less than 1 per garden');
-        maxContributorsPerGarden = _newMax;
     }
 
     // ===========  Protocol related Gov Functions ======
