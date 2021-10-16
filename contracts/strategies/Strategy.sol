@@ -249,11 +249,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden = IGarden(_garden);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
         _require(
-            IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
+            _stake > 0 &&
+                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
             Errors.TOKENS_STAKED
         );
-        // TODO: adjust this calc
-        _require(_stake > 0, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
@@ -272,6 +271,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         maxCapitalRequested = _maxCapitalRequested;
+        maxGasFeePercentage = _maxGasFeePercentage;
 
         votes[_strategist] = _stake.toInt256();
         totalPositiveVotes = _stake;
