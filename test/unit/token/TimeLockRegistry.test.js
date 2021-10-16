@@ -9,7 +9,7 @@ const { increaseTime } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getCombinedModifierFlags } = require('typescript');
 
-const TOTAL_REGISTERED_TOKENS = eth(297950);
+const TOTAL_REGISTERED_TOKENS = eth(287012);
 const investorsVestingStart = new Date(2021, 6, 27); // July 27th real token vesting start for investors
 const teamVestingStart = new Date(2021, 2, 15); // 15th March
 
