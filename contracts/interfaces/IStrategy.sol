@@ -34,7 +34,8 @@ interface IStrategy {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _maxAllocationPercentage
+        uint256 _maxAllocationPercentage,
+        uint256 _maxGasFeePercentage
     ) external;
 
     function resolveVoting(
@@ -151,6 +152,8 @@ interface IStrategy {
     function maxCapitalRequested() external view returns (uint256);
 
     function maxAllocationPercentage() external view returns (uint256);
+
+    function maxGasFeePercentage() external view returns (uint256);
 
     function expectedReturn() external view returns (uint256);
 
