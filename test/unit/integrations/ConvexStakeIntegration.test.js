@@ -86,7 +86,7 @@ describe('ConvexStakeIntegrationTest', function () {
       addresses.convex.pools.forEach(({ crvpool, cvxpool, name }) => {
         it(`can enter ${name} CRV pool and stake into convex`, async function () {
           // TODO: fix usdt pool
-          if(name === 'usdt') return;
+          if (name === 'usdt') return;
           await depositAndStakeStrategy(crvpool, cvxpool, token);
         });
       });
