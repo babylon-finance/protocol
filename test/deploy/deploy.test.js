@@ -131,15 +131,15 @@ describe('deploy', function () {
       ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
-    it('can unwind all active strategies', async () => {
+    it.skip('can unwind all active strategies', async () => {
       await canUnwindAllActiveStrategies();
     });
 
-    it('can allocate all active strategies', async () => {
+    it.skip('can allocate all active strategies', async () => {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
@@ -164,7 +164,7 @@ describe('deploy', function () {
       }
     });
 
-    it.skip('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
