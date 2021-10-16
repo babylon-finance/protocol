@@ -1,8 +1,8 @@
 const { ADDRESS_ZERO } = require('../../lib/constants');
 
-module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getRapid, network, tenderly }) => {
+module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getGasPrice, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const { deploy } = deployments;
 
   const controller = await deployments.get('BabControllerProxy');

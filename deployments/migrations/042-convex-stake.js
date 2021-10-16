@@ -5,12 +5,12 @@ module.exports = async ({
   getNamedAccounts,
   deployments,
   ethers,
-  getRapid,
+  getGasPrice,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const contract = 'ConvexStakeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');

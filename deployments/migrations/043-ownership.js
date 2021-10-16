@@ -8,11 +8,11 @@ module.exports = async ({
   getSigner,
   getChainId,
   getContract,
-  getRapid,
+  getGasPrice,
 }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
 
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);

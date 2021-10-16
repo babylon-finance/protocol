@@ -5,13 +5,13 @@ module.exports = async ({
   getNamedAccounts,
   deployments,
   ethers,
-  getRapid,
+  getGasPrice,
   getConroller,
 }) => {
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const contract = 'GardenValuer';
 
   const controller = await getController();
