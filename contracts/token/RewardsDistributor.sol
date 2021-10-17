@@ -301,13 +301,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
         _onlyMiningActive();
         _onlyStrategy(msg.sender);
-        // ts[0]: executedAt, ts[1]: exitedAt
-        uint256[] memory ts = new uint256[](2);
-        (, , , , ts[0], ts[1], ) = IStrategy(msg.sender).getStrategyState();
-        if ((ts[0] >= START_TIME || ts[1] >= START_TIME || (ts[0] > 0 && ts[1] == 0)) && START_TIME != 0) {
-            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
-        }
+        // All strategies are now part of the Mining Program
+        _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
     }
 
     /**
@@ -324,12 +319,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         _onlyMiningActive();
         _onlyStrategy(_strategy);
-        // ts[0]: executedAt, ts[1]: exitedAt
-        uint256[] memory ts = new uint256[](2);
-        (, , , , ts[0], ts[1], ) = IStrategy(_strategy).getStrategyState();
-        if ((ts[0] >= START_TIME || ts[1] >= START_TIME || (ts[0] > 0 && ts[1] == 0)) && START_TIME != 0) {
-            _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
-        }
+        _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
     }
 
     function updateGardenPowerAndContributor(
