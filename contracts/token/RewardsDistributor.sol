@@ -328,7 +328,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // ts[0]: executedAt, ts[1]: exitedAt
         uint256[] memory ts = new uint256[](2);
         (, , , , ts[0], ts[1], ) = IStrategy(msg.sender).getStrategyState();
-        if ((ts[0] >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
+        if (
+            (ts[0] >= START_TIME || ts[1] >= START_TIME || IStrategy(msg.sender).isStrategyActive()) && START_TIME != 0
+        ) {
             // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
             _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
         }
