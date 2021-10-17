@@ -323,6 +323,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external override onlyOwner {
         _onlyUnpaused();
         _onlyMiningActive();
+        _onlyStrategy(_strategy);
         // ts[0]: executedAt, ts[1]: exitedAt
         uint256[] memory ts = new uint256[](2);
         (, , , , ts[0], ts[1], ) = IStrategy(_strategy).getStrategyState();
