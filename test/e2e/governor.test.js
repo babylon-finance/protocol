@@ -13,6 +13,7 @@ const { getVoters, getGovernorMock, getProposal, castVotes, claimTokens } = requ
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 const { finalizeStrategy, finalizeStrategyImmediate } = require('fixtures/StrategyHelper');
+const { executeStrategy } = require('../fixtures/StrategyHelper');
 
 describe('governor', function () {
   let deployer;
@@ -291,6 +292,53 @@ describe('governor', function () {
     }
   });
 
+  it('check rebalanced strategies to fix', async function () {
+    const owner = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
+    const timelockController = await impersonateAddress('0xe6ed0eacb79a6e457416e4df38ed778fd6c6d193');
+    const keeper = await impersonateAddress('0x74D206186B84d4c2dAFeBD9Fd230878EC161d5B8');
+
+    const controller = await ethers.getContractAt(
+      'BabController',
+      '0xd4a5b5fcb561daf3adf86f8477555b92fba43b5f',
+      timelockController,
+    );
+
+    // upgrade controller
+    const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', owner);
+    // Rebalanced strategies to fix
+    const strategies = ['0xB60Aa37f42Fd45c6c3ed8DB0a89df1e07f70f1F5', '0xfdea6f30f3dadd60382baa07252923ff6007c35d'];
+    const distributor = await ethers.getContractAt(
+      'RewardsDistributor',
+      '0x40154ad8014df019a53440a60ed351dfba47574e',
+      owner,
+    );
+    const signers = await ethers.getSigners();
+    const signer = signers[0];
+
+    // upgrade rewards distributor
+    const distributorNewImpl = await deploy('RewardsDistributor', {
+      from: signer.address,
+    });
+
+    await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
+
+    // We check that we can finalize strategies and all get rewards
+    for (let i = 0; i < strategies.length; i++) {
+      const strategyContract = await ethers.getContractAt('IStrategy', strategies[i], owner);
+      const [, miningBool] = await distributor.checkMining(1, strategies[i]);
+      expect(miningBool[0]).to.equal(true);
+      expect(miningBool[1]).to.equal(true);
+      await strategyContract.connect(keeper).executeStrategy(eth(0.1), 0, {
+        gasPrice: 0,
+      });
+      const [miningUint2] = await distributor.checkMining(1, strategies[i]);
+      expect(miningUint2[3]).to.be.gt(0);
+      expect(miningUint2[4]).to.be.gt(0);
+      await increaseTime(ONE_DAY_IN_SECONDS * 60);
+      await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      expect(await strategyContract.strategyRewards()).to.be.gt(0);
+    }
+  });
   it('can upgrade Governor to a new one', async function () {
     // create new governor
     const mockFactory = await ethers.getContractFactory('BabylonGovernorMock');
