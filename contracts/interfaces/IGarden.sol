@@ -174,6 +174,8 @@ interface IGarden {
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 
+    function updateGardenParams(uint[9] memory _newParams) external;
+
     function expireCandidateStrategy(address _strategy) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
