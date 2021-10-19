@@ -269,7 +269,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
 
         publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
-        _require(_gardenParams[0] > 0 && _initialContribution >= _gardenParams[0] && _initialContribution <= _gardenParams[1], Errors.MIN_CONTRIBUTION);
+        _require(
+            _gardenParams[0] > 0 &&
+                _initialContribution >= _gardenParams[0] &&
+                _initialContribution <= _gardenParams[1],
+            Errors.MIN_CONTRIBUTION
+        );
 
         _start(
             _gardenParams[0],
@@ -713,25 +718,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _assignExtraCreator(3, _newCreators[3]);
     }
 
-
     /*
      * Updates Garden Params
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint[9] memory _newParams) external override {
-      _onlyCreator(msg.sender);
-      _start(
-          _newParams[0], // uint256 _maxDepositLimit
-          _newParams[1], // uint256 _minLiquidityAsset,
-          _newParams[2], // uint256 _depositHardlock,
-          _newParams[3], // uint256 _minContribution,
-          _newParams[4], // uint256 _strategyCooldownPeriod,
-          _newParams[5], // uint256 _minVotesQuorum,
-          _newParams[6], // uint256 _minStrategyDuration,
-          _newParams[7], // uint256 _maxStrategyDuration,
-          _newParams[8] // uint256 _minVoters
-      );
+    function updateGardenParams(uint256[9] memory _newParams) external override {
+        _onlyCreator(msg.sender);
+        _start(
+            _newParams[0], // uint256 _maxDepositLimit
+            _newParams[1], // uint256 _minLiquidityAsset,
+            _newParams[2], // uint256 _depositHardlock,
+            _newParams[3], // uint256 _minContribution,
+            _newParams[4], // uint256 _strategyCooldownPeriod,
+            _newParams[5], // uint256 _minVotesQuorum,
+            _newParams[6], // uint256 _minStrategyDuration,
+            _newParams[7], // uint256 _maxStrategyDuration,
+            _newParams[8] // uint256 _minVoters
+        );
     }
 
     /* ============ External Getter Functions ============ */
