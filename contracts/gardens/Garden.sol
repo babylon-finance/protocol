@@ -275,7 +275,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 _initialContribution <= _gardenParams[0],
             Errors.MIN_CONTRIBUTION
         );
-
+        gardenInitializedAt = block.timestamp;
         _start(
             _gardenParams[0],
             _gardenParams[1],
@@ -870,7 +870,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         minStrategyDuration = _minStrategyDuration;
         maxStrategyDuration = _maxStrategyDuration;
         maxDepositLimit = _maxDepositLimit;
-        gardenInitializedAt = block.timestamp;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
     }
