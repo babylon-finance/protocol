@@ -233,6 +233,20 @@ contract BabylonViewer {
         );
     }
 
+    /**
+     * returns the estimated accrued BABL for a user related to one strategy
+     */
+    function estimateUserBABLRewards(address _strategy, address _contributor) external view returns (uint256[] memory) {
+        return IRewardsDistributor(controller.rewardsDistributor()).estimateUserBABLRewards(_strategy, _contributor);
+    }
+
+    /**
+     * returns the estimated accrued BABL of a strategy
+     */
+    function estimateStrategyBABLRewards(address _strategy) external view returns (uint256) {
+        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyBABLRewards(_strategy);
+    }
+
     function getOperationsStrategy(address _strategy)
         public
         view

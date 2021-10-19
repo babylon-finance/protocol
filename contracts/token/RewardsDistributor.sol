@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -524,16 +525,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Governance has decided to have different weights for principal and profit
             // Profit weight must be higher than principal
             // profitWeight + principalWeight must always sum 1e18 (100%)
-            // Backward compatible with default values (avoid division by zero in case it is not set yet)
-            uint256 profitWeight = bablProfitWeight == 0 ? 65e16 : bablProfitWeight;
-            uint256 principalWeight = bablPrincipalWeight == 0 ? 35e16 : bablPrincipalWeight;
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
             // Set the max cap bonus x2
             uint256 maxRewards = rewards.preciseMul(2e18);
             // Apply rewards weight related to principal and profit
-            rewards = rewards.preciseMul(principalWeight).add(
-                rewards.preciseMul(profitWeight).preciseMul(percentageProfit)
+            rewards = rewards.preciseMul(bablPrincipalWeight).add(
+                rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit)
             );
             // Check max cap
             if (rewards >= maxRewards) {
@@ -704,6 +702,65 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             bablProfitWeight,
             bablPrincipalWeight
         );
+    }
+
+    function estimateUserBABLRewards(address _strategy, address _contributor)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: profitValue
+        // strategyDetails[11]: distanceValue
+        // profitData array mapping:
+        // profitData[0]: profit
+        // profitData[1]: distance
+
+        uint256[] memory rewards = new uint256[](4);
+        address garden = address(IStrategy(_strategy).garden());
+
+        /*  if (IStrategy(_strategy).strategyRewards() != 0) {
+            // Strategy got rewards already
+            address[] memory strategy = new address[]();
+            strategy[0] = _strategy;
+            rewards = getRewards(garden, _contributor, [ strategy ]);
+            return rewards; 
+        } else if (IStrategy(_strategy).isStrategyActive()) { // strategy has not finished yet
+         */
+        if (IStrategy(_strategy).isStrategyActive()) {
+            // strategy has not finished yet
+            (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+                _estimateStrategyBABLRewards(_strategy);
+
+            // Get the contributor power until the the strategy exit timestamp
+            uint256 contributorPower = getContributorPower(garden, _contributor, block.timestamp);
+            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
+            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
+            // Get steward rewards
+            rewards[1] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            // Get LP rewards
+            // Note that contributor power is fluctuating along the way for each deposit
+            rewards[2] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
+            // Creator bonus (if any)
+            rewards[3] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
+        }
+        return rewards;
+    }
+
+    function estimateStrategyBABLRewards(address _strategy) external view override returns (uint256) {
+        (, uint256[] memory strategyDetails, ) = _estimateStrategyBABLRewards(_strategy);
+        return strategyDetails[9];
     }
 
     /* ============ Internal Functions ============ */
@@ -1407,6 +1464,153 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
         }
         return _contributorBABL;
+    }
+
+    function _estimateStrategyBABLRewards(address _strategy)
+        internal
+        view
+        returns (
+            address strategist,
+            uint256[] memory strategyDetails,
+            bool[] memory profitData
+        )
+    {
+        // Strategy has not finished yet
+        uint256 strategyRewards;
+        (strategist, strategyDetails, profitData) = IStrategy(_strategy).getStrategyRewardsContext();
+        // TODO check that getNAV is in reserveAsset
+        // As the strategy has not ended we replace the capital returned value by the NAV
+        strategyDetails[7] = IStrategy(_strategy).getNAV();
+        // TODO pending substraction of protocol profit %
+        profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
+        profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
+        strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
+        strategyDetails[11] = profitData[1]
+            ? strategyDetails[7].sub(strategyDetails[8])
+            : strategyDetails[8].sub(strategyDetails[7]);
+        // We take care about beta live strategies start mining time
+        (uint256 numQuarters, uint256 startingQuarter) =
+            _getRewardsWindow(
+                (
+                    strategyDetails[0] > START_TIME
+                        ? strategyDetails[0]
+                        : strategyPerQuarter[_strategy][1].betaInitializedAt
+                ),
+                block.timestamp
+            );
+        // We create an array of quarters since the begining of the strategy
+        // We then fill with known + unknown data that has to be figured out
+        uint256[] memory strategyPower = new uint256[](numQuarters);
+        uint256[] memory protocolPower = new uint256[](numQuarters);
+
+        for (uint256 i = 0; i < numQuarters; i++) {
+            /*             uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
+             */
+            // We take the info of each epoch from current checkpoints
+            // array[0] for the first quarter power checkpoint of the strategy
+            strategyPower[i] = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
+            protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+            _require(strategyPower[i] <= protocolPower[i], Errors.OVERFLOW_IN_POWER);
+        }
+
+        strategyPower = _updatePendingPower(
+            strategyPower,
+            numQuarters,
+            startingQuarter,
+            strategyDetails[2],
+            strategyPrincipal[_strategy]
+        );
+        protocolPower = _updatePendingPower(
+            protocolPower,
+            numQuarters,
+            startingQuarter,
+            miningUpdatedAt,
+            miningProtocolPrincipal
+        );
+        strategyDetails[9] = _harvestStrategyRewards(
+            strategyPower,
+            protocolPower,
+            startingQuarter,
+            numQuarters,
+            strategyDetails[7].preciseDiv(strategyDetails[6])
+        );
+        console.log('strategy rewards', strategyRewards);
+    }
+
+    function _harvestStrategyRewards(
+        uint256[] memory _strategyPower,
+        uint256[] memory _protocolPower,
+        uint256 _startingQuarter,
+        uint256 _numQuarters,
+        uint256 _percentageProfit
+    ) internal view returns (uint256) {
+        uint256 strategyRewards;
+        uint256 percentage = 1e18;
+        for (uint256 i = 0; i < _numQuarters; i++) {
+            if (i.add(1) == _numQuarters) {
+                // last quarter - we need to take proportional supply for that timeframe despite
+                // the epoch has not finished yet
+                uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION));
+                percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                    slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                );
+            }
+            uint256 rewardsPerQuarter =
+                _strategyPower[i]
+                    .preciseDiv(_protocolPower[i])
+                    .preciseMul(uint256(_tokenSupplyPerQuarter(_startingQuarter.add(i))))
+                    .preciseMul(percentage);
+            strategyRewards = strategyRewards.add(rewardsPerQuarter);
+        }
+        // Set the max cap bonus x2
+        uint256 maxRewards = strategyRewards.preciseMul(2e18);
+        // Apply rewards weight related to principal and profit
+        strategyRewards = strategyRewards.preciseMul(bablPrincipalWeight).add(
+            strategyRewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
+        );
+        // Check max cap
+        if (strategyRewards >= maxRewards) {
+            strategyRewards = maxRewards;
+        }
+        return strategyRewards;
+    }
+
+    function _updatePendingPower(
+        uint256[] memory _powerToUpdate,
+        uint256 _numQuarters,
+        uint256 _startingQuarter,
+        uint256 _updatedAt,
+        uint256 _principal
+    ) internal view returns (uint256[] memory) {
+        uint256 lastQuarter = _getQuarter(_updatedAt); // quarter of last update
+        uint256 timeDiff = block.timestamp.sub(_updatedAt);
+        // We check the pending power to be accounted until now, since last update for protocol and strategy
+        uint256 powerDebt = timeDiff.mul(_principal);
+        for (uint256 i = lastQuarter; i < _startingQuarter.add(_numQuarters); i++) {
+            uint256 slotEnding = START_TIME.add(lastQuarter.add(i).mul(EPOCH_DURATION));
+            if (i == lastQuarter && block.timestamp >= slotEnding) {
+                // We are in the first quarter to update, we add the proportional pending part
+                _powerToUpdate[i.sub(1)] = _powerToUpdate[i.sub(1)].add(
+                    powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff)
+                );
+            } else if (i > lastQuarter && i.add(1) < _startingQuarter.add(_numQuarters)) {
+                // We are updating an intermediate quarter
+                // Should have 0 inside before updating
+                _powerToUpdate[i.sub(1)] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
+            } else {
+                // We are updating the current quarter of this strategy checkpoint
+                // It can be a multiple quarter strategy or the only one that need proportional time
+                // Should have 0 inside before updating
+                _powerToUpdate[i.sub(1)] = powerDebt
+                    .mul(
+                    block.timestamp.sub(
+                        START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
+                    )
+                )
+                    .div(timeDiff);
+            }
+        }
+        return _powerToUpdate;
     }
 }
 
