@@ -2,7 +2,7 @@ module.exports = async ({
   getNamedAccounts,
   deployments,
   upgradesDeployer,
-  getRapid,
+  getGasPrice,
   network,
   tenderly,
   getTenderlyContracts,
@@ -11,7 +11,7 @@ module.exports = async ({
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
   const signer = await getSigner(deployer);
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
 
   let KEEPER = process.env.KEEPER;
 

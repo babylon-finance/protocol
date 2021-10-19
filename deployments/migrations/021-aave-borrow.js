@@ -7,13 +7,13 @@ module.exports = async ({
   getNamedAccounts,
   deployments,
   ethers,
-  getRapid,
+  getGasPrice,
   getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const contract = 'AaveBorrowIntegration';
 
   const controller = await getController();

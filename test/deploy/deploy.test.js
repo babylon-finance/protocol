@@ -5,6 +5,7 @@ const { impersonateAddress } = require('lib/rpc');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
+const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { from, parse, eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 const { increaseTime } = require('utils/test-helpers');
@@ -19,6 +20,7 @@ describe('deploy', function () {
   let strategyNft;
   let valuer;
   let gardensNAV;
+  let snapshotId;
 
   async function canUnwindAllActiveStrategies() {
     for (const garden of gardens) {
@@ -127,19 +129,27 @@ describe('deploy', function () {
   }
 
   describe('before deployment', function () {
+    before(async () => {
+      snapshotId = await takeSnapshot();
+    });
+
     beforeEach(async () => {
       ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
-    it('can unwind all active strategies', async () => {
+    afterEach(async () => {
+      await restoreSnapshot(snapshotId);
+    });
+
+    it.skip('can unwind all active strategies', async () => {
       await canUnwindAllActiveStrategies();
     });
 
-    it('can allocate all active strategies', async () => {
+    it.skip('can allocate all active strategies', async () => {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
@@ -164,7 +174,7 @@ describe('deploy', function () {
       }
     });
 
-    it.skip('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });

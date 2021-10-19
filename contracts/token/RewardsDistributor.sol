@@ -295,30 +295,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ External Functions ============ */
 
     /**
-     * Add protocol live strategies to the mining program (if any)
-     * @param _strategies         Array of live strategies during mining program activation
-     */
-    function addLiveStrategies(address[] memory _strategies) external override {
-        // Strategies must be "active"
-        uint256[] memory capitalAllocated = new uint256[](_strategies.length);
-        bool[] memory isBetaStrategy = new bool[](_strategies.length);
-        // We check if strategies are protocol strategies by controller external validation
-        // We also check that they deserve activation on the mining program (need to be live)
-        (isBetaStrategy, capitalAllocated) = controller.isBetaStrategy(_strategies);
-        for (uint256 i = 0; i < _strategies.length; i++) {
-            if (strategyPrincipal[_strategies[i]] != 0) {
-                // Already updated, do nothing
-                continue;
-            }
-            // Only pending updated strategies can be set
-            // If the strategy exited already or was previously updated, it does not create new checkpoint
-            if (isBetaStrategy[i]) {
-                _updateProtocolPrincipal(_strategies[i], capitalAllocated[i], true);
-            }
-        }
-    }
-
-    /**
      * Function that adds/substract the capital received to the total principal of the protocol per timestamp
      * @param _capital                Amount of capital in any type of asset to be normalized into DAI
      * @param _addOrSubstract         Whether we are adding or substracting capital
@@ -326,13 +302,25 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
         _onlyMiningActive();
         _onlyStrategy(msg.sender);
-        // ts[0]: executedAt, ts[1]: exitedAt
-        uint256[] memory ts = new uint256[](2);
-        (, , , , ts[0], ts[1], ) = IStrategy(msg.sender).getStrategyState();
-        if ((ts[0] >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
-            // onlyMiningActive control, it does not create a checkpoint if the strategy is not part of the Mining Program
-            _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
-        }
+        // All strategies are now part of the Mining Program
+        _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
+    }
+
+    /**
+     * PRIVILEGE FUNCTION to update strategy data
+     * @param _strategy               Address of the strategy
+     * @param _capital                Amount of capital in any type of asset to be normalized into DAI
+     * @param _addOrSubstract         Whether we are adding or substracting capital
+     */
+    function updateStrategyCheckpoint(
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) external override onlyOwner {
+        _onlyUnpaused();
+        _onlyMiningActive();
+        _onlyStrategy(_strategy);
+        _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
     }
 
     function updateGardenPowerAndContributor(
@@ -805,8 +793,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) private {
         if (_addOrSubstract == false) {
             // Substracting capital
-            miningProtocolPrincipal = miningProtocolPrincipal.sub(_capital);
-            strategyPrincipal[_strategy] = strategyPrincipal[_strategy].sub(_capital);
+            // Failsafe condition
+            uint256 amount = _capital > strategyPrincipal[_strategy] ? strategyPrincipal[_strategy] : _capital;
+            miningProtocolPrincipal = miningProtocolPrincipal.sub(amount);
+            strategyPrincipal[_strategy] = strategyPrincipal[_strategy].sub(amount);
         } else {
             // Adding capital
             miningProtocolPrincipal = miningProtocolPrincipal.add(_capital);
@@ -933,7 +923,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             } else {
                 // We use the previous pricePerToken in a substract instead of a new price
                 // (as allocated capital used previous prices not the current one)
-                strPpt.preallocated = strPpt.preallocated.sub(_capital);
+                // Failsafe condition
+                uint256 amount = _capital > strPpt.preallocated ? strPpt.preallocated : _capital;
+                strPpt.preallocated = strPpt.preallocated.sub(amount);
             }
             return strPpt.pricePerTokenUnit;
         }
@@ -1614,4 +1606,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV6 is RewardsDistributor {}
+contract RewardsDistributorV8 is RewardsDistributor {}

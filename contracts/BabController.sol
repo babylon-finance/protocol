@@ -734,4 +734,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV7 is BabController {}
+contract BabControllerV8 is BabController {}
