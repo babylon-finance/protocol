@@ -358,24 +358,36 @@ describe('RewardsDistributor', function () {
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
       expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
-    it.only('should estimate BABL rewards in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
+    it.only('should estimate BABL rewards along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       // Mining program has to be enabled before the strategy is created
       await babController.connect(owner).enableBABLMiningProgram();
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
       await executeStrategy(long, ONE_ETH);
+      console.log('-----FIRST CALL JUST AFTER EXECUTION-----');
       console.log('Estimation str 1', (await rewardsDistributor.estimateStrategyBABLRewards(long.address)).toString());
+      const estimatedBABL1 = await rewardsDistributor.estimateStrategyBABLRewards(long.address);
+
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      console.log('-----2ND CALL 30 DAYS LATER-----');
       console.log('Estimation str 2', (await rewardsDistributor.estimateStrategyBABLRewards(long.address)).toString());
-      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedBABL2 = await rewardsDistributor.estimateStrategyBABLRewards(long.address);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      console.log('-----3RD CALL JUST BEFORE FINALIZING-----');
       console.log('Estimation str 3', (await rewardsDistributor.estimateStrategyBABLRewards(long.address)).toString());
+      const estimatedBABL3 = await rewardsDistributor.estimateStrategyBABLRewards(long.address);
+
       await finalizeStrategyImmediate(long);
+      const estimatedBABL4 = await rewardsDistributor.estimateStrategyBABLRewards(long.address);
+
       console.log('final rewards', (await long.strategyRewards()).toString());
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-      console.log('precalculated rewards', value.toString());
-      /*       expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
-       */
+      const rewards = await long.strategyRewards();
+      expect(rewards).to.be.equal(estimatedBABL4);
+      expect(estimatedBABL3).to.be.gt(estimatedBABL2);
+      expect(estimatedBABL2).to.be.gt(estimatedBABL1);
+      expect(rewards).to.be.closeTo(estimatedBABL3, estimatedBABL3.div(50)); // 2%
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution

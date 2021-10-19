@@ -502,7 +502,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
                         slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                     );
+                    console.log('REAL PERCENTAGE last epoch', percentage);
                 }
+                console.log('REAL STR POWER i', strategyPower, i);
+                console.log('REAL PROTOCOL POWER i', protocolPower, i);
                 uint256 rewardsPerQuarter =
                     strategyPower
                         .preciseDiv(protocolPower)
@@ -514,7 +517,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Profit weight must be higher than principal
             // profitWeight + principalWeight must always sum 1e18 (100%)
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
+            console.log('REAL Cap. Allocated', str[0]);
+            console.log('REAL Cap. Returned', str[1]);
+            console.log('REAL Baseline rewards', rewards);
+
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
+            console.log('REAL PERCENTAGE PROFIT', percentageProfit);
             // Set the max cap bonus x2
             uint256 maxRewards = rewards.preciseMul(2e18);
             // Apply rewards weight related to principal and profit
@@ -1273,12 +1281,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // if the strategy returned less than expected
             uint256 accountingVotes = _profitData[1] ? _strategyDetails[4] : totalVotes;
             return
-                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
+                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
                     accountingVotes
                 );
         } else if ((userVotes < 0) && _profitData[1] == false) {
             return
-                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
+                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
                     totalVotes
                 );
         } else if ((userVotes < 0) && _profitData[1] == true) {
@@ -1433,8 +1441,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _contributorBABL
     ) private view returns (uint256) {
         IGarden garden = IGarden(_garden);
-        console.log('path 1 total contributors', IGarden(_garden).totalContributors());
-
         bool isCreator = garden.creator() == _contributor;
         uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
         for (uint8 i = 0; i < 4; i++) {
@@ -1444,19 +1450,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 isCreator = isCreator || _extraCreator == _contributor;
             }
         }
-        console.log('EO', IGarden(_garden).totalContributors());
-
         // Get a multiplier bonus in case the contributor is the garden creator
         if (creatorCount == 0) {
             // If there is no creator divide the creator bonus across al members
-            console.log('path 1 total contributors', IGarden(_garden).totalContributors());
             return
                 _contributorBABL.add(
                     _contributorBABL.multiplyDecimal(gardenCreatorBonus).div(IGarden(_garden).totalContributors())
                 );
         } else {
             if (isCreator) {
-                console.log('path 2 creator count', creatorCount);
                 // Check other creators and divide by number of creators or members if creator address is 0
                 return _contributorBABL.add(_contributorBABL.multiplyDecimal(gardenCreatorBonus).div(creatorCount));
             }
@@ -1473,24 +1475,57 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             bool[] memory profitData
         )
     {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: profitValue
+        // strategyDetails[11]: distanceValue
+        // profitData array mapping:
+        // profitData[0]: profit
+        // profitData[1]: distance
+
         // Strategy has not finished yet
-        console.log('---CHECK 1---');
         (strategist, strategyDetails, profitData) = IStrategy(_strategy).getStrategyRewardsContext();
+        if (strategyDetails[9] != 0) {
+            // Already finished and got rewards
+            return (strategist, strategyDetails, profitData);
+        }
         // TODO check that getNAV is in reserveAsset
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
-        console.log('---CHECK 2---getNAV', strategyDetails[7]);
-
+        // We apply a 0.25% rounding error margin at NAV
+        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(25e14));
+        // Failsafe mode in case of wrong NAV (above 300%)
+        strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
+            ? strategyDetails[6]
+            : strategyDetails[7];
         // TODO pending substraction of protocol profit %
         profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
         profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
+        // We consider that it potentially will have profits so the protocol will take profitFee
+        // If 0 it does nothing
         strategyDetails[11] = profitData[1]
             ? strategyDetails[7].sub(strategyDetails[8])
             : strategyDetails[8].sub(strategyDetails[7]);
-        console.log('---CHECK 3---');
+        console.log('Estimated Cap. Allocated', strategyDetails[6]);
+        console.log('Estimated Cap. Returned (NAV)', strategyDetails[7]);
+        console.log('Estimated Cap. Expected', strategyDetails[8]);
+        console.log('Estimated Profit Value before', strategyDetails[10]);
+        strategyDetails[10] = profitData[0]
+            ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(profitProtocolFee))
+            : 0;
+        console.log('Estimated Profit Value after protocol profit fee', strategyDetails[10]);
 
-        // We take care about beta live strategies start mining time
+        // We take care about beta live strategies as they have a different start mining time != executedAt
         (uint256 numQuarters, uint256 startingQuarter) =
             _getRewardsWindow(
                 (
@@ -1500,24 +1535,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ),
                 block.timestamp
             );
-        console.log('---CHECK 4---');
-
         // We create an array of quarters since the begining of the strategy
         // We then fill with known + unknown data that has to be figured out
         uint256[] memory strategyPower = new uint256[](numQuarters);
         uint256[] memory protocolPower = new uint256[](numQuarters);
-        console.log('---CHECK 5---');
 
         for (uint256 i = 0; i < numQuarters; i++) {
-            /*             uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
-             */
             // We take the info of each epoch from current checkpoints
             // array[0] for the first quarter power checkpoint of the strategy
             strategyPower[i] = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
             protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
             _require(strategyPower[i] <= protocolPower[i], Errors.OVERFLOW_IN_POWER);
         }
-        console.log('---CHECK 6---', strategyPower[0], protocolPower[0]);
+        console.log('---strPwr,protPwr AS IS---', strategyPower[0], protocolPower[0]);
 
         strategyPower = _updatePendingPower(
             strategyPower,
@@ -1526,7 +1556,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             strategyDetails[2],
             strategyPrincipal[_strategy]
         );
-        console.log('---CHECK 7---');
 
         protocolPower = _updatePendingPower(
             protocolPower,
@@ -1535,7 +1564,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             miningUpdatedAt,
             miningProtocolPrincipal
         );
-        console.log('---CHECK 8---', strategyDetails[6]);
+        console.log('---strPwr,protPwr AFTER UPDATE---', strategyPower[0], protocolPower[0]);
 
         strategyDetails[9] = _harvestStrategyRewards(
             strategyPower,
@@ -1544,9 +1573,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             numQuarters,
             strategyDetails[7].preciseDiv(strategyDetails[6])
         );
-        console.log('---CHECK 9---');
-
-        console.log('strategy rewards', strategyDetails[9]);
+        console.log('ESTIMATED PROFIT %', strategyDetails[7].preciseDiv(strategyDetails[6]));
+        console.log(
+            'ESTIMATED PROFIT % MINUS MGMT FEE',
+            strategyDetails[7].sub(strategyDetails[7].preciseMul(5e15)).preciseDiv(strategyDetails[6])
+        );
+        console.log('harvested strategy rewards', strategyDetails[9]);
     }
 
     function _harvestStrategyRewards(
@@ -1558,8 +1590,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal view returns (uint256) {
         uint256 strategyRewards;
         uint256 percentage = 1e18;
-        console.log('strategy power array final', _strategyPower[0]);
-        console.log('protocol power array final', _protocolPower[0]);
+        console.log('strategy power array final [0] + size', _strategyPower[0], _strategyPower.length);
+        console.log('protocol power array final [0] + size', _protocolPower[0], _protocolPower.length);
 
         for (uint256 i = 0; i < _numQuarters; i++) {
             if (i.add(1) == _numQuarters) {
@@ -1570,9 +1602,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
                 );
             }
+            console.log('percentage', percentage);
             uint256 rewardsPerQuarter =
                 _strategyPower[i]
-                    .preciseDiv(_protocolPower[i])
+                    .preciseDiv(_protocolPower[i] == 0 ? 1 : _protocolPower[i])
                     .preciseMul(uint256(_tokenSupplyPerQuarter(_startingQuarter.add(i))))
                     .preciseMul(percentage);
             strategyRewards = strategyRewards.add(rewardsPerQuarter);
@@ -1598,25 +1631,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _principal
     ) internal view returns (uint256[] memory) {
         uint256 lastQuarter = _getQuarter(_updatedAt); // quarter of last update
-        uint256 timeDiff = block.timestamp == _updatedAt ? 1 : block.timestamp.sub(_updatedAt); // 1sec to avoid division by zero
-        console.log('---CHECK update 1---');
+        uint256 timeDiff = block.timestamp.sub(_updatedAt); // 1sec to avoid division by zero
         // We check the pending power to be accounted until now, since last update for protocol and strategy
         uint256 powerDebt = _principal.mul(timeDiff);
         if (powerDebt > 0) {
             // only if there is something to update
             for (uint256 i = lastQuarter; i < _startingQuarter.add(_numQuarters); i++) {
                 uint256 slotEnding = START_TIME.add(lastQuarter.add(i).mul(EPOCH_DURATION));
-                console.log('---CHECK update 1---', i, timeDiff);
                 if (i == lastQuarter && block.timestamp >= slotEnding) {
+                    console.log('---UPDATE FIRST QUARTER i timeDiff---', i, timeDiff);
                     // We are in the first quarter to update, we add the proportional pending part
                     _powerToUpdate[i.sub(1)] = _powerToUpdate[i.sub(1)].add(
                         powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff)
                     );
                 } else if (i > lastQuarter && i.add(1) < _startingQuarter.add(_numQuarters)) {
+                    console.log('---UPDATE INTERMEDIATE QUARTER i timeDiff---', i, timeDiff);
                     // We are updating an intermediate quarter
                     // Should have 0 inside before updating
                     _powerToUpdate[i.sub(1)] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
                 } else {
+                    console.log('---UPDATE FINAL (CURRENT) QUARTER i timeDiff---', i, timeDiff);
                     // We are updating the current quarter of this strategy checkpoint
                     // It can be a multiple quarter strategy or the only one that need proportional time
                     // Should have 0 inside before updating
