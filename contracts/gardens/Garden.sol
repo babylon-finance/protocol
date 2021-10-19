@@ -270,9 +270,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
         _require(
-            _gardenParams[0] > 0 &&
-                _initialContribution >= _gardenParams[0] &&
-                _initialContribution <= _gardenParams[1],
+            _gardenParams[3] > 0 &&
+                _initialContribution >= _gardenParams[3] &&
+                _initialContribution <= _gardenParams[0],
             Errors.MIN_CONTRIBUTION
         );
 
