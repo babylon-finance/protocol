@@ -1433,6 +1433,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _contributorBABL
     ) private view returns (uint256) {
         IGarden garden = IGarden(_garden);
+        console.log('path 1 total contributors', IGarden(_garden).totalContributors());
+
         bool isCreator = garden.creator() == _contributor;
         uint8 creatorCount = garden.creator() != address(0) ? 1 : 0;
         for (uint8 i = 0; i < 4; i++) {
@@ -1442,15 +1444,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 isCreator = isCreator || _extraCreator == _contributor;
             }
         }
+        console.log('EO', IGarden(_garden).totalContributors());
+
         // Get a multiplier bonus in case the contributor is the garden creator
         if (creatorCount == 0) {
             // If there is no creator divide the creator bonus across al members
+            console.log('path 1 total contributors', IGarden(_garden).totalContributors());
             return
                 _contributorBABL.add(
                     _contributorBABL.multiplyDecimal(gardenCreatorBonus).div(IGarden(_garden).totalContributors())
                 );
         } else {
             if (isCreator) {
+                console.log('path 2 creator count', creatorCount);
                 // Check other creators and divide by number of creators or members if creator address is 0
                 return _contributorBABL.add(_contributorBABL.multiplyDecimal(gardenCreatorBonus).div(creatorCount));
             }
@@ -1468,11 +1474,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         )
     {
         // Strategy has not finished yet
-        uint256 strategyRewards;
+        console.log('---CHECK 1---');
         (strategist, strategyDetails, profitData) = IStrategy(_strategy).getStrategyRewardsContext();
         // TODO check that getNAV is in reserveAsset
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
+        console.log('---CHECK 2---getNAV', strategyDetails[7]);
+
         // TODO pending substraction of protocol profit %
         profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
         profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
@@ -1480,6 +1488,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         strategyDetails[11] = profitData[1]
             ? strategyDetails[7].sub(strategyDetails[8])
             : strategyDetails[8].sub(strategyDetails[7]);
+        console.log('---CHECK 3---');
+
         // We take care about beta live strategies start mining time
         (uint256 numQuarters, uint256 startingQuarter) =
             _getRewardsWindow(
@@ -1490,10 +1500,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 ),
                 block.timestamp
             );
+        console.log('---CHECK 4---');
+
         // We create an array of quarters since the begining of the strategy
         // We then fill with known + unknown data that has to be figured out
         uint256[] memory strategyPower = new uint256[](numQuarters);
         uint256[] memory protocolPower = new uint256[](numQuarters);
+        console.log('---CHECK 5---');
 
         for (uint256 i = 0; i < numQuarters; i++) {
             /*             uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
@@ -1504,6 +1517,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
             _require(strategyPower[i] <= protocolPower[i], Errors.OVERFLOW_IN_POWER);
         }
+        console.log('---CHECK 6---', strategyPower[0], protocolPower[0]);
 
         strategyPower = _updatePendingPower(
             strategyPower,
@@ -1512,6 +1526,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             strategyDetails[2],
             strategyPrincipal[_strategy]
         );
+        console.log('---CHECK 7---');
+
         protocolPower = _updatePendingPower(
             protocolPower,
             numQuarters,
@@ -1519,6 +1535,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             miningUpdatedAt,
             miningProtocolPrincipal
         );
+        console.log('---CHECK 8---', strategyDetails[6]);
+
         strategyDetails[9] = _harvestStrategyRewards(
             strategyPower,
             protocolPower,
@@ -1526,7 +1544,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             numQuarters,
             strategyDetails[7].preciseDiv(strategyDetails[6])
         );
-        console.log('strategy rewards', strategyRewards);
+        console.log('---CHECK 9---');
+
+        console.log('strategy rewards', strategyDetails[9]);
     }
 
     function _harvestStrategyRewards(
@@ -1538,6 +1558,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) internal view returns (uint256) {
         uint256 strategyRewards;
         uint256 percentage = 1e18;
+        console.log('strategy power array final', _strategyPower[0]);
+        console.log('protocol power array final', _protocolPower[0]);
+
         for (uint256 i = 0; i < _numQuarters; i++) {
             if (i.add(1) == _numQuarters) {
                 // last quarter - we need to take proportional supply for that timeframe despite
@@ -1575,31 +1598,36 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _principal
     ) internal view returns (uint256[] memory) {
         uint256 lastQuarter = _getQuarter(_updatedAt); // quarter of last update
-        uint256 timeDiff = block.timestamp.sub(_updatedAt);
+        uint256 timeDiff = block.timestamp == _updatedAt ? 1 : block.timestamp.sub(_updatedAt); // 1sec to avoid division by zero
+        console.log('---CHECK update 1---');
         // We check the pending power to be accounted until now, since last update for protocol and strategy
-        uint256 powerDebt = timeDiff.mul(_principal);
-        for (uint256 i = lastQuarter; i < _startingQuarter.add(_numQuarters); i++) {
-            uint256 slotEnding = START_TIME.add(lastQuarter.add(i).mul(EPOCH_DURATION));
-            if (i == lastQuarter && block.timestamp >= slotEnding) {
-                // We are in the first quarter to update, we add the proportional pending part
-                _powerToUpdate[i.sub(1)] = _powerToUpdate[i.sub(1)].add(
-                    powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff)
-                );
-            } else if (i > lastQuarter && i.add(1) < _startingQuarter.add(_numQuarters)) {
-                // We are updating an intermediate quarter
-                // Should have 0 inside before updating
-                _powerToUpdate[i.sub(1)] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
-            } else {
-                // We are updating the current quarter of this strategy checkpoint
-                // It can be a multiple quarter strategy or the only one that need proportional time
-                // Should have 0 inside before updating
-                _powerToUpdate[i.sub(1)] = powerDebt
-                    .mul(
-                    block.timestamp.sub(
-                        START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
+        uint256 powerDebt = _principal.mul(timeDiff);
+        if (powerDebt > 0) {
+            // only if there is something to update
+            for (uint256 i = lastQuarter; i < _startingQuarter.add(_numQuarters); i++) {
+                uint256 slotEnding = START_TIME.add(lastQuarter.add(i).mul(EPOCH_DURATION));
+                console.log('---CHECK update 1---', i, timeDiff);
+                if (i == lastQuarter && block.timestamp >= slotEnding) {
+                    // We are in the first quarter to update, we add the proportional pending part
+                    _powerToUpdate[i.sub(1)] = _powerToUpdate[i.sub(1)].add(
+                        powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff)
+                    );
+                } else if (i > lastQuarter && i.add(1) < _startingQuarter.add(_numQuarters)) {
+                    // We are updating an intermediate quarter
+                    // Should have 0 inside before updating
+                    _powerToUpdate[i.sub(1)] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
+                } else {
+                    // We are updating the current quarter of this strategy checkpoint
+                    // It can be a multiple quarter strategy or the only one that need proportional time
+                    // Should have 0 inside before updating
+                    _powerToUpdate[i.sub(1)] = powerDebt
+                        .mul(
+                        block.timestamp.sub(
+                            START_TIME.add(_getQuarter(block.timestamp).mul(EPOCH_DURATION).sub(EPOCH_DURATION))
+                        )
                     )
-                )
-                    .div(timeDiff);
+                        .div(timeDiff);
+                }
             }
         }
         return _powerToUpdate;
