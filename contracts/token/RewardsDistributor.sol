@@ -1100,10 +1100,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Users might get BABL rewards if they join the garden before the strategy ends
         // Contributor power will check their exact contribution (avoiding flashloans)
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
-            // In case of profits, the distribution of profits might substract the protocol fee beforehand:
-            strategyDetails[10] = profitData[0] == true
-                ? strategyDetails[10].sub(strategyDetails[10].multiplyDecimal(profitProtocolFee))
-                : 0;
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
@@ -1216,12 +1212,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // if the strategy returned less than expected
             uint256 accountingVotes = _profitData[1] ? _strategyDetails[4] : totalVotes;
             return
-                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
+                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
                     accountingVotes
                 );
         } else if ((userVotes < 0) && _profitData[1] == false) {
             return
-                _strategyDetails[11].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
+                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
                     totalVotes
                 );
         } else if ((userVotes < 0) && _profitData[1] == true) {
