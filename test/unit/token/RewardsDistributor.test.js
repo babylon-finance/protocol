@@ -1659,11 +1659,21 @@ describe('RewardsDistributor', function () {
       const signer3ProfitDAI = signer3RewardsDAI[6];
       // USDC Garden is set up to give all profit rewards to strategist
       // so signer 3 despite is LP and steward but gets no (0) profits
+      // We calculate strategy profits
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const setAsideGarden1 = await usdcGarden.reserveAssetRewardsSetAside();
+      const setAsideGarden2 = await daiGarden.reserveAssetRewardsSetAside();
       await expect(signer3ProfitUSDC).to.equal(0);
-      await expect(signer1ProfitUSDC).to.equal(179962394);
+      await expect(signer1ProfitUSDC).to.be.closeTo(setAsideGarden1, 5);
       // DAI Garden is set up to give all profit rewards to stewards
       // so signer 1 despite is the strategist gets the same profits than signer3
       await expect(signer1ProfitDAI).to.equal(signer3ProfitDAI);
+      await expect(signer1ProfitDAI.add(signer3ProfitDAI)).to.be.closeTo(setAsideGarden2, 5);
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens with profit below expected return within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -2060,42 +2070,63 @@ describe('RewardsDistributor', function () {
       await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
-
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-
+      const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit = signer2Rewards[6];
+      const rewardsSetAside1 = await garden1.reserveAssetRewardsSetAside(); // All long1 rewards available
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-
+      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
+      const rewardsSetAside3 = await garden1.reserveAssetRewardsSetAside(); // All long2 rewards available
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-
       const signer1BABL2 = signer1Rewards2[5];
       const signer1Profit2 = signer1Rewards2[6];
-
+      const signer2Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit2 = signer2Rewards2[6];
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
-
-      expect(signer1Profit).to.be.closeTo('5983787580486307', signer1Profit.div(100));
-      expect(signer1Profit2).to.be.closeTo('5958439050861242', signer1Profit2.div(100));
-
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
         ethers.utils.parseEther('0.02'),
       );
+      expect(rewardsSetAside1).to.be.closeTo(strategistLong1.add(stewardLong1), 5);
+      expect(rewardsSetAside1).to.be.closeTo(signer1Profit.add(signer2Profit), 5);
+      expect(rewardsSetAside1).to.be.closeTo(profitLong1.mul(15).div(100), 5);
+      expect(rewardsSetAside3).to.be.closeTo(strategistLong2.add(stewardLong2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(signer1Profit2.add(signer2Profit2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(profitLong2.mul(15).div(100), 10);
+      // user specific check
+      // signer 1 has contributor power of 0.6 (60%) in balance
+      expect(signer1Profit).to.be.closeTo(strategistLong1.add(stewardLong1.mul(60).div(100)), 10);
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
@@ -2118,9 +2149,45 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-      // TODO: Add calculations of profits and BABL
-      expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
-      expect(signer1BABL).to.be.closeTo('80779335476763963816834', signer1BABL.div(100));
+      // Add calculations
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
+      const long1BABL = await long1.strategyRewards();
+      const long2BABL = await long2.strategyRewards();
+
+      const estimateSigner1Long1Profit = strategistLong1.add(stewardLong1.mul(54).div(100)); // power 54%
+      const estimateSigner1Long2Profit = strategistLong2.add(stewardLong2.mul(55).div(100)); // power 55%
+      const signer1BABLStrategistLong1 = long1BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
+      const signer1BABLStrategistLong2 = long2BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
+      const signer1BABLStewardLong1 = long1BABL.mul(10).mul(54).div(10000); // power 54% stewards % in BABL is 10% (no 5%)
+      const signer1BABLStewardLong2 = long2BABL.mul(10).mul(55).div(10000); // power 55% stewards % in BABL is 10% (no 5%)
+      const signer1BABLLPLong1 = long1BABL.mul(80).mul(54).div(10000); // power 54%
+      const signer1BABLLPLong2 = long2BABL.mul(80).mul(55).div(10000); // power 55%
+      let totalSigner1BABLLong1 = signer1BABLStrategistLong1.add(signer1BABLStewardLong1).add(signer1BABLLPLong1);
+      let totalSigner1BABLLong2 = signer1BABLStrategistLong2.add(signer1BABLStewardLong2).add(signer1BABLLPLong2);
+
+      // 10% add bonus creator
+      totalSigner1BABLLong1 = totalSigner1BABLLong1.add(totalSigner1BABLLong1.mul(10).div(100));
+      totalSigner1BABLLong2 = totalSigner1BABLLong2.add(totalSigner1BABLLong2.mul(10).div(100));
+
+      console.log('signer1BABLStrategistLong1', signer1BABLStrategistLong1.toString());
+      console.log('signer1BABLStrategistLong2', signer1BABLStrategistLong2.toString());
+      console.log('signer1BABLStewardLong1', signer1BABLStewardLong1.toString());
+      console.log('signer1BABLStewardLong2', signer1BABLStewardLong2.toString());
+
+      expect(signer1Profit).to.be.closeTo(
+        estimateSigner1Long1Profit.add(estimateSigner1Long2Profit),
+        signer1Profit.div(50),
+      ); // 2%
+      expect(signer1BABL).to.be.closeTo(totalSigner1BABLLong1.add(totalSigner1BABLLong2), signer1BABL.div(50)); // 2%
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
@@ -2205,8 +2272,8 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('10813510863198169', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('1157789933205635', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
