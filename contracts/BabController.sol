@@ -387,20 +387,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Setter that can be changed by the team in case of an emergency
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the rewards distributor
-     *
-     * @param _newRewardsDistributor      Address of the new rewards distributor
-     */
-    function editRewardsDistributor(address _newRewardsDistributor) external override onlyGovernanceOrEmergency {
-        require(_newRewardsDistributor != address(0), 'Address must not be 0');
-
-        address oldRewardsDistributor = rewardsDistributor;
-        rewardsDistributor = _newRewardsDistributor;
-
-        emit RewardsDistributorChanged(_newRewardsDistributor, oldRewardsDistributor);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the price oracle
      *
      * @param _priceOracle               Address of the new price oracle
@@ -700,4 +686,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV9 is BabController {}
+contract BabControllerV8 is BabController {}
