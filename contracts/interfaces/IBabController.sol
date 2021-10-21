@@ -46,13 +46,9 @@ interface IBabController {
 
     function editPriceOracle(address _priceOracle) external;
 
-    function editIshtarGate(address _ishtarGate) external;
-
     function editMardukGate(address _mardukGate) external;
 
     function editGardenValuer(address _gardenValuer) external;
-
-    function editRewardsDistributor(address _rewardsDistributor) external;
 
     function editTreasury(address _newTreasury) external;
 
@@ -76,15 +72,9 @@ interface IBabController {
 
     function enableGardenTokensTransfers() external;
 
-    function enableBABLMiningProgram() external;
-
-    function setAllowPublicGardens() external;
-
     function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;
 
     function gardenCreationIsOpen() external view returns (bool);
-
-    function openPublicGardenCreation() external;
 
     function owner() external view returns (address);
 

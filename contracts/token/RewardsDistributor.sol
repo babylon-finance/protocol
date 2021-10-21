@@ -79,13 +79,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Throws if the BABL Rewards mining program is not active
-     */
-    function _onlyMiningActive() private view {
-        _require(IBabController(controller).bablMiningProgramEnabled(), Errors.ONLY_MINING_ACTIVE);
-    }
-
-    /**
      * Throws if the sender is not the controller
      */
     function _onlyController() private view {
@@ -300,7 +293,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _addOrSubstract         Whether we are adding or substracting capital
      */
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
-        _onlyMiningActive();
         _onlyStrategy(msg.sender);
         // All strategies are now part of the Mining Program
         _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
@@ -318,7 +310,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool _addOrSubstract
     ) external override onlyOwner {
         _onlyUnpaused();
-        _onlyMiningActive();
         _onlyStrategy(_strategy);
         _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
     }
@@ -347,7 +338,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant returns (uint256) {
         _onlyUnpaused();
-        _onlyMiningActive();
         // Restrictive only to gardens when claiming BABL
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
@@ -430,6 +420,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * rewards[4]: LP BABL
      * rewards[5]: total BABL
      * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
      */
     function getRewards(
         address _garden,
@@ -437,7 +428,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view override returns (uint256[] memory) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
-        uint256[] memory totalRewards = new uint256[](7);
+        uint256[] memory totalRewards = new uint256[](8);
         uint256 initialDepositAt;
         uint256 claimedAt;
         (, initialDepositAt, claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
@@ -445,7 +436,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Security check
             _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
 
-            uint256[] memory tempRewards = new uint256[](7);
+            uint256[] memory tempRewards = new uint256[](8);
 
             tempRewards = _getStrategyProfitsAndBABL(
                 _garden,
@@ -461,6 +452,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             totalRewards[4] = totalRewards[4].add(tempRewards[4]);
             totalRewards[5] = totalRewards[5].add(tempRewards[5]);
             totalRewards[6] = totalRewards[6].add(tempRewards[6]);
+            totalRewards[7] = totalRewards[7].add(tempRewards[7]);
         }
 
         return totalRewards;
@@ -513,16 +505,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Governance has decided to have different weights for principal and profit
             // Profit weight must be higher than principal
             // profitWeight + principalWeight must always sum 1e18 (100%)
-            // Backward compatible with default values (avoid division by zero in case it is not set yet)
-            uint256 profitWeight = bablProfitWeight == 0 ? 65e16 : bablProfitWeight;
-            uint256 principalWeight = bablPrincipalWeight == 0 ? 35e16 : bablPrincipalWeight;
             // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
             uint256 percentageProfit = str[1].preciseDiv(str[0]);
             // Set the max cap bonus x2
             uint256 maxRewards = rewards.preciseMul(2e18);
             // Apply rewards weight related to principal and profit
-            rewards = rewards.preciseMul(principalWeight).add(
-                rewards.preciseMul(profitWeight).preciseMul(percentageProfit)
+            rewards = rewards.preciseMul(bablPrincipalWeight).add(
+                rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit)
             );
             // Check max cap
             if (rewards >= maxRewards) {
@@ -559,7 +548,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // powerData[7]: avgGardenBalance (garden)
         // powerData[8]: totalSupply (garden)
         powerData = _getGardenAndContributor(_garden, _contributor);
-
         if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
             return 0;
         } else {
@@ -570,7 +558,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
             uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
-
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_to" timestamp
             uint256 timeDiff = block.timestamp.sub(_time);
@@ -693,6 +680,82 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             bablProfitWeight,
             bablPrincipalWeight
         );
+    }
+
+    /**
+     * Get an estimation of user rewards for active strategies
+     * @param _strategy        Address of the strategy to estimate BABL rewards
+     * @param _contributor     Address of the garden contributor
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
+     */
+    function estimateUserRewards(address _strategy, address _contributor)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: profitValue
+        // strategyDetails[11]: distanceValue
+        // profitData array mapping:
+        // profitData[0]: profit
+        // profitData[1]: distance
+
+        uint256[] memory rewards = new uint256[](8);
+        if (IStrategy(_strategy).isStrategyActive()) {
+            address garden = address(IStrategy(_strategy).garden());
+            (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+                _estimateStrategyRewards(_strategy);
+            // Get the contributor power until the the strategy exit timestamp
+            uint256 contributorPower =
+                getContributorPower(
+                    garden,
+                    _contributor,
+                    strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
+                );
+            rewards = _getRewardsPerRole(
+                garden,
+                _strategy,
+                strategist,
+                _contributor,
+                contributorPower,
+                strategyDetails,
+                profitData
+            );
+        }
+        return rewards;
+    }
+
+    /**
+     * Get an estimation of strategy BABL rewards for active strategies in the mining program
+     * @param _strategy        Address of the strategy to estimate BABL rewards
+     * @return the estimated BABL rewards
+     */
+    function estimateStrategyRewards(address _strategy) external view override returns (uint256) {
+        if (IStrategy(_strategy).isStrategyActive()) {
+            (, uint256[] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
+            return strategyDetails[9];
+        } else {
+            return 0;
+        }
     }
 
     /* ============ Internal Functions ============ */
@@ -1048,6 +1111,61 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    /**
+     * Get an estimation of user rewards for active strategies
+     * @param _garden               Address of the garden
+     * @param _strategy             Address of the strategy to estimate rewards
+     * @param _strategist           Address of the strategist
+     * @param _contributor          Address of the garden contributor
+     * @param _contributorPower     Contributor power in a specific time
+     * @param _strategyDetails      Details of the strategy in that specific moment
+     * @param _profitData           Array of profit Data (if profit as well distance)
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
+     */
+    function _getRewardsPerRole(
+        address _garden,
+        address _strategy,
+        address _strategist,
+        address _contributor,
+        uint256 _contributorPower,
+        uint256[] memory _strategyDetails,
+        bool[] memory _profitData
+    ) internal view returns (uint256[] memory) {
+        uint256[] memory rewards = new uint256[](8);
+        // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
+        rewards[0] = _strategist == _contributor ? _getStrategyStrategistBabl(_strategyDetails, _profitData) : 0;
+        // Get strategist profit
+        rewards[1] = (_strategist == _contributor && _profitData[0] == true)
+            ? _getStrategyStrategistProfits(_garden, _strategyDetails[10])
+            : 0;
+        // Get steward rewards
+        rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, _strategyDetails, _profitData);
+        // If not profits _getStrategyStewardsProfits should not execute
+        rewards[3] = _profitData[0] == true
+            ? _getStrategyStewardProfits(_garden, _strategy, _contributor, _strategyDetails, _profitData)
+            : 0;
+        // Get LP rewards
+        // Contributor power is fluctuating along the way for each new deposit
+        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorPower);
+        // Total BABL including creator bonus (if any)
+        rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
+        // Total profit
+        rewards[6] = rewards[1].add(rewards[3]);
+        // Creator bonus
+        rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
+            ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
+            : 0;
+        return rewards;
+    }
+
     /* ========== Internal View functions ========== */
 
     /**
@@ -1075,7 +1193,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _claimedAt
     ) private view returns (uint256[] memory) {
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
-        uint256[] memory rewards = new uint256[](7);
+        uint256[] memory rewards = new uint256[](8);
 
         (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
             IStrategy(_strategy).getStrategyRewardsContext();
@@ -1103,23 +1221,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
-            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
-            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
-            // Get strategist profit rewards if profits
-            rewards[1] = (strategist == _contributor && profitData[0] == true)
-                ? _getStrategyStrategistProfits(_garden, strategyDetails[10])
-                : 0;
-            // Get steward rewards
-            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
-            // If not profits _getStrategyStewardsProfits should not execute
-            rewards[3] = profitData[0] == true
-                ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
-                : 0;
-            // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
-            // Creator bonus (if any)
-            rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
-            rewards[6] = rewards[1].add(rewards[3]);
+            rewards = _getRewardsPerRole(
+                _garden,
+                _strategy,
+                strategist,
+                _contributor,
+                contributorPower,
+                strategyDetails,
+                profitData
+            );
         }
 
         return rewards;
@@ -1396,6 +1506,171 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
         }
         return _contributorBABL;
+    }
+
+    function _estimateStrategyRewards(address _strategy)
+        internal
+        view
+        returns (
+            address strategist,
+            uint256[] memory strategyDetails,
+            bool[] memory profitData
+        )
+    {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: profitValue
+        // strategyDetails[11]: distanceValue
+        // profitData array mapping:
+        // profitData[0]: profit
+        // profitData[1]: distance
+
+        (strategist, strategyDetails, profitData) = IStrategy(_strategy).getStrategyRewardsContext();
+        if (strategyDetails[9] != 0 || strategyDetails[0] == 0) {
+            // Already finished and got rewards or not executed yet (not active)
+            return (strategist, strategyDetails, profitData);
+        }
+        // Strategy has not finished yet, lets try to estimate its mining rewards
+        // As the strategy has not ended we replace the capital returned value by the NAV
+        strategyDetails[7] = IStrategy(_strategy).getNAV();
+        // We apply a 0.25% rounding error margin at NAV
+        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(25e14));
+        // Failsafe mode in case of wrong NAV (above 300%)
+        strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
+            ? strategyDetails[6]
+            : strategyDetails[7];
+        profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
+        profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
+        strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
+        // We consider that it potentially will have profits so the protocol will take profitFee
+        // If 0 it does nothing
+        strategyDetails[11] = profitData[1]
+            ? strategyDetails[7].sub(strategyDetails[8])
+            : strategyDetails[8].sub(strategyDetails[7]);
+        // We take care about beta live strategies as they have a different start mining time != executedAt
+        (uint256 numQuarters, uint256 startingQuarter) =
+            _getRewardsWindow(
+                (
+                    (strategyDetails[0] > START_TIME && START_TIME != 0)
+                        ? strategyDetails[0]
+                        : strategyPerQuarter[_strategy][1].betaInitializedAt
+                ),
+                block.timestamp
+            );
+        // We create an array of quarters since the begining of the strategy
+        // We then fill with known + unknown data that has to be figured out
+        uint256[] memory strategyPower = new uint256[](numQuarters);
+        uint256[] memory protocolPower = new uint256[](numQuarters);
+        for (uint256 i = 0; i < numQuarters; i++) {
+            // We take the info of each epoch from current checkpoints
+            // array[0] for the first quarter power checkpoint of the strategy
+            strategyPower[i] = strategyPerQuarter[_strategy][startingQuarter.add(i)].quarterPower;
+            protocolPower[i] = protocolPerQuarter[startingQuarter.add(i)].quarterPower;
+            _require(strategyPower[i] <= protocolPower[i], Errors.OVERFLOW_IN_POWER);
+        }
+        strategyPower = _updatePendingPower(
+            strategyPower,
+            numQuarters,
+            startingQuarter,
+            strategyDetails[2],
+            strategyPrincipal[_strategy]
+        );
+        protocolPower = _updatePendingPower(
+            protocolPower,
+            numQuarters,
+            startingQuarter,
+            miningUpdatedAt,
+            miningProtocolPrincipal
+        );
+        strategyDetails[9] = _harvestStrategyRewards(
+            strategyPower,
+            protocolPower,
+            startingQuarter,
+            numQuarters,
+            strategyDetails[7].preciseDiv(strategyDetails[6])
+        );
+    }
+
+    function _harvestStrategyRewards(
+        uint256[] memory _strategyPower,
+        uint256[] memory _protocolPower,
+        uint256 _startingQuarter,
+        uint256 _numQuarters,
+        uint256 _percentageProfit
+    ) internal view returns (uint256) {
+        uint256 strategyRewards;
+        uint256 percentage = 1e18;
+        for (uint256 i = 0; i < _numQuarters; i++) {
+            if (i.add(1) == _numQuarters) {
+                // last quarter - we need to take proportional supply for that timeframe despite
+                // the epoch has not finished yet
+                uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION));
+                percentage = block.timestamp.sub(slotEnding.sub(EPOCH_DURATION)).preciseDiv(
+                    slotEnding.sub(slotEnding.sub(EPOCH_DURATION))
+                );
+            }
+            uint256 rewardsPerQuarter =
+                _strategyPower[i]
+                    .preciseDiv(_protocolPower[i] == 0 ? 1 : _protocolPower[i])
+                    .preciseMul(uint256(_tokenSupplyPerQuarter(_startingQuarter.add(i))))
+                    .preciseMul(percentage);
+            strategyRewards = strategyRewards.add(rewardsPerQuarter);
+        }
+        // Set the max cap bonus x2
+        uint256 maxRewards = strategyRewards.preciseMul(2e18);
+        // Apply rewards weight related to principal and profit
+        strategyRewards = strategyRewards.preciseMul(bablPrincipalWeight).add(
+            strategyRewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
+        );
+        // Check max cap
+        if (strategyRewards >= maxRewards) {
+            strategyRewards = maxRewards;
+        }
+        return strategyRewards;
+    }
+
+    function _updatePendingPower(
+        uint256[] memory _powerToUpdate,
+        uint256 _numQuarters,
+        uint256 _startingQuarter,
+        uint256 _updatedAt,
+        uint256 _principal
+    ) internal view returns (uint256[] memory) {
+        uint256 lastQuarter = _getQuarter(_updatedAt); // quarter of last update
+        uint256 currentQuarter = _getQuarter(block.timestamp); // current quarter
+        uint256 timeDiff = block.timestamp.sub(_updatedAt); // 1sec to avoid division by zero
+        // We check the pending power to be accounted until now, since last update for protocol and strategy
+        uint256 powerDebt = _principal.mul(timeDiff);
+        if (powerDebt > 0) {
+            for (uint256 i = 0; i < _numQuarters; i++) {
+                uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION));
+                if (i == 0 && lastQuarter == _startingQuarter && lastQuarter < currentQuarter) {
+                    // We are in the first quarter to update, we add the proportional pending part
+                    _powerToUpdate[i] = _powerToUpdate[i].add(powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff));
+                } else if (i > 0 && i.add(1) < _numQuarters && lastQuarter <= _startingQuarter.add(i)) {
+                    // We are updating an intermediate quarter
+                    // Should have 0 inside before updating
+                    _powerToUpdate[i] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
+                } else if (_startingQuarter.add(i) == currentQuarter) {
+                    // We are updating the current quarter of this strategy checkpoint or the last to update
+                    // It can be a multiple quarter strategy or the only one that need proportional time
+                    // Should have 0 inside before updating
+                    _powerToUpdate[i] = powerDebt.mul(block.timestamp.sub(slotEnding.sub(EPOCH_DURATION))).div(
+                        timeDiff
+                    );
+                }
+            }
+        }
+        return _powerToUpdate;
     }
 }
 
