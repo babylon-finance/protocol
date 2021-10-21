@@ -68,6 +68,10 @@ interface IRewardsDistributor {
         view
         returns (uint256[] memory, bool[] memory);
 
+    function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
+
+    function estimateStrategyRewards(address _strategy) external view returns (uint256);
+
     /* ============ External Functions ============ */
 
     function startBABLRewards() external;
