@@ -84,6 +84,11 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ Modifiers ============ */
 
+    modifier onlyGovernanceOrEmergency {
+        require(msg.sender == owner() || msg.sender == EMERGENCY_OWNER, 'Not enough privileges');
+        _;
+    }
+
     /* ============ State Variables ============ */
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -164,6 +169,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
     address public override mardukGate;
+
+    address public constant EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
 
     /* ============ Constructor ============ */
 
@@ -265,15 +272,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to enable public creation of gardens
-     *
-     */
-    function openPublicGardenCreation() external override onlyOwner {
-        require(!gardenCreationIsOpen, 'Garden creation is already open to the public');
-        gardenCreationIsOpen = true;
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows transfers of ERC20 gardenTokens
      * Can only happen after 2021 is finished.
      */
@@ -282,25 +280,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         gardenTokensTransfersEnabled = true;
     }
 
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows public gardens
-     */
-    function setAllowPublicGardens() external override onlyOwner {
-        allowPublicGardens = true;
-    }
-
     // ===========  Protocol related Gov Functions ======
-
-    /**  PRIVILEGED GOVERNANCE FUNCTION. Enable and starts the BABL Mining program by the Rewards Distributor
-     * Can only happen after public launch of the protocol.
-     */
-    function enableBABLMiningProgram() external override onlyOwner {
-        if (bablMiningProgramEnabled == false) {
-            // Can only be activated once
-            bablMiningProgramEnabled = true;
-            IRewardsDistributor(rewardsDistributor).startBABLRewards(); // Sets the timestamp
-        }
-    }
 
     /**
      * PRIVILEGED FACTORY FUNCTION. Adds a new valid keeper to the list
@@ -361,38 +341,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the price oracle
-     *
-     * @param _priceOracle               Address of the new price oracle
-     */
-    function editPriceOracle(address _priceOracle) external override onlyOwner {
-        require(_priceOracle != priceOracle, 'Price oracle already exists');
-
-        require(_priceOracle != address(0), 'Price oracle must exist');
-
-        address oldPriceOracle = priceOracle;
-        priceOracle = _priceOracle;
-
-        emit PriceOracleChanged(_priceOracle, oldPriceOracle);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Ishtar Gate Address
-     *
-     * @param _ishtarGate               Address of the new Ishtar Gate
-     */
-    function editIshtarGate(address _ishtarGate) external override onlyOwner {
-        require(_ishtarGate != ishtarGate, 'Ishtar Gate already exists');
-
-        require(_ishtarGate != address(0), 'Ishtar Gate oracle must exist');
-
-        address oldIshtarGate = ishtarGate;
-        ishtarGate = _ishtarGate;
-
-        emit IshtarGateChanged(_ishtarGate, oldIshtarGate);
-    }
-
-    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the Marduk Gate Address
      *
      * @param _mardukGate               Address of the new Marduk Gate
@@ -406,22 +354,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         mardukGate = _mardukGate;
 
         emit MardukGateChanged(_mardukGate, oldMardukGate);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the garden valuer
-     *
-     * @param _gardenValuer Address of the new garden valuer
-     */
-    function editGardenValuer(address _gardenValuer) external override onlyOwner {
-        require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
-
-        require(_gardenValuer != address(0), 'Garden Valuer must exist');
-
-        address oldGardenValuer = gardenValuer;
-        gardenValuer = _gardenValuer;
-
-        emit GardenValuerChanged(_gardenValuer, oldGardenValuer);
     }
 
     /**
@@ -453,11 +385,59 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
+     * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
+     *
+     * @param  _reserve                         Address of the reserve to edit
+     * @param  _newMinLiquidityReserve          Absolute min liquidity of an asset to grab price
+     */
+    function editLiquidityReserve(address _reserve, uint256 _newMinLiquidityReserve) public override onlyOwner {
+        require(_newMinLiquidityReserve > 0, '_minRiskyPairLiquidityEth > 0');
+        require(validReserveAsset[_reserve], 'Needs to be a valid reserve');
+        minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
+
+        emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
+    }
+
+    // Setter that can be changed by the team in case of an emergency
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the price oracle
+     *
+     * @param _priceOracle               Address of the new price oracle
+     */
+    function editPriceOracle(address _priceOracle) external override onlyGovernanceOrEmergency {
+        require(_priceOracle != priceOracle, 'Price oracle already exists');
+
+        require(_priceOracle != address(0), 'Price oracle must exist');
+
+        address oldPriceOracle = priceOracle;
+        priceOracle = _priceOracle;
+
+        emit PriceOracleChanged(_priceOracle, oldPriceOracle);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the garden valuer
+     *
+     * @param _gardenValuer Address of the new garden valuer
+     */
+    function editGardenValuer(address _gardenValuer) external override onlyGovernanceOrEmergency {
+        require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
+
+        require(_gardenValuer != address(0), 'Garden Valuer must exist');
+
+        address oldGardenValuer = gardenValuer;
+        gardenValuer = _gardenValuer;
+
+        emit GardenValuerChanged(_gardenValuer, oldGardenValuer);
+    }
+
+    /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol garden factory
      *
      * @param _newGardenFactory      Address of the new garden factory
      */
-    function editGardenFactory(address _newGardenFactory) external override onlyOwner {
+    function editGardenFactory(address _newGardenFactory) external override onlyGovernanceOrEmergency {
         require(_newGardenFactory != address(0), 'Address must not be 0');
 
         address oldGardenFactory = gardenFactory;
@@ -471,7 +451,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newGardenNFT      Address of the new garden NFT
      */
-    function editGardenNFT(address _newGardenNFT) external override onlyOwner {
+    function editGardenNFT(address _newGardenNFT) external override onlyGovernanceOrEmergency {
         require(_newGardenNFT != address(0), 'Address must not be 0');
 
         address oldGardenNFT = gardenNFT;
@@ -485,7 +465,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newStrategyNFT      Address of the new strategy NFT
      */
-    function editStrategyNFT(address _newStrategyNFT) external override onlyOwner {
+    function editStrategyNFT(address _newStrategyNFT) external override onlyGovernanceOrEmergency {
         require(_newStrategyNFT != address(0), 'Address must not be 0');
 
         address oldStrategyNFT = strategyNFT;
@@ -499,7 +479,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newStrategyFactory      Address of the new strategy factory
      */
-    function editStrategyFactory(address _newStrategyFactory) external override onlyOwner {
+    function editStrategyFactory(address _newStrategyFactory) external override onlyGovernanceOrEmergency {
         require(_newStrategyFactory != address(0), 'Address must not be 0');
 
         address oldStrategyFactory = strategyFactory;
@@ -513,7 +493,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newDefaultMasterSwapper     Address of the new default trade integration
      */
-    function setMasterSwapper(address _newDefaultMasterSwapper) external override onlyOwner {
+    function setMasterSwapper(address _newDefaultMasterSwapper) external override onlyGovernanceOrEmergency {
         require(_newDefaultMasterSwapper != address(0), 'Address must not be 0');
         require(_newDefaultMasterSwapper != masterSwapper, 'Address must be different');
         address oldMasterSwapper = masterSwapper;
@@ -528,27 +508,13 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param  _kind             Operation kind
      * @param  _operation        Address of the operation contract to set
      */
-    function setOperation(uint8 _kind, address _operation) public override onlyOwner {
+    function setOperation(uint8 _kind, address _operation) public override onlyGovernanceOrEmergency {
         require(_kind < MAX_OPERATIONS, 'Max operations reached');
         require(enabledOperations[_kind] != _operation, 'Operation already set');
         require(_operation != address(0), 'Operation address must exist.');
         enabledOperations[_kind] = _operation;
 
         emit ControllerOperationSet(_kind, _operation);
-    }
-
-    /**
-     * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
-     *
-     * @param  _reserve                         Address of the reserve to edit
-     * @param  _newMinLiquidityReserve          Absolute min liquidity of an asset to grab price
-     */
-    function editLiquidityReserve(address _reserve, uint256 _newMinLiquidityReserve) public override onlyOwner {
-        require(_newMinLiquidityReserve > 0, '_minRiskyPairLiquidityEth > 0');
-        require(validReserveAsset[_reserve], 'Needs to be a valid reserve');
-        minLiquidityPerReserve[_reserve] = _newMinLiquidityReserve;
-
-        emit LiquidityMinimumEdited(_reserve, _newMinLiquidityReserve);
     }
 
     // ===========  Protocol security related Gov Functions ======
@@ -734,4 +700,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 }
 
-contract BabControllerV8 is BabController {}
+contract BabControllerV9 is BabController {}
