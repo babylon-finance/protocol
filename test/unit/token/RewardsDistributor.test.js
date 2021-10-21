@@ -2605,12 +2605,6 @@ describe('RewardsDistributor', function () {
       // 10% add bonus creator
       totalSigner1BABLLong1 = totalSigner1BABLLong1.add(totalSigner1BABLLong1.mul(10).div(100));
       totalSigner1BABLLong2 = totalSigner1BABLLong2.add(totalSigner1BABLLong2.mul(10).div(100));
-
-      console.log('signer1BABLStrategistLong1', signer1BABLStrategistLong1.toString());
-      console.log('signer1BABLStrategistLong2', signer1BABLStrategistLong2.toString());
-      console.log('signer1BABLStewardLong1', signer1BABLStewardLong1.toString());
-      console.log('signer1BABLStewardLong2', signer1BABLStewardLong2.toString());
-
       expect(signer1Profit).to.be.closeTo(
         estimateSigner1Long1Profit.add(estimateSigner1Long2Profit),
         signer1Profit.div(50),
