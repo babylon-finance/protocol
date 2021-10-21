@@ -472,10 +472,10 @@ contract BabylonViewer {
         view
         returns (uint256[] memory)
     {
-        uint256[] memory totalRewards = new uint256[](4);
+        uint256[] memory totalRewards = new uint256[](8);
         address rewardsDistributor = address(controller.rewardsDistributor());
         for (uint256 i = 0; i < _strategies.length; i++) {
-            uint256[] memory tempRewards = new uint256[](4);
+            uint256[] memory tempRewards = new uint256[](8);
             if (!IStrategy(_strategies[i]).isStrategyActive()) {
                 continue;
             }
@@ -485,6 +485,10 @@ contract BabylonViewer {
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
             totalRewards[2] = totalRewards[2].add(tempRewards[2]);
             totalRewards[3] = totalRewards[3].add(tempRewards[3]);
+            totalRewards[4] = totalRewards[4].add(tempRewards[4]);
+            totalRewards[5] = totalRewards[5].add(tempRewards[5]);
+            totalRewards[6] = totalRewards[6].add(tempRewards[6]);
+            totalRewards[7] = totalRewards[7].add(tempRewards[7]);
         }
         return totalRewards;
     }

@@ -139,14 +139,20 @@ describe('Babylon Viewer', function () {
       const [, , pendingRewards] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS);
       const [, , pendingRewards2] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
-      expect(pendingRewards[0]).to.equal(0); // Not profit strategy, strategist gets 0
-      expect(pendingRewards[1]).to.equal(0); // Not profit strategy, steward voting for gets 0
-      expect(pendingRewards[2]).to.equal(0); // Just started, still 0
-      expect(pendingRewards[3]).to.equal(0); // Just started, still 0
+      expect(pendingRewards[0]).to.equal(0); // Not profit strategy, strategist gets 0 BABL
+      expect(pendingRewards[1]).to.equal(0); // Not profit strategy, strategist gets 0 profit
+      expect(pendingRewards[2]).to.equal(0); // Not profit strategy, steward voting for gets 0 BABL
+      expect(pendingRewards[3]).to.equal(0); // Not profit strategy, steward gets 0 profit
+      expect(pendingRewards[4]).to.equal(0); // Just started, still 0
+      expect(pendingRewards[5]).to.equal(0); // Just started, still 0
+      expect(pendingRewards[6]).to.equal(0); // Just started, still 0
       expect(pendingRewards2[0]).to.equal(0); // Not profit strategy, strategist gets 0
-      expect(pendingRewards2[1]).to.equal(0); // Not profit strategy, steward voting for gets 0
-      expect(pendingRewards2[2]).to.be.gt(0); // get BABL estimation for LP
-      expect(pendingRewards2[3]).to.be.gt(0); // get total BABL estimation
+      expect(pendingRewards2[1]).to.equal(0); // Not profit strategy, strategist gets 0 profit
+      expect(pendingRewards2[2]).to.equal(0); // Not profit strategy, steward voting for gets 0
+      expect(pendingRewards2[3]).to.equal(0); // Not profit strategy, steward gets 0 profit
+      expect(pendingRewards2[4]).to.be.gt(0); // get BABL estimation for LP
+      expect(pendingRewards2[5]).to.be.gt(0); // get total BABL estimation
+      expect(pendingRewards2[6]).to.equal(0); // no profit strategy
     });
 
     it('calls get user gardens', async function () {

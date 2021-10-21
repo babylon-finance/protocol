@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -437,7 +436,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view override returns (uint256[] memory) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
-        uint256[] memory totalRewards = new uint256[](7);
+        uint256[] memory totalRewards = new uint256[](8);
         uint256 initialDepositAt;
         uint256 claimedAt;
         (, initialDepositAt, claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
@@ -445,7 +444,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Security check
             _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
 
-            uint256[] memory tempRewards = new uint256[](7);
+            uint256[] memory tempRewards = new uint256[](8);
 
             tempRewards = _getStrategyProfitsAndBABL(
                 _garden,
@@ -461,6 +460,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             totalRewards[4] = totalRewards[4].add(tempRewards[4]);
             totalRewards[5] = totalRewards[5].add(tempRewards[5]);
             totalRewards[6] = totalRewards[6].add(tempRewards[6]);
+            totalRewards[7] = totalRewards[7].add(tempRewards[7]);
         }
 
         return totalRewards;
@@ -713,7 +713,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[0]: profit
         // profitData[1]: distance
 
-        uint256[] memory rewards = new uint256[](4);
+        uint256[] memory rewards = new uint256[](8);
         if (IStrategy(_strategy).isStrategyActive()) {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
@@ -727,16 +727,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 );
             // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
             rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
-
+            // Get strategist profit
+            rewards[1] = (strategist == _contributor && profitData[0] == true)
+                ? _getStrategyStrategistProfits(garden, strategyDetails[10])
+                : 0;
             // Get steward rewards
-            rewards[1] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
-
+            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            // If not profits _getStrategyStewardsProfits should not execute
+            rewards[3] = profitData[0] == true
+                ? _getStrategyStewardProfits(garden, _strategy, _contributor, strategyDetails, profitData)
+                : 0;
             // Get LP rewards
-            // Note that contributor power is fluctuating along the way for each deposit
-            rewards[2] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
+            // Note that contributor power is fluctuating along the way for each new deposit
+            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
 
-            // Creator bonus (if any)
-            rewards[3] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[1]).add(rewards[2]));
+            // Total BABL including creator bonus (if any)
+            rewards[5] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
+            // Total profit
+            rewards[6] = rewards[1].add(rewards[3]);
+            // Creator bonus
+            rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
+                ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
+                : 0;
         }
         return rewards;
     }
@@ -1130,7 +1142,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _claimedAt
     ) private view returns (uint256[] memory) {
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
-        uint256[] memory rewards = new uint256[](7);
+        uint256[] memory rewards = new uint256[](8);
 
         (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
             IStrategy(_strategy).getStrategyRewardsContext();
@@ -1175,6 +1187,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Creator bonus (if any)
             rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
             rewards[6] = rewards[1].add(rewards[3]);
+            // Creator bonus
+            rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
+                ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
+                : 0;
         }
 
         return rewards;
