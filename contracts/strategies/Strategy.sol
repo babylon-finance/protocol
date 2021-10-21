@@ -190,7 +190,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     bool private finalized; // Flag that indicates whether we exited the strategy
     bool private active; // Whether the strategy has met the voting quorum
     bool private dataSet;
-    bool private hasMiningStarted;
+    bool private hasMiningStarted; // DEPRECATED
 
     uint256 public override duration; // Duration of the bet
     uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
@@ -267,7 +267,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         stake = _stake;
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        hasMiningStarted = ((enteredAt > rewardsDistributor.START_TIME()) && (rewardsDistributor.START_TIME() != 0));
         duration = _strategyDuration;
         expectedReturn = _expectedReturn;
         maxCapitalRequested = _maxCapitalRequested;
@@ -424,14 +423,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
 
-        // Accounting of strategy power contribution along the time
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // Only if the Mining program started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
-        }
+        rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
+
         // Send the amount back to the garden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
         IERC20(garden.reserveAsset()).safeTransfer(
@@ -778,14 +771,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (executedAt == 0) {
             executedAt = block.timestamp;
         }
-        // We consider also strategies on candidate state when mining program is activated
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // The Mining program has not started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(_capital, true);
-        }
+        rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
@@ -947,16 +933,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             strategyReturns,
             burningAmount
         );
-        // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // Only if the Mining program started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
-            // Must be zero in case the mining program didnt started on time
-            strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
-        }
+        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        // Must be zero in case the mining program didnt started on time
+        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
