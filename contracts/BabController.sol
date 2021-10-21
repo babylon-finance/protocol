@@ -358,6 +358,15 @@ contract BabController is OwnableUpgradeable, IBabController {
         emit MardukGateChanged(_mardukGate, oldMardukGate);
     }
 
+    function editRewardsDistributor(address _newRewardsDistributor) external override onlyOwner {
+        require(_newRewardsDistributor != address(0), 'Address must not be 0');
+
+        address oldRewardsDistributor = rewardsDistributor;
+        rewardsDistributor = _newRewardsDistributor;
+
+        emit RewardsDistributorChanged(_newRewardsDistributor, oldRewardsDistributor);
+    }
+
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the protocol fee recipient
      *

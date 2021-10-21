@@ -52,6 +52,8 @@ interface IBabController {
 
     function editTreasury(address _newTreasury) external;
 
+    function editRewardsDistributor(address _rewardsDistributor) external;
+
     function editGardenFactory(address _newGardenFactory) external;
 
     function editGardenNFT(address _newGardenNFT) external;
