@@ -358,93 +358,355 @@ describe('RewardsDistributor', function () {
       const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
       expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
     });
-
-    it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
+    it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
+      // Mining program has to be enabled before the strategy is created
       await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
-    });
-
-    it('should get proportional 66% BABL rewards if the Mining Program starts 1/3 after of an strategy execution duration', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
       await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(2), value.div(50));
-    });
-    it('should get proportional 33% BABL rewards if the Mining Program starts 2/3 after of an strategy execution duration', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 66);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      increaseTime(ONE_DAY_IN_SECONDS * 33);
+      const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedBABL2 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedBABL3 = await rewardsDistributor.estimateStrategyRewards(long.address);
       await finalizeStrategyImmediate(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(1), value.div(50));
+      const estimatedBABL4 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      const rewards = await long.strategyRewards();
+      expect(estimatedBABL3).to.be.gt(estimatedBABL2);
+      expect(estimatedBABL2).to.be.gt(estimatedBABL1);
+      expect(rewards).to.be.closeTo(estimatedBABL3, estimatedBABL3.div(50)); // 2%
+      expect(estimatedBABL4).to.be.equal(0);
     });
-    it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-
-      // Mining program has to be enabled before the strategy starts its execution
+      // Mining program has to be enabled before the strategy is created
       await babController.connect(owner).enableBABLMiningProgram();
-
       await executeStrategy(long, ONE_ETH);
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
 
-      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('BAB#049');
-    });
-    it('should not add the same live strategy twice', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
-      // Do nothing as strategyPrincipal > 0
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
       await finalizeStrategyImmediate(long);
-      // Do nothing as is no longer a beta strategy
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+      const getRewardsSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long.address,
+      ]);
+      const getRewardsSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long.address,
+      ]);
 
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getRewardsSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getRewardsSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.equal(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.equal(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.equal(0); // Steward
+      // Estimations are 0 when the strategy already finished
+      expect(estimatedSigner1BABL5[5]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[5]).to.be.equal(0);
+    });
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 1 quarter', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      // Mining program has to be enabled before the strategy is created
+      await babController.connect(owner).enableBABLMiningProgram();
+      await executeStrategy(long, ONE_ETH);
+      await injectFakeProfits(long, ONE_ETH.mul(222));
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await finalizeStrategyImmediate(long);
+      const getSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL5 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL5 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.be.gt(0); // Steward
+
+      // Once the strategy ends, estimation is 0
+      expect(estimatedSigner1BABL5[0]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[0]).to.be.equal(0);
+      expect(estimatedSigner1BABL5[2]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[2]).to.be.equal(0);
+      const returned = await long.capitalReturned();
+      const allocated = await long.capitalAllocated();
+
+      const profit = returned.sub(allocated);
+      const rewardsStrategist = profit.mul(10).div(100);
+      const rewardsStewards = profit.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5[1]).to.equal(rewardsStrategist);
+      expect(getSigner1BABL5[3].add(getSigner2BABL5[3])).to.be.closeTo(rewardsStewards, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(rewardsStrategist.add(rewardsStewards), 5);
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances
+      // since last deposit and checking back to the past long distance)
+    });
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 3 quarters', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      // Mining program has to be enabled before the strategy is created
+      await babController.connect(owner).enableBABLMiningProgram();
+      await executeStrategy(long, ONE_ETH);
+      await injectFakeProfits(long, ONE_ETH.mul(222));
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await finalizeStrategyImmediate(long);
+      const estimatedSigner1BABL4 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL4 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL5 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL5 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.be.gt(0); // Steward
+      // After the strategy ends, estimation is back to 0
+      expect(estimatedSigner1BABL4[0]).to.be.equal(estimatedSigner1BABL5[0]);
+      expect(estimatedSigner2BABL4[0]).to.be.equal(estimatedSigner2BABL5[0]);
+      expect(estimatedSigner1BABL4[2]).to.be.equal(estimatedSigner1BABL5[2]);
+      expect(estimatedSigner2BABL4[2]).to.be.equal(estimatedSigner2BABL5[2]);
+      const returned = await long.capitalReturned();
+      const allocated = await long.capitalAllocated();
+      const profit = returned.sub(allocated);
+      const rewardsStrategist = profit.mul(10).div(100);
+      const rewardsStewards = profit.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5[1]).to.equal(rewardsStrategist);
+      expect(getSigner1BABL5[3].add(getSigner2BABL5[3])).to.be.closeTo(rewardsStewards, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(rewardsStrategist.add(rewardsStewards), 5);
+
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances)
+      /* expect(estimatedSigner1BABL4[2]).to.be.equal(estimatedSigner1BABL5[2]);
+      expect(estimatedSigner2BABL4[2]).to.be.equal(estimatedSigner2BABL5[2]);
+      expect(estimatedSigner1BABL4[3]).to.be.equal(estimatedSigner1BABL5[3]);
+      expect(estimatedSigner2BABL4[3]).to.be.equal(estimatedSigner2BABL5[3]); */
+    });
+    it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      // Mining program has to be enabled before the strategy is created
+      await babController.connect(owner).enableBABLMiningProgram();
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(222));
+
+      const estimatedSigner1BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL1Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL1Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      const estimatedSigner1BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedSigner1BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const getSigner1BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const getSigner2BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      const getSigner1BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long2.address,
+      ]);
+      const getSigner2BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long2.address,
+      ]);
+      expect(estimatedSigner1BABL4Long1[0]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[2]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[4]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[5]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[0]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[2]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[4]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[5]).to.equal(0);
+
+      expect(estimatedSigner1BABL4Long2[0]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[2]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[4]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[5]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[0]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[2]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[4]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[5]).to.equal(0);
+
+      expect(estimatedSigner1BABL3Long1[0]).to.be.closeTo(getSigner1BABL4Long1[0], getSigner1BABL4Long1[0].div(50));
+      expect(estimatedSigner1BABL3Long1[2]).to.be.closeTo(getSigner1BABL4Long1[2], getSigner1BABL4Long1[2].div(50));
+      expect(estimatedSigner1BABL3Long1[4]).to.be.closeTo(getSigner1BABL4Long1[4], getSigner1BABL4Long1[4].div(50));
+      expect(estimatedSigner1BABL3Long1[5]).to.be.closeTo(getSigner1BABL4Long1[5], getSigner1BABL4Long1[5].div(50));
+      expect(estimatedSigner2BABL3Long1[0]).to.be.closeTo(getSigner2BABL4Long1[0], getSigner2BABL4Long1[0].div(50));
+      expect(estimatedSigner2BABL3Long1[2]).to.be.closeTo(getSigner2BABL4Long1[2], getSigner2BABL4Long1[2].div(50));
+      expect(estimatedSigner2BABL3Long1[4]).to.be.closeTo(getSigner2BABL4Long1[4], getSigner2BABL4Long1[4].div(50));
+      expect(estimatedSigner2BABL3Long1[5]).to.be.closeTo(getSigner2BABL4Long1[5], getSigner2BABL4Long1[5].div(50));
+
+      expect(estimatedSigner1BABL3Long2[0]).to.be.closeTo(getSigner1BABL4Long2[0], getSigner1BABL4Long2[0].div(50));
+      expect(estimatedSigner1BABL3Long2[2]).to.be.closeTo(getSigner1BABL4Long2[2], getSigner1BABL4Long2[2].div(50));
+      expect(estimatedSigner1BABL3Long2[4]).to.be.closeTo(getSigner1BABL4Long2[4], getSigner1BABL4Long2[4].div(50));
+      expect(estimatedSigner1BABL3Long2[5]).to.be.closeTo(getSigner1BABL4Long2[5], getSigner1BABL4Long2[5].div(50));
+      expect(estimatedSigner2BABL3Long2[0]).to.be.closeTo(getSigner2BABL4Long2[0], getSigner2BABL4Long2[0].div(50));
+      expect(estimatedSigner2BABL3Long2[2]).to.be.closeTo(getSigner2BABL4Long2[2], getSigner2BABL4Long2[2].div(50));
+      expect(estimatedSigner2BABL3Long2[4]).to.be.closeTo(getSigner2BABL4Long2[4], getSigner2BABL4Long2[4].div(50));
+      expect(estimatedSigner2BABL3Long2[5]).to.be.closeTo(getSigner2BABL4Long2[5], getSigner2BABL4Long2[5].div(50));
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL5Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const getSigner1BABL5Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const getSigner2BABL5Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL5Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL5Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      expect(estimatedSigner1BABL1Long1[5]).to.be.lt(estimatedSigner1BABL2Long1[5]);
+      expect(estimatedSigner2BABL1Long1[5]).to.be.lt(estimatedSigner2BABL2Long1[5]);
+      expect(estimatedSigner1BABL2Long1[5]).to.be.lt(estimatedSigner1BABL3Long1[5]);
+      expect(estimatedSigner2BABL2Long1[5]).to.be.lt(estimatedSigner2BABL3Long1[5]);
+
+      expect(estimatedSigner1BABL1Long2[5]).to.be.lt(estimatedSigner1BABL2Long2[5]);
+      expect(estimatedSigner2BABL1Long2[5]).to.be.lt(estimatedSigner2BABL2Long2[5]);
+      expect(estimatedSigner1BABL2Long2[5]).to.be.lt(estimatedSigner1BABL3Long2[5]);
+      expect(estimatedSigner2BABL2Long2[5]).to.be.lt(estimatedSigner2BABL3Long2[5]);
+
+      // Long 1 Strategy with profits, strategist and stewards get BABL
+      expect(estimatedSigner1BABL3Long1[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3Long1[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3Long1[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3Long1[2]).to.be.gt(0); // Steward
+      // Long2 got no profits at all, no BABL rewards to strategist or stewards
+      expect(estimatedSigner1BABL3Long2[0]).to.equal(0); // Strategist
+      expect(estimatedSigner1BABL3Long2[2]).to.equal(0); // Steward
+      expect(estimatedSigner2BABL3Long2[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3Long2[2]).to.equal(0); // Steward
+
+      // Once the strategy has finished, its estimation is back to 0
+      expect(estimatedSigner1BABL4Long1[0]).to.be.equal(estimatedSigner1BABL5Long1[0]);
+      expect(estimatedSigner2BABL4Long1[0]).to.be.equal(estimatedSigner2BABL5Long1[0]);
+      expect(estimatedSigner1BABL4Long1[2]).to.be.equal(estimatedSigner1BABL5Long1[2]);
+      expect(estimatedSigner2BABL4Long1[2]).to.be.equal(estimatedSigner2BABL5Long1[2]);
+      expect(estimatedSigner1BABL4Long2[0]).to.be.equal(estimatedSigner1BABL5Long2[0]);
+      expect(estimatedSigner2BABL4Long2[0]).to.be.equal(estimatedSigner2BABL5Long2[0]);
+      expect(estimatedSigner1BABL4Long2[2]).to.be.equal(estimatedSigner1BABL5Long2[2]);
+      expect(estimatedSigner2BABL4Long2[2]).to.be.equal(estimatedSigner2BABL5Long2[2]);
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const rewardsStrategistLong1 = profitLong1.mul(10).div(100);
+      const rewardsStewardsLong1 = profitLong1.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5Long1[1]).to.equal(rewardsStrategistLong1);
+      expect(getSigner1BABL5Long1[3].add(getSigner2BABL5Long1[3])).to.be.closeTo(rewardsStewardsLong1, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(
+        rewardsStrategistLong1.add(rewardsStewardsLong1),
+        5,
+      );
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances back and forth)
+      /* expect(estimatedSigner1BABL4Long1[2]).to.be.equal(estimatedSigner1BABL5Long1[2]);
+      expect(estimatedSigner2BABL4Long1[2]).to.be.equal(estimatedSigner2BABL5Long1[2]);
+      expect(estimatedSigner1BABL4Long1[3]).to.be.equal(estimatedSigner1BABL5Long1[3]);
+      expect(estimatedSigner2BABL4Long1[3]).to.be.equal(estimatedSigner2BABL5Long1[3]); */
+      /* expect(estimatedSigner1BABL4Long2[2]).to.be.equal(estimatedSigner1BABL5Long2[2]);
+      expect(estimatedSigner2BABL4Long2[2]).to.be.equal(estimatedSigner2BABL5Long2[2]);
+      expect(estimatedSigner1BABL4Long2[3]).to.be.equal(estimatedSigner1BABL5Long2[3]);
+      expect(estimatedSigner2BABL4Long2[3]).to.be.equal(estimatedSigner2BABL5Long2[3]); */
+    });
+    it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters but the second starts later', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      // Mining program has to be enabled before the strategy is created
+      await babController.connect(owner).enableBABLMiningProgram();
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      await executeStrategy(long2, ONE_ETH);
+      const estimatedSigner1BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner1BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner1BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedSigner1BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const getSigner1BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const getSigner1BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long2.address,
+      ]);
+      // Once we activate the other strategy, the estimation must go up (cannot be reduced)
+      expect(estimatedSigner1BABL2Long1[0]).to.be.lt(estimatedSigner1BABL3Long1[0]);
+      expect(estimatedSigner1BABL2Long1[2]).to.be.lt(estimatedSigner1BABL3Long1[2]);
+      expect(estimatedSigner1BABL2Long1[4]).to.be.lt(estimatedSigner1BABL3Long1[4]);
+      expect(estimatedSigner1BABL2Long1[5]).to.be.lt(estimatedSigner1BABL3Long1[5]);
+
+      expect(estimatedSigner1BABL2Long2[0]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[2]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[4]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[5]).to.equal(0);
+      // TODO The accuracy if other strategies are fluctuating is high
+      expect(estimatedSigner1BABL3Long1[5]).to.be.closeTo(getSigner1BABL4Long1[5], getSigner1BABL4Long1[5].div(50)); // 2%
+      expect(estimatedSigner1BABL3Long2[5]).to.be.closeTo(getSigner1BABL4Long2[5], getSigner1BABL4Long2[5].div(50)); // 2%
+      expect(estimatedSigner1BABL4Long1[5]).to.be.equal(0);
+      expect(estimatedSigner1BABL4Long2[5]).to.be.equal(0);
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -1747,11 +2009,21 @@ describe('RewardsDistributor', function () {
       const signer3ProfitDAI = signer3RewardsDAI[6];
       // USDC Garden is set up to give all profit rewards to strategist
       // so signer 3 despite is LP and steward but gets no (0) profits
+      // We calculate strategy profits
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const setAsideGarden1 = await usdcGarden.reserveAssetRewardsSetAside();
+      const setAsideGarden2 = await daiGarden.reserveAssetRewardsSetAside();
       await expect(signer3ProfitUSDC).to.equal(0);
-      await expect(signer1ProfitUSDC).to.equal(179962394);
+      await expect(signer1ProfitUSDC).to.be.closeTo(setAsideGarden1, 5);
       // DAI Garden is set up to give all profit rewards to stewards
       // so signer 1 despite is the strategist gets the same profits than signer3
       await expect(signer1ProfitDAI).to.equal(signer3ProfitDAI);
+      await expect(signer1ProfitDAI.add(signer3ProfitDAI)).to.be.closeTo(setAsideGarden2, 5);
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens with profit below expected return within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -2148,42 +2420,63 @@ describe('RewardsDistributor', function () {
       await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
-
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-
+      const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit = signer2Rewards[6];
+      const rewardsSetAside1 = await garden1.reserveAssetRewardsSetAside(); // All long1 rewards available
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-
+      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
+      const rewardsSetAside3 = await garden1.reserveAssetRewardsSetAside(); // All long2 rewards available
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-
       const signer1BABL2 = signer1Rewards2[5];
       const signer1Profit2 = signer1Rewards2[6];
-
+      const signer2Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit2 = signer2Rewards2[6];
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
-
-      expect(signer1Profit).to.be.closeTo('5983787580486307', signer1Profit.div(100));
-      expect(signer1Profit2).to.be.closeTo('5958439050861242', signer1Profit2.div(100));
-
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
         ethers.utils.parseEther('0.02'),
       );
+      expect(rewardsSetAside1).to.be.closeTo(strategistLong1.add(stewardLong1), 5);
+      expect(rewardsSetAside1).to.be.closeTo(signer1Profit.add(signer2Profit), 5);
+      expect(rewardsSetAside1).to.be.closeTo(profitLong1.mul(15).div(100), 5);
+      expect(rewardsSetAside3).to.be.closeTo(strategistLong2.add(stewardLong2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(signer1Profit2.add(signer2Profit2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(profitLong2.mul(15).div(100), 10);
+      // user specific check
+      // signer 1 has contributor power of 0.6 (60%) in balance
+      expect(signer1Profit).to.be.closeTo(strategistLong1.add(stewardLong1.mul(60).div(100)), 10);
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
@@ -2206,9 +2499,39 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-      // TODO: Add calculations of profits and BABL
-      expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
-      expect(signer1BABL).to.be.closeTo('80779335476763963816834', signer1BABL.div(100));
+      // Add calculations
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
+      const long1BABL = await long1.strategyRewards();
+      const long2BABL = await long2.strategyRewards();
+
+      const estimateSigner1Long1Profit = strategistLong1.add(stewardLong1.mul(54).div(100)); // power 54%
+      const estimateSigner1Long2Profit = strategistLong2.add(stewardLong2.mul(55).div(100)); // power 55%
+      const signer1BABLStrategistLong1 = long1BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
+      const signer1BABLStrategistLong2 = long2BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
+      const signer1BABLStewardLong1 = long1BABL.mul(10).mul(54).div(10000); // power 54% stewards % in BABL is 10% (no 5%)
+      const signer1BABLStewardLong2 = long2BABL.mul(10).mul(55).div(10000); // power 55% stewards % in BABL is 10% (no 5%)
+      const signer1BABLLPLong1 = long1BABL.mul(80).mul(54).div(10000); // power 54%
+      const signer1BABLLPLong2 = long2BABL.mul(80).mul(55).div(10000); // power 55%
+      let totalSigner1BABLLong1 = signer1BABLStrategistLong1.add(signer1BABLStewardLong1).add(signer1BABLLPLong1);
+      let totalSigner1BABLLong2 = signer1BABLStrategistLong2.add(signer1BABLStewardLong2).add(signer1BABLLPLong2);
+
+      // 10% add bonus creator
+      totalSigner1BABLLong1 = totalSigner1BABLLong1.add(totalSigner1BABLLong1.mul(10).div(100));
+      totalSigner1BABLLong2 = totalSigner1BABLLong2.add(totalSigner1BABLLong2.mul(10).div(100));
+      expect(signer1Profit).to.be.closeTo(
+        estimateSigner1Long1Profit.add(estimateSigner1Long2Profit),
+        signer1Profit.div(50),
+      ); // 2%
+      expect(signer1BABL).to.be.closeTo(totalSigner1BABLLong1.add(totalSigner1BABLLong2), signer1BABL.div(50)); // 2%
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
@@ -2293,8 +2616,8 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('10813510863198169', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('1157789933205635', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
