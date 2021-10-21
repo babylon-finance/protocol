@@ -371,20 +371,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the rewards distributor
-     *
-     * @param _newRewardsDistributor      Address of the new rewards distributor
-     */
-    function editRewardsDistributor(address _newRewardsDistributor) external override onlyOwner {
-        require(_newRewardsDistributor != address(0), 'Address must not be 0');
-
-        address oldRewardsDistributor = rewardsDistributor;
-        rewardsDistributor = _newRewardsDistributor;
-
-        emit RewardsDistributorChanged(_newRewardsDistributor, oldRewardsDistributor);
-    }
-
-    /**
      * GOVERNANCE FUNCTION: Edits the minimum liquidity an asset must have on Uniswap
      *
      * @param  _reserve                         Address of the reserve to edit
@@ -399,6 +385,20 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     // Setter that can be changed by the team in case of an emergency
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the rewards distributor
+     *
+     * @param _newRewardsDistributor      Address of the new rewards distributor
+     */
+    function editRewardsDistributor(address _newRewardsDistributor) external override onlyGovernanceOrEmergency {
+        require(_newRewardsDistributor != address(0), 'Address must not be 0');
+
+        address oldRewardsDistributor = rewardsDistributor;
+        rewardsDistributor = _newRewardsDistributor;
+
+        emit RewardsDistributorChanged(_newRewardsDistributor, oldRewardsDistributor);
+    }
 
     /**
      * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to change the price oracle
