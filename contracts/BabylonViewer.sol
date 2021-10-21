@@ -476,6 +476,10 @@ contract BabylonViewer {
         for (uint256 i = 0; i < _strategies.length; i++) {
             uint256[] memory tempRewards = new uint256[](4);
 
+            if (!IStrategy(_strategies[i]).isStrategyActive()) {
+                continue;
+            }
+
             tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserBABLRewards(_strategies[i], _contributor);
 
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
