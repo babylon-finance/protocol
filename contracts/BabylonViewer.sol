@@ -197,7 +197,7 @@ contract BabylonViewer {
         returns (
             address,
             string memory,
-            uint256[13] memory,
+            uint256[14] memory,
             bool[] memory,
             uint256[] memory
         )
@@ -226,25 +226,12 @@ contract BabylonViewer {
                 strategy.enteredAt(),
                 strategy.getNAV(),
                 rewards,
-                strategy.maxAllocationPercentage()
+                strategy.maxAllocationPercentage(),
+                _estimateStrategyBABLRewards(_strategy)
             ],
             status,
             ts
         );
-    }
-
-    /**
-     * returns the estimated accrued BABL for a user related to one strategy
-     */
-    function estimateUserBABLRewards(address _strategy, address _contributor) external view returns (uint256[] memory) {
-        return IRewardsDistributor(controller.rewardsDistributor()).estimateUserBABLRewards(_strategy, _contributor);
-    }
-
-    /**
-     * returns the estimated accrued BABL of a strategy
-     */
-    function estimateStrategyBABLRewards(address _strategy) external view returns (uint256) {
-        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyBABLRewards(_strategy);
     }
 
     function getOperationsStrategy(address _strategy)
@@ -368,6 +355,7 @@ contract BabylonViewer {
     {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](10);
+        uint256[] memory pendingRewards = new uint256[](4);
         (
             contribution[0],
             contribution[1],
@@ -389,6 +377,7 @@ contract BabylonViewer {
                 garden.getFinalizedStrategies()
             );
         contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
+        pendingRewards = _estimateUserBABLRewards(_user, garden.getStrategies());
         return (contribution, totalRewards);
     }
 
@@ -464,5 +453,36 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
+    }
+
+    /**
+     * returns the estimated accrued BABL of a strategy
+     */
+    function _estimateStrategyBABLRewards(address _strategy) private view returns (uint256) {
+        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyBABLRewards(_strategy);
+    }
+
+    /**
+     * returns the estimated accrued BABL for a user related to one strategy
+     */
+    function _estimateUserBABLRewards(address _contributor, address[] memory _strategies)
+        private
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory totalRewards = new uint256[](4);
+        address rewardsDistributor = address(controller.rewardsDistributor());
+
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            uint256[] memory tempRewards = new uint256[](4);
+
+            tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserBABLRewards(_strategies[i], _contributor);
+
+            totalRewards[0] = totalRewards[0].add(tempRewards[0]);
+            totalRewards[1] = totalRewards[1].add(tempRewards[1]);
+            totalRewards[2] = totalRewards[2].add(tempRewards[2]);
+            totalRewards[3] = totalRewards[3].add(tempRewards[3]);
+        }
+        return totalRewards;
     }
 }
