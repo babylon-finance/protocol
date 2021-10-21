@@ -195,7 +195,7 @@ contract BabylonViewer {
         returns (
             address,
             string memory,
-            uint256[14] memory,
+            uint256[15] memory,
             bool[] memory,
             uint256[] memory
         )
