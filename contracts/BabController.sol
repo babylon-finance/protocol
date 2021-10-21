@@ -188,6 +188,8 @@ contract BabController is OwnableUpgradeable, IBabController {
 
         maxContributorsPerGarden = 100;
         gardenCreationIsOpen = false;
+        allowPublicGardens = true;
+        bablMiningProgramEnabled = true;
     }
 
     /* ============ External Functions ============ */

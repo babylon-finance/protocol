@@ -80,7 +80,7 @@ describe('rewards', function () {
       weth,
       wbtc,
     } = await setupTests()());
-    await babController.connect(owner).enableBABLMiningProgram();
+
     const reserveContract = await getERC20(addresses.tokens.WETH);
     users = await createWallets(userNum, {
       tokens: [addresses.tokens.WETH, addresses.tokens.ETH],

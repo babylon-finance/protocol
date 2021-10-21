@@ -105,9 +105,6 @@ describe('governor', function () {
       values: [from(0), from(0)],
       calldatas: [
         new ethers.utils.Interface(['function enableTokensTransfers()']).encodeFunctionData('enableTokensTransfers'),
-        new ethers.utils.Interface(['function enableBABLMiningProgram()']).encodeFunctionData(
-          'enableBABLMiningProgram',
-        ),
       ],
       description: 'enable tokenTrasfers and miningProgram',
     });
@@ -266,12 +263,8 @@ describe('governor', function () {
     await runProposal(governor, {
       targets: [controller.address],
       values: [from(0)],
-      calldatas: [
-        new ethers.utils.Interface(['function enableBABLMiningProgram()']).encodeFunctionData(
-          'enableBABLMiningProgram',
-        ),
-      ],
-      description: 'enable miningProgram',
+      calldatas: [],
+      description: 'empty proposal',
     });
 
     const strategies = await controller.getLiveStrategies(50);

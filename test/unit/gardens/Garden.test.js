@@ -160,7 +160,6 @@ describe('Garden', function () {
 
     it('should allow renouncing creator rights if the garden is public', async function () {
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
       expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
@@ -227,11 +226,6 @@ describe('Garden', function () {
         ((await mardukGate.canAccessBeta(signer3.address)) && !(await garden1.privateGarden()));
       expect(canJoin).to.equal(false);
       // Make garden public first at BabController then at garden level
-
-      expect(await babController.allowPublicGardens()).to.equal(false);
-      await babController.connect(owner).setAllowPublicGardens();
-
-      expect(await babController.allowPublicGardens()).to.equal(true);
       await garden1.connect(signer1).makeGardenPublic();
 
       garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
@@ -259,7 +253,6 @@ describe('Garden', function () {
       );
       // Enable strategist creator rights - the garden needs to be public
       await expect(garden1.connect(signer1).setPublicRights(true, false)).to.be.revertedWith('BAB#090');
-      await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
@@ -288,55 +281,12 @@ describe('Garden', function () {
 
       // Enable voting power rights to users - the garden needs to be public
       await expect(garden1.connect(signer1).setPublicRights(false, true)).to.be.revertedWith('BAB#090');
-      await babController.connect(owner).setAllowPublicGardens();
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(false, true);
       const canJoin3 =
         (await mardukGate.connect(signer1).canVoteInAGarden(garden1.address, signer2.address)) ||
         ((await mardukGate.canAccessBeta(signer2.address)) && (await garden1.publicStewards()));
       expect(canJoin3).to.equal(true);
-    });
-  });
-
-  describe('creation open to public', async function () {
-    it('should allow the creation of a garden to a non-Ishtar gate user once garden creation is open to the public', async function () {
-      await expect(
-        babController
-          .connect(signer2)
-          .createGarden(
-            addresses.tokens.WETH,
-            'TEST Ishtar',
-            'AAA',
-            'http:',
-            0,
-            GARDEN_PARAMS,
-            eth('0.1'),
-            [false, false, false],
-            [0, 0, 0],
-            {
-              value: eth('0.1'),
-            },
-          ),
-      ).to.be.revertedWith('User does not have creation permissions');
-      await babController.connect(owner).openPublicGardenCreation();
-      await expect(
-        babController
-          .connect(signer2)
-          .createGarden(
-            addresses.tokens.WETH,
-            'TEST Ishtar',
-            'AAA',
-            'http:',
-            0,
-            GARDEN_PARAMS,
-            eth('0.1'),
-            [false, false, false],
-            [0, 0, 0],
-            {
-              value: eth('0.1'),
-            },
-          ),
-      ).not.to.be.reverted;
     });
   });
 
@@ -1844,7 +1794,6 @@ describe('Garden', function () {
 
     describe('can be done after making a garden public', async function () {
       it('a user can still deposit after a garden is granted public access', async function () {
-        await babController.connect(owner).setAllowPublicGardens();
         await garden1.connect(signer1).makeGardenPublic();
         await expect(
           garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {

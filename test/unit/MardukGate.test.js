@@ -140,7 +140,6 @@ describe('MardukGate', function () {
 
     it('creator can join a public garden after renouncing to 0 address', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
-      await babController.connect(owner).setAllowPublicGardens();
       await babController
         .connect(signer2)
         .createGarden(
@@ -290,7 +289,6 @@ describe('MardukGate', function () {
 
     it('creator can still create a strategy after renouncing and giving him permissions', async function () {
       await mardukGate.connect(owner).setCreatorPermissions(signer2.address, true, { gasPrice: 0 });
-      await babController.connect(owner).setAllowPublicGardens();
       await expect(
         babController
           .connect(signer2)
@@ -434,7 +432,6 @@ describe('MardukGate', function () {
     });
 
     it('creator cannot grant access to a garden after renouncing', async function () {
-      await babController.connect(owner).setAllowPublicGardens();
       await expect(
         babController
           .connect(signer1)

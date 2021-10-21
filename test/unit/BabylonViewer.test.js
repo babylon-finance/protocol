@@ -120,7 +120,6 @@ describe('Babylon Viewer', function () {
     });
     it('calls get complete active strategy', async function () {
       const newGarden = await createGarden();
-      await babController.connect(owner).enableBABLMiningProgram();
       const strategy = await getStrategy({
         state: 'active',
         garden: newGarden,
@@ -134,7 +133,6 @@ describe('Babylon Viewer', function () {
     });
     it('calls get contribution and rewards', async function () {
       const newGarden = await createGarden();
-      await babController.connect(owner).enableBABLMiningProgram();
       await getStrategy({ state: 'active', garden: newGarden, specificParams: [addresses.tokens.USDC, 0] });
       const [, , pendingRewards] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS);

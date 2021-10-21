@@ -228,7 +228,7 @@ describe('BabController', function () {
       await executeStrategy(long2, ONE_ETH);
       increaseTime(ONE_DAY_IN_SECONDS * 30);
       // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const strategies = await babController.getLiveStrategies(2);
       expect(strategies.length).to.equal(2);
     });
@@ -245,7 +245,7 @@ describe('BabController', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
       // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const strategies = await babController.getLiveStrategies(2);
       expect(strategies.length).to.equal(2);
     });
@@ -319,7 +319,6 @@ describe('BabController', function () {
     it('should pause individually the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
-      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('BAB#083');
     });
     it('should pause individually the BABL Token main functions as a TimeLockedToken', async function () {
       // Enable BABL token transfers
@@ -367,13 +366,11 @@ describe('BabController', function () {
     it('owner can unpause the reward distributor main functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
-      await expect(babController.connect(owner).enableBABLMiningProgram()).to.be.revertedWith('BAB#083');
       await expect(babController.connect(signer1).setSomePause([rewardsDistributor.address], false)).to.be.revertedWith(
         'only admin can unpause',
       );
       const newBablToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
       await babController.connect(owner).setSomePause([rewardsDistributor.address], false);
-      await expect(babController.connect(owner).enableBABLMiningProgram()).to.not.be.reverted;
     });
 
     it('owner can unpause the BABL Token main functions as a TimeLockedToken', async function () {
