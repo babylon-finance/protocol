@@ -18,8 +18,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -476,14 +474,11 @@ contract BabylonViewer {
     {
         uint256[] memory totalRewards = new uint256[](4);
         address rewardsDistributor = address(controller.rewardsDistributor());
-
         for (uint256 i = 0; i < _strategies.length; i++) {
             uint256[] memory tempRewards = new uint256[](4);
-
             if (!IStrategy(_strategies[i]).isStrategyActive()) {
                 continue;
             }
-
             tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserBABLRewards(_strategies[i], _contributor);
 
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
