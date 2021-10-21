@@ -23,7 +23,8 @@ const ZEROMAXCAP_STRATEGY_PARAMS = [
   eth(0.1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage
+  eth(0.1), // 10% _maxAllocationPercentage,
+  eth(0.05), // 5% _maxGasFeePercentage
 ];
 
 describe('Strategy', function () {

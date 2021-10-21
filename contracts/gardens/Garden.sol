@@ -640,7 +640,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
         _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        _require(_stratParams.length == 5, Errors.STRAT_PARAMS_LENGTH);
+        _require(_stratParams.length == 6, Errors.STRAT_PARAMS_LENGTH);
         address strategy =
             IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
                 _name,
