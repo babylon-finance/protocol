@@ -713,9 +713,9 @@ describe('Garden', function () {
       });
       const start = NOW;
       const end = start + 7776000 / 3;
-      // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 36% of contribution power within the time period as most of the period had 50%
+      // Despite malicious contributor deposit new 5ETH to increase its position, 11ETH out of 17 ETH (64%) (conviction deposit) it only gets 45% of contribution power within the time period as most of the period had 50%
       await expect(await rewardsDistributor.getContributorPower(garden1.address, signer3.address, end)).to.be.closeTo(
-        eth('0.391316254722209097'),
+        eth('0.458470716713887765'),
         eth('0.06'),
       );
     });
