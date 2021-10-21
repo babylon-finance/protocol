@@ -351,7 +351,11 @@ contract BabylonViewer {
     function getContributionAndRewards(address _garden, address _user)
         external
         view
-        returns (uint256[] memory, uint256[] memory)
+        returns (
+            uint256[] memory,
+            uint256[] memory,
+            uint256[] memory
+        )
     {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](10);
@@ -378,7 +382,7 @@ contract BabylonViewer {
             );
         contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
         pendingRewards = _estimateUserBABLRewards(_user, garden.getStrategies());
-        return (contribution, totalRewards);
+        return (contribution, totalRewards, pendingRewards);
     }
 
     function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
