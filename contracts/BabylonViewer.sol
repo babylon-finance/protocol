@@ -225,7 +225,7 @@ contract BabylonViewer {
                 strategy.getNAV(),
                 rewards,
                 strategy.maxAllocationPercentage(),
-                strategy.isStrategyActive() ? _estimateStrategyBABLRewards(_strategy) : 0
+                strategy.isStrategyActive() ? _estimateStrategyRewards(_strategy) : 0
             ],
             status,
             ts
@@ -379,7 +379,7 @@ contract BabylonViewer {
                 garden.getFinalizedStrategies()
             );
         contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
-        pendingRewards = _estimateUserBABLRewards(_user, garden.getStrategies());
+        pendingRewards = _estimateUserRewards(_user, garden.getStrategies());
         return (contribution, totalRewards, pendingRewards);
     }
 
@@ -460,14 +460,14 @@ contract BabylonViewer {
     /**
      * returns the estimated accrued BABL of a strategy
      */
-    function _estimateStrategyBABLRewards(address _strategy) private view returns (uint256) {
-        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyBABLRewards(_strategy);
+    function _estimateStrategyRewards(address _strategy) private view returns (uint256) {
+        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy);
     }
 
     /**
      * returns the estimated accrued BABL for a user related to one strategy
      */
-    function _estimateUserBABLRewards(address _contributor, address[] memory _strategies)
+    function _estimateUserRewards(address _contributor, address[] memory _strategies)
         private
         view
         returns (uint256[] memory)
@@ -479,7 +479,7 @@ contract BabylonViewer {
             if (!IStrategy(_strategies[i]).isStrategyActive()) {
                 continue;
             }
-            tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserBABLRewards(_strategies[i], _contributor);
+            tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserRewards(_strategies[i], _contributor);
 
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);

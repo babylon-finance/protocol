@@ -78,13 +78,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Throws if the BABL Rewards mining program is not active
-     */
-    function _onlyMiningActive() private view {
-        _require(IBabController(controller).bablMiningProgramEnabled(), Errors.ONLY_MINING_ACTIVE);
-    }
-
-    /**
      * Throws if the sender is not the controller
      */
     function _onlyController() private view {
@@ -299,7 +292,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _addOrSubstract         Whether we are adding or substracting capital
      */
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
-        _onlyMiningActive();
         _onlyStrategy(msg.sender);
         // All strategies are now part of the Mining Program
         _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
@@ -317,7 +309,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool _addOrSubstract
     ) external override onlyOwner {
         _onlyUnpaused();
-        _onlyMiningActive();
         _onlyStrategy(_strategy);
         _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
     }
@@ -346,7 +337,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant returns (uint256) {
         _onlyUnpaused();
-        _onlyMiningActive();
         // Restrictive only to gardens when claiming BABL
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
@@ -429,6 +419,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * rewards[4]: LP BABL
      * rewards[5]: total BABL
      * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
      */
     function getRewards(
         address _garden,
@@ -690,7 +681,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         );
     }
 
-    function estimateUserBABLRewards(address _strategy, address _contributor)
+    /**
+     * Get an estimation of user rewards for active strategies
+     * @param _strategy        Address of the strategy to estimate BABL rewards
+     * @param _contributor     Address of the garden contributor
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
+     */
+    function estimateUserRewards(address _strategy, address _contributor)
         external
         view
         override
@@ -717,7 +722,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (IStrategy(_strategy).isStrategyActive()) {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
-                _estimateStrategyBABLRewards(_strategy);
+                _estimateStrategyRewards(_strategy);
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower =
                 getContributorPower(
@@ -725,37 +730,27 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     _contributor,
                     strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
                 );
-            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
-            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
-            // Get strategist profit
-            rewards[1] = (strategist == _contributor && profitData[0] == true)
-                ? _getStrategyStrategistProfits(garden, strategyDetails[10])
-                : 0;
-            // Get steward rewards
-            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
-            // If not profits _getStrategyStewardsProfits should not execute
-            rewards[3] = profitData[0] == true
-                ? _getStrategyStewardProfits(garden, _strategy, _contributor, strategyDetails, profitData)
-                : 0;
-            // Get LP rewards
-            // Note that contributor power is fluctuating along the way for each new deposit
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
-
-            // Total BABL including creator bonus (if any)
-            rewards[5] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
-            // Total profit
-            rewards[6] = rewards[1].add(rewards[3]);
-            // Creator bonus
-            rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
-                ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
-                : 0;
+            rewards = _getRewardsPerRole(
+                garden,
+                _strategy,
+                strategist,
+                _contributor,
+                contributorPower,
+                strategyDetails,
+                profitData
+            );
         }
         return rewards;
     }
 
-    function estimateStrategyBABLRewards(address _strategy) external view override returns (uint256) {
+    /**
+     * Get an estimation of strategy BABL rewards for active strategies in the mining program
+     * @param _strategy        Address of the strategy to estimate BABL rewards
+     * @return the estimated BABL rewards
+     */
+    function estimateStrategyRewards(address _strategy) external view override returns (uint256) {
         if (IStrategy(_strategy).isStrategyActive()) {
-            (, uint256[] memory strategyDetails, ) = _estimateStrategyBABLRewards(_strategy);
+            (, uint256[] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
             return strategyDetails[9];
         } else {
             return 0;
@@ -1115,6 +1110,61 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    /**
+     * Get an estimation of user rewards for active strategies
+     * @param _garden               Address of the garden
+     * @param _strategy             Address of the strategy to estimate rewards
+     * @param _strategist           Address of the strategist
+     * @param _contributor          Address of the garden contributor
+     * @param _contributorPower     Contributor power in a specific time
+     * @param _strategyDetails      Details of the strategy in that specific moment
+     * @param _profitData           Array of profit Data (if profit as well distance)
+     * @return Array of size 7 with the following distribution:
+     * rewards[0]: Strategist BABL
+     * rewards[1]: Strategist Profit
+     * rewards[2]: Steward BABL
+     * rewards[3]: Steward Profit
+     * rewards[4]: LP BABL
+     * rewards[5]: total BABL
+     * rewards[6]: total Profits
+     * rewards[7]: Creator bonus
+     */
+    function _getRewardsPerRole(
+        address _garden,
+        address _strategy,
+        address _strategist,
+        address _contributor,
+        uint256 _contributorPower,
+        uint256[] memory _strategyDetails,
+        bool[] memory _profitData
+    ) internal view returns (uint256[] memory) {
+        uint256[] memory rewards = new uint256[](8);
+        // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
+        rewards[0] = _strategist == _contributor ? _getStrategyStrategistBabl(_strategyDetails, _profitData) : 0;
+        // Get strategist profit
+        rewards[1] = (_strategist == _contributor && _profitData[0] == true)
+            ? _getStrategyStrategistProfits(_garden, _strategyDetails[10])
+            : 0;
+        // Get steward rewards
+        rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, _strategyDetails, _profitData);
+        // If not profits _getStrategyStewardsProfits should not execute
+        rewards[3] = _profitData[0] == true
+            ? _getStrategyStewardProfits(_garden, _strategy, _contributor, _strategyDetails, _profitData)
+            : 0;
+        // Get LP rewards
+        // Contributor power is fluctuating along the way for each new deposit
+        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorPower);
+        // Total BABL including creator bonus (if any)
+        rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
+        // Total profit
+        rewards[6] = rewards[1].add(rewards[3]);
+        // Creator bonus
+        rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
+            ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
+            : 0;
+        return rewards;
+    }
+
     /* ========== Internal View functions ========== */
 
     /**
@@ -1170,27 +1220,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
-            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
-            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
-            // Get strategist profit rewards if profits
-            rewards[1] = (strategist == _contributor && profitData[0] == true)
-                ? _getStrategyStrategistProfits(_garden, strategyDetails[10])
-                : 0;
-            // Get steward rewards
-            rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
-            // If not profits _getStrategyStewardsProfits should not execute
-            rewards[3] = profitData[0] == true
-                ? _getStrategyStewardProfits(_garden, _strategy, _contributor, strategyDetails, profitData)
-                : 0;
-            // Get LP rewards
-            rewards[4] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
-            // Creator bonus (if any)
-            rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
-            rewards[6] = rewards[1].add(rewards[3]);
-            // Creator bonus
-            rewards[7] = rewards[5] > (rewards[0].add(rewards[2]).add(rewards[4]))
-                ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
-                : 0;
+            rewards = _getRewardsPerRole(
+                _garden,
+                _strategy,
+                strategist,
+                _contributor,
+                contributorPower,
+                strategyDetails,
+                profitData
+            );
         }
 
         return rewards;
@@ -1469,7 +1507,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return _contributorBABL;
     }
 
-    function _estimateStrategyBABLRewards(address _strategy)
+    function _estimateStrategyRewards(address _strategy)
         internal
         view
         returns (
