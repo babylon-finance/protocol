@@ -227,7 +227,7 @@ contract BabylonViewer {
                 strategy.getNAV(),
                 rewards,
                 strategy.maxAllocationPercentage(),
-                _estimateStrategyBABLRewards(_strategy)
+                strategy.isStrategyActive() ? _estimateStrategyBABLRewards(_strategy) : 0
             ],
             status,
             ts

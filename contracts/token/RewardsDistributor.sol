@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -713,32 +714,40 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[1]: distance
 
         uint256[] memory rewards = new uint256[](4);
-        address garden = address(IStrategy(_strategy).garden());
+        if (IStrategy(_strategy).isStrategyActive()) {
+            address garden = address(IStrategy(_strategy).garden());
+            (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+                _estimateStrategyBABLRewards(_strategy);
+            // Get the contributor power until the the strategy exit timestamp
+            uint256 contributorPower =
+                getContributorPower(
+                    garden,
+                    _contributor,
+                    strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
+                );
+            // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
+            rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
 
-        (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
-            _estimateStrategyBABLRewards(_strategy);
-        // Get the contributor power until the the strategy exit timestamp
-        uint256 contributorPower =
-            getContributorPower(garden, _contributor, strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]);
-        // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
-        rewards[0] = strategist == _contributor ? _getStrategyStrategistBabl(strategyDetails, profitData) : 0;
+            // Get steward rewards
+            rewards[1] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
 
-        // Get steward rewards
-        rewards[1] = _getStrategyStewardBabl(_strategy, _contributor, strategyDetails, profitData);
+            // Get LP rewards
+            // Note that contributor power is fluctuating along the way for each deposit
+            rewards[2] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
 
-        // Get LP rewards
-        // Note that contributor power is fluctuating along the way for each deposit
-        rewards[2] = _getStrategyLPBabl(strategyDetails[9], contributorPower);
-
-        // Creator bonus (if any)
-        rewards[3] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[1]).add(rewards[2]));
-
+            // Creator bonus (if any)
+            rewards[3] = _getCreatorBonus(garden, _contributor, rewards[0].add(rewards[1]).add(rewards[2]));
+        }
         return rewards;
     }
 
     function estimateStrategyBABLRewards(address _strategy) external view override returns (uint256) {
-        (, uint256[] memory strategyDetails, ) = _estimateStrategyBABLRewards(_strategy);
-        return strategyDetails[9];
+        if (IStrategy(_strategy).isStrategyActive()) {
+            (, uint256[] memory strategyDetails, ) = _estimateStrategyBABLRewards(_strategy);
+            return strategyDetails[9];
+        } else {
+            return 0;
+        }
     }
 
     /* ============ Internal Functions ============ */
@@ -1472,10 +1481,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
         (strategist, strategyDetails, profitData) = IStrategy(_strategy).getStrategyRewardsContext();
         if (strategyDetails[9] != 0 || strategyDetails[0] == 0) {
-            // Already finished and got rewards or not executed yet
+            // Already finished and got rewards or not executed yet (not active)
             return (strategist, strategyDetails, profitData);
         }
-        // Strategy has not finished yet
+        // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
         // We apply a 0.25% rounding error margin at NAV
@@ -1484,7 +1493,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
             ? strategyDetails[6]
             : strategyDetails[7];
-        // TODO pending substraction of protocol profit %
         profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
         profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
@@ -1497,7 +1505,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (uint256 numQuarters, uint256 startingQuarter) =
             _getRewardsWindow(
                 (
-                    strategyDetails[0] > START_TIME
+                    (strategyDetails[0] > START_TIME && START_TIME != 0)
                         ? strategyDetails[0]
                         : strategyPerQuarter[_strategy][1].betaInitializedAt
                 ),
@@ -1583,24 +1591,24 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _principal
     ) internal view returns (uint256[] memory) {
         uint256 lastQuarter = _getQuarter(_updatedAt); // quarter of last update
+        uint256 currentQuarter = _getQuarter(block.timestamp); // current quarter
         uint256 timeDiff = block.timestamp.sub(_updatedAt); // 1sec to avoid division by zero
         // We check the pending power to be accounted until now, since last update for protocol and strategy
         uint256 powerDebt = _principal.mul(timeDiff);
         if (powerDebt > 0) {
             for (uint256 i = 0; i < _numQuarters; i++) {
                 uint256 slotEnding = START_TIME.add(_startingQuarter.add(i).mul(EPOCH_DURATION));
-                if (i == 0 && lastQuarter == _startingQuarter) {
+                if (i == 0 && lastQuarter == _startingQuarter && lastQuarter < currentQuarter) {
                     // We are in the first quarter to update, we add the proportional pending part
                     _powerToUpdate[i] = _powerToUpdate[i].add(powerDebt.mul(slotEnding.sub(_updatedAt)).div(timeDiff));
                 } else if (i > 0 && i.add(1) < _numQuarters && lastQuarter <= _startingQuarter.add(i)) {
                     // We are updating an intermediate quarter
                     // Should have 0 inside before updating
                     _powerToUpdate[i] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
-                } else {
-                    // We are updating the current quarter of this strategy checkpoint
+                } else if (_startingQuarter.add(i) == currentQuarter) {
+                    // We are updating the current quarter of this strategy checkpoint or the last to update
                     // It can be a multiple quarter strategy or the only one that need proportional time
                     // Should have 0 inside before updating
-
                     _powerToUpdate[i] = powerDebt.mul(block.timestamp.sub(slotEnding.sub(EPOCH_DURATION))).div(
                         timeDiff
                     );
