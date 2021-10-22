@@ -159,7 +159,7 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, keeper, priceOracle, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
+      ({ owner, gov, keeper, priceOracle, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
