@@ -375,8 +375,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare,
-                             minContribution);
+            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare, minContribution);
         }
     }
 
