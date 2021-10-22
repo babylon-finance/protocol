@@ -1322,11 +1322,11 @@ describe('RewardsDistributor', function () {
       const rewards4 = parse('117451.286778501300195412');
       const rewards5 = parse('147539.390039545454842836');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.05'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.05'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.05'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -1374,11 +1374,11 @@ describe('RewardsDistributor', function () {
       const rewards4 = parse('121325.449793500543897062');
       const rewards5 = parse('152941.315399184640553240');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.05'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.05'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.05'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
     });
   });
 
