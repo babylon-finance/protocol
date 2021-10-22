@@ -27,7 +27,7 @@ const ZEROMAXCAP_STRATEGY_PARAMS = [
   eth(0.05), // 5% _maxGasFeePercentage
 ];
 
-describe('Strategy', function () {
+describe.only('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
   let babController;
