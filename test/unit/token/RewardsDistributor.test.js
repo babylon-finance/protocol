@@ -101,7 +101,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe.skip('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -337,30 +337,8 @@ describe.skip('RewardsDistributor', function () {
       [supply] = await rewardsDistributor.checkMining(700, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
     });
-    it('should get 0 BABL rewards if the Mining Program has not started yet', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-
-      await executeStrategy(long, ONE_ETH);
-      await finalizeStrategyAfter30Days(long);
-
-      expect(await long.strategyRewards()).to.be.equal(0);
-    });
-
-    it('should get proportional BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
-
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-      await executeStrategy(long, ONE_ETH);
-
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-      expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
-    });
     it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
 
       await executeStrategy(long, ONE_ETH);
       const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
@@ -378,8 +356,6 @@ describe.skip('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
-
       await executeStrategy(long, ONE_ETH);
       const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
       const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
@@ -422,7 +398,6 @@ describe.skip('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
 
       await executeStrategy(long, ONE_ETH);
       await injectFakeProfits(long, ONE_ETH.mul(222));
@@ -474,7 +449,6 @@ describe.skip('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 3 quarters', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
 
       await executeStrategy(long, ONE_ETH);
       await injectFakeProfits(long, ONE_ETH.mul(222));
@@ -530,8 +504,6 @@ describe.skip('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
-      // Mining program has to be enabled before the strategy is created
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH);
@@ -671,7 +643,6 @@ describe.skip('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters but the second starts later', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
 
       await executeStrategy(long1, ONE_ETH);
       await injectFakeProfits(long1, ONE_ETH.mul(222));
@@ -1044,10 +1015,7 @@ describe.skip('RewardsDistributor', function () {
     });
 
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
+      const now = await rewardsDistributor.START_TIME();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -1055,7 +1023,7 @@ describe.skip('RewardsDistributor', function () {
 
       await finalizeStrategyAfter2Quarters(long1);
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 3, [
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
@@ -1096,10 +1064,7 @@ describe.skip('RewardsDistributor', function () {
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
+      const now = await rewardsDistributor.START_TIME();
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -1114,7 +1079,7 @@ describe.skip('RewardsDistributor', function () {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 4, [
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
@@ -1123,7 +1088,7 @@ describe.skip('RewardsDistributor', function () {
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
 
-      expect(rewardsLong1).to.be.closeTo('143814823688624358512181', rewardsLong1.div(100));
+      expect(rewardsLong1).to.be.closeTo('144440195353450221812071', rewardsLong1.div(100));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
@@ -1351,11 +1316,11 @@ describe.skip('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14671.82');
-      const rewards2 = parse('36096.85');
-      const rewards3 = parse('104047.22');
-      const rewards4 = parse('117451.31');
-      const rewards5 = parse('147539.46');
+      const rewards1 = parse('14671.96');
+      const rewards2 = parse('36096.95');
+      const rewards3 = parse('104047.21');
+      const rewards4 = parse('117451.28');
+      const rewards5 = parse('147539.38');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
@@ -1403,11 +1368,11 @@ describe.skip('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15155.79');
-      const rewards2 = parse('36096.83');
-      const rewards3 = parse('107479.28');
-      const rewards4 = parse('121325.48');
-      const rewards5 = parse('152941.39');
+      const rewards1 = parse('15155.93');
+      const rewards2 = parse('36096.93');
+      const rewards3 = parse('107479.27');
+      const rewards4 = parse('121325.45');
+      const rewards5 = parse('152941.31');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));

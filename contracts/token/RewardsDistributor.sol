@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -283,6 +282,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bablPrincipalWeight = 35e16; // 35%
 
         status = NOT_ENTERED;
+        // We start BABL rewards as they were started by bip#1
+        START_TIME = block.timestamp;
     }
 
     /* ============ External Functions ============ */
@@ -342,18 +343,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
         return _safeBABLTransfer(_to, amount);
-    }
-
-    /**
-     * Starts BABL Rewards Mining Program from the controller.
-     */
-    function startBABLRewards() external override {
-        _onlyUnpaused();
-        _onlyController();
-        if (START_TIME == 0) {
-            // It can only be activated once to avoid overriding START_TIME
-            START_TIME = block.timestamp;
-        }
     }
 
     /**

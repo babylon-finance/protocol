@@ -74,8 +74,6 @@ interface IRewardsDistributor {
 
     /* ============ External Functions ============ */
 
-    function startBABLRewards() external;
-
     function updateStrategyCheckpoint(
         address _strategy,
         uint256 _capital,
