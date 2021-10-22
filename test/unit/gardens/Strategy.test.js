@@ -106,7 +106,7 @@ describe('Strategy', function () {
     });
   });
 
-  describe.only('updateParams', function () {
+  describe('updateParams', function () {
     it('strategist can update duration, maxGasFeePercentage, and maxTradeSlippagePercentage of a strategy', async function () {
       await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1)]);
 
