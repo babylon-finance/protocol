@@ -216,9 +216,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
 
-    uint256 public override maxGasFeePercentage = 5e16; // Relative to the capital allocated to the strategy (1% = 1e16, 10% 1e17)
+    uint256 public override maxGasFeePercentage; // Relative to the capital allocated to the strategy (1% = 1e16, 10% 1e17)
 
-    uint256 public override maxTradeSlippagePercentage = 5e16; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
+    uint256 public override maxTradeSlippagePercentage; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
 
     /* ============ Constructor ============ */
 
