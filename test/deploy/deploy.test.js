@@ -14,6 +14,7 @@ const { deploy } = deployments;
 
 describe('deploy', function () {
   let owner;
+  let gov;
   let keeper;
   let priceOracle;
   let gardens;
@@ -111,7 +112,7 @@ describe('deploy', function () {
         }
 
         console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
-        await strategyContract.connect(owner).changeStrategyDuration(1);
+        await strategyContract.connect(gov).changeStrategyDuration(1);
 
         try {
           await strategyContract.connect(keeper).finalizeStrategy(1, '');
@@ -134,7 +135,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, keeper, strategyNft, valuer, gardens } = await getContracts());
+      ({ owner, gov, keeper, strategyNft, valuer, gardens } = await getContracts());
     });
 
     afterEach(async () => {
