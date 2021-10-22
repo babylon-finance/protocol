@@ -133,7 +133,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 private constant SLIPPAGE_ALLOWED = 5e16; // 5%
+    uint256 private constant MAX_TRADE_SLIPPAGE = 5e16; // 5%
     uint256 private constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 private constant MAX_CANDIDATE_PERIOD = 7 days;
 
@@ -216,7 +216,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
 
-    uint256 public override maxGasFeePercentage = 5e16; // Relative to the capital allocated to the strategy (1% = 1e16, 10% 1e17)
+    uint256 public override maxGasFeePercentage; // Relative to the capital allocated to the strategy (1% = 1e16, 10% 1e17)
+
+    uint256 public override maxTradeSlippagePercentage; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
 
     /* ============ Constructor ============ */
 
@@ -232,6 +234,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _expectedReturn                Expected return
      * @param _maxAllocationPercentage       Max allocation percentage of garden capital
      * @param _maxGasFeePercentage           Max gas fee percentage of garden capital
+     * @param _maxTradeSlippagePercentage    Max slippage allowed per trade in % of capital
      */
     function initialize(
         address _strategist,
@@ -242,25 +245,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _strategyDuration,
         uint256 _expectedReturn,
         uint256 _maxAllocationPercentage,
-        uint256 _maxGasFeePercentage
+        uint256 _maxGasFeePercentage,
+        uint256 _maxTradeSlippagePercentage
     ) external override initializer {
         controller = IBabController(_controller);
-        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
-        _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(
-            _stake > 0 &&
-                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
-            Errors.TOKENS_STAKED
+
+        _initializeRequire(
+            _strategist,
+            _garden,
+            _maxCapitalRequested,
+            _stake,
+            _strategyDuration,
+            _maxAllocationPercentage,
+            _maxTradeSlippagePercentage
         );
-        _require(
-            _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
-            Errors.DURATION_MUST_BE_IN_RANGE
-        );
-        _require(
-            _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
-            Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
-        );
+
         maxAllocationPercentage = _maxAllocationPercentage;
         strategist = _strategist;
         enteredAt = block.timestamp;
@@ -271,6 +271,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         expectedReturn = _expectedReturn;
         maxCapitalRequested = _maxCapitalRequested;
         maxGasFeePercentage = _maxGasFeePercentage;
+        maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
 
         votes[_strategist] = _stake.toInt256();
         totalPositiveVotes = _stake;
@@ -745,6 +746,33 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Internal Functions ============ */
 
+    function _initializeRequire(
+        address _strategist,
+        address _garden,
+        uint256 _maxCapitalRequested,
+        uint256 _stake,
+        uint256 _strategyDuration,
+        uint256 _maxAllocationPercentage,
+        uint256 _maxTradeSlippagePercentage
+    ) internal initializer {
+        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
+        _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
+        _require(
+            _stake > 0 &&
+                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
+            Errors.TOKENS_STAKED
+        );
+        _require(
+            _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
+            Errors.DURATION_MUST_BE_IN_RANGE
+        );
+        _require(
+            _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
+            Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
+        );
+        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE );
+    }
+
     /*
      * Executes an strategy that has been activated and gone through the cooldown period.
      * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
@@ -891,7 +919,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        uint256 minAmountExpected =
+            exactAmount.sub(
+                exactAmount.preciseMul(
+                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : MAX_TRADE_SLIPPAGE
+                )
+            );
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,

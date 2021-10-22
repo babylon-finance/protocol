@@ -12,6 +12,7 @@ const DEFAULT_STRATEGY_PARAMS = [
   eth(0.05), // 5% _expectedReturn,
   eth(0.1), // 10% _maxAllocationPercentage
   eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
 const DAI_STRATEGY_PARAMS = [
@@ -21,6 +22,7 @@ const DAI_STRATEGY_PARAMS = [
   eth(0.05), // 5% _expectedReturn
   eth(0.1), // 10% _maxAllocationPercentage,
   eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
 const USDC_STRATEGY_PARAMS = [
@@ -30,6 +32,7 @@ const USDC_STRATEGY_PARAMS = [
   eth(0.05), // 5% _expectedReturn
   eth(0.1), // 10% _maxAllocationPercentage
   eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
 const WBTC_STRATEGY_PARAMS = [
@@ -39,6 +42,7 @@ const WBTC_STRATEGY_PARAMS = [
   eth(0.05), // 5% _expectedReturn
   eth(0.1), // 10% _maxAllocationPercentage
   eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
 const GARDEN_PARAMS_MAP = {

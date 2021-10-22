@@ -290,4 +290,6 @@ library Errors {
     uint256 internal constant INVALID_CAPITAL_TO_UNWIND = 100;
     // Mining % sharing does not match
     uint256 internal constant INVALID_MINING_VALUES = 101;
+    // Max trade slippage percentage
+    uint256 internal constant MAX_TRADE_SLIPPAGE_PERCENTAGE = 102;
 }
