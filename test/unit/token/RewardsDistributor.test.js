@@ -1316,11 +1316,11 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14671.96');
-      const rewards2 = parse('36096.95');
-      const rewards3 = parse('104047.21');
-      const rewards4 = parse('117451.28');
-      const rewards5 = parse('147539.38');
+      const rewards1 = parse('14671.966667585869371740');
+      const rewards2 = parse('36096.951426471299806363');
+      const rewards3 = parse('104047.210918636801712873');
+      const rewards4 = parse('117451.286778501300195412');
+      const rewards5 = parse('147539.390039545454842836');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
@@ -1368,11 +1368,11 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15155.93');
-      const rewards2 = parse('36096.93');
-      const rewards3 = parse('107479.27');
-      const rewards4 = parse('121325.45');
-      const rewards5 = parse('152941.31');
+      const rewards1 = parse('15155.933452641217618416');
+      const rewards2 = parse('36096.936107085705229522');
+      const rewards3 = parse('107479.271149546266710805');
+      const rewards4 = parse('121325.449793500543897062');
+      const rewards5 = parse('152941.315399184640553240');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.05'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.05'));
