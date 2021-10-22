@@ -328,7 +328,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             );
         }
 
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare, minContribution);
     }
 
     function depositBySig(
@@ -369,12 +369,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 signer,
                 signer,
                 _mintNft,
-                _pricePerShare
+                _pricePerShare,
+                minContribution.sub(_fee)
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare);
+            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare,
+                             minContribution);
         }
     }
 
@@ -985,7 +987,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _to,
         address _from,
         bool _mintNft,
-        uint256 _pricePerShare
+        uint256 _pricePerShare,
+        uint256 _minContribution
     ) private {
         _onlyUnpaused();
         (bool canDeposit, , ) = _getUserPermission(_from);
@@ -996,7 +999,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
-        _require(_amountIn >= minContribution, Errors.MIN_CONTRIBUTION);
+        _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
 
