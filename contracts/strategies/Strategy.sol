@@ -252,12 +252,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden = IGarden(_garden);
 
         _initializeRequire(
-          _strategist,
-          _garden,
-          _maxCapitalRequested,
-          _stake,
-          _strategyDuration,
-          _maxAllocationPercentage
+            _strategist,
+            _garden,
+            _maxCapitalRequested,
+            _stake,
+            _strategyDuration,
+            _maxAllocationPercentage
         );
 
         maxAllocationPercentage = _maxAllocationPercentage;
@@ -270,7 +270,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         expectedReturn = _expectedReturn;
         maxCapitalRequested = _maxCapitalRequested;
         maxGasFeePercentage = _maxGasFeePercentage;
-        maxTradeSlippagePercentage = _maxTradeSlippagePercentage ;
+        maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
 
         votes[_strategist] = _stake.toInt256();
         totalPositiveVotes = _stake;
@@ -768,7 +768,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
             Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
         );
-
     }
 
     /*
@@ -917,8 +916,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(maxTradeSlippagePercentage != 0 ?
-                                                                           maxTradeSlippagePercentage : MAX_TRADE_SLIPPAGE));
+        uint256 minAmountExpected =
+            exactAmount.sub(
+                exactAmount.preciseMul(
+                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : MAX_TRADE_SLIPPAGE
+                )
+            );
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,

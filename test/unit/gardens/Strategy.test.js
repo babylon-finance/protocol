@@ -25,9 +25,10 @@ const ZEROMAXCAP_STRATEGY_PARAMS = [
   eth(0.05), // 5% _expectedReturn,
   eth(0.1), // 10% _maxAllocationPercentage,
   eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
-describe.only('Strategy', function () {
+describe('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
   let babController;
