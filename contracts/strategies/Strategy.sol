@@ -770,7 +770,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
             Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
         );
-        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE );
+        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
     }
 
     /*
