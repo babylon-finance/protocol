@@ -463,6 +463,24 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Allows strategist to update some strategy params
+     * @dev
+     *   _params[0]  duration
+     *   _params[1]  maxGasFeePercentage
+     *   _params[2]  maxTradeSlippagePercentage
+     * @param _params  New params
+     */
+    function updateParams(uint256[3] calldata _params) external override {
+        _onlyStrategistOrGovernor();
+        _onlyUnpaused();
+
+        _require(_params[0] < duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        duration = _params[0];
+
+        emit StrategyDurationChanged(_newDuration, duration);
+    }
+
+    /**
      * Lets the strategist change the duration of the strategy
      * @param _newDuration            New duration of the strategy
      */
@@ -770,7 +788,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
             Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
         );
-        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE );
+        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
     }
 
     /*
