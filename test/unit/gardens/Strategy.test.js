@@ -94,10 +94,6 @@ describe('Strategy', function () {
   });
 
   describe('Strategy Deployment', async function () {
-    it('should deploy contract successfully', async function () {
-      const deployed = await strategyDataset.deployed();
-      expect(!!deployed).to.equal(true);
-    });
     it('should NOT initialize a strategy with maxcapitalrequested of 0', async function () {
       await expect(
         getStrategy({
@@ -105,7 +101,7 @@ describe('Strategy', function () {
           params: ZEROMAXCAP_STRATEGY_PARAMS,
           specificParams: [addresses.tokens.USDT, 0],
         }),
-      ).to.be.revertedWith('BAB#099');
+      ).to.be.revertedWith('BAB#093');
     });
   });
 

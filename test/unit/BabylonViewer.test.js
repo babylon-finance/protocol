@@ -95,8 +95,11 @@ describe('Babylon Viewer', function () {
     it('calls get complete strategy', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
       const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[5][0]);
+
       expect(strategyDetails[0]).to.equal(signer1.address); // Strategist
+
       expect(strategyDetails[1]).to.equal('Strategy Name'); // Name
+
       expect(strategyDetails[2][0]).to.equal(1); // Ops count
       expect(strategyDetails[2][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
       expect(strategyDetails[2][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
@@ -110,27 +113,18 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[2][10]).to.equal(0); // Get NAV
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
       expect(strategyDetails[2][12]).to.equal(DEFAULT_STRATEGY_PARAMS[4]); // Max Allocation Percentage
-      expect(strategyDetails[2][13]).to.equal(0); // Mining program not started yet
+      expect(strategyDetails[2][13]).to.equal(eth(0.05)); // maxAllocationPercentage
+      expect(strategyDetails[2][14]).to.equal(0); // Strategy Rewards
+
       expect(strategyDetails[3][0]).to.equal(false); // Active
       expect(strategyDetails[3][1]).to.equal(true); // Data set
       expect(strategyDetails[3][2]).to.equal(false); // Finalized
+
       expect(strategyDetails[4][0]).to.equal(0); // Executed at
       expect(strategyDetails[4][1]).to.equal(0); // Exited At
       expect(strategyDetails[4][2]).to.equal(0); // Updated At
     });
-    it('calls get complete active strategy', async function () {
-      const newGarden = await createGarden();
-      const strategy = await getStrategy({
-        state: 'active',
-        garden: newGarden,
-        specificParams: [addresses.tokens.USDC, 0],
-      });
-      await increaseTime(ONE_DAY_IN_SECONDS);
-      const strategyDetails = await babViewer.getCompleteStrategy(strategy.address);
-      await increaseTime(ONE_DAY_IN_SECONDS * 15);
-      const strategyDetails2 = await babViewer.getCompleteStrategy(strategy.address);
-      expect(strategyDetails2[2][13]).to.be.gt(strategyDetails[2][13]);
-    });
+
     it('calls get contribution and rewards', async function () {
       const newGarden = await createGarden();
       await getStrategy({ state: 'active', garden: newGarden, specificParams: [addresses.tokens.USDC, 0] });
