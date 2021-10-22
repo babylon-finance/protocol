@@ -251,27 +251,26 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         controller = IBabController(_controller);
         garden = IGarden(_garden);
 
-        _initializeRequire(
-            _strategist,
-            _garden,
-            _maxCapitalRequested,
-            _stake,
-            _strategyDuration,
-            _maxAllocationPercentage,
-            _maxTradeSlippagePercentage
+        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
+        _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
+        _require(
+            _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
+            Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
         );
 
+        maxCapitalRequested = _maxCapitalRequested;
         maxAllocationPercentage = _maxAllocationPercentage;
+
+        _setStake(_stake, _strategist);
+        _setDuration(_strategyDuration);
+        _setMaxTradeSlippage(_maxTradeSlippagePercentage);
+        _setMaxGasFeePercentage(_maxGasFeePercentage);
+
         strategist = _strategist;
         enteredAt = block.timestamp;
-        stake = _stake;
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        duration = _strategyDuration;
         expectedReturn = _expectedReturn;
-        maxCapitalRequested = _maxCapitalRequested;
-        maxGasFeePercentage = _maxGasFeePercentage;
-        maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
 
         votes[_strategist] = _stake.toInt256();
         totalPositiveVotes = _stake;
@@ -475,21 +474,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
 
         _require(_params[0] < duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        duration = _params[0];
 
-        emit StrategyDurationChanged(_newDuration, duration);
-    }
+        _setDuration(_params[0]);
+        _setMaxGasFeePercentage(_params[1]);
+        _setMaxTradeSlippage(_params[2]);
 
-    /**
-     * Lets the strategist change the duration of the strategy
-     * @param _newDuration            New duration of the strategy
-     */
-    function changeStrategyDuration(uint256 _newDuration) external override {
-        _onlyStrategistOrGovernor();
-        _onlyUnpaused();
-        _require(_newDuration < duration && !finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        emit StrategyDurationChanged(_newDuration, duration);
-        duration = _newDuration;
+        emit StrategyDurationChanged(_params[0], duration);
     }
 
     /**
@@ -764,39 +754,48 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Internal Functions ============ */
 
-    function _initializeRequire(
-        address _strategist,
-        address _garden,
-        uint256 _maxCapitalRequested,
+    function _setStake(
         uint256 _stake,
-        uint256 _strategyDuration,
-        uint256 _maxAllocationPercentage,
-        uint256 _maxTradeSlippagePercentage
-    ) internal initializer {
-        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
-        _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
+        address _strategist
+    ) internal {
         _require(
             _stake > 0 &&
                 IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
             Errors.TOKENS_STAKED
         );
+        stake = _stake;
+    }
+
+    function _setMaxGasFeePercentage(
+        uint256 _maxGasFeePercentage
+    ) internal {
+        _require(_maxGasFeePercentage <= 10e17, Errors.MAX_GAS_FEE_PERCENTAGE);
+        maxGasFeePercentage = _maxGasFeePercentage;
+    }
+
+    function _setMaxTradeSlippage(
+        uint256 _maxTradeSlippagePercentage
+    ) internal {
+        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
+        maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
+    }
+
+    function _setDuration(
+        uint256 _strategyDuration
+    ) internal {
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
         );
-        _require(
-            _maxCapitalRequested > 0 && _maxAllocationPercentage <= 1e18,
-            Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
-        );
-        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
+        duration = _strategyDuration;
     }
 
-    /*
+    /**
      * Executes an strategy that has been activated and gone through the cooldown period.
      * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
-     * @param _keepers                  The address of the keeper to pay
+     * @param _keeper                   The address of the keeper to pay
      */
     function _executesStrategy(
         uint256 _capital,
