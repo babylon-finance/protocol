@@ -754,10 +754,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Internal Functions ============ */
 
-    function _setStake(
-        uint256 _stake,
-        address _strategist
-    ) internal {
+    function _setStake(uint256 _stake, address _strategist) internal {
         _require(
             _stake > 0 &&
                 IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
@@ -766,23 +763,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         stake = _stake;
     }
 
-    function _setMaxGasFeePercentage(
-        uint256 _maxGasFeePercentage
-    ) internal {
+    function _setMaxGasFeePercentage(uint256 _maxGasFeePercentage) internal {
         _require(_maxGasFeePercentage <= 10e17, Errors.MAX_GAS_FEE_PERCENTAGE);
         maxGasFeePercentage = _maxGasFeePercentage;
     }
 
-    function _setMaxTradeSlippage(
-        uint256 _maxTradeSlippagePercentage
-    ) internal {
+    function _setMaxTradeSlippage(uint256 _maxTradeSlippagePercentage) internal {
         _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
         maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
     }
 
-    function _setDuration(
-        uint256 _strategyDuration
-    ) internal {
+    function _setDuration(uint256 _strategyDuration) internal {
         _require(
             _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
             Errors.DURATION_MUST_BE_IN_RANGE
