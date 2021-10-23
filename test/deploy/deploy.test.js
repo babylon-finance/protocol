@@ -40,8 +40,11 @@ describe('deploy', function () {
       for (const strategy of strategies) {
         const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
         const name = await strategyNft.getStrategyName(strategy);
-
-        cb(strategyContract, name, reserveAsset);
+        try {
+          await cb(strategyContract, name, reserveAsset);
+        } catch (error) {
+          console.error(`${name} fails`);
+        }
       }
     }
   }
@@ -97,16 +100,17 @@ describe('deploy', function () {
     }
 
     console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
-    await strategyContract
-      .connect(gov)
-      .updateParams([
-        1,
-        strategyContract.maxGasFeePercentage(),
-        strategyContract.maxTradeSlippagePercentage(),
-        strategyContract.maxAllocationPercentage(),
-      ]);
-    console.log('updated params');
     try {
+      console.log('updating params');
+      await strategyContract
+        .connect(gov)
+        .updateParams([
+          1,
+          await strategyContract.maxGasFeePercentage(),
+          await strategyContract.maxTradeSlippagePercentage(),
+          await strategyContract.maxAllocationPercentage(),
+        ]);
+      console.log('updated params');
       await strategyContract.connect(keeper).finalizeStrategy(1, '');
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
@@ -131,15 +135,15 @@ describe('deploy', function () {
   }
 
   async function canUnwindAllActiveStrategies() {
-    iterateStrategiesFromGardens(unwindStrategy);
+    await iterateStrategiesFromGardens(unwindStrategy);
   }
 
   async function canAllocateCapitalToAllActiveStrategies() {
-    iterateStrategiesFromGardens(addCapitalToStrategy);
+    await iterateStrategiesFromGardens(addCapitalToStrategy);
   }
 
   async function canFinalizeAllActiveStrategies() {
-    iterateStrategiesFromGardens(finalizeStrategy);
+    await iterateStrategiesFromGardens(finalizeStrategy);
   }
 
   describe('before deployment', function () {
