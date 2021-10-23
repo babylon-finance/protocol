@@ -2,9 +2,8 @@ const { expect } = require('chai');
 // const { deployments } = require('hardhat');
 // const { increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
-const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
-const { takeSnapshot, restoreSnapshot, impersonateAddress } = require('lib/rpc');
+const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 
@@ -15,11 +14,11 @@ const STUCK_EXECUTE = [
   // '0x702c284Cd32F842bE450f5e5C9DE48f14303F1C8', // Long TOKE. Reason: Error: execution reverted: BAB#098
   // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
 
-  // 0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED   // ICELong
-  // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
-  '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
-  // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
+  // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
+  // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ ICELong
+  // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
+  // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
 ];
 
 describe('deploy', function () {
@@ -81,7 +80,7 @@ describe('deploy', function () {
     console.log(`  Adding capital to the strategy ${name} ${strategyContract.address}`);
 
     try {
-      const capital = reserveAsset === addresses.tokens.DAI ? eth(3000) : eth(1);
+      const capital = reserveAsset === addresses.tokens.DAI ? eth(2000) : eth(1);
       await strategyContract.connect(keeper).executeStrategy(capital, 1);
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
@@ -128,7 +127,7 @@ describe('deploy', function () {
       const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
-      addCapitalToStrategy(strategyContract, name, reserveAsset);
+      await addCapitalToStrategy(strategyContract, name, reserveAsset);
     }
   }
 
@@ -169,7 +168,7 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });
@@ -194,7 +193,7 @@ describe('deploy', function () {
       }
     });
 
-    it.skip('can execute stuck proposals', async () => {
+    it.only('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
 
