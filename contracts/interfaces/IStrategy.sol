@@ -45,7 +45,7 @@ interface IStrategy {
         uint256 fee
     ) external;
 
-    function updateParams(uint256[3] calldata _params) external;
+    function updateParams(uint256[4] calldata _params) external;
 
     function setData(
         uint8[] calldata _opTypes,
