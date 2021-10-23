@@ -133,7 +133,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 private constant MAX_TRADE_SLIPPAGE = 5e16; // 5%
+    uint256 private constant MAX_TRADE_SLIPPAGE = 25e15; // 2.5%
     uint256 private constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 private constant MAX_CANDIDATE_PERIOD = 7 days;
 
@@ -764,12 +764,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _setMaxGasFeePercentage(uint256 _maxGasFeePercentage) internal {
-        _require(_maxGasFeePercentage <= 10e17, Errors.MAX_GAS_FEE_PERCENTAGE);
+        _require(_maxGasFeePercentage <= 10e16, Errors.MAX_GAS_FEE_PERCENTAGE);
         maxGasFeePercentage = _maxGasFeePercentage;
     }
 
     function _setMaxTradeSlippage(uint256 _maxTradeSlippagePercentage) internal {
-        _require(_maxTradeSlippagePercentage <= 20e17, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
+        _require(_maxTradeSlippagePercentage <= 20e16, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
         maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
     }
 
