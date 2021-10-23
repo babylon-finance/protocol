@@ -15,6 +15,7 @@ const STUCK_EXECUTE = [
   // '0x702c284Cd32F842bE450f5e5C9DE48f14303F1C8', // Long TOKE. Reason: Error: execution reverted: BAB#098
   // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
 
+  // 0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED   // ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
   '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
@@ -104,12 +105,10 @@ describe('deploy', function () {
 
     console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
     try {
-      console.log('updating params', gov.address);
       await strategyContract
         .connect(gov)
         .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
 
-      console.log('updated params');
       await strategyContract.connect(keeper).finalizeStrategy(1, '');
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
