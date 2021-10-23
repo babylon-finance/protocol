@@ -1128,7 +1128,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
         }
-        // uint256 gasSpent = gasleft();
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),

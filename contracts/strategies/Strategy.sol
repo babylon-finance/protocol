@@ -19,6 +19,7 @@ pragma solidity 0.7.6;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -337,11 +338,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
-            votes[_voters[i]] = _votes[i];
+            // Security check that user has actually such voting power
+            uint256 maxUserVote =
+                ERC20(address(garden)).balanceOf(_voters[i]) >= uint256(Math.abs(_votes[i]))
+                    ? uint256(Math.abs(_votes[i]))
+                    : ERC20(address(garden)).balanceOf(_voters[i]);
+            votes[_voters[i]] = _votes[i] > 0 ? int256(maxUserVote) : int256(-1).mul(int256(maxUserVote));
             if (_votes[i] > 0) {
-                totalPositiveVotes = totalPositiveVotes.add(uint256(Math.abs(_votes[i])));
+                totalPositiveVotes = totalPositiveVotes.add(maxUserVote);
             } else {
-                totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
+                totalNegativeVotes = totalNegativeVotes.add(maxUserVote);
             }
         }
 
