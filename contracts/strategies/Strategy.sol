@@ -44,6 +44,7 @@ import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
 
 /**
  * @title Strategy
@@ -338,6 +339,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
+            bool canVote =
+                garden.publicStewards() ||
+                    IMardukGate(IBabController(controller).mardukGate()).canVoteInAGarden(address(garden), _voters[i]);
+            if (!canVote) {
+                // Voters which cannot vote will not be considered valid
+                continue;
+            }
             // Security check that user has actually such voting power
             uint256 balance = ERC20(address(garden)).balanceOf(_voters[i]);
             uint256 maxUserVote = balance >= uint256(Math.abs(_votes[i])) ? uint256(Math.abs(_votes[i])) : balance;
