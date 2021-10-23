@@ -133,7 +133,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 private constant MAX_TRADE_SLIPPAGE = 25e15; // 2.5%
+    uint256 private constant DEFAULT_TRADE_SLIPPAGE = 25e15; // 2.5%
     uint256 private constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 private constant MAX_CANDIDATE_PERIOD = 7 days;
 
@@ -930,7 +930,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 minAmountExpected =
             exactAmount.sub(
                 exactAmount.preciseMul(
-                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : MAX_TRADE_SLIPPAGE
+                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
                 )
             );
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
