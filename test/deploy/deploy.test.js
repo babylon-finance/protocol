@@ -2,8 +2,9 @@ const { expect } = require('chai');
 // const { deployments } = require('hardhat');
 // const { increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
+const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
-const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
+const { takeSnapshot, restoreSnapshot, impersonateAddress } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 
@@ -94,6 +95,8 @@ describe('deploy', function () {
 
   async function finalizeStrategy(strategyContract, name, reserveAsset) {
     const isExecuting = await strategyContract.isStrategyActive();
+    const gardenContract = await ethers.getContractAt('Garden', await strategyContract.garden());
+
     if (!isExecuting) {
       console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
       return;
@@ -101,15 +104,11 @@ describe('deploy', function () {
 
     console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
     try {
-      console.log('updating params');
+      console.log('updating params', gov.address);
       await strategyContract
         .connect(gov)
-        .updateParams([
-          1,
-          await strategyContract.maxGasFeePercentage(),
-          await strategyContract.maxTradeSlippagePercentage(),
-          await strategyContract.maxAllocationPercentage(),
-        ]);
+        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
+
       console.log('updated params');
       await strategyContract.connect(keeper).finalizeStrategy(1, '');
 
