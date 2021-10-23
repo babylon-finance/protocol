@@ -718,7 +718,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _assignExtraCreator(3, _newCreators[3]);
     }
 
-    /*
+    /**
      * Updates Garden Params
      * Can only be called by the creator
      * @param _newParams  New params
@@ -863,6 +863,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             Errors.DURATION_RANGE
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
+
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;

@@ -45,6 +45,8 @@ interface IStrategy {
         uint256 fee
     ) external;
 
+    function updateParams(uint256[4] calldata _params) external;
+
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
@@ -71,8 +73,6 @@ interface IStrategy {
     function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
 
     function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external;
-
-    function changeStrategyDuration(uint256 _newDuration) external;
 
     function invokeFromIntegration(
         address _target,

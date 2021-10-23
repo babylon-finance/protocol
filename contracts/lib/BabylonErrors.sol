@@ -292,4 +292,6 @@ library Errors {
     uint256 internal constant INVALID_MINING_VALUES = 101;
     // Max trade slippage percentage
     uint256 internal constant MAX_TRADE_SLIPPAGE_PERCENTAGE = 102;
+    // Max gas fee percentage
+    uint256 internal constant MAX_GAS_FEE_PERCENTAGE = 103;
 }

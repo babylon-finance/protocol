@@ -195,7 +195,7 @@ contract BabylonViewer {
         returns (
             address,
             string memory,
-            uint256[15] memory,
+            uint256[16] memory,
             bool[] memory,
             uint256[] memory
         )
@@ -226,6 +226,7 @@ contract BabylonViewer {
                 rewards,
                 strategy.maxAllocationPercentage(),
                 strategy.maxGasFeePercentage(),
+                strategy.maxTradeSlippagePercentage(),
                 strategy.isStrategyActive() ? _estimateStrategyRewards(_strategy) : 0
             ],
             status,
