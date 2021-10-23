@@ -253,7 +253,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
+        _require(
+            _maxCapitalRequested > 0,
+            Errors.MAX_CAPITAL_REQUESTED
+        );
 
         maxCapitalRequested = _maxCapitalRequested;
 
@@ -763,7 +766,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _setMaxAllocationPercentage(uint256 _maxAllocationPercentage) internal {
-        _require(_maxAllocationPercentage <= 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        _require(
+            _maxAllocationPercentage <= 1e18,
+            Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE
+        );
         maxAllocationPercentage = _maxAllocationPercentage;
     }
 

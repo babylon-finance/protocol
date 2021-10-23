@@ -114,7 +114,8 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
       expect(strategyDetails[2][12]).to.equal(DEFAULT_STRATEGY_PARAMS[4]); // Max Allocation Percentage
       expect(strategyDetails[2][13]).to.equal(eth(0.05)); // maxAllocationPercentage
-      expect(strategyDetails[2][14]).to.equal(0); // Strategy Rewards
+      expect(strategyDetails[2][14]).to.equal(eth(0.05)); // maxTradeSlippagePercentage
+      expect(strategyDetails[2][15]).to.equal(0); // Strategy Rewards
 
       expect(strategyDetails[3][0]).to.equal(false); // Active
       expect(strategyDetails[3][1]).to.equal(true); // Data set
