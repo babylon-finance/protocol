@@ -339,10 +339,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
             // Security check that user has actually such voting power
-            uint256 maxUserVote =
-                ERC20(address(garden)).balanceOf(_voters[i]) >= uint256(Math.abs(_votes[i]))
-                    ? uint256(Math.abs(_votes[i]))
-                    : ERC20(address(garden)).balanceOf(_voters[i]);
+            uint256 balance = ERC20(address(garden)).balanceOf(_voters[i]);
+            uint256 maxUserVote = balance >= uint256(Math.abs(_votes[i])) ? uint256(Math.abs(_votes[i])) : balance;
             votes[_voters[i]] = _votes[i] > 0 ? int256(maxUserVote) : int256(-1).mul(int256(maxUserVote));
             if (_votes[i] > 0) {
                 totalPositiveVotes = totalPositiveVotes.add(maxUserVote);
