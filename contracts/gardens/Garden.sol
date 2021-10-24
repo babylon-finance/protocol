@@ -388,11 +388,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   it will be applied regardless of the garden state.
      *   It is advised to first try to withdraw with no penalty and it this
      *   reverts then try to with penalty.
-     * @param _amountIn           Quantity of the garden token to withdrawal
+     * @param _amountIn         Quantity of the garden token to withdrawal
      * @param _minAmountOut     Min quantity of reserve asset to receive
-     * @param _to                            Address to send component assets to
-     * @param _withPenalty                   Whether or not this is an immediate withdrawal
-     * @param _unwindStrategy                Strategy to unwind
+     * @param _to               Address to send component assets to
+     * @param _withPenalty      Whether or not this is an immediate withdrawal
+     * @param _unwindStrategy   Strategy to unwind
      */
     function withdraw(
         uint256 _amountIn,
@@ -1053,7 +1053,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
         if (reserveAsset == WETH) {
             // Check that the withdrawal is possible
-            // Unwrap WETH if ETH balance lower than netFlowQuantity
+            // Unwrap WETH if ETH balance lower than amount
             if (address(this).balance < _amount) {
                 IWETH(WETH).withdraw(_amount.sub(address(this).balance));
             }

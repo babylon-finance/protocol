@@ -945,8 +945,8 @@ describe('Garden', function () {
         opts: {
           depositIn: eth(),
           depositOut: eth(),
-          amountIn: eth(),
-          minAmountOut: eth(),
+          amountIn: eth(0.5),
+          minAmountOut: eth(0.5),
           fee: eth(0.01),
           maxFee: eth(0.01),
         },
@@ -957,14 +957,14 @@ describe('Garden', function () {
         opts: {
           depositIn: from(1000 * 1e6),
           depositOut: eth(1000),
-          amountIn: eth(1000),
-          minAmountOut: from(1000 * 1e6),
+          amountIn: eth(500),
+          minAmountOut: from(500 * 1e6),
           fee: from(100 * 1e6),
           maxFee: from(100 * 1e6),
         },
       },
     ].forEach(({ token, name, opts }) => {
-      it(`can witdraw with a Keeper fee into ${name} garden`, async function () {
+      it.only(`can witdraw with a Keeper fee into ${name} garden`, async function () {
         const { amountIn, minAmountOut, fee, maxFee, depositIn, depositOut } = opts;
 
         const erc20 = await getERC20(token);
@@ -973,7 +973,7 @@ describe('Garden', function () {
 
         const garden = await createGarden({ reserveAsset: token });
 
-        await erc20.connect(signer3).approve(garden.address, amountIn, {
+        await erc20.connect(signer3).approve(garden.address, depositIn, {
           gasPrice: 0,
         });
 
@@ -981,6 +981,7 @@ describe('Garden', function () {
 
         const supplyBefore = await garden.totalSupply();
         const balanceBefore = await ethers.provider.getBalance(signer3.address);
+        const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
         const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, maxFee);
 
@@ -1034,6 +1035,9 @@ describe('Garden', function () {
 
         const supplyAfter = await garden.totalSupply();
         expect(supplyBefore.sub(supplyAfter)).to.eq(amountIn);
+
+        const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+        expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
       });
     });
 
