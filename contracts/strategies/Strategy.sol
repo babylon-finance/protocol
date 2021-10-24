@@ -493,6 +493,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_CONTRIBUTOR
         );
+        _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
