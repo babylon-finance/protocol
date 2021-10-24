@@ -81,6 +81,13 @@ contract GardenValuer {
      */
     function calculateGardenValuation(address _garden, address _quoteAsset) external view returns (uint256) {
         IPriceOracle priceOracle = IPriceOracle(IBabController(controller).priceOracle());
+        require(
+            address(priceOracle) != address(0) &&
+                _garden != address(0) &&
+                _quoteAsset != address(0) &&
+                IBabController(controller).isSystemContract(_garden),
+            'Incorrect input data'
+        );
         address reserveAsset = IGarden(_garden).reserveAsset();
         uint256 totalSupply = ERC20(_garden).totalSupply();
         // If there are no tokens return 0
