@@ -417,7 +417,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _withPenalty,
             _unwindStrategy,
             pricePerShare,
-            _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0
+            _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0,
+            0
         );
     }
 
@@ -464,31 +465,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce, _maxFee, _withPenalty, v, r, s);
 
-        // If a Keeper fee is greater than zero then reduce user shares to
-        // exchange and pay keeper the fee.
-        if (_fee > 0) {
-            _withdrawInternalWithFee(
-                _amountIn,
-                _minAmountOut,
-                _maxFee,
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare,
-                _strategyNAV,
-                _fee,
-                signer
-            );
-        } else {
-            _withdrawInternal(
-                _amountIn,
-                _minAmountOut,
-                payable(signer),
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare,
-                _strategyNAV
-            );
-        }
+        _withdrawInternal(
+            _amountIn,
+            _minAmountOut.sub(_maxFee),
+            payable(signer),
+            _withPenalty,
+            _unwindStrategy,
+            _pricePerShare,
+            _strategyNAV,
+            _fee
+        );
     }
 
     /**
@@ -875,8 +861,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         depositHardlock = _depositHardlock;
     }
 
-    function _reserveToShares(uint256 _amount, uint256 _pricePerShare) internal view returns (uint256) {
-        return _amount.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+    function _sharesToReserve(uint256 _shares, uint256 _pricePerShare) internal view returns (uint256) {
+        // in case of USDC that would with 6 decimals
+        return _shares.preciseMul(_pricePerShare).preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
+    }
+
+    function _reserveToShares(uint256 _reserve, uint256 _pricePerShare) internal view returns (uint256) {
+        return _reserve.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
     }
 
     function _withdrawInternal(
@@ -886,7 +877,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty,
         address _unwindStrategy,
         uint256 _pricePerShare,
-        uint256 _strategyNAV
+        uint256 _strategyNAV,
+        uint256 _fee
     ) internal {
         _onlyUnpaused();
         _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
@@ -896,10 +888,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         _require(_amountIn <= previousBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
-        // this value would have 18 decimals even for USDC
-        uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
-        // in case of USDC that would with 6 decimals
-        uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
+        uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
         // if withPenaltiy then unwind strategy
         if (_withPenalty) {
@@ -912,12 +901,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
 
         _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
-
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
+
         // We need previous supply before minting new tokens to get accurate rewards calculations
         uint256 previousSupply = totalSupply();
         _burn(_to, _amountIn);
-        _safeSendReserveAsset(_to, amountOut);
+        _safeSendReserveAsset(_to, amountOut.sub(_fee));
+        if (_fee > 0) {
+            // If fee > 0 pay Accountant
+            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+        }
         _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
@@ -934,20 +927,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _fee,
         address _signer
     ) internal {
-        // account for non 18 decimals ERC20
-        uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
         _withdrawInternal(
-            _amountIn.sub(feeShares),
+            _amountIn,
             _minAmountOut.sub(_maxFee),
             payable(_signer),
             _withPenalty,
             _unwindStrategy,
             _pricePerShare,
-            _strategyNAV
+            _strategyNAV,
+            _fee
         );
-        // burn shares paid to Keeper
-        _burn(_signer, feeShares);
-        IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
     }
 
     function _getWithdrawSigner(
@@ -1112,7 +1101,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _updateContributorWithdrawalInfo(
         address _contributor,
-        uint256 _netflowQuantity,
+        uint256 _amountOut,
         uint256 _previousBalance,
         uint256 _previousSupply,
         uint256 _tokensToBurn
@@ -1126,7 +1115,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.totalDeposits = 0;
             totalContributors = totalContributors.sub(1);
         } else {
-            contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
+            contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
         // uint256 gasSpent = gasleft();
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
