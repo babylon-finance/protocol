@@ -964,7 +964,7 @@ describe('Garden', function () {
         },
       },
     ].forEach(({ token, name, opts }) => {
-      it.only(`can witdraw with a Keeper fee into ${name} garden`, async function () {
+      it(`can witdraw with a Keeper fee into ${name} garden`, async function () {
         const { amountIn, minAmountOut, fee, maxFee, depositIn, depositOut } = opts;
 
         const erc20 = await getERC20(token);
