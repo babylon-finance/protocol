@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
@@ -329,8 +330,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _reserveAsset Address of the reserve assset
      */
     function addReserveAsset(address _reserveAsset) external override onlyOwner {
+        require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
-        // TODO: check decimals reserve asset
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
         emit ReserveAssetAdded(_reserveAsset);

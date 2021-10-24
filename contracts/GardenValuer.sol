@@ -87,8 +87,6 @@ contract GardenValuer {
         if (totalSupply == 0) {
             return 0;
         }
-
-        // uint8 reserveAssetDecimals = ERC20(reserveAsset).decimals();
         uint8 quoteAssetDecimals = ERC20(_quoteAsset).decimals();
 
         uint256 reservePrice;
