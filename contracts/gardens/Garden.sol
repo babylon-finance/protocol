@@ -900,7 +900,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
         // in case of USDC that would with 6 decimals
         uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
-
         // if withPenaltiy then unwind strategy
         if (_withPenalty) {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
@@ -908,6 +907,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // than desired so we have have to account for this with a 5% slippage.
             // TODO: if there is more than 5% slippage that will block
             // withdrawal
+            _require(_unwindStrategy != address(0), Errors.ADDRESS_IS_ZERO);
             IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
