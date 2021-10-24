@@ -183,6 +183,7 @@ contract BorrowOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        require(_garden.isGardenStrategy(msg.sender), 'garden strategy mismatch');
         address borrowToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
