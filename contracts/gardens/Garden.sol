@@ -994,6 +994,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minContribution
     ) private {
         _onlyUnpaused();
+        _require(_to != address(0), Errors.ADDRESS_IS_ZERO);
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
 
