@@ -500,6 +500,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        // Flashloan protection
+        _require(
+            block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock,
+            Errors.DEPOSIT_HARDLOCK
+        );
         uint256[] memory rewards = new uint256[](7);
 
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
