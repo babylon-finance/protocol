@@ -298,6 +298,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _keeper Address of the keeper
      */
     function addKeeper(address _keeper) external override onlyOwner {
+        require(!keeperList[_keeper] && _keeper != address(0), 'Incorrect address');
         keeperList[_keeper] = true;
     }
 
