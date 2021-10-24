@@ -364,6 +364,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
+        _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
         _executesStrategy(_capital, _fee, msg.sender);
     }
 
