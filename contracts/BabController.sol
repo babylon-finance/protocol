@@ -222,6 +222,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     ) external payable override returns (address) {
         require(masterSwapper != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
+        require(mardukGate != address(0), 'Marduk gate not initialized');
         require(
             IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
