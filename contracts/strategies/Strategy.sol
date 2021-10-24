@@ -690,6 +690,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
+        _require(_index >= 0 && _index < opTypes.length, Errors.NOT_IN_RANGE);
         // _getOpDecodedData guarantee backward compatibility with OpData
         return (opTypes[_index], opIntegrations[_index], _getOpDecodedData(_index));
     }
