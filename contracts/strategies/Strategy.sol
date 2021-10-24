@@ -332,11 +332,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
+        // Including the strategist who actually can override its stake initial vote
         totalPositiveVotes = 0;
         totalNegativeVotes = 0;
 
         // Set votes data
         for (uint256 i = 0; i < _voters.length; i++) {
+            if (votes[_voters[i]] != 0 && _voters[i] != strategist) {
+                // We avoid double voting, but strategist can override its previous vote based on stake
+                continue;
+            }
             votes[_voters[i]] = _votes[i];
             if (_votes[i] > 0) {
                 totalPositiveVotes = totalPositiveVotes.add(uint256(Math.abs(_votes[i])));
