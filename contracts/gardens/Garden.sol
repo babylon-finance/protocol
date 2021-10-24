@@ -535,7 +535,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _rewards,
         int256 _returns,
         uint256 _burningAmount
-    ) external override {
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyStrategy();
 
