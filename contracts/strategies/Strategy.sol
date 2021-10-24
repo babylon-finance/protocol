@@ -486,7 +486,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token             Address of the token to sweep
      */
-    function sweep(address _token) external {
+    function sweep(address _token) external nonReentrant {
         _onlyUnpaused();
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
