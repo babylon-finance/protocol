@@ -916,29 +916,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
 
-    function _withdrawInternalWithFee(
-        uint256 _amountIn,
-        uint256 _minAmountOut,
-        uint256 _maxFee,
-        bool _withPenalty,
-        address _unwindStrategy,
-        uint256 _pricePerShare,
-        uint256 _strategyNAV,
-        uint256 _fee,
-        address _signer
-    ) internal {
-        _withdrawInternal(
-            _amountIn,
-            _minAmountOut.sub(_maxFee),
-            payable(_signer),
-            _withPenalty,
-            _unwindStrategy,
-            _pricePerShare,
-            _strategyNAV,
-            _fee
-        );
-    }
-
     function _getWithdrawSigner(
         uint256 _amountIn,
         uint256 _minAmountOut,
