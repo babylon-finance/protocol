@@ -62,7 +62,7 @@ contract BuyOperation is Operation {
         uint256 /* _index */
     ) external view override onlyStrategy {
         address asset = BytesLib.decodeOpDataAddress(_data);
-        require(asset != address(0), 'Incorrect asset address');       
+        require(asset != address(0), 'Incorrect asset address');
         require(asset != _garden.reserveAsset(), 'Receive token must be different');
     }
 
