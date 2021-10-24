@@ -224,6 +224,13 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(mardukGate != address(0), 'Marduk gate not initialized');
         require(
+            gardenNFT != address(0) &&
+                strategyFactory != address(0) &&
+                gardenValuer != address(0) &&
+                treasury != address(0),
+            'Parameters are uninitiliazed'
+        );
+        require(
             IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
