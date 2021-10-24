@@ -672,6 +672,9 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param  _contractAddress           The contract address to check
      */
     function isSystemContract(address _contractAddress) external view override returns (bool) {
+        if (_contractAddress == address(0)) {
+            return false;
+        }
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
