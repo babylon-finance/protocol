@@ -294,4 +294,6 @@ library Errors {
     uint256 internal constant MAX_TRADE_SLIPPAGE_PERCENTAGE = 102;
     // Max gas fee percentage
     uint256 internal constant MAX_GAS_FEE_PERCENTAGE = 103;
+    // Mismatch between voters and votes
+    uint256 internal constant INVALID_VOTES_LENGTH = 104;
 }

@@ -328,7 +328,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
-
+        _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
