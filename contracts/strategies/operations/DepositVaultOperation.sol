@@ -70,7 +70,9 @@ contract DepositVaultOperation is Operation {
         IGarden, /* _garden */
         address _integration,
         uint256 /* _index */
-    ) external view override onlyStrategy {}
+    ) external view override onlyStrategy {
+        require(BytesLib.decodeOpDataAddress(_data) != address(0), 'Incorrect vault address!');
+    }
 
     /**
      * Executes the deposit vault operation
