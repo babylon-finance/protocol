@@ -1247,6 +1247,24 @@ describe('Garden', function () {
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
+    it('can withdraw all funds', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth();
+
+      await garden1.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false, {
+        value: eth(),
+        gasPrice: 0,
+      });
+
+      const beforeWithdrawal = await ethers.provider.getBalance(signer3.address);
+
+      await garden1.connect(signer3).withdraw(eth(999999999), minAmountOut, signer3.getAddress(), false, ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+
+      expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
+    });
+
     it('can withdraw with a penalty from a straetgy with losses', async function () {
       const garden = await createGarden();
 
@@ -1309,48 +1327,6 @@ describe('Garden', function () {
         .reverted;
       await expect(garden1.connect(signer3).withdraw(eth('20'), 2, signer3.getAddress()), false, ADDRESS_ZERO).to.to.be
         .reverted;
-    });
-
-    it('strategist or voters cannot withdraw more garden tokens than they have locked in active strategies', async function () {
-      const strategyContract = await createStrategy(
-        'buy',
-        'vote',
-        [signer1, signer2, signer3],
-        uniswapV3TradeIntegration.address,
-        garden1,
-      );
-
-      // It is executed
-      const signer1Balance = await garden1.balanceOf(signer1.address);
-      const signer2Balance = await garden1.balanceOf(signer2.address);
-      const signer1LockedBalance = await garden1.getLockedBalance(signer1.address);
-      const signer2LockedBalance = await garden1.getLockedBalance(signer2.address);
-      await executeStrategy(strategyContract, eth('1'), 42);
-
-      // Cannot withdraw locked stake amount
-      await expect(
-        garden1
-          .connect(signer1)
-          .withdraw(
-            signer1Balance.sub(signer1LockedBalance).add(eth('0.1')),
-            1,
-            signer1.getAddress(),
-            false,
-            ADDRESS_ZERO,
-          ),
-      ).to.be.reverted;
-      // Cannot withdraw locked stake amount
-      await expect(
-        garden1
-          .connect(signer2)
-          .withdraw(
-            signer2Balance.sub(signer2LockedBalance).add(eth('0.1')),
-            1,
-            signer2.getAddress(),
-            false,
-            ADDRESS_ZERO,
-          ),
-      ).to.be.reverted;
     });
 
     it('strategist or voters can withdraw garden tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
