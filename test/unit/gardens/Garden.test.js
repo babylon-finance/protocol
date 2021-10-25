@@ -1158,7 +1158,7 @@ describe('Garden', function () {
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
-      console.log(gardenBalanceAfter.toString(),gardenBalanceBefore.toString());
+      console.log(gardenBalanceAfter.toString(), gardenBalanceBefore.toString());
       expect(gardenBalanceAfter.sub(gardenBalanceBefore)).to.be.closeTo(from(0), from(25 * 1e6));
 
       // check users garden shares
