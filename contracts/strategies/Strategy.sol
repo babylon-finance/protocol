@@ -220,6 +220,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     uint256 public override maxTradeSlippagePercentage; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
 
+    uint256 private gardenSupply; // Garden supply when the strategy finalized
+    uint256 private startBlock; // block number executing at
+    uint256 private endBlock; // block number exiting at
+
     /* ============ Constructor ============ */
 
     /**
@@ -398,6 +402,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
+        endBlock = block.number;
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -637,7 +642,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](12);
+        uint256[] memory data = new uint256[](15);
         bool[] memory boolData = new bool[](2);
 
         data[0] = executedAt;
@@ -654,6 +659,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         boolData[1] = capitalReturned >= data[8] ? true : false;
         data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        data[12] = endBlock;
+        data[13] = gardenSupply;
+        data[14] = startBlock;
         return (strategist, data, boolData);
     }
 
@@ -813,6 +821,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
+            startBlock = block.number;
         }
         rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
@@ -987,6 +996,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
         // Must be zero in case the mining program didnt started on time
         strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        // Checkpoint of garden supply
+        gardenSupply = IERC20(address(garden)).totalSupply();
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
