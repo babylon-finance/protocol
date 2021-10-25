@@ -57,6 +57,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     constructor(IBabController _controller, address _mooniswapFactoryAddress)
         PoolIntegration('oneinch_pool', _controller)
     {
+        require(address(_controller) != address(0) && _mooniswapFactoryAddress != address(0), 'invalid address');
         mooniswapFactory = IMooniswapFactory(_mooniswapFactoryAddress);
     }
 

@@ -251,9 +251,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _initialContribution,
         bool[] memory _publicGardenStrategistsStewards
     ) public payable override initializer {
-        _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
+        _require(bytes(_name).length < 50 && bytes(_symbol).length > 0, Errors.NAME_TOO_LONG);
         _require(
-            _creator != address(0) && _controller != address(0) && ERC20Upgradeable(_reserveAsset).decimals() > 0,
+            _creator != address(0) &&
+                _controller != address(0) &&
+                _reserveAsset != address(0) &&
+                ERC20Upgradeable(_reserveAsset).decimals() > 0,
             Errors.ADDRESS_IS_ZERO
         );
         _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
@@ -486,6 +489,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyContributor();
         Contributor storage contributor = contributors[msg.sender];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        // Flashloan protection
+        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         uint256[] memory rewards = new uint256[](7);
 
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
@@ -521,7 +526,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _rewards,
         int256 _returns,
         uint256 _burningAmount
-    ) external override {
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyStrategy();
 
@@ -554,7 +559,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _keeper  Keeper that executed the transaction
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
-    function payKeeper(address payable _keeper, uint256 _fee) public override {
+    function payKeeper(address payable _keeper, uint256 _fee) public override nonReentrant {
         _onlyUnpaused();
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
@@ -621,7 +626,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         bytes calldata _opEncodedDatas
-    ) external override {
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyContributor();
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
@@ -648,7 +653,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external override {
+    function allocateCapitalToStrategy(uint256 _capital) external override nonReentrant {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
@@ -833,7 +838,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVoters
     ) private {
         _require(
-            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
+            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset) &&
+                _minLiquidityAsset > 0,
             Errors.MIN_LIQUIDITY
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
@@ -841,7 +847,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD && _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
             Errors.NOT_IN_RANGE
         );
-        _require(_minVotesQuorum >= TEN_PERCENT && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
+        _require(_minVotesQuorum >= TEN_PERCENT.div(2) && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
         _require(
             _maxStrategyDuration >= _minStrategyDuration &&
                 _minStrategyDuration >= 1 days &&
@@ -888,6 +894,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         _require(_amountIn <= previousBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
         // if withPenaltiy then unwind strategy
@@ -897,10 +904,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // than desired so we have have to account for this with a 5% slippage.
             // TODO: if there is more than 5% slippage that will block
             // withdrawal
+            _require(_unwindStrategy != address(0), Errors.ADDRESS_IS_ZERO);
             IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
-        _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
+        _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
+
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         // We need previous supply before minting new tokens to get accurate rewards calculations
@@ -956,8 +965,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minContribution
     ) private {
         _onlyUnpaused();
+        _require(_to != address(0), Errors.ADDRESS_IS_ZERO);
         (bool canDeposit, , ) = _getUserPermission(_from);
-        _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
+        _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive

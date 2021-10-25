@@ -328,7 +328,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
-
+        _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
@@ -364,6 +364,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
+        _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
         _executesStrategy(_capital, _fee, msg.sender);
     }
 
@@ -486,13 +487,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token             Address of the token to sweep
      */
-    function sweep(address _token) external {
+    function sweep(address _token) external nonReentrant {
         _onlyUnpaused();
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
                 IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_CONTRIBUTOR
         );
+        _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
@@ -690,6 +692,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
+        _require(_index >= 0 && _index < opTypes.length, Errors.NOT_IN_RANGE);
         // _getOpDecodedData guarantee backward compatibility with OpData
         return (opTypes[_index], opIntegrations[_index], _getOpDecodedData(_index));
     }
@@ -958,7 +961,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
-            IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+            if (protocolProfits > 0) {
+                // We avoid a transfer in case capitalReturned == capitalAllocated
+                IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+            }
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
             // Returns were negative so let's burn the strategiest stake

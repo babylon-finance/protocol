@@ -23,6 +23,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
+import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -182,7 +183,7 @@ contract BorrowOperation is Operation {
         bytes calldata _data,
         IGarden _garden,
         address _integration
-    ) external view override returns (uint256, bool) {
+    ) external view override onlyStrategy returns (uint256, bool) {
         address borrowToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
