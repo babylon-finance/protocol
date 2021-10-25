@@ -251,16 +251,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _initialContribution,
         bool[] memory _publicGardenStrategistsStewards
     ) public payable override initializer {
-        _require(bytes(_name).length < 50 && bytes(_symbol).length > 0, Errors.NAME_TOO_LONG);
-        _require(
-            _creator != address(0) &&
-                _controller != address(0) &&
-                _reserveAsset != address(0) &&
-                ERC20Upgradeable(_reserveAsset).decimals() > 0,
-            Errors.ADDRESS_IS_ZERO
-        );
-        _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
-        _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
@@ -626,7 +616,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         bytes calldata _opEncodedDatas
-    ) external override nonReentrant {
+    ) external override {
         _onlyUnpaused();
         _onlyContributor();
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
@@ -653,7 +643,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external override nonReentrant {
+    function allocateCapitalToStrategy(uint256 _capital) external override {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
