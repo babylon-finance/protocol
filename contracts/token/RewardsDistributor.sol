@@ -1296,7 +1296,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256[] memory _strategyDetails,
         bool[] memory _profitData
-    ) private view returns (uint256) {
+    ) private view returns (uint256 stewardBabl) {
         // Assumptions:
         // Assumption that the strategy got profits. Should not execute otherwise.
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
@@ -1311,18 +1311,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Otherwise, we divide by all total votes as also voters against will get some profits
             // if the strategy returned less than expected
             uint256 accountingVotes = _profitData[1] ? _strategyDetails[4] : totalVotes;
-            return
-                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
-                    accountingVotes
-                );
+            stewardBabl = _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
+                accountingVotes
+            );
         } else if ((userVotes < 0) && _profitData[1] == false) {
-            return
-                _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(Math.abs(userVotes))).preciseDiv(
-                    totalVotes
-                );
+            stewardBabl = _strategyDetails[10]
+                .multiplyDecimal(profitShare)
+                .preciseMul(uint256(Math.abs(userVotes)))
+                .preciseDiv(totalVotes);
         } else if ((userVotes < 0) && _profitData[1] == true) {
             // Voted against a very profit strategy above expected returns, get no profit at all
-            return 0;
+            stewardBabl = 0;
         }
     }
 
