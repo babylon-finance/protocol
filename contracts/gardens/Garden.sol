@@ -538,7 +538,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _rewards,
         int256 _returns,
         uint256 _burningAmount
-    ) external override {
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyStrategy();
 
@@ -571,7 +571,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _keeper  Keeper that executed the transaction
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
-    function payKeeper(address payable _keeper, uint256 _fee) public override {
+    function payKeeper(address payable _keeper, uint256 _fee) public override nonReentrant {
         _onlyUnpaused();
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
@@ -665,7 +665,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external override {
+    function allocateCapitalToStrategy(uint256 _capital) external override nonReentrant {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
