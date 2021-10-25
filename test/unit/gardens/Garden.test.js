@@ -1126,6 +1126,12 @@ describe('Garden', function () {
       const strategyNAV = await strategy.getNAV();
 
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
+
+      // remove USDC funds from Garden so penalty would be applied
+      await usdc.connect(await impersonateAddress(garden.address)).transfer(signer3.address, gardenBalanceBefore, {
+        gasPrice: 0,
+      });
+
       await garden
         .connect(keeper)
         .withdrawBySig(
@@ -1143,10 +1149,16 @@ describe('Garden', function () {
           sig.s,
         );
 
+      // put the funds back
+      await usdc.connect(await impersonateAddress(signer3.address)).transfer(garden.address, gardenBalanceBefore, {
+        gasPrice: 0,
+      });
+
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      console.log(gardenBalanceAfter.toString(),gardenBalanceBefore.toString());
       expect(gardenBalanceAfter.sub(gardenBalanceBefore)).to.be.closeTo(from(0), from(25 * 1e6));
 
       // check users garden shares
@@ -1195,6 +1207,12 @@ describe('Garden', function () {
       const strategyNAV = await strategy.getNAV();
 
       const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, true);
+
+      // remove USDC funds from Garden so penalty would be applied
+      await usdc.connect(await impersonateAddress(garden.address)).transfer(signer3.address, gardenBalanceBefore, {
+        gasPrice: 0,
+      });
+
       await garden
         .connect(keeper)
         .withdrawBySig(
@@ -1211,6 +1229,11 @@ describe('Garden', function () {
           sig.r,
           sig.s,
         );
+
+      // put the funds back
+      await usdc.connect(await impersonateAddress(signer3.address)).transfer(garden.address, gardenBalanceBefore, {
+        gasPrice: 0,
+      });
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
