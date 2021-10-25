@@ -38,12 +38,12 @@ interface IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view returns (uint256[] memory);
 
-    function getContributorPower(
+    /*    function getContributorPower(
         address _garden,
         address _contributor,
         uint256 _time
     ) external view returns (uint256);
-
+ */
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
     function getBABLMiningParameters()
@@ -71,6 +71,14 @@ interface IRewardsDistributor {
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);
+
+    function getPriorBalance(
+        address _garden,
+        address _contributor,
+        uint256 _blockNumber
+    ) external view virtual returns (uint256);
+
+    function getCurrentBalance(address _garden, address _contributor) external view virtual returns (uint256);
 
     /* ============ External Functions ============ */
 
