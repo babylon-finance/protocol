@@ -911,7 +911,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
-        _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
+        _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
         // We need previous supply before minting new tokens to get accurate rewards calculations
