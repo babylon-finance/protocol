@@ -991,7 +991,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         (bool canDeposit, , ) = _getUserPermission(_from);
-        _require(canDeposit || _isCreator(_to), Errors.USER_CANNOT_JOIN);
+        _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
