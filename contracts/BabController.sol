@@ -20,6 +20,7 @@ pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
@@ -223,6 +224,14 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(masterSwapper != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
+            mardukGate != address(0) &&
+                gardenNFT != address(0) &&
+                strategyFactory != address(0) &&
+                gardenValuer != address(0) &&
+                treasury != address(0),
+            'Parameters not initialized'
+        );
+        require(
             IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
             'User does not have creation permissions'
         );
@@ -290,6 +299,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _keeper Address of the keeper
      */
     function addKeeper(address _keeper) external override onlyOwner {
+        require(!keeperList[_keeper] && _keeper != address(0), 'Incorrect address');
         keeperList[_keeper] = true;
     }
 
@@ -320,8 +330,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _reserveAsset Address of the reserve assset
      */
     function addReserveAsset(address _reserveAsset) external override onlyOwner {
+        require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
-        // TODO: check decimals reserve asset
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
         emit ReserveAssetAdded(_reserveAsset);
@@ -662,6 +672,9 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param  _contractAddress           The contract address to check
      */
     function isSystemContract(address _contractAddress) external view override returns (bool) {
+        if (_contractAddress == address(0)) {
+            return false;
+        }
         return (isGarden[_contractAddress] ||
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||

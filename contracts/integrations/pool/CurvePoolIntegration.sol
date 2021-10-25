@@ -69,6 +69,7 @@ contract CurvePoolIntegration is PoolIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {
+        require(address(_controller) != address(0), 'invalid address');
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
         usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt

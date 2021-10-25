@@ -59,6 +59,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     constructor(IBabController _controller, address _uniswapRouterAddress)
         PoolIntegration('uniswap_pool', _controller)
     {
+        require(address(_controller) != address(0) && _uniswapRouterAddress != address(0), 'invalid address');
         uniRouter = IUniswapV2Router(_uniswapRouterAddress);
     }
 

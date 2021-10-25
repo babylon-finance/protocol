@@ -251,9 +251,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _initialContribution,
         bool[] memory _publicGardenStrategistsStewards
     ) public payable override initializer {
-        _require(bytes(_name).length < 50, Errors.NAME_TOO_LONG);
+        _require(bytes(_name).length < 50 && bytes(_symbol).length > 0, Errors.NAME_TOO_LONG);
         _require(
-            _creator != address(0) && _controller != address(0) && ERC20Upgradeable(_reserveAsset).decimals() > 0,
+            _creator != address(0) &&
+                _controller != address(0) &&
+                _reserveAsset != address(0) &&
+                ERC20Upgradeable(_reserveAsset).decimals() > 0,
             Errors.ADDRESS_IS_ZERO
         );
         _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
@@ -847,7 +850,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVoters
     ) private {
         _require(
-            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset),
+            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset) &&
+                _minLiquidityAsset > 0,
             Errors.MIN_LIQUIDITY
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
@@ -990,6 +994,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minContribution
     ) private {
         _onlyUnpaused();
+        _require(_to != address(0), Errors.ADDRESS_IS_ZERO);
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
 
