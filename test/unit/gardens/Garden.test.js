@@ -945,8 +945,8 @@ describe('Garden', function () {
         opts: {
           depositIn: eth(),
           depositOut: eth(),
-          amountIn: eth(),
-          minAmountOut: eth(),
+          amountIn: eth(0.5),
+          minAmountOut: eth(0.5),
           fee: eth(0.01),
           maxFee: eth(0.01),
         },
@@ -957,8 +957,8 @@ describe('Garden', function () {
         opts: {
           depositIn: from(1000 * 1e6),
           depositOut: eth(1000),
-          amountIn: eth(1000),
-          minAmountOut: from(1000 * 1e6),
+          amountIn: eth(500),
+          minAmountOut: from(500 * 1e6),
           fee: from(100 * 1e6),
           maxFee: from(100 * 1e6),
         },
@@ -973,7 +973,7 @@ describe('Garden', function () {
 
         const garden = await createGarden({ reserveAsset: token });
 
-        await erc20.connect(signer3).approve(garden.address, amountIn, {
+        await erc20.connect(signer3).approve(garden.address, depositIn, {
           gasPrice: 0,
         });
 
@@ -981,6 +981,7 @@ describe('Garden', function () {
 
         const supplyBefore = await garden.totalSupply();
         const balanceBefore = await ethers.provider.getBalance(signer3.address);
+        const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
         const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, maxFee);
 
@@ -1034,6 +1035,9 @@ describe('Garden', function () {
 
         const supplyAfter = await garden.totalSupply();
         expect(supplyBefore.sub(supplyAfter)).to.eq(amountIn);
+
+        const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+        expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
       });
     });
 
@@ -1243,6 +1247,24 @@ describe('Garden', function () {
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
+    it('can withdraw all funds', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth();
+
+      await garden1.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false, {
+        value: eth(),
+        gasPrice: 0,
+      });
+
+      const beforeWithdrawal = await ethers.provider.getBalance(signer3.address);
+
+      await garden1.connect(signer3).withdraw(eth(999999999), minAmountOut, signer3.getAddress(), false, ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+
+      expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
+    });
+
     it('can withdraw with a penalty from a straetgy with losses', async function () {
       const garden = await createGarden();
 
@@ -1305,48 +1327,6 @@ describe('Garden', function () {
         .reverted;
       await expect(garden1.connect(signer3).withdraw(eth('20'), 2, signer3.getAddress()), false, ADDRESS_ZERO).to.to.be
         .reverted;
-    });
-
-    it('strategist or voters cannot withdraw more garden tokens than they have locked in active strategies', async function () {
-      const strategyContract = await createStrategy(
-        'buy',
-        'vote',
-        [signer1, signer2, signer3],
-        uniswapV3TradeIntegration.address,
-        garden1,
-      );
-
-      // It is executed
-      const signer1Balance = await garden1.balanceOf(signer1.address);
-      const signer2Balance = await garden1.balanceOf(signer2.address);
-      const signer1LockedBalance = await garden1.getLockedBalance(signer1.address);
-      const signer2LockedBalance = await garden1.getLockedBalance(signer2.address);
-      await executeStrategy(strategyContract, eth('1'), 42);
-
-      // Cannot withdraw locked stake amount
-      await expect(
-        garden1
-          .connect(signer1)
-          .withdraw(
-            signer1Balance.sub(signer1LockedBalance).add(eth('0.1')),
-            1,
-            signer1.getAddress(),
-            false,
-            ADDRESS_ZERO,
-          ),
-      ).to.be.reverted;
-      // Cannot withdraw locked stake amount
-      await expect(
-        garden1
-          .connect(signer2)
-          .withdraw(
-            signer2Balance.sub(signer2LockedBalance).add(eth('0.1')),
-            1,
-            signer2.getAddress(),
-            false,
-            ADDRESS_ZERO,
-          ),
-      ).to.be.reverted;
     });
 
     it('strategist or voters can withdraw garden tokens that were locked during strategy execution (negative profits) once they are unlocked after finishing active strategies', async function () {
