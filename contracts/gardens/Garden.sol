@@ -890,10 +890,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
-        uint256 previousBalance = balanceOf(_to);
+
+        uint256 prevBalance = balanceOf(_to);
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
-        _require(_amountIn <= previousBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+        // any amountIn higher than user balance is treated as withdrawAll
+        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))? prevBalance.sub(getLockedBalance(_to)): _amountIn;
+        _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
@@ -912,15 +915,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
-        // We need previous supply before minting new tokens to get accurate rewards calculations
-        uint256 previousSupply = totalSupply();
+        // We need previous supply before burning new tokens to get accurate rewards calculations
+        uint256 prevSupply = totalSupply();
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut.sub(_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
-        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, prevSupply, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -1094,7 +1097,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
-        // If sold everything
+        // If withdrawn everything
         if (balanceOf(_contributor) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
@@ -1104,8 +1107,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
-        // uint256 gasSpent = gasleft();
-        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        // We need to update at Rewards Distributor SC for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
