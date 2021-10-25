@@ -895,7 +895,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
-        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))? prevBalance.sub(getLockedBalance(_to)): _amountIn;
+        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))
+            ? prevBalance.sub(getLockedBalance(_to))
+            : _amountIn;
         _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
