@@ -1558,6 +1558,42 @@ describe('Garden', function () {
       expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
     });
 
+    it('can deposit with fee > minContribution', async function () {
+      const amountIn = from(2000 * 1e6);
+      const minAmountOut = eth(2000);
+      const fee = from(1000 * 1e6);
+      const maxFee = from(1000 * 1e6);
+      const nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut.sub(eth(1000)));
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn.sub(fee));
+
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn.sub(fee));
+    });
+
     [
       {
         token: addresses.tokens.WETH,
