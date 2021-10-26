@@ -597,10 +597,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _blockNumber
     ) public view virtual override returns (uint256) {
-        if (_blockNumber >= block.number) {
-            // failsafe get previous block as still not determined
-            _blockNumber = _blockNumber - 1;
-        }
+        // flashloan protection along the time
+        _blockNumber = _blockNumber > 0 ? _blockNumber.sub(1) : _blockNumber; // avoid underflows
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
         if (nCheckpoints == 0) {
             return 0;

@@ -339,7 +339,6 @@ describe('RewardsDistributor', function () {
     });
     it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-
       await executeStrategy(long, ONE_ETH);
       const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
@@ -1438,6 +1437,130 @@ describe('RewardsDistributor', function () {
         expect(strategyData3[7]).to.be.closeTo(strategyData[7], strategyData3[7].div(100));
         expect(await reserveAssetContract.balanceOf(garden.address)).to.be.gte(amount);
       });
+    });
+  });
+  describe('Contributor share', async function () {
+    it('getPriorBalance is zero if just deposited to avoid flash loans', async function () {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.number),
+      ).to.be.equal(eth('0'));
+    });
+    it('getPriorBalance is the balance the next block after depositing', async function () {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.number),
+      ).to.be.equal(eth('0'));
+      await increaseBlock(1);
+      const block2 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.number),
+      ).to.be.equal(eth('1'));
+    });
+    it('getPriorBalance and getCurrentBalance are giving the right balance for each deposits', async function () {
+      const block = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.number),
+      ).to.be.equal(eth('0'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('0'));
+      // 1st deposit
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block2 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.number),
+      ).to.be.equal(eth('0'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await increaseBlock(1);
+      const block3 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.number),
+      ).to.be.equal(eth('1'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      // 2nd deposit
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block4 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.number),
+      ).to.be.equal(eth('1'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await increaseBlock(1);
+      const block5 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.number),
+      ).to.be.equal(eth('2'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+    });
+    it('getPriorBalance and getCurrentBalance can back to the future in a deterministic way ;)', async function () {
+      const block1 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.number),
+      ).to.be.equal(eth('0'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('0'));
+      // 1st deposit
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block2 = await ethers.provider.getBlock();
+      // flashloan protection worked
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.number),
+      ).to.be.equal(eth('0'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await increaseBlock(1);
+      const block3 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.number),
+      ).to.be.equal(eth('1'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      // 2nd deposit
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
+      });
+      const block4 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.number),
+      ).to.be.equal(eth('1'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await increaseBlock(1);
+      const block5 = await ethers.provider.getBlock();
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.number),
+      ).to.be.equal(eth('2'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await increaseBlock(20);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      // We now check past blocks
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.number),
+      ).to.be.equal(eth('0'));
+      // As we are in the future, flashloan protection still works
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.number - 1),
+      ).to.be.equal(eth('0'));
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.number),
+      ).to.be.equal(eth('0'));
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.number),
+      ).to.be.equal(eth('1'));
+      // As we are in the future, flashloan protection still works
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.number),
+      ).to.be.equal(eth('1'));
+      await expect(
+        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.number),
+      ).to.be.equal(eth('2'));
+      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
     });
   });
 
