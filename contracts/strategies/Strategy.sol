@@ -203,7 +203,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 private endingGardenSupply; // garden token supply when strategy starts
+    uint256 private endingGardenSupply; // garden token supply when strategy ends
 
     // Voters mapped to their votes.
     mapping(address => int256) private votes;
