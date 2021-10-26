@@ -200,12 +200,12 @@ contract DepositVaultOperation is Operation {
         // their underlying protocols, e.g., stETH/Lido
         uint256 pricePerShare = _getPrice(vault, vaultAsset);
         // if failed to fetch price from Oracle get it from the underlying protocol
-        if(pricePerShare == 0) {
-          pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
-          // Normalization of pricePerShare
-          pricePerShare = pricePerShare.mul(
-              10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-          );
+        if (pricePerShare == 0) {
+            pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
+            // Normalization of pricePerShare
+            pricePerShare = pricePerShare.mul(
+                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+            );
         }
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
