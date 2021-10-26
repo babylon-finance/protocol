@@ -251,16 +251,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _initialContribution,
         bool[] memory _publicGardenStrategistsStewards
     ) public payable override initializer {
-        _require(bytes(_name).length < 50 && bytes(_symbol).length > 0, Errors.NAME_TOO_LONG);
-        _require(
-            _creator != address(0) &&
-                _controller != address(0) &&
-                _reserveAsset != address(0) &&
-                ERC20Upgradeable(_reserveAsset).decimals() > 0,
-            Errors.ADDRESS_IS_ZERO
-        );
-        _require(_gardenParams.length == 10, Errors.GARDEN_PARAMS_LENGTH);
-        _require(IBabController(_controller).isValidReserveAsset(_reserveAsset), Errors.MUST_BE_RESERVE_ASSET);
         __ERC20_init(_name, _symbol);
 
         controller = _controller;
@@ -373,7 +363,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 signer,
                 _mintNft,
                 _pricePerShare,
-                minContribution.sub(_fee)
+                minContribution > _fee ? minContribution.sub(_fee) : 0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
@@ -391,11 +381,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   it will be applied regardless of the garden state.
      *   It is advised to first try to withdraw with no penalty and it this
      *   reverts then try to with penalty.
-     * @param _amountIn           Quantity of the garden token to withdrawal
+     * @param _amountIn         Quantity of the garden token to withdrawal
      * @param _minAmountOut     Min quantity of reserve asset to receive
-     * @param _to                            Address to send component assets to
-     * @param _withPenalty                   Whether or not this is an immediate withdrawal
-     * @param _unwindStrategy                Strategy to unwind
+     * @param _to               Address to send component assets to
+     * @param _withPenalty      Whether or not this is an immediate withdrawal
+     * @param _unwindStrategy   Strategy to unwind
      */
     function withdraw(
         uint256 _amountIn,
@@ -420,7 +410,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _withPenalty,
             _unwindStrategy,
             pricePerShare,
-            _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0
+            _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0,
+            0
         );
     }
 
@@ -467,31 +458,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce, _maxFee, _withPenalty, v, r, s);
 
-        // If a Keeper fee is greater than zero then reduce user shares to
-        // exchange and pay keeper the fee.
-        if (_fee > 0) {
-            _withdrawInternalWithFee(
-                _amountIn,
-                _minAmountOut,
-                _maxFee,
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare,
-                _strategyNAV,
-                _fee,
-                signer
-            );
-        } else {
-            _withdrawInternal(
-                _amountIn,
-                _minAmountOut,
-                payable(signer),
-                _withPenalty,
-                _unwindStrategy,
-                _pricePerShare,
-                _strategyNAV
-            );
-        }
+        _withdrawInternal(
+            _amountIn,
+            _minAmountOut.sub(_maxFee),
+            payable(signer),
+            _withPenalty,
+            _unwindStrategy,
+            _pricePerShare,
+            _strategyNAV,
+            _fee
+        );
     }
 
     /**
@@ -640,7 +616,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
         bytes calldata _opEncodedDatas
-    ) external override nonReentrant {
+    ) external override {
         _onlyUnpaused();
         _onlyContributor();
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
@@ -667,7 +643,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *
      * @param _capital        Amount of capital to allocate to the strategy
      */
-    function allocateCapitalToStrategy(uint256 _capital) external override nonReentrant {
+    function allocateCapitalToStrategy(uint256 _capital) external override {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
@@ -882,8 +858,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         depositHardlock = _depositHardlock;
     }
 
-    function _reserveToShares(uint256 _amount, uint256 _pricePerShare) internal view returns (uint256) {
-        return _amount.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+    function _sharesToReserve(uint256 _shares, uint256 _pricePerShare) internal view returns (uint256) {
+        // in case of USDC that would with 6 decimals
+        return _shares.preciseMul(_pricePerShare).preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
+    }
+
+    function _reserveToShares(uint256 _reserve, uint256 _pricePerShare) internal view returns (uint256) {
+        return _reserve.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
     }
 
     function _withdrawInternal(
@@ -893,22 +874,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _withPenalty,
         address _unwindStrategy,
         uint256 _pricePerShare,
-        uint256 _strategyNAV
+        uint256 _strategyNAV,
+        uint256 _fee
     ) internal {
         _onlyUnpaused();
         _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
-        uint256 previousBalance = balanceOf(_to);
+
+        uint256 prevBalance = balanceOf(_to);
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
-        _require(_amountIn <= previousBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
-        // this value would have 18 decimals even for USDC
-        uint256 amountOutNormalized = _amountIn.preciseMul(_pricePerShare);
-        // in case of USDC that would with 6 decimals
-        uint256 amountOut = amountOutNormalized.preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
+        // any amountIn higher than user balance is treated as withdrawAll
+        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))
+            ? prevBalance.sub(getLockedBalance(_to))
+            : _amountIn;
+        _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+
+        uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
+
         // if withPenaltiy then unwind strategy
-        if (_withPenalty) {
+        if (_withPenalty && !(liquidReserve() >= amountOut)) {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
@@ -921,40 +907,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
-        // We need previous supply before minting new tokens to get accurate rewards calculations
-        uint256 previousSupply = totalSupply();
+
+        // We need previous supply before burning new tokens to get accurate rewards calculations
+        uint256 prevSupply = totalSupply();
         _burn(_to, _amountIn);
-        _safeSendReserveAsset(_to, amountOut);
-        _updateContributorWithdrawalInfo(_to, amountOut, previousBalance, previousSupply, _amountIn);
+        _safeSendReserveAsset(_to, amountOut.sub(_fee));
+        if (_fee > 0) {
+            // If fee > 0 pay Accountant
+            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+        }
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, prevSupply, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
-    }
-
-    function _withdrawInternalWithFee(
-        uint256 _amountIn,
-        uint256 _minAmountOut,
-        uint256 _maxFee,
-        bool _withPenalty,
-        address _unwindStrategy,
-        uint256 _pricePerShare,
-        uint256 _strategyNAV,
-        uint256 _fee,
-        address _signer
-    ) internal {
-        // account for non 18 decimals ERC20
-        uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
-        _withdrawInternal(
-            _amountIn.sub(feeShares),
-            _minAmountOut.sub(_maxFee),
-            payable(_signer),
-            _withPenalty,
-            _unwindStrategy,
-            _pricePerShare,
-            _strategyNAV
-        );
-        // burn shares paid to Keeper
-        _burn(_signer, feeShares);
-        IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
     }
 
     function _getWithdrawSigner(
@@ -1072,7 +1036,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
         if (reserveAsset == WETH) {
             // Check that the withdrawal is possible
-            // Unwrap WETH if ETH balance lower than netFlowQuantity
+            // Unwrap WETH if ETH balance lower than amount
             if (address(this).balance < _amount) {
                 IWETH(WETH).withdraw(_amount.sub(address(this).balance));
             }
@@ -1120,13 +1084,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _updateContributorWithdrawalInfo(
         address _contributor,
-        uint256 _netflowQuantity,
+        uint256 _amountOut,
         uint256 _previousBalance,
         uint256 _previousSupply,
         uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
-        // If sold everything
+        // If withdrawn everything
         if (balanceOf(_contributor) == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
@@ -1134,10 +1098,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.totalDeposits = 0;
             totalContributors = totalContributors.sub(1);
         } else {
-            contributor.withdrawnSince = contributor.withdrawnSince.add(_netflowQuantity);
+            contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
-        // uint256 gasSpent = gasleft();
-        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        // We need to update at Rewards Distributor SC for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
@@ -1190,4 +1153,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV13 is Garden {}
+contract GardenV14 is Garden {}
