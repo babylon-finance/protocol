@@ -171,7 +171,14 @@ describe('deploy', function () {
         console.log(
           `Garden ${await gardenContract.name()} ${garden} has NAV $${ethers.utils.formatUnits(gardenNAV, 'ether')}`,
         );
-        expect(gardenNAV).to.closeTo(gardensNAV[garden], eth());
+        try {
+          expect(gardenNAV).to.closeTo(gardensNAV[garden], eth());
+        } catch (e) {
+          console.log(e.message);
+          console.log(`the diff is $${ethers.utils.formatUnits(gardensNAV[garden].sub(gardenNAV), 'ether')}`);
+        }
+        // console.log('gardenNAV', gardenNAV.toString());
+        // console.log('gardensNAV[garden]', gardensNAV[garden].toString());
       }
     });
 

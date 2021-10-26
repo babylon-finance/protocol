@@ -6,6 +6,18 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'WETH->wstETH',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.wstETH,
+    value: from('1006074239866975462'),
+  },
+  {
+    name: 'WETH->stETH',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.stETH,
+    value: from('1006074239866975462'),
+  },
+  {
     name: 'DPI->USDC',
     tokenIn: addresses.tokens.DPI,
     tokenOut: addresses.tokens.USDC,
