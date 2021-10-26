@@ -195,7 +195,14 @@ contract DepositVaultOperation is Operation {
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
+        // try to get price of an investment token from Oracle
+        // markets sometimes price assets differently than
+        // their underlying protocols, e.g., stETH/Lido
+        uint256 pricePerShare = _getPrice(vaultAsset, vault);
+        // if failed to fetch price from Oracle get it from the underlying protocol
+        if(pricePerShare == 0) {
+          pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
+        }
         // Normalization of pricePerShare
         pricePerShare = pricePerShare.mul(
             10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
