@@ -187,7 +187,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 power; // Contributor power
     }
     struct Checkpoints {
-        uint256 fromBlock; // checkpoint block number
+        uint256 fromTime; // checkpoint block timestamp
         uint256 userTokens; // User garden tokens in the checkpoint
         uint256 supply; // Total supply in the checkpoint
         uint256 gardenLastDepositAt; // DEPRECATED
@@ -589,28 +589,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      *
      * @param _garden       Address of the garden
      * @param _contributor  Address of the contributor
-     * @param _blockNumber  Block to get token power at
+     * @param _blockTime  Block timestamp to get token power at
      * @return Token power for an account at specific block
      */
     function getPriorBalance(
         address _garden,
         address _contributor,
-        uint256 _blockNumber
+        uint256 _blockTime
     ) public view virtual override returns (uint256) {
         // flashloan protection along the time
-        _blockNumber = _blockNumber > 0 ? _blockNumber.sub(1) : _blockNumber; // avoid underflows
+        _blockTime = _blockTime.sub(1);
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
         if (nCheckpoints == 0) {
             return 0;
         }
 
         // First check most recent balance
-        if (userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromBlock <= _blockNumber) {
+        if (userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime <= _blockTime) {
             return userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens;
         }
 
         // Next check implicit zero balance
-        if (userCheckpoints[_garden][_contributor][0].fromBlock > _blockNumber) {
+        if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime) {
             return 0;
         }
 
@@ -619,9 +619,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
             Checkpoints memory cp = userCheckpoints[_garden][_contributor][center];
-            if (cp.fromBlock == _blockNumber) {
+            if (cp.fromTime == _blockTime) {
                 return cp.userTokens;
-            } else if (cp.fromBlock < _blockNumber) {
+            } else if (cp.fromTime < _blockTime) {
                 lower = center;
             } else {
                 upper = center - 1;
@@ -772,9 +772,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
-        // strategyDetails[12]: endBlock
-        // strategyDetails[13]: gardenSupply
-        // strategyDetails[14]: startingBlock
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -828,13 +827,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _newBalance,
         uint256 _newSupply
     ) internal {
-        uint256 blockNumber = block.number;
+        uint256 blockTime = block.timestamp;
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
-        if (nCheckpoints > 0 && userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromBlock == blockNumber) {
+        if (nCheckpoints > 0 && userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime == blockTime) {
             userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens = _newBalance;
             userCheckpoints[_garden][_contributor][nCheckpoints - 1].supply = _newSupply;
         } else {
-            userCheckpoints[_garden][_contributor][nCheckpoints] = Checkpoints(blockNumber, _newBalance, _newSupply, 0);
+            userCheckpoints[_garden][_contributor][nCheckpoints] = Checkpoints(blockTime, _newBalance, _newSupply, 0);
             numCheckpoints[_garden][_contributor] = nCheckpoints + 1;
         }
     }
@@ -1296,9 +1295,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
-        // strategyDetails[12]: endBlock
-        // strategyDetails[13]: gardenSupply
-        // strategyDetails[14]: startingBlock
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -1309,7 +1307,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorShare =
-                getPriorBalance(_garden, _contributor, strategyDetails[12]).preciseDiv(strategyDetails[13]);
+                getPriorBalance(_garden, _contributor, strategyDetails[1]).preciseDiv(
+                    strategyDetails[13] > 0 ? strategyDetails[13] : ERC20(_garden).totalSupply()
+                );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
