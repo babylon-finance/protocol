@@ -1647,14 +1647,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 } else if (i > 0 && i.add(1) < _numQuarters && lastQuarter <= _startingQuarter.add(i)) {
                     // We are updating an intermediate quarter
                     // Should have 0 inside before updating
-                    _powerToUpdate[i] = powerDebt.mul(EPOCH_DURATION).div(timeDiff);
+                    _powerToUpdate[i] = _powerToUpdate[i].add(powerDebt.mul(EPOCH_DURATION).div(timeDiff));
                 } else if (_startingQuarter.add(i) == currentQuarter) {
                     // We are updating the current quarter of this strategy checkpoint or the last to update
                     // It can be a multiple quarter strategy or the only one that need proportional time
-                    // Should have 0 inside before updating
-                    _powerToUpdate[i] = powerDebt.mul(block.timestamp.sub(slotEnding.sub(EPOCH_DURATION))).div(
-                        timeDiff
-                    );
+                    if (lastQuarter == currentQuarter) {
+                        // Just add the powerDebt being in the same epoch, no need to get proportional
+                        _powerToUpdate[i] = _powerToUpdate[i].add(powerDebt);
+                    } else {
+                        // should have 0 inside before updating in case of different epoch since last update
+                        _powerToUpdate[i] = _powerToUpdate[i].add(
+                            powerDebt.mul(block.timestamp.sub(slotEnding.sub(EPOCH_DURATION))).div(timeDiff)
+                        );
+                    }
                 }
             }
         }

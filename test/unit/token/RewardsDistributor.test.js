@@ -354,6 +354,38 @@ describe('RewardsDistributor', function () {
       expect(rewards).to.be.closeTo(estimatedBABL3, estimatedBABL3.div(50)); // 2%
       expect(estimatedBABL4).to.be.equal(0);
     });
+    it('should estimate BABL rewards correctly in case of 2 strategies one starting after the first one', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      const estimatedBABL1Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedBABL2Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      await executeStrategy(long2, ONE_ETH);
+      const estimatedBABL3Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL3Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedBABL4Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL4Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedBABL5Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL5Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      const rewardsLong1 = await long1.strategyRewards();
+      const rewardsLong2 = await long2.strategyRewards();
+      expect(estimatedBABL4Long1).to.be.gt(estimatedBABL3Long1);
+      expect(estimatedBABL4Long1).to.be.gt(estimatedBABL4Long2);
+
+      expect(estimatedBABL3Long1).to.be.gt(estimatedBABL2Long1);
+      expect(estimatedBABL3Long1).to.be.gt(estimatedBABL3Long2);
+      expect(estimatedBABL2Long1).to.be.gt(estimatedBABL1Long1);
+      expect(rewardsLong1).to.be.closeTo(estimatedBABL4Long1, estimatedBABL4Long1.div(50)); // 2%
+      expect(rewardsLong2).to.be.closeTo(estimatedBABL4Long2, estimatedBABL4Long2.div(50)); // 2%
+      expect(rewardsLong1).to.be.gt(rewardsLong2);
+
+      expect(estimatedBABL5Long1).to.be.equal(0);
+      expect(estimatedBABL5Long2).to.be.equal(0);
+    });
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
       await executeStrategy(long, ONE_ETH);
