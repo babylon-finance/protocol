@@ -575,7 +575,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         override
         returns (uint256[] memory, bool[] memory)
     {
-        uint256[] memory miningData = new uint256[](10);
+        uint256[] memory miningData = new uint256[](11);
         bool[] memory miningBool = new bool[](2);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
@@ -587,6 +587,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
         miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
+        (, , , , , , miningData[10]) = IStrategy(_strategy).getStrategyState();
         miningBool[0] = isProtocolPerQuarter[_quarterNum];
         miningBool[1] = strategyPerQuarter[_strategy][_quarterNum].initialized;
 
