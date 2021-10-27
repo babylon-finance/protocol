@@ -198,12 +198,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 private minRebalanceCapital; // DEPRECATED
+    uint256 private startingGardenSupply; // garden token supply when strategy starts
     address[] private tokensNeeded; // Not used anymore
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 private rewardsTotalOverhead; // DEPRECATED
+    uint256 private endingGardenSupply; // garden token supply when strategy ends
 
     // Voters mapped to their votes.
     mapping(address => int256) private votes;
@@ -398,6 +398,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
+        // Checkpoint of garden supply
+        endingGardenSupply = IERC20(address(garden)).totalSupply();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -637,7 +639,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](12);
+        uint256[] memory data = new uint256[](14);
         bool[] memory boolData = new bool[](2);
 
         data[0] = executedAt;
@@ -654,6 +656,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         boolData[1] = capitalReturned >= data[8] ? true : false;
         data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        data[12] = startingGardenSupply;
+        data[13] = endingGardenSupply;
         return (strategist, data, boolData);
     }
 
@@ -813,6 +817,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
+            // Checkpoint of garden supply at start
+            startingGardenSupply = IERC20(address(garden)).totalSupply();
         }
         rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
