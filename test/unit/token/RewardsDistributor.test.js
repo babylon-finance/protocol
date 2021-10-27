@@ -1439,7 +1439,7 @@ describe('RewardsDistributor', function () {
       });
     });
   });
-  describe.only('Deterministic contributor balance along the time', async function () {
+  describe('Deterministic contributor balance along the time', async function () {
     it('getPriorBalance is zero if just deposited to avoid flash loans', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),

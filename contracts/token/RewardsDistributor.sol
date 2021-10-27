@@ -573,7 +573,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     } */
 
     /**
-     * GOVERNANCE FUNCTION. Check garden tokens balance of a user in a garden
+     * Check garden tokens balance of a user in a garden
      *
      * @param _garden       Address of the garden
      * @param _contributor  Address of the contributor
@@ -581,11 +581,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function getCurrentBalance(address _garden, address _contributor) public view virtual override returns (uint256) {
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
-        return nCheckpoints > 0 ? userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens : 0;
+        // Backward compatible
+        return
+            nCheckpoints > 0
+                ? userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens
+                : ERC20(_garden).balanceOf(_contributor);
     }
 
     /**
-     * GOVERNANCE FUNCTION. Get token power at a specific block for an account
+     * Get token power at a specific block for an account
      *
      * @param _garden       Address of the garden
      * @param _contributor  Address of the contributor
@@ -600,20 +604,30 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // flashloan protection along the time
         _blockTime = _blockTime.sub(1);
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
-        if (nCheckpoints == 0) {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        bool notBetaUser = contributor.initialDepositAt == 0 || contributor.initialDepositAt > _blockTime;
+        bool betaUser = contributor.initialDepositAt <= _blockTime && contributor.initialDepositAt > 0;
+        if (nCheckpoints == 0 && notBetaUser) {
             return 0;
+        } else if (nCheckpoints == 0 && betaUser) {
+            // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
+            ERC20(_garden).balanceOf(_contributor);
         }
-
+        // There are at least one checkpoint
         // First check most recent balance
         if (userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime <= _blockTime) {
             return userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens;
         }
 
         // Next check implicit zero balance
-        if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime) {
+        if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime && notBetaUser) {
+            // backward compatible
             return 0;
+        } else if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime && betaUser) {
+            // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
+            ERC20(_garden).balanceOf(_contributor);
         }
-
+        // It has more checkpoints but the time is between different checkpoints, we look for it
         uint256 lower = 0;
         uint256 upper = nCheckpoints - 1;
         while (upper > lower) {
