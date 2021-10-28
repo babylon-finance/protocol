@@ -76,9 +76,25 @@ interface IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _blockNumber
-    ) external view virtual returns (uint256);
+    )
+        external
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function getCurrentBalance(address _garden, address _contributor) external view virtual returns (uint256);
+    function getCurrentBalance(address _garden, address _contributor)
+        external
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
     /* ============ External Functions ============ */
 

@@ -759,7 +759,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        uint256 contributorCurrentBalance = rewardsDistributor.getCurrentBalance(address(this), _contributor);
+        (, uint256 contributorCurrentBalance, ) = rewardsDistributor.getCurrentBalance(address(this), _contributor);
 
         uint256 balance = balanceOf(_contributor);
         uint256 lockedBalance = getLockedBalance(_contributor);
