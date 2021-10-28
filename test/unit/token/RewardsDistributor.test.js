@@ -1446,7 +1446,7 @@ describe('RewardsDistributor', function () {
       });
       const block = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
       ).to.be.equal(eth('0'));
     });
     it('getPriorBalance is the balance the next block after depositing', async function () {
@@ -1455,57 +1455,69 @@ describe('RewardsDistributor', function () {
       });
       const block = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
       ).to.be.equal(eth('0'));
       await increaseBlock(1);
       const block2 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
       ).to.be.equal(eth('1'));
     });
     it('getPriorBalance and getCurrentBalance are giving the right balance for each deposits', async function () {
       const block = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
       ).to.be.equal(eth('0'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('0'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('0'),
+      );
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
       ).to.be.equal(eth('0'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('1'),
+      );
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
       ).to.be.equal(eth('1'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('1'),
+      );
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
       ).to.be.equal(eth('1'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('2'),
+      );
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
       ).to.be.equal(eth('2'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('2'),
+      );
     });
     it('getPriorBalance and getCurrentBalance can back to the future in a deterministic way ;)', async function () {
       const block1 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp))[1],
       ).to.be.equal(eth('0'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('0'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('0'),
+      );
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
@@ -1513,54 +1525,64 @@ describe('RewardsDistributor', function () {
       const block2 = await ethers.provider.getBlock();
       // flashloan protection worked
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
       ).to.be.equal(eth('0'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('1'),
+      );
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
       ).to.be.equal(eth('1'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('1'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('1'),
+      );
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
       ).to.be.equal(eth('1'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('2'),
+      );
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
       ).to.be.equal(eth('2'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('2'),
+      );
       await increaseBlock(20);
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
       // We now check past blocks
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp))[1],
       ).to.be.equal(eth('0'));
       // As we are in the future, flashloan protection still works
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp - 1),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp - 1))[1],
       ).to.be.equal(eth('0'));
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
       ).to.be.equal(eth('0'));
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
       ).to.be.equal(eth('1'));
       // As we are in the future, flashloan protection still works
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
       ).to.be.equal(eth('1'));
       await expect(
-        await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp),
+        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
       ).to.be.equal(eth('2'));
-      await expect(await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address)).to.be.equal(eth('2'));
+      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
+        eth('2'),
+      );
     });
   });
 
