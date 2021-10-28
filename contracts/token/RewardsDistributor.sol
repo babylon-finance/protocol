@@ -611,7 +611,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return 0;
         } else if (nCheckpoints == 0 && betaUser) {
             // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
-            ERC20(_garden).balanceOf(_contributor);
+            return ERC20(_garden).balanceOf(_contributor);
         }
         // There are at least one checkpoint
         // First check most recent balance
@@ -625,7 +625,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return 0;
         } else if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime && betaUser) {
             // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
-            ERC20(_garden).balanceOf(_contributor);
+            return ERC20(_garden).balanceOf(_contributor);
         }
         // It has more checkpoints but the time is between different checkpoints, we look for it
         uint256 lower = 0;
