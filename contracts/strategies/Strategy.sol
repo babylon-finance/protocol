@@ -398,8 +398,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
-        // Checkpoint of garden supply
-        endingGardenSupply = IERC20(address(garden)).totalSupply();
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
 
@@ -985,6 +983,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
+        endingGardenSupply = IERC20(address(garden)).totalSupply();
         garden.finalizeStrategy(
             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
             strategyReturns,
