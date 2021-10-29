@@ -2472,18 +2472,20 @@ describe('RewardsDistributor', function () {
       expect((await garden1.balanceOf(signer2.address)).toString()).to.be.equal(signer2GardenBalance);
     });
 
-    it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
+    it.only('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
-
+      console.log('--- AFTER EXECUTION---');
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
+      console.log('--- AFTER FINALIZING LONG 1---');
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
+      console.log('--- GETTING REWARDS OF SIGNER 1 LONG 1 AND LONG 2 THAT HAS NOT FINISHED YET---');
 
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2491,6 +2493,8 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
+      console.log('--- CLAIMING REWARDS OF SIGNER 1 LONG 1 AND LONG 2 THAT HAS NOT FINISHED YET---');
+
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
       expect(signer1Profit.toString()).to.be.closeTo('5983787580486307', ethers.utils.parseEther('0.005'));
@@ -2504,13 +2508,18 @@ describe('RewardsDistributor', function () {
       expect(signer1BABL2.toString()).to.be.equal('0');
       increaseTime(ONE_DAY_IN_SECONDS * 10);
 
+      console.log('--- BEFORE FINALIZING LONG 2---');
+
       await finalizeStrategyAfterQuarter(long2);
+      console.log('--- GETTING REWARDS OF SIGNER 1 LONG 1 ALREADY CLAIMED AND LONG 2 JUST FINISHED---');
+
       const signer1Rewards3 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       const signer1BABL3 = signer1Rewards3[5];
       const signer1Profit3 = signer1Rewards3[6];
+      console.log('--- CLAIMING REWARDS OF SIGNER 1 LONG 1 ALREADY CLAIMED AND LONG 2 JUST FINISHED---');
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all

@@ -838,6 +838,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, _strategy);
+            console.log('contributor share', contributorShare);
             _require(contributorShare <= 1e18, Errors.OVERFLOW_IN_POWER);
             rewards = _getRewardsPerRole(
                 garden,
@@ -889,11 +890,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 endTime = strategyDetails[1] > 0 ? strategyDetails[1] : block.timestamp;
         (uint256 timestamp, uint256 balance, uint256 supply) = getPriorBalance(_garden, _contributor, endTime);
         // Backward compatible
+        console.log('supply before', supply);
+        console.log('checkpoint', timestamp, balance, supply);
         supply = (strategyDetails[1] > 0 && strategyDetails[13] > 0)
             ? strategyDetails[13]
             : (endTime == block.timestamp ? ERC20(_garden).totalSupply() : supply);
+        console.log('supply after', supply);
+        console.log('finished?', strategyDetails[1] > 0);
+        console.log(
+            'finished and has endingGardenSupply',
+            strategyDetails[13],
+            strategyDetails[1] > 0 && strategyDetails[13] > 0
+        );
         // TODO take initial time and make a contributor power
-        return balance.preciseDiv(supply);
+        uint256 share = balance.preciseDiv(supply);
+        return share <= 1e18 ? share : 1e18; // Avoid overflow
     }
 
     /**
@@ -1404,6 +1415,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, _strategy);
+            console.log('contributor share', contributorShare);
+            console.log(
+                'contributor balance is strategist?',
+                ERC20(_garden).balanceOf(_contributor),
+                strategist == _contributor
+            );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
