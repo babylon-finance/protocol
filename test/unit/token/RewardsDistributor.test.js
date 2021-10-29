@@ -1439,150 +1439,471 @@ describe('RewardsDistributor', function () {
       });
     });
   });
-  describe('Deterministic contributor balance along the time', async function () {
+  describe('Deterministic contributor share and balance along the time', async function () {
     it('getPriorBalance is zero if just deposited to avoid flash loans', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
-      ).to.be.equal(eth('0'));
+      const [priorBalance] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block.timestamp,
+      );
+      await expect(priorBalance[8].toString()).to.be.equal(eth('0'));
     });
     it('getPriorBalance is the balance the next block after depositing', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
-      ).to.be.equal(eth('0'));
+      const [priorBalance] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block.timestamp,
+      );
+      await expect(priorBalance[8]).to.be.equal(eth('0'));
       await increaseBlock(1);
       const block2 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
-      ).to.be.equal(eth('1'));
+      const [priorBalance2] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block2.timestamp,
+      );
+      await expect(priorBalance2[8]).to.be.equal(eth('1'));
     });
-    it('getPriorBalance and getCurrentBalance are giving the right balance for each deposits', async function () {
+    it('getPriorBalance is providing the right balance for each deposits', async function () {
       const block = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('0'),
+      const [priorBalance] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block.timestamp,
       );
+      await expect(priorBalance[8]).to.be.equal(eth('0'));
+
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('1'),
+      const [priorBalance2] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block2.timestamp,
       );
+      await expect(priorBalance2[8]).to.be.equal(eth('0'));
+
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('1'),
+      const [priorBalance3] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block3.timestamp,
       );
+      await expect(priorBalance3[8]).to.be.equal(eth('1'));
+
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('2'),
+      const [priorBalance4] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block4.timestamp,
       );
+      await expect(priorBalance4[8]).to.be.equal(eth('1'));
+
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
-      ).to.be.equal(eth('2'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('2'),
+      const [priorBalance5] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block5.timestamp,
       );
+      await expect(priorBalance5[8]).to.be.equal(eth('2'));
     });
-    it('getPriorBalance and getCurrentBalance can back to the future in a deterministic way ;)', async function () {
+    it('getPriorBalance can back to the future in a deterministic way ;)', async function () {
       const block1 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('0'),
+      const [priorBalance1] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block1.timestamp,
       );
+      await expect(priorBalance1[8]).to.be.equal(eth('0'));
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
-      // flashloan protection worked
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('1'),
+      const [priorBalance2] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block2.timestamp,
       );
+      // flashloan protection worked
+      await expect(priorBalance2[8]).to.be.equal(eth('0'));
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('1'),
+      const [priorBalance3] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block3.timestamp,
       );
+      await expect(priorBalance3[8]).to.be.equal(eth('1'));
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('2'),
+      const [priorBalance4] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block4.timestamp,
       );
+      await expect(priorBalance4[8]).to.be.equal(eth('1'));
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
-      ).to.be.equal(eth('2'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('2'),
+      const [priorBalance5] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block5.timestamp,
       );
+      await expect(priorBalance5[8]).to.be.equal(eth('2'));
       await increaseBlock(20);
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
+
       // We now check past blocks
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block1.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      // As we are in the future, flashloan protection still works
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp - 1))[1],
-      ).to.be.equal(eth('0'));
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block2.timestamp))[1],
-      ).to.be.equal(eth('0'));
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block3.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      // As we are in the future, flashloan protection still works
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block4.timestamp))[1],
-      ).to.be.equal(eth('1'));
-      await expect(
-        (await rewardsDistributor.getPriorBalance(garden1.address, signer3.address, block5.timestamp))[1],
-      ).to.be.equal(eth('2'));
-      await expect((await rewardsDistributor.getCurrentBalance(garden1.address, signer3.address))[1]).to.be.equal(
-        eth('2'),
+      const [priorBalance6] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block1.timestamp,
       );
+      await expect(priorBalance6[8]).to.be.equal(eth('0'));
+      // As we are in the future, flashloan protection still works
+      const [priorBalance7] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block1.timestamp - 1,
+      );
+      await expect(priorBalance7[8]).to.be.equal(eth('0'));
+      const [priorBalance8] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block2.timestamp,
+      );
+      await expect(priorBalance8[8]).to.be.equal(eth('0'));
+      const [priorBalance9] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block3.timestamp,
+      );
+      await expect(priorBalance9[8]).to.be.equal(eth('1'));
+      // As we are in the future, flashloan protection still works
+      const [priorBalance10] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block4.timestamp,
+      );
+      await expect(priorBalance10[8]).to.be.equal(eth('1'));
+      const [priorBalance11] = await rewardsDistributor.getContributorPerGarden(
+        garden1.address,
+        signer3.address,
+        block5.timestamp,
+      );
+      await expect(priorBalance11[8]).to.be.equal(eth('2'));
+    });
+    it('getSafeUserSharePerStrategy does consider burned tokens in a non profit strategy', async function () {
+      const [long1, long2, long3, long4] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+      ]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long4, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long1);
+
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      increaseTime(ONE_DAY_IN_SECONDS * 10);
+
+      await finalizeStrategyAfterQuarter(long2);
+      const signer1ShareLong2 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      // It does count penalty for strategist but not for garden supply (only this time)
+      // New strategies will get less supply (the real one)
+      expect(signer1ShareLong2).to.be.lt(signer1ShareLong1);
+      await injectFakeProfits(long3, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long3);
+      const signer1ShareLong3 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      expect(signer1ShareLong3).to.be.gt(signer1ShareLong2); // a bit
+      await injectFakeProfits(long4, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long4);
+      const signer1ShareLong4 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+      expect(signer1ShareLong4).to.be.equal(signer1ShareLong3); // just a bit
+    });
+    it('getSafeUserSharePerStrategy is deterministic despite we are in the future', async function () {
+      const [long1, long2, long3, long4] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+      ]);
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long4, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long1);
+
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      increaseTime(ONE_DAY_IN_SECONDS * 10);
+      await injectFakeProfits(long2, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long2);
+      const signer1ShareLong2 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      // It does count penalty for strategist but not for garden supply (only this time)
+      // New strategies will get less supply (the real one)
+      expect(signer1ShareLong2).to.be.equal(signer1ShareLong1);
+      await injectFakeProfits(long3, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long3);
+      const signer1ShareLong3 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      expect(signer1ShareLong3).to.be.equal(signer1ShareLong2);
+      await injectFakeProfits(long4, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long4);
+      const signer1ShareLong4 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+      expect(signer1ShareLong4).to.be.equal(signer1ShareLong3);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const signer1ShareLong12 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer1ShareLong22 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      const signer1ShareLong32 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      const signer1ShareLong42 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+
+      expect(signer1ShareLong12).to.be.equal(signer1ShareLong1);
+      expect(signer1ShareLong22).to.be.equal(signer1ShareLong2);
+      expect(signer1ShareLong32).to.be.equal(signer1ShareLong3);
+      expect(signer1ShareLong42).to.be.equal(signer1ShareLong4);
+    });
+    it('getSafeUserSharePerStrategy is deterministic but implements a protection mechanism from malicious strategists', async function () {
+      const [long1, long2, long3, long4] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+      ]);
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long4, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long1);
+
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      increaseTime(ONE_DAY_IN_SECONDS * 10);
+
+      await finalizeStrategyAfterQuarter(long2);
+      const signer1ShareLong2 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      // It does count penalty for strategist but not for garden supply (only this time)
+      // New strategies will get less supply (the real one)
+      expect(signer1ShareLong2).to.be.lt(signer1ShareLong1);
+      await injectFakeProfits(long3, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long3);
+      const signer1ShareLong3 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      expect(signer1ShareLong3).to.be.gt(signer1ShareLong2); // a bit
+      await injectFakeProfits(long4, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long4);
+      const signer1ShareLong4 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+      expect(signer1ShareLong4).to.be.equal(signer1ShareLong3);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const signer1ShareLong12 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer1ShareLong22 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      const signer1ShareLong32 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      const signer1ShareLong42 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+
+      // security limit to protect the protocol.
+      // Strategist signer1 executed bad strategies so we cannot give him the checkpoint as it is along the time unless he deposit or withdraw
+      // as burning is done without checkpoints
+      expect(signer1ShareLong12).to.be.lt(signer1ShareLong1);
+      expect(signer1ShareLong22).to.be.equal(signer1ShareLong2);
+      expect(signer1ShareLong32).to.be.equal(signer1ShareLong3);
+      expect(signer1ShareLong42).to.be.equal(signer1ShareLong4);
+      await weth.connect(signer1).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer1).deposit(eth(1), 1, signer1.getAddress(), false);
+      // In the future it might be able to get the same user share that he deserve but will never take it
+      // if running low on garden tokens or it does not create a new checkpoint (deposit or withdrawal)
+      const signer1ShareLong13 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      expect(signer1ShareLong13).to.be.equal(signer1ShareLong1); // Strategist takes what it deserves but need to deposit more to compensate looses
+    });
+    it('getSafeUserSharePerStrategy does consider burned tokens with consecutive non profit strategies', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const [long1, long2, long3, long4] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden1 },
+      ]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long4, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long1);
+
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer2ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer2.address,
+        long1.address,
+      );
+      increaseTime(ONE_DAY_IN_SECONDS * 10);
+
+      await finalizeStrategyAfterQuarter(long2);
+      const signer1ShareLong2 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long2.address,
+      );
+      const signer2ShareLong2 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer2.address,
+        long2.address,
+      );
+      // It does count penalty for strategist but not for garden supply (only this time)
+      // New strategies will get less supply (the real one)
+      expect(signer1ShareLong2).to.be.lt(signer1ShareLong1);
+      // Burning does not affect LP within the same strategy finalization (they do not deserve that)
+      // But there will be less garden supply next time, so its position is growing then from this moment
+      // In contrary, strategist position is the other way around
+      expect(signer2ShareLong2).to.be.equal(signer2ShareLong1);
+
+      await finalizeStrategyAfterQuarter(long3);
+      const signer1ShareLong3 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long3.address,
+      );
+      const signer2ShareLong3 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer2.address,
+        long3.address,
+      );
+      expect(signer1ShareLong3).to.be.lt(signer1ShareLong2);
+      // There are less garden supply and signer 2 has the same tokens than before
+      expect(signer2ShareLong3).to.be.gt(signer2ShareLong2);
+
+      await injectFakeProfits(long4, ONE_ETH.mul(240));
+      await finalizeStrategyAfterQuarter(long4);
+      const signer1ShareLong4 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long4.address,
+      );
+      const signer2ShareLong4 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer2.address,
+        long4.address,
+      );
+      expect(signer1ShareLong4).to.be.gt(signer1ShareLong3); // just a bit
+      // More burning tokens for the strategist in long3 means that LPs has higher % share in long4 finalization than in long3
+      expect(signer2ShareLong4).to.be.gt(signer2ShareLong3);
     });
   });
 
@@ -2472,20 +2793,17 @@ describe('RewardsDistributor', function () {
       expect((await garden1.balanceOf(signer2.address)).toString()).to.be.equal(signer2GardenBalance);
     });
 
-    it.only('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
+    it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
-      console.log('--- AFTER EXECUTION---');
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
-      console.log('--- AFTER FINALIZING LONG 1---');
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
-      console.log('--- GETTING REWARDS OF SIGNER 1 LONG 1 AND LONG 2 THAT HAS NOT FINISHED YET---');
 
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2493,7 +2811,6 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-      console.log('--- CLAIMING REWARDS OF SIGNER 1 LONG 1 AND LONG 2 THAT HAS NOT FINISHED YET---');
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.005'));
@@ -2507,11 +2824,7 @@ describe('RewardsDistributor', function () {
       expect(signer1Profit2.toString()).to.be.equal('0');
       expect(signer1BABL2.toString()).to.be.equal('0');
       increaseTime(ONE_DAY_IN_SECONDS * 10);
-
-      console.log('--- BEFORE FINALIZING LONG 2---');
-
       await finalizeStrategyAfterQuarter(long2);
-      console.log('--- GETTING REWARDS OF SIGNER 1 LONG 1 ALREADY CLAIMED AND LONG 2 JUST FINISHED---');
 
       const signer1Rewards3 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2519,7 +2832,6 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL3 = signer1Rewards3[5];
       const signer1Profit3 = signer1Rewards3[6];
-      console.log('--- CLAIMING REWARDS OF SIGNER 1 LONG 1 ALREADY CLAIMED AND LONG 2 JUST FINISHED---');
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
