@@ -299,15 +299,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             if (_sendToken != WETH) {
                 try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
-                  sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-                } catch {
-                }
+                    sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                } catch {}
             }
             if (_receiveToken != WETH) {
                 try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
-                  return;
-                } catch {
-                }
+                    return;
+                } catch {}
             }
         }
         require(false, 'Master swapper could not swap');
