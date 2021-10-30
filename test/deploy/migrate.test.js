@@ -14,20 +14,28 @@ describe('migrate', function () {
       ({ owner, gardens, distributor } = await deployFixture());
     });
 
-    it('migrates all users for all gardens', async () => {
+    it('migrates RD into checkpoints and it does not affect rewards', async () => {
       console.log(gardens.length);
       console.log(gardens);
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('Garden', garden);
-        console.log(`Migrating garden ${garden} ${await gardenContract.name()}`);
+        console.log(`---------GARDEN ${garden} ${await gardenContract.name()}----------------`);
         const users = (await getUsers(garden)).map((u) => u.address);
-
-        const gasCost = await distributor.connect(owner).estimateGas.migrateBetaUsers(garden, users);
-        console.log('gas cost', gasCost.toString());
-        await distributor.connect(owner).migrateBetaUsers(garden, users);
-        for (const user of users) {
-          const [, beta] = await distributor.getBetaMigration(garden, user);
-          expect(beta).to.eql([true, true]);
+        const strategies = await gardenContract.getFinalizedStrategies();
+        for (const strategy of strategies) {
+          const strategyContract = await ethers.getContractAt('Strategy', strategy);
+          const rewards = await strategyContract.strategyRewards();
+          const strategist = await strategyContract.strategist();
+          if (rewards > 0) {
+            console.log(`-------------STRATEGY GOT REWARDS ${strategy}------------`, rewards.toString());
+            for (const user of users) {
+              const rewards = await distributor.getRewards(garden, user, [strategy]);
+              const isStrategist = strategist.toLowerCase() === user.toLowerCase;
+              console.log('strategist - user', strategist, user);
+              console.log('USER', user, rewards.toString(), isStrategist);
+              // expect(rewards).to.eql([true, true]);
+            }
+          }
         }
       }
     });
