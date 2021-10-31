@@ -298,11 +298,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             if (_sendToken != WETH) {
-                ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2);
-                sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
+                    sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                } catch {}
             }
             if (_receiveToken != WETH) {
-                ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity);
+                try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
+                    return;
+                } catch {}
             }
         }
         require(false, 'Master swapper could not swap');
@@ -399,9 +402,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 return true;
             } catch {
                 if (swapped) {
-                    // TODO: check that there is uni3 liquidity instead
-                    // require(false, 'Uni Swap failed midway');
-                    // Revert
+                    // Undo curve swap to reserve
                     _curveSwap(_strategy, _reserve, _sendToken, diff, 1);
                 }
             }

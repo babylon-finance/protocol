@@ -192,14 +192,21 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
-        // Normalization of pricePerShare
-        pricePerShare = pricePerShare.mul(
-            10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-        );
+        // try to get price of an investment token from Oracle
+        // markets sometimes price assets differently than
+        // their underlying protocols, e.g., stETH/Lido
+        uint256 pricePerShare = _getPrice(vault, vaultAsset);
+        // if failed to fetch price from Oracle get it from the underlying protocol
+        if (pricePerShare == 0) {
+            pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
+            // Normalization of pricePerShare
+            pricePerShare = pricePerShare.mul(
+                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+            );
+        }
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
         uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
