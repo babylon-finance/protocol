@@ -27,9 +27,6 @@ pragma solidity 0.7.6;
 interface IRewardsDistributor {
     /* ========== View functions ========== */
 
-    /*     // solhint-disable-next-line
-    function START_TIME() external view returns (uint256);
- */
     function getStrategyRewards(address _strategy) external view returns (uint96);
 
     function getRewards(
@@ -38,12 +35,6 @@ interface IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view returns (uint256[] memory);
 
-    /*    function getContributorPower(
-        address _garden,
-        address _contributor,
-        uint256 _time
-    ) external view returns (uint256);
- */
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
     function getBABLMiningParameters()
@@ -63,40 +54,15 @@ interface IRewardsDistributor {
         view
         returns (uint256[] memory, bool[] memory);
 
-    /*  function getContributorPerGarden(
-        address _garden,
-        address _contributor,
-        uint256 _timestamp
-    ) external view returns (uint256[] memory, bool[] memory);
- */
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);
 
-    /* function getPriorBalance(
+    function getContributorPerGarden(
         address _garden,
         address _contributor,
-        uint256 _blockNumber
-    )
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256
-        ); */
-    /* 
-    function getCurrentBalance(address _garden, address _contributor)
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        ); */
+        uint256 _time
+    ) external view returns (uint256[] memory);
 
     /* ============ External Functions ============ */
 
