@@ -27,9 +27,9 @@ pragma solidity 0.7.6;
 interface IRewardsDistributor {
     /* ========== View functions ========== */
 
-    // solhint-disable-next-line
+    /*     // solhint-disable-next-line
     function START_TIME() external view returns (uint256);
-
+ */
     function getStrategyRewards(address _strategy) external view returns (uint96);
 
     function getRewards(
@@ -63,12 +63,12 @@ interface IRewardsDistributor {
         view
         returns (uint256[] memory, bool[] memory);
 
-    function getContributorPerGarden(
+    /*  function getContributorPerGarden(
         address _garden,
         address _contributor,
         uint256 _timestamp
     ) external view returns (uint256[] memory, bool[] memory);
-
+ */
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);
