@@ -16,8 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-/* import 'hardhat/console.sol';
- */
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -635,7 +633,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, _strategy);
-            // console.log('contributor share', contributorShare);
             _require(contributorShare <= 1e18, Errors.OVERFLOW_IN_POWER);
             rewards = _getRewardsPerRole(
                 garden,
@@ -1163,7 +1160,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _time
     ) internal view returns (uint256) {
-        // console.log('contributor power', _time);
         // Check to avoid out of bounds
         uint256[] memory powerData = new uint256[](10);
         // powerData[0]: lastDepositAt (contributor)
@@ -1308,12 +1304,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, _strategy);
-            // console.log('contributor share', contributorShare);
-            /* console.log(
-                'contributor balance is strategist?',
-                ERC20(_garden).balanceOf(_contributor),
-                strategist == _contributor
-            ); */
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
