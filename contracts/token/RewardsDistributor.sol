@@ -332,7 +332,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
-        _writeCheckpoint(_garden, _contributor, newBalance, newSupply, _previousBalance);
+        if (newBalance == 0) {
+            // By deleting all checkpoints, we will override them if the user join again sometime after
+            numCheckpoints[_garden][_contributor] = 0;
+        } else {
+            _writeCheckpoint(_garden, _contributor, newBalance, newSupply, _previousBalance);
+        }
     }
 
     /**
@@ -1224,27 +1229,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Take the closest position prior to _endTime
         (uint256 timestamp, uint256 balanceEnd, uint256 supplyEnd) = _getPriorBalance(_garden, _contributor, endTime);
         // If it finished already and has garden supply checkpoint, then use it
-        // If has not finished yet, use current totalSupply
+        // If it has not finished yet, use current totalSupply
         // If it is an old strategy w/o the garden supply checkpoint, trust getPriorBalance supply guessing
         uint256 finalSupplyEnd =
             (strategyDetails[1] > 0 && strategyDetails[13] > 0)
                 ? strategyDetails[13]
                 : (endTime == block.timestamp ? ERC20(_garden).totalSupply() : supplyEnd);
         // Security check (avoid flashloans and other position attacks depositing after half of the period)
-        uint256 startTime = strategyDetails[0] > 0 ? strategyDetails[0] : block.timestamp;
-        uint256 threshold = startTime.add(endTime.sub(startTime).div(2));
-        if (timestamp > threshold) {
+        uint256 startTime = strategyDetails[0];
+        // uint256 threshold = startTime.add(endTime.sub(startTime).div(2));
+        if (timestamp > startTime) {
+            // If the balance fluctuated during the strategy duration we take proportional start vs end
             // Take the last position closest to _startTime
             (, uint256 balanceStart, ) = _getPriorBalance(_garden, _contributor, startTime);
-            // We take the minimum position and override it except if it was the first deposit
-            // If first deposit we just take the average
-            balanceEnd = balanceStart < balanceEnd
-                ? (
-                    balanceStart == 0
-                        ? balanceEnd.preciseMul(endTime.sub(threshold).preciseDiv(endTime.sub(startTime)))
-                        : balanceStart
-                )
-                : balanceEnd;
+            // We take proportional
+            balanceEnd = (balanceStart.mul(timestamp.sub(startTime)).add(balanceEnd.mul(endTime.sub(timestamp)))).div(
+                endTime.sub(startTime)
+            );
         }
         return balanceEnd.preciseDiv(finalSupplyEnd) <= 1e18 ? balanceEnd.preciseDiv(finalSupplyEnd) : 1e18; // Avoid overflow
     }

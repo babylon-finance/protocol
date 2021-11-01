@@ -1647,6 +1647,180 @@ describe('RewardsDistributor', function () {
       );
       await expect(priorBalance11[9]).to.be.equal(eth('2'));
     });
+    it('getSafeUserSharePerStrategy if deposit was before strategy start', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await executeStrategy(long1, ONE_ETH);
+      await increaseTime(ONE_DAY_IN_SECONDS * 15);
+      await finalizeStrategyAfterQuarter(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.equal(precalculatedSigner3Share);
+    });
+    it('getSafeUserSharePerStrategy if deposit was after the strategy starts (a quarter of strategy duration)', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await executeStrategy(long1, ONE_ETH);
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.mul(3).div(4), eth('0.001'));
+    });
+    it('getSafeUserSharePerStrategy if deposit was after the strategy starts (half of strategy duration)', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await executeStrategy(long1, ONE_ETH);
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await finalizeStrategyImmediate(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(2), eth('0.0001'));
+    });
+    it('getSafeUserSharePerStrategy if deposit was after the strategy starts (3/4 of strategy duration)', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await executeStrategy(long1, ONE_ETH);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      await finalizeStrategyImmediate(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(4), eth('0.0001'));
+    });
+    it('getSafeUserSharePerStrategy gets prox to 0 if deposit was just before the end of the strategy', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await executeStrategy(long1, ONE_ETH);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await finalizeStrategyImmediate(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      // const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
+    });
+    it.only('getSafeUserSharePerStrategy gets prox to 0 if deposit just during start and finalization', async function () {
+      const token = addresses.tokens.WETH;
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      await transferFunds(token);
+      await weth.connect(signer3).approve(garden1.address, eth(5), { gasPrice: 0 });
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await executeStrategy(long1, ONE_ETH);
+      // Quick in and out
+      await increaseTime(5);
+      await garden1
+        .connect(signer3)
+        .withdraw(await garden1.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO, {
+          gasPrice: 0,
+        });
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
+      await finalizeStrategyImmediate(long1);
+      const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer1.address,
+        long1.address,
+      );
+      const signer3ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      // Withdraw everything
+      await garden1
+        .connect(signer3)
+        .withdraw(await garden1.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO, {
+          gasPrice: 0,
+        });
+      const signer3ShareLong12 = await rewardsDistributor.getSafeUserSharePerStrategy(
+        garden1.address,
+        signer3.address,
+        long1.address,
+      );
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
+      // After withdrawing everything loose rewards with it
+      expect(signer3ShareLong12).to.be.equal(0);
+    });
     it('getSafeUserSharePerStrategy does consider burned tokens in a non profit strategy', async function () {
       const [long1, long2, long3, long4] = await createStrategies([
         { garden: garden1 },
