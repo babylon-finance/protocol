@@ -105,6 +105,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keccak256(
             'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256,_nonce,uint256 _maxFee,uint256 _withPenalty)'
         );
+    bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
+        keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
 
     /* ============ Structs ============ */
 
@@ -471,35 +473,63 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
+     * @notice
+     *   Exchanges user's gardens shairs for amount in reserve asset. This
+     *   method allows users to leave garden and reclaim their inital investment
+     *   plus profits or losses.
+     * @dev
+     *   Should be called instead of the `withdraw` to save gas due to
+     *   pricePerShare caculated off-chain. Doesn't allow to unwind strategies
+     *   contrary to `withdraw`.
+     *   The Keeper fee is paid out of user's shares.
+     *   The true _minAmountOut is actually _minAmountOut - _maxFee due to the
+     *   Keeper fee.
+     * @param _profits         Profit rewards in reserve asset.
+     * @param _babl            BABL rewards from mining program.
+     * @param _nonce           Current nonce to prevent replay attacks.
+     * @param _maxFee          Max fee user is willing to pay keeper. Fee is
+     *                         substracted from the garden tokens amount. Fee is
+     *                         expressed in reserve asset.
+     * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     */
+    function rewardsBySig(
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _fee,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external nonReentrant {
+        _onlyKeeper();
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+        bytes32 hash =
+            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
+                .toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        _require(signer != address(0) && balanceOf(signer) > 0, Errors.INVALID_SIGNER);
+        // to prevent replay attacks
+        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
+        // If a Keeper fee is greater than zero then reduce user shares to
+        // exchange and pay keeper the fee.
+        if (_fee > 0) {
+            // pay Keeper the fee
+            IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
+        }
+        _sendRewards(payable(signer), _babl, _profits);
+    }
+
+    /**
      * User can claim the rewards from the strategies that his principal
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
-        _onlyUnpaused();
         _onlyContributor();
-        Contributor storage contributor = contributors[msg.sender];
-        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
-        // Flashloan protection
-        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         uint256[] memory rewards = new uint256[](7);
-
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _require(rewards[5] > 0 || rewards[6] > 0, Errors.NO_REWARDS_TO_CLAIM);
-
-        if (rewards[6] > 0) {
-            contributor.claimedRewards = contributor.claimedRewards.add(rewards[6]); // Rewards claimed properly
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(rewards[6]);
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
-            _safeSendReserveAsset(msg.sender, rewards[6]);
-            emit RewardsForContributor(msg.sender, rewards[6]);
-        }
-        if (rewards[5] > 0) {
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
-            // Send BABL rewards
-            uint256 amount = rewardsDistributor.sendTokensToContributor(msg.sender, rewards[5]);
-            contributor.claimedBABL = contributor.claimedBABL.add(amount); // BABL Rewards claimed properly
-            emit BABLRewardsForContributor(msg.sender, amount);
-        }
+        _sendRewards(msg.sender, rewards[5], rewards[6]);
     }
 
     /**
@@ -864,6 +894,33 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     function _reserveToShares(uint256 _reserve, uint256 _pricePerShare) internal view returns (uint256) {
         return _reserve.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
+    }
+
+    function _sendRewards(
+        address _contributor,
+        uint256 _babl,
+        uint256 _profits
+    ) internal {
+        _onlyUnpaused();
+        Contributor storage contributor = contributors[_contributor];
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        // Flashloan protection
+        _require(block.timestamp.sub(contributor.lastDepositAt) > depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        if (_profits > 0) {
+            contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(_profits);
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+            _safeSendReserveAsset(payable(_contributor), _profits);
+            emit RewardsForContributor(_contributor, _profits);
+        }
+        if (_babl > 0) {
+            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+            // Send BABL rewards
+            uint256 amount = rewardsDistributor.sendTokensToContributor(_contributor, _babl);
+            contributor.claimedBABL = contributor.claimedBABL.add(amount); // BABL Rewards claimed properly
+            emit BABLRewardsForContributor(_contributor, amount);
+        }
+        contributor.nonce = contributor.nonce + 1;
     }
 
     function _withdrawInternal(
