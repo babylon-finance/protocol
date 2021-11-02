@@ -96,7 +96,6 @@ interface IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _previousBalance,
-        uint256 _previousSupply,
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;

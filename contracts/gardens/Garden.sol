@@ -759,8 +759,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         )
     {
         Contributor storage contributor = contributors[_contributor];
-        /*         (, uint256 contributorCurrentBalance, , ) = rewardsDistributor.getCurrentBalance(address(this), _contributor);
-         */
         uint256 balance = balanceOf(_contributor);
         uint256 lockedBalance = getLockedBalance(_contributor);
         return (
@@ -774,7 +772,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : 0,
             balance,
             lockedBalance,
-            balance.preciseDiv(totalSupply()),
+            balance.preciseDiv(totalSupply() > 0 ? totalSupply() : 1),
             contributor.nonce
         );
     }
@@ -908,15 +906,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
-        // We need previous supply before burning new tokens to get accurate rewards calculations
-        uint256 prevSupply = totalSupply();
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut.sub(_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
-        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, prevSupply, _amountIn);
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -989,8 +985,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         uint256 previousBalance = balanceOf(_to);
-        uint256 previousSupply = totalSupply();
-
         uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
         uint256 sharesToMint = normalizedAmountIn.preciseDiv(_pricePerShare);
 
@@ -1000,7 +994,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // mint shares
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
-        _updateContributorDepositInfo(_to, previousBalance, _amountIn, previousSupply, sharesToMint);
+        _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1055,7 +1049,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _previousBalance,
         uint256 _reserveAssetQuantity,
-        uint256 _previousSupply,
         uint256 _newTokens
     ) private {
         Contributor storage contributor = contributors[_contributor];
@@ -1073,7 +1066,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             address(this),
             _contributor,
             _previousBalance,
-            _previousSupply,
             _newTokens,
             true // deposit
         );
@@ -1086,7 +1078,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _amountOut,
         uint256 _previousBalance,
-        uint256 _previousSupply,
         uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
@@ -1105,7 +1096,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             address(this),
             _contributor,
             _previousBalance,
-            _previousSupply,
             _tokensToBurn,
             false // withdraw
         );

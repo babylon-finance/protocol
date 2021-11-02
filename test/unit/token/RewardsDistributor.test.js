@@ -1348,11 +1348,11 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14672.595416725612884423');
-      const rewards2 = parse('36098.189612245045417479');
-      const rewards3 = parse('104050.285299975376812724');
-      const rewards4 = parse('117453.651358699424268914');
-      const rewards5 = parse('147527.838230672158239247');
+      const rewards1 = parse('14671.969613046743957495');
+      const rewards2 = parse('36096.953845806641677925');
+      const rewards3 = parse('104047.211350494729542019');
+      const rewards4 = parse('117451.285407629161403613');
+      const rewards5 = parse('147539.387931271969046346');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -1400,11 +1400,11 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15104.657627233425833648');
-      const rewards2 = parse('36098.167962121146321732');
-      const rewards3 = parse('107114.206916726264795904');
-      const rewards4 = parse('120912.200093392037677411');
-      const rewards5 = parse('152349.756980992635780255');
+      const rewards1 = parse('15155.933452641217618416');
+      const rewards2 = parse('36096.937332231609664089');
+      const rewards3 = parse('107479.271390278235568100');
+      const rewards4 = parse('121325.449840546307705846');
+      const rewards5 = parse('152941.315065880026180203');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -1775,7 +1775,7 @@ describe('RewardsDistributor', function () {
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
     });
-    it.only('getSafeUserSharePerStrategy gets prox to 0 if deposit just during start and finalization', async function () {
+    it('getSafeUserSharePerStrategy gets prox to 0 if deposit just during start and finalization', async function () {
       const token = addresses.tokens.WETH;
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
@@ -3244,8 +3244,8 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('11217682606859440', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('2029756396474891', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
