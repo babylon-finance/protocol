@@ -54,6 +54,12 @@ interface IGarden {
 
     function creator() external view returns (address);
 
+    function sendRewards(
+        address _contributor,
+        uint256 _babl,
+        uint256 _profits
+    ) external;
+
     function isGardenStrategy(address _strategy) external view returns (bool);
 
     function getContributor(address _contributor)
@@ -170,8 +176,8 @@ interface IGarden {
         bytes32 s
     ) external;
 
-    function claimReturns(address[] calldata _finalizedStrategies) external;
-
+    /*     function claimReturns(address[] calldata _finalizedStrategies) external;
+     */
     function getLockedBalance(address _contributor) external view returns (uint256);
 
     function updateGardenParams(uint256[9] memory _newParams) external;

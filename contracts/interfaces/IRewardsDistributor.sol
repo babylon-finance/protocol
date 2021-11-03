@@ -66,14 +66,6 @@ interface IRewardsDistributor {
 
     /* ============ External Functions ============ */
 
-    function updateStrategyCheckpoint(
-        address _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) external;
-
-    function sendTokensToContributor(address _to, uint256 _amount) external returns (uint256);
-
     function setProfitRewards(
         address _garden,
         uint256 _strategistShare,
@@ -98,5 +90,13 @@ interface IRewardsDistributor {
         uint256 _previousBalance,
         uint256 _tokenDiff,
         bool _addOrSubstract
+    ) external;
+
+    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
+
+    function claimRewardsBySig(
+        address _to,
+        uint256 _babl,
+        uint256 _profits
     ) external;
 }

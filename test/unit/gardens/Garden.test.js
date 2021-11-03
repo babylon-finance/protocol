@@ -4,20 +4,17 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
 const {
-  NOW,
   PROFIT_STRATEGIST_SHARE,
   PROFIT_STEWARD_SHARE,
   PROFIT_LP_SHARE,
   ONE_DAY_IN_SECONDS,
   ONE_ETH,
   PROTOCOL_FEE,
-  PROFIT_PROTOCOL_FEE,
   GARDEN_PARAMS_STABLE,
   GARDEN_PARAMS,
   ADDRESS_ZERO,
-  ONE_YEAR_IN_SECONDS,
 } = require('lib/constants.js');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { getERC20, from, eth } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
