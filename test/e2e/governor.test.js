@@ -284,7 +284,6 @@ describe('governor', function () {
       }
     }
   });
-
   it('check rebalanced strategies to fix', async function () {
     const owner = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
     const timelockController = await impersonateAddress('0xe6ed0eacb79a6e457416e4df38ed778fd6c6d193');
