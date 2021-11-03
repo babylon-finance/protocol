@@ -201,10 +201,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
     }
 
-    function _onlyContributor(address _contributor) private view {
-        _require(balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
-    }
-
     /**
      * Throws if the sender is not an strategy of this garden
      */
@@ -224,6 +220,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function _onlyKeeper() private view {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
+
+    function _onlyValidSigner(address _signer, uint256 _nonce) private view {
+        // Used in by sig
+        _require(_signer != address(0), Errors.INVALID_SIGNER);
+        // to prevent replay attacks
+        _require(contributors[_signer].nonce == _nonce, Errors.INVALID_NONCE);
     }
 
     /* ============ Constructor ============ */
@@ -483,7 +486,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   The Keeper fee is paid out of user's shares.
      *   The true _minAmountOut is actually _minAmountOut - _maxFee due to the
      *   Keeper fee.
-     * @param _amountIn        Quantity of the garden tokens to burn to pay keeper.
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
      * @param _nonce           Current nonce to prevent replay attacks.
@@ -494,7 +496,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
      */
     function rewardsBySig(
-        uint256 _amountIn,
         uint256 _babl,
         uint256 _profits,
         uint256 _nonce,
@@ -504,20 +505,47 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external nonReentrant {
+    ) external override nonReentrant {
+        _onlyUnpaused();
         _onlyKeeper();
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
         bytes32 hash =
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
-        _require(signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay attacks
-        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
-        // We sent the rewards to the garden user
-        rewardsDistributor.claimRewardsBySig(payable(signer), _babl, _profits);
-        // Then we pay the fee by using garden tokens
-        _withdrawInternal(_amountIn, 0, payable(signer), false, address(0), _pricePerShare, 0, _fee);
+        _rewardsBySigInternal(signer, _nonce, _pricePerShare, _babl, _profits, _fee);
+    }
+
+    function _rewardsBySigInternal(
+        address _signer,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _fee
+    ) internal {
+        _onlyValidSigner(_signer, _nonce);
+        uint256 prevBalance = balanceOf(_signer);
+        _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
+        // Flashloan protection
+        _require(block.timestamp.sub(contributors[_signer].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        // Strategists cannot use locked stake while in active strategies
+        // Fee payment amount has to be equal or less than msg.sender balance minus the locked balance
+        uint256 amountIn = _reserveToShares(_fee, _pricePerShare);
+        _require(amountIn <= prevBalance.sub(getLockedBalance(_signer)), Errors.TOKENS_STAKED);
+        _require(amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
+        _require(reserveAssetRewardsSetAside >= _profits, Errors.MIN_LIQUIDITY);
+        _burn(_signer, amountIn);
+        if (_fee > 0) {
+            // If fee > 0 pay Accountant
+            IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
+        }
+        // We make accounting for token burning as withdrawal
+        _updateContributorWithdrawalInfo(_signer, _fee, prevBalance, amountIn);
+        emit GardenWithdrawal(_signer, _signer, _fee, amountIn, block.timestamp);
+
+        // Once user has paid the fee, we sent the rewards to the garden user
+        rewardsDistributor.claimRewardsBySig(payable(_signer), _babl, _profits);
     }
 
     /**
@@ -636,8 +664,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bytes calldata _opEncodedDatas
     ) external override {
         _onlyUnpaused();
-        _onlyContributor(msg.sender);
-        // _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
         (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
         _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
@@ -891,7 +918,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         _onlyUnpaused();
         _require(IBabController(controller).rewardsDistributor() == msg.sender, Errors.ONLY_RD);
-        _onlyContributor(_contributor);
+        _require(balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         Contributor storage contributor = contributors[_contributor];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
@@ -907,10 +934,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         if (_babl > 0) {
             contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             contributor.claimedBABL = contributor.claimedBABL.add(_babl); // BABL Rewards claimed properly
-            // Check-Effects, Interaction is going to be executed at RD
+            // Check-Effects, Interaction is going to be executed at RD afterwards
             emit BABLRewardsForContributor(_contributor, _babl);
         }
-        contributor.nonce = contributor.nonce + 1;
     }
 
     function _withdrawInternal(
@@ -924,10 +950,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _fee
     ) internal {
         _onlyUnpaused();
-        _require(balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
+        uint256 prevBalance = balanceOf(_to);
+        _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
         _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
-        uint256 prevBalance = balanceOf(_to);
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
@@ -982,9 +1008,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             )
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
-        _require(signer != address(0), Errors.INVALID_SIGNER);
+        _onlyValidSigner(signer, _nonce);
+        /* _require(signer != address(0), Errors.INVALID_SIGNER);
         // to prevent replay attacks
-        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
+        _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE); */
         return signer;
     }
 

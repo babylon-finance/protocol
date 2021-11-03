@@ -2922,7 +2922,7 @@ describe('RewardsDistributor', function () {
       await rewardsDistributor.connect(signer1).claimRewards(usdcGarden.address, [long1.address]);
 
       // We claim our tokens and check that they are received properly
-      await rewardsDistributor.connect(signer1).claimRewards(gaiGarden.address, [long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(daiGarden.address, [long2.address]);
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
