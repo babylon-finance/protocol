@@ -1728,4 +1728,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV9 is RewardsDistributor {}
+contract RewardsDistributorV10 is RewardsDistributor {}
