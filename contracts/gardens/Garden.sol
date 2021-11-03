@@ -474,13 +474,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * @notice
-     *   Exchanges user's gardens shairs for amount in reserve asset. This
-     *   method allows users to leave garden and reclaim their inital investment
-     *   plus profits or losses.
+     *   Exchanges user's gardens shares for amount in reserve asset
+     *   to pay the fee transaction. This method allows users
+     *   to claim their rewards either profits or BABL.
      * @dev
-     *   Should be called instead of the `withdraw` to save gas due to
-     *   pricePerShare caculated off-chain. Doesn't allow to unwind strategies
-     *   contrary to `withdraw`.
+     *   Should be called instead of the `claimReturns` to save gas due to
+     *   getRewards caculated off-chain.
      *   The Keeper fee is paid out of user's shares.
      *   The true _minAmountOut is actually _minAmountOut - _maxFee due to the
      *   Keeper fee.
@@ -508,7 +507,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
-        _require(signer != address(0) && balanceOf(signer) > 0, Errors.INVALID_SIGNER);
+        _require(signer != address(0), Errors.INVALID_SIGNER);
         // to prevent replay attacks
         _require(contributors[signer].nonce == _nonce, Errors.INVALID_NONCE);
         // If a Keeper fee is greater than zero then reduce user shares to
@@ -905,7 +904,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         Contributor storage contributor = contributors[_contributor];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
         // Flashloan protection
-        _require(block.timestamp.sub(contributor.lastDepositAt) > depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(_profits);
@@ -949,7 +948,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
-        // if withPenaltiy then unwind strategy
+        // if withPenalty then unwind strategy
         if (_withPenalty && !(liquidReserve() >= amountOut)) {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
