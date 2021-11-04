@@ -526,6 +526,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _require(IBabController(controller).rewardsDistributor() == msg.sender, Errors.ONLY_RD);
         _sendRewardsInternal(_contributor, _babl, _profits);
+        // Avoid race condition between rewardsBySig and claimRewards
+        contributors[_contributor].nonce++;
     }
 
     /**

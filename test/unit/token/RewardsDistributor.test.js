@@ -2370,7 +2370,44 @@ describe('RewardsDistributor', function () {
           .rewardsBySig(babl, profits, nonce, maxFee, pricePerShare, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
       ).not.to.be.reverted;
     });
+    it('can avoid race condition between claimRewardsBySig and claimRewards', async function () {
+      const amountIn = eth('1');
+      const minAmountOut = eth('0.9');
 
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const nonce = 2; // nonce is 2 as it deposited twice before
+      const maxFee = 1;
+      const pricePerShare = eth();
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      // Race condition
+      // User claims its tokens by direct claim
+      await rewardsDistributor.connect(signer2).claimRewards(newGarden.address, [long1.address]);
+      // It also claim its token rewards by sig so the accountant is in process with nonce = 2
+      // Signer2 is trying a race condition between a normal and a by sig claim.
+      // nonce avoids a race condition between a normal claimRewards and a claimRewardsBySig
+      await expect(
+        newGarden
+          .connect(keeper)
+          .rewardsBySig(babl, profits, nonce, maxFee, pricePerShare, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#089');
+    });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
