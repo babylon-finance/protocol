@@ -955,20 +955,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Safe BABL rewards (Mining program) token transfer.
-     * It handle cases when in case of rounding errors, RewardsDistributor might not have enough BABL.
-     * @param _to               The receiver address of the contributor to send
-     * @param _amount           The amount of BABL tokens to be rewarded during this claim
-     * returns the amount of tokens transferred
-     */
-    /*  function _safeBABLTransfer(address _to, uint96 _amount) private returns (uint256) {
-        uint256 bablBal = babltoken.balanceOf(address(this));
-        uint256 amountToSend = _amount > bablBal ? bablBal : _amount;
-        SafeERC20.safeTransfer(babltoken, _to, amountToSend);
-        return amountToSend;
-    } */
-
-    /**
      * Set a customized profit rewards
      * @param _garden           Address of the garden
      * @param _strategistShare  New sharing profit % for strategist
@@ -1595,9 +1581,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
-        // strategyDetails[12]: endBlock
-        // strategyDetails[13]: gardenSupply
-        // strategyDetails[14]: startingBlock
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
