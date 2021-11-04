@@ -94,9 +94,5 @@ interface IRewardsDistributor {
 
     function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
 
-    function claimRewardsBySig(
-        address _to,
-        uint256 _babl,
-        uint256 _profits
-    ) external;
+    function claimRewardsBySig(address _to, uint256 _babl) external;
 }

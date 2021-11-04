@@ -220,8 +220,28 @@ function getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFe
   return ethers.utils.keccak256(payload);
 }
 
+function getRewardsSigHash(garden, signer, babl, profits, nonce, maxFee) {
+  const REWARDS_BY_SIG_TYPEHASH = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)'),
+  );
+
+  let payload = ethers.utils.defaultAbiCoder.encode(
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
+    [REWARDS_BY_SIG_TYPEHASH, garden, babl, profits, nonce, maxFee],
+  );
+
+  return ethers.utils.keccak256(payload);
+}
+
 async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee, withPenalty) {
   let payloadHash = getWithdrawSigHash(garden, signer, amountIn, minAmountOut, nonce, maxFee, withPenalty);
+
+  let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
+  return ethers.utils.splitSignature(signature);
+}
+
+async function getRewardsSig(garden, signer, babl, profits, nonce, maxFee) {
+  let payloadHash = getRewardsSigHash(garden, signer, babl, profits, nonce, maxFee);
 
   let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
   return ethers.utils.splitSignature(signature);
@@ -235,4 +255,6 @@ module.exports = {
   getDepositSigHash,
   getWithdrawSig,
   getWithdrawSigHash,
+  getRewardsSig,
+  getRewardsSigHash,
 };
