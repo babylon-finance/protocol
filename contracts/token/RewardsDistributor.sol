@@ -1576,9 +1576,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
-        // strategyDetails[12]: endBlock
-        // strategyDetails[13]: gardenSupply
-        // strategyDetails[14]: startingBlock
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
