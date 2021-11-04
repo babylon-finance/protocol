@@ -181,16 +181,6 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
-    it.only('NAV is good', async () => {
-      const strategyContract = await ethers.getContractAt(
-        'IStrategy',
-        '0x8D79A321b2404E6d452267f90AaC07150F26A4F1',
-        owner,
-      );
-      const nav = await strategyContract.getNAV();
-      console.log('NAV less than 60k', ethers.utils.formatEther(nav));
-    });
-
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('Garden', garden);
@@ -200,6 +190,11 @@ describe('deploy', function () {
         console.log(
           `Garden ${await gardenContract.name()} ${garden} has NAV $${ethers.utils.formatUnits(gardenNAV, 'ether')}`,
         );
+        // const strategies = await gardenContract.getStrategies();
+        // for(const strat of strategies) {
+        //   const stratContract = await ethers.getContractAt('Strategy', strat);
+        //   console.log(strat, (await stratContract.getNAV()).toString());
+        // }
         try {
           expect(gardenNAV).to.closeTo(gardensNAV[garden], eth());
         } catch (e) {
