@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
@@ -211,10 +210,15 @@ contract ConvexStakeIntegration is PassiveIntegration {
         (, token, , , , ) = booster.poolInfo(pid);
     }
 
-    function _getRewards(address _asset) internal view override returns (address token, uint256 balance) {
+    function _getRewards(address _strategy, address _asset)
+        internal
+        view
+        override
+        returns (address token, uint256 balance)
+    {
         IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = rewards.earned(msg.sender) * 2; // * 2 accounts roughly for CVX
+        uint256 totalAmount = rewards.earned(_strategy) * 2; // * 2 accounts roughly for CVX
         // add extra rewards and convert to reward token
         uint256 extraRewardsLength = rewards.extraRewardsLength();
         if (extraRewardsLength > 0) {
@@ -222,7 +226,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
                 IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
                 totalAmount = totalAmount.add(
                     oracle.getPrice(rewards.extraRewards(i), extraRewards.rewardToken()).preciseMul(
-                        extraRewards.earned(msg.sender)
+                        extraRewards.earned(_strategy)
                     )
                 );
             }

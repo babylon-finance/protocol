@@ -253,7 +253,17 @@ contract DepositVaultOperation is Operation {
                     IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
                 );
         }
-        try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
+        // Patching IB
+        if (_yieldVault == 0x912EC00eaEbf3820a9B0AC7a5E15F381A1C91f22) {
+            return
+                _getPrice(CRV, _reserveAsset).preciseMul(
+                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender) * 2
+                );
+        }
+        try IPassiveIntegration(_integration).getRewards(msg.sender, _yieldVault) returns (
+            address rewardToken,
+            uint256 amount
+        ) {
             if (rewardToken != address(0) && amount > 0) {
                 return _getPrice(rewardToken, _reserveAsset).preciseMul(amount);
             }
