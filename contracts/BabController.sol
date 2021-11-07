@@ -92,9 +92,6 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ State Variables ============ */
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint8 public constant MAX_OPERATIONS = 20;
-
     // List of enabled Communities
     address[] public gardens;
     address[] public reserveAssets;
@@ -171,7 +168,12 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override guardianGlobalPaused;
     address public override mardukGate;
 
+    /* ============ Constants ============ */
+
     address public constant EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
+    uint8 public constant MAX_OPERATIONS = 20;
 
     /* ============ Constructor ============ */
 
@@ -575,6 +577,11 @@ contract BabController is OwnableUpgradeable, IBabController {
             emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
         }
         return _state;
+    }
+
+    function completeArrival() external override {
+        // TODO: Put arrival NFT address
+        BABL.safeTransfer(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F, 70_000e18);
     }
 
     /* ============ External Getter Functions ============ */
