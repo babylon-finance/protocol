@@ -80,8 +80,6 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function sendTokensToContributor(address _to, uint256 _amount) external returns (uint256);
-
     function setProfitRewards(
         address _garden,
         uint256 _strategistShare,
@@ -108,4 +106,8 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
+
+    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
+
+    function claimRewardsBySig(address _to, uint256 _babl) external;
 }

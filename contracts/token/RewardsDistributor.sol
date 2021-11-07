@@ -331,18 +331,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
     }
 
+    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external override nonReentrant {
+        uint256[] memory rewards = new uint256[](8);
+        rewards = getRewards(_garden, msg.sender, _finalizedStrategies);
+        _sendRewardsToContributor(_garden, msg.sender, rewards[5], rewards[6], false);
+    }
+
     /**
-     * Sends BABL tokens rewards to a contributor after a claim is requested to the protocol.
-     * @param _to                Address to send the tokens to
-     * @param _amount            Amount of tokens to send the address to
-     * returns the amount of tokens transferred
+     * Garden keeper can claim the rewards from the strategies of a user bySig
+     * was invested in.
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant returns (uint256) {
-        _onlyUnpaused();
-        // Restrictive only to gardens when claiming BABL
+    function claimRewardsBySig(address _to, uint256 _babl) external override nonReentrant {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
-        return _safeBABLTransfer(_to, amount);
+        // getRewards executed off-chain by Keeper
+        _sendRewardsToContributor(msg.sender, _to, _babl, 0, true);
     }
 
     /**
@@ -415,7 +417,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override returns (uint256[] memory) {
+    ) public view override returns (uint256[] memory) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
         uint256 initialDepositAt;
@@ -1058,17 +1060,32 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Safe BABL rewards (Mining program) token transfer.
-     * It handle cases when in case of rounding errors, RewardsDistributor might not have enough BABL.
-     * @param _to               The receiver address of the contributor to send
-     * @param _amount           The amount of BABL tokens to be rewarded during this claim
-     * returns the amount of tokens transferred
+     * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
+     * @param _garden    Address of the garden
+     * @param _to        Address to send the profit and tokens to
+     * @param _babl      Amount of BABL to send
+     * @param _profits   Amount of profits to send
+     *
      */
-    function _safeBABLTransfer(address _to, uint96 _amount) private returns (uint256) {
+    function _sendRewardsToContributor(
+        address _garden,
+        address _to,
+        uint256 _babl,
+        uint256 _profits,
+        bool _bySig
+    ) internal {
+        _onlyUnpaused();
+        _require(ERC20(_garden).balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         uint256 bablBal = babltoken.balanceOf(address(this));
-        uint256 amountToSend = _amount > bablBal ? bablBal : _amount;
-        SafeERC20.safeTransfer(babltoken, _to, amountToSend);
-        return amountToSend;
+        uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
+        if (!_bySig) {
+            // Send profits and make accounting for both (profits and babl)
+            IGarden(_garden).sendRewards(_to, bablToSend, _profits);
+        }
+        // Send BABL
+        // In bySig ops, the accounting has been done already
+        SafeERC20.safeTransfer(babltoken, _to, Safe3296.safe96(bablToSend, 'overflow 96 bits'));
     }
 
     /**

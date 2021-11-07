@@ -170,7 +170,23 @@ interface IGarden {
         bytes32 s
     ) external;
 
-    function claimReturns(address[] calldata _finalizedStrategies) external;
+    function sendRewards(
+        address _contributor,
+        uint256 _babl,
+        uint256 _profits
+    ) external;
+
+    function rewardsBySig(
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 
     function getLockedBalance(address _contributor) external view returns (uint256);
 
