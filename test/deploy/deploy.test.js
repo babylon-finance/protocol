@@ -21,6 +21,7 @@ const STUCK_EXECUTE = [
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
   '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
+  // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
 ];
 
 describe('deploy', function () {
