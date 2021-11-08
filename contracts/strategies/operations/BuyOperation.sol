@@ -124,6 +124,10 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,

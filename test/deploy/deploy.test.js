@@ -182,7 +182,7 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
-    it.only('NAV of a specific strategy', async () => {
+    it('NAV of a specific strategy', async () => {
       const stratContract = await ethers.getContractAt('Strategy', '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5');
       const nav = await stratContract.getNAV();
       console.log('IB Curve NAV', nav.toString());
@@ -213,7 +213,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('can execute stuck strategies', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
