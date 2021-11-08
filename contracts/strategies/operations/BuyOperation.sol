@@ -154,6 +154,10 @@ contract BuyOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
         uint256 NAV =
             SafeDecimalMath
