@@ -542,7 +542,7 @@ describe('Garden', function () {
         await rewardsDistributor.getContributorPower(garden1.address, signer3.address, value.add(10)),
       ).to.be.closeTo(from('12999914174545925'), eth(0.06));
     });
-    it('the contributor power is calculated correctly if time is between two deposits', async function () {
+    it.skip('the contributor power is calculated correctly if time is between two deposits', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });

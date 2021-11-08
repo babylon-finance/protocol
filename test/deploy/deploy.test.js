@@ -19,7 +19,9 @@ const STUCK_EXECUTE = [
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
-  '0x8D79A321b2404E6d452267f90AaC07150F26A4F1',
+  '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
+  // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
+  // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
 ];
 
 describe('deploy', function () {
@@ -181,6 +183,12 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
+    it('NAV of a specific strategy', async () => {
+      const stratContract = await ethers.getContractAt('Strategy', '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5');
+      const nav = await stratContract.getNAV();
+      console.log('IB Curve NAV', nav.toString());
+    });
+
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('Garden', garden);
@@ -206,7 +214,7 @@ describe('deploy', function () {
       }
     });
 
-    it('can execute stuck proposals', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
