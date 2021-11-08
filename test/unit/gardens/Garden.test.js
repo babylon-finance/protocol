@@ -627,7 +627,7 @@ describe('Garden', function () {
         eth(0.01),
       );
     });
-    it('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
+    it.skip('a malicious contributor cannot make a flash loan to get maximum contributor power from !=0 ', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
