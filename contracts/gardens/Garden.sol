@@ -531,6 +531,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(IBabController(controller).rewardsDistributor() == msg.sender, Errors.ONLY_RD);
         // Avoid race condition between rewardsBySig and claimRewards
         contributors[_contributor].nonce++;
+        // Flashloan protection
+        _require(
+            block.timestamp.sub(contributors[_contributor].lastDepositAt) >= depositHardlock,
+            Errors.DEPOSIT_HARDLOCK
+        );
         _sendRewardsInternal(_contributor, _babl, _profits);
     }
 
@@ -1062,8 +1067,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 prevBalance = balanceOf(_signer);
         uint256 prevSupply = totalSupply();
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
-        // Flashloan protection
-        _require(block.timestamp.sub(contributors[_signer].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         // Strategists cannot use locked stake while in active strategies
         // Fee payment amount has to be equal or less than msg.sender balance minus the locked balance
         uint256 amountIn = _reserveToShares(_fee, _pricePerShare);
@@ -1076,7 +1079,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
         // We make accounting for token burning as withdrawal
         _updateContributorWithdrawalInfo(_signer, _fee, prevBalance, prevSupply, amountIn);
-        emit GardenWithdrawal(_signer, _signer, _fee, amountIn, block.timestamp);
         // Once user has paid the fee, we sent the rewards to the garden user
         // 1st we send profit rewards
         // Avoid external call to send profit rewards
@@ -1099,17 +1101,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         Contributor storage contributor = contributors[_contributor];
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
-        // Flashloan protection
-        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(_profits);
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             _safeSendReserveAsset(payable(_contributor), _profits);
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
-            contributor.claimedAt = block.timestamp; // Checkpoint of this claim
             contributor.claimedBABL = contributor.claimedBABL.add(_babl); // BABL Rewards claimed properly
             // Check-Effects. Interaction done at RD afterwards
             emit BABLRewardsForContributor(_contributor, _babl);
