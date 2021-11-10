@@ -2502,8 +2502,8 @@ describe('RewardsDistributor', function () {
 
       const estimateSigner1Long1Profit = strategistLong1.add(stewardLong1.mul(54).div(100)); // power 54%
       const estimateSigner1Long2Profit = strategistLong2.add(stewardLong2.mul(55).div(100)); // power 55%
-      const signer1BABLStrategistLong1 = long1BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
-      const signer1BABLStrategistLong2 = long2BABL.mul(10).div(100).mul(199).div(100); // get extra bonus x2 for expectedReturn
+      const signer1BABLStrategistLong1 = long1BABL.mul(10).div(100); // do not get extra bonus
+      const signer1BABLStrategistLong2 = long2BABL.mul(10).div(100); // do not get extra bonus
       const signer1BABLStewardLong1 = long1BABL.mul(10).mul(54).div(10000); // power 54% stewards % in BABL is 10% (no 5%)
       const signer1BABLStewardLong2 = long2BABL.mul(10).mul(55).div(10000); // power 55% stewards % in BABL is 10% (no 5%)
       const signer1BABLLPLong1 = long1BABL.mul(80).mul(54).div(10000); // power 54%
