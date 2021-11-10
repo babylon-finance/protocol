@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -1339,6 +1340,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 babl;
         babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
         if (_profitData[0] == true && _profitData[1] == true) {
+            uint256 bablCap = babl.mul(2); // Cap x2
+            // Strategist get a bonus based on the profits with a max cap of x2
+            babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
+            if (babl > bablCap) {
+                babl = bablCap;
+            }
             return babl;
         } else if (_profitData[0] == true && _profitData[1] == false) {
             //under expectations
