@@ -257,7 +257,8 @@ contract BabylonViewer {
 
     function getPermissions(address _user) external view returns (bool, bool) {
         IMardukGate gate = IMardukGate(controller.mardukGate());
-        return (gate.canAccessBeta(_user), gate.canCreate(_user));
+        bool hasProphet = IERC721(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43).balanceOf(_user) > 0;
+        return (gate.canAccessBeta(_user) || hasProphet, gate.canCreate(_user) || hasProphet);
     }
 
     function getGardenPermissions(address _garden, address _user)
