@@ -11,6 +11,8 @@ const degenUsers = require('./degen.js').users;
 const validEmails = require('./emails.js').emails;
 const twitterList = require('./twitter.js').twitter;
 const settlersList = require('./settlers.js').settlers;
+const manualList = require('./manual.js').manual;
+const nftList = require('./nftharvest.js').users;
 
 // Instanciate with desired auth type (here's Bearer v2 auth)
 // const twitterClient = new TwitterApi('AAAAAAAAAAAAAAAAAAAAAB7PVgEAAAAAcboprQmIBJ1AFt16tgH4PL3Rq1Q%3DTphxU4mHBPjdeAZ9T10ReyiLBXYq9xTqbQaK51ROcYjoUFAUXW');
@@ -27,6 +29,15 @@ const pickleMap = {};
 const emailMap = {};
 const twitterMap = {};
 const settlersMap = {};
+const nftMap = {};
+
+// Add manual list people
+manualList.forEach((manualUser) => {
+  const found = entries.find((data) => data.twitter === manualUser.twitter || data.wallet === manualUser.wallet);
+  if (!found) {
+    entries.push({ data: manualUser });
+  }
+});
 
 impossibleUsers.forEach((add) => {
   ifMap[add.toLowerCase()] = true;
@@ -36,8 +47,17 @@ babUsers.forEach((add) => {
   babMap[add.toLowerCase()] = true;
 });
 
+// evan
+babUsers['0xFFcE201482A32122287658c588e0E0dfb3eFCCEc'.toLowerCase()] = true;
+// stormg
+babUsers['0x0e024CdBA8377ACF2d83e23090e27f5F8F490497'.toLowerCase()] = true;
+
 degenUsers.forEach((add) => {
   degenMap[add.toLowerCase()] = true;
+});
+
+nftList.forEach((add) => {
+  nftMap[add.toLowerCase()] = true;
 });
 
 settlersList.forEach((add) => {
@@ -107,11 +127,17 @@ const mainRoutine = async () => {
         if (!settlersMap[data.wallet.toLowerCase()]) {
           let score = 1;
           if (emailMap[data.email]) {
-            score += 10;
+            score += 3;
+          } else {
+            data.email = null;
           }
           // grab from twitter api
           if (twitterMap[data.twitter]) {
-            score += 2 * twitterMap[data.twitter];
+            if (twitterMap[data.twitter] < 0.1) {
+              score -= 1;
+            } else {
+              score += 5 * twitterMap[data.twitter];
+            }
           }
           // Impossible finance
           if (ifMap[data.wallet.toLowerCase()]) {
@@ -138,6 +164,10 @@ const mainRoutine = async () => {
       .filter((e) => e);
 
     // Add Harvest NFT holders to the top 10000
+    console.log('nftList', nftList.length);
+    Object.keys(nftMap).forEach((key) => {
+      entries.push({ address: key.toLowerCase(), score: 21000 });
+    });
     // Add Degens to the top 10000
     Object.keys(degenMap).forEach((key) => {
       entries.push({ address: key.toLowerCase(), score: 20000 });
@@ -163,13 +193,24 @@ const mainRoutine = async () => {
     });
     // Remove duplicates
 
-    console.log('---- sorted ---');
-    console.log('count DeFi', entries.filter((e) => e.score > 100).length);
-    console.log('count Degen', entries.filter((e) => e.score === 20000).length);
-    console.log('count Bab users', entries.filter((e) => e.score === 10000).length);
-    console.log('count Email', entries.filter((e) => e.score >= 10).length);
-    console.log('count Twitter', entries.filter((e) => e.score > 11).length);
-    console.log('count', entries.length);
+    // console.log('---- sorted ---');
+    // console.log('count DeFi', entries.filter((e) => e.score > 100).length);
+    // console.log('count NFT harvest', entries.filter((e) => e.score === 21000).length);
+    // console.log('count Degen', entries.filter((e) => e.score === 20000).length);
+    // console.log('count Bab users', entries.filter((e) => e.score === 10000).length);
+    // console.log('count Email', entries.filter((e) => e.email).length);
+    // console.log('count Twitter', entries.filter((e) => e.score > 4).length);
+    // console.log('count', entries.length);
+
+    // WHITELIST onchain 7872
+    console.log('[');
+    entries
+      .slice(0, 7872)
+      .filter((e) => e.address)
+      .forEach((e) => {
+        console.log(e.address.toLowerCase() + ',');
+      });
+    console.log(']');
   }, 1000);
 };
 
