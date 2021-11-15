@@ -164,7 +164,6 @@ const mainRoutine = async () => {
       .filter((e) => e);
 
     // Add Harvest NFT holders to the top 10000
-    console.log('nftList', nftList.length);
     Object.keys(nftMap).forEach((key) => {
       entries.push({ address: key.toLowerCase(), score: 21000 });
     });
@@ -208,7 +207,7 @@ const mainRoutine = async () => {
       .slice(0, 7872)
       .filter((e) => e.address)
       .forEach((e) => {
-        console.log(e.address.toLowerCase() + ',');
+        console.log(`'${e.address.toLowerCase()}',`);
       });
     console.log(']');
   }, 1000);
