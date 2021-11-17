@@ -20,7 +20,7 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {IERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
@@ -257,7 +257,7 @@ contract BabylonViewer {
 
     function getPermissions(address _user) external view returns (bool, bool) {
         IMardukGate gate = IMardukGate(controller.mardukGate());
-        bool hasProphet = IERC721(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43).balanceOf(_user) > 0;
+        bool hasProphet = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43).balanceOf(_user) > 0;
         return (gate.canAccessBeta(_user) || hasProphet, gate.canCreate(_user) || hasProphet);
     }
 
@@ -391,6 +391,16 @@ contract BabylonViewer {
             IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
             _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
+    }
+
+    function getAllProphets(address _address) public view returns (uint256[] memory) {
+        IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+        uint256 prophetsNumber = prophets.balanceOf(_address);
+        uint256[] memory prophetIds = new uint256[](prophetsNumber);
+        for (uint256 i = 0; i < prophetsNumber; i++) {
+            prophetIds[i] = prophets.tokenOfOwnerByIndex(_address, i);
+        }
+        return prophetIds;
     }
 
     /* ============ Private Functions ============ */
