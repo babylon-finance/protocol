@@ -281,9 +281,10 @@ contract BabylonViewer {
 
     function getGardensUser(address _user, uint256 _offset) external view returns (address[] memory, bool[] memory) {
         address[] memory gardens = controller.getGardens();
-        address[] memory userGardens = new address[](50);
-        bool[] memory hasUserDeposited = new bool[](50);
-        uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
+        address[] memory userGardens = new address[](100);
+        bool[] memory hasUserDeposited = new bool[](100);
+        uint256 limit = gardens.length <= 100 ? gardens.length : _offset.add(100);
+        limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
         for (uint256 i = _offset; i < limit; i++) {
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
