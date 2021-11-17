@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+pragma experimental ABIEncoderV2;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -36,6 +37,7 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IProphets} from '../interfaces/IProphets.sol';
 
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
@@ -258,6 +260,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
+
+    IProphets public constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     /* ============ Constructor ============ */
 
@@ -712,7 +716,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
-            // Get the contributor power until the the strategy exit timestamp
+            // Get the contributor power until the strategy exit timestamp
             uint256 contributorPower =
                 getContributorPower(
                     garden,
@@ -728,8 +732,36 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyDetails,
                 profitData
             );
+            // add Prophets NFT bonus if staked in the garden
+            // rewards = _boostRewards(garden, _contributor, rewards);
         }
         return rewards;
+    }
+
+    function _boostRewards(
+        address _garden,
+        address _contributor,
+        uint256[] memory _rewards
+    ) internal view returns (uint256[] memory) {
+        // prophetBonus[0]: strategist NFT bonus
+        // prophetBonus[1]: steward NFT bonus (voter)
+        // prophetBonus[2]: LP NFT bonus
+        // prophetBonus[3]: creator bonus
+        // uint256[] memory prophetBonus = new uint256[](4);
+        // lets get the prophet additional bonus
+        uint256 stakedNFT = PROPHETS_NFT.stakeOf(_contributor, _garden);
+        if (stakedNFT != 0) {
+            IProphets.Attributes memory extraBonus;
+            // Has staked a prophet in the garden
+            extraBonus = PROPHETS_NFT.getAttributes(stakedNFT);
+            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(uint256(extraBonus.strategistMultiplier)));
+            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(uint256(extraBonus.voterMultiplier)));
+            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(uint256(extraBonus.lpMultiplier)));
+            _rewards[7] = _rewards[4].add(_rewards[7].multiplyDecimal(uint256(extraBonus.creatorMultiplier)));
+            _rewards[5] = _rewards[0].add(_rewards[2]).add(_rewards[4]).add(_rewards[7]);
+
+        }
+        return _rewards;
     }
 
     /**
@@ -1218,6 +1250,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyDetails,
                 profitData
             );
+            // add Prophets NFT bonus if staked in the garden
+            // rewards = _boostRewards(_garden, _contributor, rewards);
         }
 
         return rewards;
@@ -1225,10 +1259,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the BABL rewards (Mining program) for a Steward profile
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
-     * @param _strategyDetails  Strategy details data
-     * @param _profitData       Strategy profit data
+     * @param _strategy             Strategy address
+     * @param _contributor          Contributor address
+     * @param _strategyDetails      Strategy details data
+     * @param _profitData           Strategy profit data
      */
     function _getStrategyStewardBabl(
         address _strategy,
@@ -1243,7 +1277,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
 
         uint256 bablCap;
-
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl;
         if (userVotes > 0 && _profitData[0] == true && _profitData[1] == true) {
@@ -1326,8 +1359,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the BABL rewards (Mining program) for a Strategist profile
-     * @param _strategyDetails     Strategy details data
-     * @param _profitData          Strategy details data
+     * @param _strategyDetails          Strategy details data
+     * @param _profitData               Strategy details data
      */
     function _getStrategyStrategistBabl(uint256[] memory _strategyDetails, bool[] memory _profitData)
         private
@@ -1338,7 +1371,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
         uint256 bablCap;
-        babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
+        babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage);
         if (_profitData[0] == true && _profitData[1] == true) {
             // Strategy with equal or higher profits than expected
             bablCap = babl.mul(2); // Max cap
@@ -1460,9 +1493,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Gives creator bonus to the user and returns original + bonus
-     * @param _garden           Address of the garden
-     * @param _contributor      Address of the contributor
-     * @param _contributorBABL  BABL obtained in the strategy
+     * @param _garden               Address of the garden
+     * @param _contributor          Address of the contributor
+     * @param _contributorBABL      BABL obtained in the strategy
      */
     function _getCreatorBonus(
         address _garden,
