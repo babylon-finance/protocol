@@ -393,7 +393,7 @@ contract BabylonViewer {
         );
     }
 
-    function getAllProphets(address _address, uint256[] memory) public view returns (uint256[] memory) {
+    function getAllProphets(address _address) public view returns (uint256[] memory) {
         IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
         uint256 prophetsNumber = prophets.balanceOf(_address);
         uint256[] memory prophetIds = new uint256[](prophetsNumber);
