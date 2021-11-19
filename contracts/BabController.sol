@@ -708,6 +708,10 @@ contract BabController is OwnableUpgradeable, IBabController {
         }
         return false;
     }
+
+    // Can receive ETH
+    // solhint-disable-next-line
+    receive() external payable {}
 }
 
 contract BabControllerV9 is BabController {}
