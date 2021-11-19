@@ -580,8 +580,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     function completeArrival() external override {
-        // TODO: Put arrival NFT address
-        BABL.safeTransfer(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F, 70_000e18);
+        BABL.safeTransfer(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43, 70_000e18);
     }
 
     /* ============ External Getter Functions ============ */
