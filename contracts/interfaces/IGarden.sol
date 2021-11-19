@@ -176,12 +176,11 @@ interface IGarden {
         uint256 _profits
     ) external;
 
-    function rewardsBySig(
+    function claimRewardsBySig(
         uint256 _babl,
         uint256 _profits,
         uint256 _nonce,
         uint256 _maxFee,
-        uint256 _pricePerShare,
         uint256 _fee,
         uint8 v,
         bytes32 r,

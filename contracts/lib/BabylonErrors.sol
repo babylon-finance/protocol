@@ -298,4 +298,6 @@ library Errors {
     uint256 internal constant INVALID_VOTES_LENGTH = 104;
     // Only Rewards Distributor
     uint256 internal constant ONLY_RD = 105;
+    // Fee is too LOW
+    uint256 internal constant FEE_TOO_LOW = 106;
 }

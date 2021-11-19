@@ -341,7 +341,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Garden keeper can claim the rewards from the strategies of a user bySig
      * was invested in.
      */
-    function claimRewardsBySig(address _to, uint256 _babl) external override nonReentrant {
+    function sendBABLBySig(address _to, uint256 _babl) external override nonReentrant {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         // getRewards executed off-chain by Keeper
         _sendRewardsToContributor(msg.sender, _to, _babl, 0, true);
