@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-pragma experimental ABIEncoderV2;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -733,7 +732,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            // rewards = _boostRewards(garden, _contributor, rewards);
+            rewards = _boostRewards(garden, _contributor, rewards);
         }
         return rewards;
     }
@@ -743,23 +742,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256[] memory _rewards
     ) internal view returns (uint256[] memory) {
-        // prophetBonus[0]: strategist NFT bonus
-        // prophetBonus[1]: steward NFT bonus (voter)
-        // prophetBonus[2]: LP NFT bonus
-        // prophetBonus[3]: creator bonus
-        // uint256[] memory prophetBonus = new uint256[](4);
+        // prophetBonus[0]: NFT id
+        // prophetBonus[1]: BABL loot
+        // prophetBonus[2]: strategist NFT bonus
+        // prophetBonus[3]: steward NFT bonus (voter)
+        // prophetBonus[4]: LP NFT bonus
+        // prophetBonus[5]: creator bonus
+        uint256[] memory prophetBonus = new uint256[](6);
         // lets get the prophet additional bonus
-        uint256 stakedNFT = PROPHETS_NFT.stakeOf(_contributor, _garden);
-        if (stakedNFT != 0) {
-            IProphets.Attributes memory extraBonus;
+        prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, _garden);
+        if (prophetBonus[0] != 0) {
             // Has staked a prophet in the garden
-            extraBonus = PROPHETS_NFT.getAttributes(stakedNFT);
-            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(uint256(extraBonus.strategistMultiplier)));
-            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(uint256(extraBonus.voterMultiplier)));
-            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(uint256(extraBonus.lpMultiplier)));
-            _rewards[7] = _rewards[4].add(_rewards[7].multiplyDecimal(uint256(extraBonus.creatorMultiplier)));
+            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(prophetBonus[2]));
+            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(prophetBonus[3]));
+            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(prophetBonus[4]));
+            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(prophetBonus[5]));
             _rewards[5] = _rewards[0].add(_rewards[2]).add(_rewards[4]).add(_rewards[7]);
-
         }
         return _rewards;
     }
@@ -1251,7 +1249,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            // rewards = _boostRewards(_garden, _contributor, rewards);
+            rewards = _boostRewards(_garden, _contributor, rewards);
         }
 
         return rewards;

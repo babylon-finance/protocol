@@ -16,7 +16,6 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-pragma abicoder v2;
 
 /**
  * @title IProphets
@@ -25,17 +24,9 @@ pragma abicoder v2;
  * Interface for interacting with the Prophets NFT
  */
 interface IProphets {
-    struct Attributes {
-        uint256 bablLoot;
-        uint64 creatorMultiplier;
-        uint64 lpMultiplier;
-        uint64 voterMultiplier;
-        uint64 strategistMultiplier;
-    }
-
     /* ============ Functions ============ */
 
-    function getAttributes(uint256 _id) external view returns (Attributes memory);
+    function getStakedProphetAttrs(address _owner, address _stakedAt) external view returns (uint256[] memory);
 
     function targetOf(uint256 _id) external view returns (address);
 
