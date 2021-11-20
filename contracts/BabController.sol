@@ -579,7 +579,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
-    function completeArrival() external override {
+    function completeArrival() external override onlyOwner {
         BABL.safeTransfer(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43, 15_404e18);
         BABL.safeTransfer(treasury, 70_000e18 - 15_404e18);
     }
