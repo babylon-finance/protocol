@@ -143,4 +143,6 @@ interface IBabController {
     function protocolManagementFee() external view returns (uint256);
 
     function minLiquidityPerReserve(address _reserve) external view returns (uint256);
+
+    function completeArrival() external;
 }
