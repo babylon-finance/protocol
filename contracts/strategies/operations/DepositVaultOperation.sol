@@ -20,7 +20,6 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
@@ -237,7 +236,7 @@ contract DepositVaultOperation is Operation {
         ) {
             uint256 nav =
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender).mul(2)
                 );
             nav = nav.add(
                 _getPrice(LDO, _reserveAsset).preciseMul(
@@ -250,10 +249,20 @@ contract DepositVaultOperation is Operation {
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
             return
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender).mul(2)
                 );
         }
-        try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
+        // Patching IB
+        if (_yieldVault == 0x912EC00eaEbf3820a9B0AC7a5E15F381A1C91f22) {
+            return
+                _getPrice(CRV, _reserveAsset).preciseMul(
+                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender).mul(2)
+                );
+        }
+        try IPassiveIntegration(_integration).getRewards(msg.sender, _yieldVault) returns (
+            address rewardToken,
+            uint256 amount
+        ) {
             if (rewardToken != address(0) && amount > 0) {
                 return _getPrice(rewardToken, _reserveAsset).preciseMul(amount);
             }
