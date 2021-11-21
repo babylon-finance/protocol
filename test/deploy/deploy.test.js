@@ -114,7 +114,7 @@ describe('deploy', function () {
     //   .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
 
     console.log('aa');
-    await strategyContract.connect(keeper).finalizeStrategy(1, '');
+    await strategyContract.connect(keeper).finalizeStrategy(1, '', { gasLimit: 10000000 });
 
     const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 

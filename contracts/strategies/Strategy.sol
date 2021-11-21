@@ -989,17 +989,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
-        // uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
-        // endingGardenSupply = IERC20(address(garden)).totalSupply();
-        // garden.finalizeStrategy(
-        //     profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-        //     strategyReturns,
-        //     burningAmount
-        // );
-        // rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        endingGardenSupply = IERC20(address(garden)).totalSupply();
+        garden.finalizeStrategy(
+            profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
+            strategyReturns,
+            burningAmount
+        );
+        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
         // Must be zero in case the mining program didnt started on time
-        // strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
