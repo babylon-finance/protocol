@@ -13,15 +13,17 @@ const STUCK_EXECUTE = [
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED
   // '0x702c284Cd32F842bE450f5e5C9DE48f14303F1C8', // Long TOKE. Reason: Error: execution reverted: BAB#098
   // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
-
   // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
   // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
-  '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
+  // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
+  '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48', // Can't finalize Leverage long eth ++ curve
+
+  // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // Lend WBTc... Can't execute
 ];
 
 describe('deploy', function () {
@@ -106,21 +108,22 @@ describe('deploy', function () {
     }
 
     console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
-    try {
-      await strategyContract
-        .connect(gov)
-        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
+    // try {
+    // await strategyContract
+    //   .connect(gov)
+    //   .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
 
-      await strategyContract.connect(keeper).finalizeStrategy(1, '');
+    console.log('aa');
+    await strategyContract.connect(keeper).finalizeStrategy(1, '');
 
-      const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
+    const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
-      expect(active).eq(false);
-      expect(finalized).eq(true);
-      expect(exitedAt).gt(0);
-    } catch (e) {
-      console.log(`failed to finalize strategy ${e}`);
-    }
+    expect(active).eq(false);
+    expect(finalized).eq(true);
+    expect(exitedAt).gt(0);
+    // } catch (e) {
+    //   console.log(`failed to finalize strategy ${e}`);
+    // }
   }
 
   async function executeStuckStrategies() {
@@ -131,6 +134,16 @@ describe('deploy', function () {
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
       await addCapitalToStrategy(strategyContract, name, reserveAsset);
+    }
+  }
+  async function finalizeStuckStrategies() {
+    const strategies = STUCK_EXECUTE;
+    for (const strategy of strategies) {
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const reserveAsset = await gardenContract.reserveAsset();
+      const name = await strategyNft.getStrategyName(strategy);
+      await finalizeStrategy(strategyContract, name, reserveAsset);
     }
   }
 
@@ -224,6 +237,11 @@ describe('deploy', function () {
 
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
+    });
+
+    it.only('can finalize stuck strategies', async () => {
+      console.log('keeper', keeper.address);
+      await finalizeStuckStrategies();
     });
   });
 });

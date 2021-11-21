@@ -17,6 +17,7 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -397,6 +398,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _transferStrategyPrincipal();
         // Send rest to garden if any
         _sendReserveAssetToGarden();
+        console.log('before reserve asset');
         updatedAt = exitedAt;
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
     }
@@ -834,6 +836,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
+            console.log('enter', i, opTypes[i]);
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
@@ -856,7 +859,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address assetFinalized = garden.reserveAsset();
         uint256 capitalPending;
         uint8 assetStatus;
+        // console.log('EXIT');
         for (uint256 i = opTypes.length; i > 0; i--) {
+            // console.log('exit operation', i - 1, opTypes[i - 1]);
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
@@ -879,6 +884,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset());
             }
         }
+        console.log('end exit');
     }
 
     /**
@@ -941,9 +947,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 minAmountExpected =
             exactAmount.sub(
                 exactAmount.preciseMul(
-                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
+                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage.mul(2) : DEFAULT_TRADE_SLIPPAGE
                 )
             );
+        console.log('before master swapper trade', maxTradeSlippagePercentage);
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,
@@ -982,17 +989,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
-        uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        // uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
-        endingGardenSupply = IERC20(address(garden)).totalSupply();
-        garden.finalizeStrategy(
-            profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-            strategyReturns,
-            burningAmount
-        );
-        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        // endingGardenSupply = IERC20(address(garden)).totalSupply();
+        // garden.finalizeStrategy(
+        //     profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
+        //     strategyReturns,
+        //     burningAmount
+        // );
+        // rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
         // Must be zero in case the mining program didnt started on time
-        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        // strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
