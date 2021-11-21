@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -73,8 +74,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyStrategy(address _strategy) private view {
         address garden = address(IStrategy(_strategy).garden());
+        console.log('RD::onlyStrategy:: check 1');
         _require(IBabController(controller).isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
+        console.log('RD::onlyStrategy:: check 2');
         _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
+        console.log('RD::onlyStrategy:: check 3');
     }
 
     /**
@@ -296,6 +300,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external override {
         _onlyStrategy(msg.sender);
         // All strategies are now part of the Mining Program
+        console.log('RD updateStrategyCheckpoint', msg.sender, _capital, _addOrSubstract);
         _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
     }
 
@@ -457,7 +462,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
+        console.log('getStrategyRewards:: before check');
         if ((strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
+            console.log('getStrategyRewards:: inside check');
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
@@ -758,18 +765,28 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _capital,
         bool _addOrSubstract
     ) internal {
-        address reserveAsset = IGarden(IStrategy(_strategy).garden()).reserveAsset();
+        console.log('RD::_updateProtocolPrincipal::Check -1');
+        // console.log('garden', address(IStrategy(_strategy).garden()));
+        // address reserveAsset = IGarden(address(IStrategy(_strategy).garden())).reserveAsset();
+        address reserveAsset = address(DAI);
         // To compare strategy power between all strategies we normalize their capital into DAI
         // Then, we need to take control of getPrice fluctuations along the time
-        uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
+        console.log('RD::_updateProtocolPrincipal::Check 0');
+        //uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
+        uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(DAI, _strategy, _capital, _addOrSubstract);
+        console.log('RD::_updateProtocolPrincipal::Check 1');
         _capital = _capital.preciseMul(pricePerTokenUnit).mul(10**uint256(18).sub(ERC20(reserveAsset).decimals()));
+        console.log('RD::_updateProtocolPrincipal::Check 2');
         // Create or/and update the protocol quarter checkpoints if mining program is activated
         _updateProtocolPowerPerQuarter();
+        console.log('RD::_updateProtocolPrincipal::Check 3');
         // We update the strategy power per quarter normalized in DAI if mining program is activated
         _updateStrategyPowerPerQuarter(_strategy);
+        console.log('RD::_updateProtocolPrincipal::Check 4');
         // The following function call _updatePrincipal must be always executed
         // after _updateProtocolPowerPerQuarter and _updateStrategyPowerPerQuarter
         _updatePrincipal(_strategy, _capital, _addOrSubstract);
+        console.log('RD::_updateProtocolPrincipal::Check 5');
         // The following time set should always be executed at the end
         miningUpdatedAt = block.timestamp;
     }

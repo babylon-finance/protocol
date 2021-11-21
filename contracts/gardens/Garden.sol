@@ -519,7 +519,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         _onlyUnpaused();
         _onlyStrategy();
-
+        console.log('Garden:: finalizeStrategy', _rewards, _burningAmount);
         // burn statgist stake
         if (_burningAmount > 0) {
             address strategist = IStrategy(msg.sender).strategist();
@@ -531,12 +531,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
-
+        console.log('reserveAssetRewardsSetAside', reserveAssetRewardsSetAside);
         // Mark strategy as finalized
         absoluteReturns = absoluteReturns.add(_returns);
-        strategies = strategies.remove(msg.sender);
-        finalizedStrategies.push(msg.sender);
+        console.log('check 0');
+        console.log('strategy msg.sender', msg.sender);
+      /*   for (uint256 i = 0; i < strategies.length; i++) {
+            console.log('strategies', strategies[i]);
+        } */
+        // strategies = strategies.remove(msg.sender);
+        console.log('check 1');
+        // finalizedStrategies.push(msg.sender);
+        console.log('check 2');
         strategyMapping[msg.sender] = false;
+        console.log('Garden.sol finalizeStrategy:: END');
     }
 
     /**

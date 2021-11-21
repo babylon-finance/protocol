@@ -380,11 +380,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
+        console.log('Strategy::finalizeStrategy', _fee, _tokenURI);
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
+        console.log('Strategy:: before _exitStrategy');
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
+        console.log('Strategy:: after _exitStrategy');
         capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
@@ -395,7 +398,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
         // Transfer rewards
+        console.log('Strategy:: before _transferStrategyPrincipal');
         _transferStrategyPrincipal();
+        console.log('Strategy:: after _transferStrategyPrincipal');
         // Send rest to garden if any
         _sendReserveAssetToGarden();
         console.log('before reserve asset');
@@ -859,9 +864,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address assetFinalized = garden.reserveAsset();
         uint256 capitalPending;
         uint8 assetStatus;
-        // console.log('EXIT');
+        console.log('EXIT');
         for (uint256 i = opTypes.length; i > 0; i--) {
             // console.log('exit operation', i - 1, opTypes[i - 1]);
+            console.log('exit operation', i, opTypes[i - 1]);
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
@@ -874,6 +880,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 opIntegrations[i - 1]
             );
         }
+        console.log('exitStrategy intermediate check');
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
             if (assetFinalized == address(0)) {
@@ -950,7 +957,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage.mul(2) : DEFAULT_TRADE_SLIPPAGE
                 )
             );
-        console.log('before master swapper trade', maxTradeSlippagePercentage);
+        // console.log('before master swapper trade', maxTradeSlippagePercentage);
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,
@@ -958,6 +965,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _receiveToken,
             minAmountExpected
         );
+        // console.log('minAmountExpected', minAmountExpected);
         return minAmountExpected;
     }
 
@@ -989,17 +997,22 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
-        // uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
-        // endingGardenSupply = IERC20(address(garden)).totalSupply();
-        // garden.finalizeStrategy(
-        //     profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-        //     strategyReturns,
-        //     burningAmount
-        // );
-        // rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        endingGardenSupply = IERC20(address(garden)).totalSupply();
+        console.log('profitsSharing', profitsSharing[0], profitsSharing[1], profitsSharing[2]);
+        console.log('profits', profits);
+        console.log('protocolProfits', protocolProfits);
+        garden.finalizeStrategy(
+             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
+             strategyReturns,
+             burningAmount
+         );
+        console.log('Strategy::_transfer before updateProtocolPrincipal');
+        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
         // Must be zero in case the mining program didnt started on time
-        // strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        console.log('Strategy::_transfer before getStrategyRewards');
+        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {

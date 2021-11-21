@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -136,6 +136,7 @@ contract LendOperation is Operation {
     {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        console.log('LendOperation:: _percentage', _percentage);
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         _tokenToTrade(assetToken, msg.sender, _garden, _integration);
         return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
