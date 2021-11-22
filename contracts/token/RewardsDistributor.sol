@@ -305,22 +305,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
     }
 
-    /**
-     * PRIVILEGE FUNCTION to update strategy data
-     * @param _strategy               Address of the strategy
-     * @param _capital                Amount of capital in any type of asset to be normalized into DAI
-     * @param _addOrSubstract         Whether we are adding or substracting capital
-     */
-    function updateStrategyCheckpoint(
-        address _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) external override onlyOwner {
-        _onlyUnpaused();
-        _onlyStrategy(_strategy);
-        _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
-    }
-
     function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
@@ -1172,13 +1156,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
             return 0;
         } else {
-            uint256 maxTime = powerData[5].add(1 days);
+            // Safe check to avoid underflow, time travel only works for a past date
+            if (_time > block.timestamp) {
+                _time = block.timestamp;
+            }
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
-            uint256 updatedPower = powerData[3].add((maxTime.sub(powerData[0])).mul(powerData[2]));
-            uint256 updatedGardenPower = powerData[6].add((maxTime.sub(powerData[5])).mul(powerData[8]));
+            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
+            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_to" timestamp
-            uint256 timeDiff = maxTime.sub(_time);
+            uint256 timeDiff = block.timestamp.sub(_time);
             uint256 userPowerDiff = powerData[4].mul(timeDiff);
             uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
             // Avoid underflow conditions 0 at user, 1 at garden
