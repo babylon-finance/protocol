@@ -475,19 +475,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     /**
      * @notice
-     *   Exchanges user's gardens shares for amount in reserve asset
-     *   to pay the fee transaction. This method allows users
+     *   This method allows users
      *   to claim their rewards either profits or BABL.
      * @dev
      *   Should be called instead of the `claimRewards at RD` to save gas due to
      *   getRewards caculated off-chain.
-     *   The Keeper fee is paid out of user's shares and it is calculated off-chain.
+     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
      *
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
      * @param _nonce           Current nonce to prevent replay attacks.
      * @param _maxFee          Max fee user is willing to pay keeper. Fee is
-     *                         substracted from the garden tokens amount. Fee is
+     *                         substracted from user wallet in reserveAsset. Fee is
      *                         expressed in reserve asset.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
      */
