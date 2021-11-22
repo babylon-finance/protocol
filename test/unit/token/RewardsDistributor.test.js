@@ -2694,7 +2694,7 @@ describe('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
-  describe.only('NFT stake in Gardens for boost BABL rewards', function () {
+  describe('NFT stake in Gardens for boost BABL rewards', function () {
     it('can stake common prophet NFT in a garden to get 1% LP', async function () {
       const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
       const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
