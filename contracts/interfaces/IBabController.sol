@@ -80,6 +80,8 @@ interface IBabController {
 
     function owner() external view returns (address);
 
+    function EMERGENCY_OWNER() external view returns (address);
+
     function guardianGlobalPaused() external view returns (bool);
 
     function guardianPaused(address _address) external view returns (bool);
