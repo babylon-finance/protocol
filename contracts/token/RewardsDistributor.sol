@@ -732,7 +732,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            rewards = _boostRewards(garden, _contributor, rewards);
+            rewards = _boostRewards(garden, _contributor, rewards, strategyDetails);
         }
         return rewards;
     }
@@ -740,7 +740,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _boostRewards(
         address _garden,
         address _contributor,
-        uint256[] memory _rewards
+        uint256[] memory _rewards,
+        uint256[] memory _strategyDetails
     ) internal view returns (uint256[] memory) {
         // prophetBonus[0]: NFT id
         // prophetBonus[1]: BABL loot
@@ -748,15 +749,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // prophetBonus[3]: steward NFT bonus (voter)
         // prophetBonus[4]: LP NFT bonus
         // prophetBonus[5]: creator bonus
-        uint256[] memory prophetBonus = new uint256[](6);
+        // prophetBonus[6]: stake NFT ts
+        uint256[7] memory prophetBonus;
         // lets get the prophet additional bonus
         prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, _garden);
-        if (prophetBonus[0] != 0) {
-            // Has staked a prophet in the garden
-            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(prophetBonus[2]));
-            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(prophetBonus[3]));
-            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(prophetBonus[4]));
-            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(prophetBonus[5]));
+        uint256 percentage = _getNFTPercentage(prophetBonus[6], _strategyDetails[0], _strategyDetails[1]);
+        if (prophetBonus[0] != 0 && percentage > 0) {
+            // Has staked a prophet in the garden before the strategy finished
+            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(prophetBonus[2].preciseMul(percentage)));
+            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(prophetBonus[3].preciseMul(percentage)));
+            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(prophetBonus[4].preciseMul(percentage)));
+            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(prophetBonus[5].preciseMul(percentage)));
             _rewards[5] = _rewards[0].add(_rewards[2]).add(_rewards[4]).add(_rewards[7]);
         }
         return _rewards;
@@ -1129,6 +1132,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    /* ========== Internal View functions ========== */
+
     /**
      * Get an estimation of user rewards for active strategies
      * @param _garden               Address of the garden
@@ -1184,7 +1189,29 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return rewards;
     }
 
-    /* ========== Internal View functions ========== */
+    function _getNFTPercentage(
+        uint256 _stakedAt,
+        uint256 _executedAt,
+        uint256 _exitedAt
+    ) internal view returns (uint256) {
+        if (_stakedAt <= _executedAt && _executedAt > 0) {
+            // NFT staked before the strategy was executed
+            // gets 100% of Prophet bonuses
+            return 1e18;
+        } else if (_stakedAt < _exitedAt && _exitedAt > 0) {
+            // NFT staked after the strategy was executed + strategy finished
+            // gets proportional
+            return (_exitedAt.sub(_stakedAt)).preciseDiv(_exitedAt.sub(_executedAt));
+        } else if (_stakedAt < block.timestamp && _exitedAt == 0) {
+            // Strategy still live
+            // gets proportional
+            return (block.timestamp.sub(_stakedAt)).preciseDiv(block.timestamp.sub(_executedAt));
+        } else {
+            // Strategy finalized before staking the NFT
+            // NFT is not eligible then for this strategy
+            return 0;
+        }
+    }
 
     /**
      * Get the rewards for a specific contributor activately contributing in strategies of a specific garden
@@ -1249,7 +1276,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            rewards = _boostRewards(_garden, _contributor, rewards);
+            rewards = _boostRewards(_garden, _contributor, rewards, strategyDetails);
         }
 
         return rewards;

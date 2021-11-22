@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 /**
  * @title IProphets
@@ -23,12 +24,10 @@ pragma solidity 0.7.6;
  *
  * Interface for interacting with the Prophets NFT
  */
-interface IProphets {
+interface IProphets is IERC721 {
     /* ============ Functions ============ */
 
-    function getStakedProphetAttrs(address _owner, address _stakedAt) external view returns (uint256[] memory);
+    function getStakedProphetAttrs(address _owner, address _stakedAt) external view returns (uint256[7] memory);
 
-    function targetOf(uint256 _id) external view returns (address);
-
-    function stakeOf(address _user, address _target) external view returns (uint256);
+    function stake(uint256 _id, address _target) external;
 }
