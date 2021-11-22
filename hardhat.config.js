@@ -14,7 +14,6 @@ require('hardhat-watcher');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
-require('@typechain/hardhat');
 
 require('./lib/plugins/upgrades');
 require('./lib/plugins/gasnow');
@@ -31,6 +30,7 @@ require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/strategy-expire');
+require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 

@@ -1395,23 +1395,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Assumptions:
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
-        uint256 bablCap;
-        babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage);
+        babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
         if (_profitData[0] == true && _profitData[1] == true) {
-            // Strategy with equal or higher profits than expected
-            bablCap = babl.mul(2); // Max cap
-            // The more the results are close to the expected the more bonus will get (limited by a x2 cap)
-            babl = babl.add(babl.preciseMul(_strategyDetails[8].preciseDiv(_strategyDetails[7])));
-            if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
+            uint256 bablCap = babl.mul(2); // Cap x2
+            // Strategist get a bonus based on the profits with a max cap of x2
+            babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
+            if (babl > bablCap) {
+                babl = bablCap;
+            }
+            return babl;
         } else if (_profitData[0] == true && _profitData[1] == false) {
             //under expectations
             // The more the results are close to the expected the less penalization it might have
-            babl = babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
+            return babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
         } else {
             // No positive profit, no BABL assigned to the strategist role
             return 0;
         }
-        return babl;
     }
 
     /**

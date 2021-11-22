@@ -46,11 +46,8 @@ abstract contract BaseIntegration {
         _;
     }
 
-    /* ============ State Variables ============ */
+    /* ============ Constants ============ */
 
-    // Address of the controller
-    IBabController public controller;
-    // Wrapped ETH address
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
@@ -59,6 +56,11 @@ abstract contract BaseIntegration {
     address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
     address internal constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
     address internal constant sUSD = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
+
+    /* ============ State Variables ============ */
+
+    // Address of the controller
+    IBabController public controller;
 
     // Name of the integration
     string public name;
@@ -79,13 +81,6 @@ abstract contract BaseIntegration {
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * Returns the name of the integration
-     */
-    function getName() external view returns (string memory) {
-        return name;
-    }
 
     /* ============ Internal Functions ============ */
 
