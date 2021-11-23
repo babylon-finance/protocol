@@ -740,6 +740,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return rewards;
     }
 
+    /**
+     * Boost BABL Rewards in case of a staked NFT prophet
+     * @param _rewards          Precalculated rewards array
+     * @param _strategyDetails  Array with strategy context
+     * @param _prophetBonus     Array with prophet NFT data from user-garden
+     * @return Rewards array with boosted rewards (if any)
+     */
     function _boostRewards(
         uint256[] memory _rewards,
         uint256[] memory _strategyDetails,
@@ -752,7 +759,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // _prophetBonus[4]: LP NFT bonus
         // _prophetBonus[5]: creator bonus
         // _prophetBonus[6]: stake NFT ts
-        // lets get the prophet additional bonus
+        // We calculate the percentage to apply or if any, depending on staking ts
         uint256 percentage = _getNFTPercentage(_prophetBonus[6], _strategyDetails[0], _strategyDetails[1]);
         if (_prophetBonus[0] != 0 && percentage > 0) {
             // Has staked a prophet in the garden before the strategy finished
@@ -1189,6 +1196,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return rewards;
     }
 
+    /**
+     * Get the percentage to apply the NFT prophet bonus, if any depending on staking ts
+     * @param _stakedAt        Timestamp when the NFT was staked (if any)
+     * @param _executedAt      Strategy executedAt timestamp
+     * @param _exitedAt        Strategy exitedAt timestamp (it can be finished or not == 0)
+     * @return the estimated proportional percentage to apply from NFT bonuses
+     */
     function _getNFTPercentage(
         uint256 _stakedAt,
         uint256 _executedAt,
