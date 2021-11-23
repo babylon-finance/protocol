@@ -14,6 +14,7 @@ require('hardhat-watcher');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
+require('@typechain/hardhat');
 
 require('./lib/plugins/upgrades');
 require('./lib/plugins/gasnow');
