@@ -16,20 +16,12 @@ const { impersonateAddress } = require('lib/rpc');
 const { finalizeStrategy, finalizeStrategyImmediate } = require('fixtures/StrategyHelper');
 const { executeStrategy } = require('../fixtures/StrategyHelper');
 
-const id = '101114191999043486697736420869088395356011912576891508818550663031478128389980';
+const id = '32156439968584618709935706941284187564699780275842591571726595721389081057467';
 
-describe('BIP3', function () {
-  let owner;
-  let gov;
-  let keeper;
-  let gardens;
-  let strategyNft;
-  let valuer;
-  let gardensNAV;
-
+describe('BIP4', function () {
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
+      await deployFixture();
     });
 
     it.only('can execute bip3', async () => {
