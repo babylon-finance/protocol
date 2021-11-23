@@ -424,6 +424,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 initialDepositAt;
         uint256 claimedAt;
         (, initialDepositAt, claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        uint256[7] memory prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, _garden);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             // Security check
             _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
@@ -435,7 +436,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _finalizedStrategies[i],
                 _contributor,
                 initialDepositAt,
-                claimedAt
+                claimedAt,
+                prophetBonus
             );
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
@@ -713,6 +715,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory rewards = new uint256[](8);
         if (IStrategy(_strategy).isStrategyActive()) {
             address garden = address(IStrategy(_strategy).garden());
+            uint256[7] memory prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, garden);
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
             // Get the contributor power until the strategy exit timestamp
@@ -732,34 +735,31 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            rewards = _boostRewards(garden, _contributor, rewards, strategyDetails);
+            rewards = _boostRewards(rewards, strategyDetails, prophetBonus);
         }
         return rewards;
     }
 
     function _boostRewards(
-        address _garden,
-        address _contributor,
         uint256[] memory _rewards,
-        uint256[] memory _strategyDetails
+        uint256[] memory _strategyDetails,
+        uint256[7] memory _prophetBonus
     ) internal view returns (uint256[] memory) {
-        // prophetBonus[0]: NFT id
-        // prophetBonus[1]: BABL loot
-        // prophetBonus[2]: strategist NFT bonus
-        // prophetBonus[3]: steward NFT bonus (voter)
-        // prophetBonus[4]: LP NFT bonus
-        // prophetBonus[5]: creator bonus
-        // prophetBonus[6]: stake NFT ts
-        uint256[7] memory prophetBonus;
+        // _prophetBonus[0]: NFT id
+        // _prophetBonus[1]: BABL loot
+        // _prophetBonus[2]: strategist NFT bonus
+        // _prophetBonus[3]: steward NFT bonus (voter)
+        // _prophetBonus[4]: LP NFT bonus
+        // _prophetBonus[5]: creator bonus
+        // _prophetBonus[6]: stake NFT ts
         // lets get the prophet additional bonus
-        prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, _garden);
-        uint256 percentage = _getNFTPercentage(prophetBonus[6], _strategyDetails[0], _strategyDetails[1]);
-        if (prophetBonus[0] != 0 && percentage > 0) {
+        uint256 percentage = _getNFTPercentage(_prophetBonus[6], _strategyDetails[0], _strategyDetails[1]);
+        if (_prophetBonus[0] != 0 && percentage > 0) {
             // Has staked a prophet in the garden before the strategy finished
-            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(prophetBonus[2].preciseMul(percentage)));
-            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(prophetBonus[3].preciseMul(percentage)));
-            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(prophetBonus[4].preciseMul(percentage)));
-            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(prophetBonus[5].preciseMul(percentage)));
+            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(_prophetBonus[2].preciseMul(percentage)));
+            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(_prophetBonus[3].preciseMul(percentage)));
+            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(_prophetBonus[4].preciseMul(percentage)));
+            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(_prophetBonus[5].preciseMul(percentage)));
             _rewards[5] = _rewards[0].add(_rewards[2]).add(_rewards[4]).add(_rewards[7]);
         }
         return _rewards;
@@ -1235,7 +1235,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategy,
         address _contributor,
         uint256 _initialDepositAt,
-        uint256 _claimedAt
+        uint256 _claimedAt,
+        uint256[7] memory _prophetBonus
     ) private view returns (uint256[] memory) {
         _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         uint256[] memory rewards = new uint256[](8);
@@ -1276,7 +1277,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
-            rewards = _boostRewards(_garden, _contributor, rewards, strategyDetails);
+            rewards = _boostRewards(rewards, strategyDetails, _prophetBonus);
         }
 
         return rewards;
