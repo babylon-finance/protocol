@@ -80,7 +80,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * Throws if the sender is not the protocol
      */
     modifier onlyGovernanceOrEmergency {
-        require(msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(), 'Not enough privileges');
+        require(
+            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
+            'Not enough privileges'
+        );
         _;
     }
 

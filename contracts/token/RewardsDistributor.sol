@@ -1587,8 +1587,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
-        // We apply a 0.25% rounding error margin at NAV
-        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(25e14));
+        // We apply a 0.15% rounding error margin at NAV
+        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(15e14));
         // Failsafe mode in case of wrong NAV (above 300%)
         strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
             ? strategyDetails[6]

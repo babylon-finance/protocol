@@ -1350,11 +1350,18 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14671.966667585869371740');
+      /* const rewards1 = parse('14671.966667585869371740');
       const rewards2 = parse('36096.951426471299806363');
       const rewards3 = parse('104047.210918636801712873');
       const rewards4 = parse('117451.286778501300195412');
-      const rewards5 = parse('147539.390039545454842836');
+      const rewards5 = parse('147539.390039545454842836'); */
+
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('14673.393319344954463656');
+      const rewards2 = parse('36096.950984452786879400');
+      const rewards3 = parse('104046.896057485702332952');
+      const rewards4 = parse('117449.939320854562745237');
+      const rewards5 = parse('147536.480743613679287247');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -1402,11 +1409,18 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15155.933452641217618416');
+      /* const rewards1 = parse('15155.933452641217618416');
       const rewards2 = parse('36096.936107085705229522');
       const rewards3 = parse('107479.271149546266710805');
       const rewards4 = parse('121325.449793500543897062');
-      const rewards5 = parse('152941.315399184640553240');
+      const rewards5 = parse('152941.315399184640553240'); */
+
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('15123.685155140945439330');
+      const rewards2 = parse('36096.928651851330106962');
+      const rewards3 = parse('107239.812891459833566632');
+      const rewards4 = parse('121054.105410329289883519');
+      const rewards5 = parse('152561.879804255854131469');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -2604,8 +2618,12 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
+
+      // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
+      // If we use block 13665320 to test NFT staking
+      expect(signer1Profit2.toString()).to.be.closeTo('11708791017819073', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2118621695754461', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
