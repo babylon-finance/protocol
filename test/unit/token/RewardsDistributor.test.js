@@ -2712,7 +2712,7 @@ describe('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
-  describe('NFT stake in Gardens for boost BABL rewards', function () {
+  describe('NFT stake in Gardens to boost BABL rewards', function () {
     it('can stake common prophet NFT in a garden to get 1% LP', async function () {
       const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
       const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
@@ -2756,7 +2756,7 @@ describe('RewardsDistributor', function () {
       const rewardsSigner2Long2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
         long2.address,
       ]);
-      expect(rewardsSigner2Long2[4]).to.be.closeTo(rewardsSigner2Long1[4].add(bonusLP), eth(0.1));
+      expect(rewardsSigner2Long2[4]).to.be.closeTo(rewardsSigner2Long1[4].add(bonusLP), rewardsSigner2Long2[4].div(50));
     });
     it('can stake great prophet NFT in a garden to get 3.5% strategist, 1.5% steward, 4.5% LP and 1% creator bonus', async function () {
       const token = addresses.tokens.WETH;
