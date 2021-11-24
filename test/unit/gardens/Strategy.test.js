@@ -563,42 +563,62 @@ describe('Strategy', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategy(long1);
 
+      // Add calculations long1
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const calculatedSetAsideLong1 = profitLong1.mul(15).div(100);
+
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong1).to.be.closeTo(
-        '7465310015245664',
+        calculatedSetAsideLong1,
         reserveAssetRewardsSetAsideLong1.div(100),
       );
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
-
       const reserveAssetRewardsSetAsideLong2 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong2).to.be.equal(reserveAssetRewardsSetAsideLong1);
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
+      // Add calculations long3
+      const returnedLong3 = await long3.capitalReturned();
+      const allocatedLong3 = await long3.capitalAllocated();
+      const profitLong3 = returnedLong3.sub(allocatedLong3);
+      const calculatedSetAsideLong3 = profitLong3.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong3 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong3).to.be.closeTo(
-        '7457155378612255',
+        calculatedSetAsideLong3,
         reserveAssetRewardsSetAsideLong3.div(100),
       );
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
+      // Add calculations long4
+      const returnedLong4 = await long4.capitalReturned();
+      const allocatedLong4 = await long4.capitalAllocated();
+      const profitLong4 = returnedLong4.sub(allocatedLong4);
+      const calculatedSetAsideLong4 = profitLong4.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong4 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong4).to.be.closeTo(
-        '15746963198401948',
+        calculatedSetAsideLong4.add(calculatedSetAsideLong3),
         reserveAssetRewardsSetAsideLong4.div(100),
       );
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
+      // Add calculations long5
+      const returnedLong5 = await long5.capitalReturned();
+      const allocatedLong5 = await long5.capitalAllocated();
+      const profitLong5 = returnedLong5.sub(allocatedLong5);
+      const calculatedSetAsideLong5 = profitLong5.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong5 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong5).to.be.closeTo(
-        '24032618688505816',
+        calculatedSetAsideLong5.add(calculatedSetAsideLong4.add(calculatedSetAsideLong3)),
         reserveAssetRewardsSetAsideLong5.div(100),
       );
     });
