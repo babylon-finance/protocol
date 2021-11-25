@@ -15,10 +15,13 @@ const STUCK_EXECUTE = [
   // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
 
   // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
-  '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
+  // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
+  '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
+  // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
+  // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
 ];
 
 describe('deploy', function () {
@@ -180,6 +183,12 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
+    it('NAV of a specific strategy', async () => {
+      const stratContract = await ethers.getContractAt('Strategy', '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5');
+      const nav = await stratContract.getNAV();
+      console.log('IB Curve NAV', nav.toString());
+    });
+
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('Garden', garden);
@@ -189,6 +198,11 @@ describe('deploy', function () {
         console.log(
           `Garden ${await gardenContract.name()} ${garden} has NAV $${ethers.utils.formatUnits(gardenNAV, 'ether')}`,
         );
+        // const strategies = await gardenContract.getStrategies();
+        // for(const strat of strategies) {
+        //   const stratContract = await ethers.getContractAt('Strategy', strat);
+        //   console.log(strat, (await stratContract.getNAV()).toString());
+        // }
         try {
           expect(gardenNAV).to.closeTo(gardensNAV[garden], eth());
         } catch (e) {
@@ -200,7 +214,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('can execute stuck proposals', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 

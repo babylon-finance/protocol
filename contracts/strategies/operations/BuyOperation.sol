@@ -93,6 +93,10 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, ERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
@@ -120,6 +124,10 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         IStrategy(msg.sender).trade(
             token,
@@ -145,6 +153,10 @@ contract BuyOperation is Operation {
         address token = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
+        }
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
         uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
         uint256 NAV =

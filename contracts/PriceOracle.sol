@@ -457,7 +457,9 @@ contract PriceOracle is IPriceOracle {
      * @return price                Price of the pair
      */
     function getPriceNAV(address _tokenIn, address _tokenOut) public view override returns (uint256 price) {
-        return _getPrice(_tokenIn, _tokenOut, true);
+        price = _getPrice(_tokenIn, _tokenOut, true);
+        require(price != 0, 'Price not found');
+        return price;
     }
 
     /**
@@ -467,7 +469,9 @@ contract PriceOracle is IPriceOracle {
      * @return price                Price of the pair
      */
     function getPrice(address _tokenIn, address _tokenOut) public view virtual override returns (uint256 price) {
-        return _getPrice(_tokenIn, _tokenOut, false);
+        price = _getPrice(_tokenIn, _tokenOut, false);
+        require(price != 0, 'Price not found');
+        return price;
     }
 
     /**
@@ -481,7 +485,7 @@ contract PriceOracle is IPriceOracle {
         address _tokenIn,
         address _tokenOut,
         bool _forNAV
-    ) public view returns (uint256 price) {
+    ) internal view returns (uint256 price) {
         // Same asset. Returns base unit
         if (_tokenIn == _tokenOut) {
             return 10**18;
@@ -634,7 +638,6 @@ contract PriceOracle is IPriceOracle {
                 }
             }
         }
-
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
             uint256 shares = 1e18;
@@ -650,18 +653,17 @@ contract PriceOracle is IPriceOracle {
             }
             return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
         }
-
-        // Direct UNI3
-        price = _getUNIV3Price(_tokenIn, _tokenOut);
-        if (price != 0) {
-            return price;
-        }
         // UniV3 through WETH
         if (_tokenIn != WETH && _tokenOut != WETH) {
             uint256 divisor = _getUNIV3Price(_tokenOut, WETH);
             if (divisor != 0) {
                 return _getUNIV3Price(_tokenIn, WETH).preciseDiv(divisor);
             }
+        }
+        // Direct UNI3
+        price = _getUNIV3Price(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
         }
         // UniV3 through DAI
         if (_tokenIn != DAI && _tokenOut != DAI) {
@@ -675,7 +677,6 @@ contract PriceOracle is IPriceOracle {
             price = _getUNIV2Price(_tokenIn, _tokenOut);
         }
         // No valid price
-        require(price != 0, 'Price not found');
         return price;
     }
 

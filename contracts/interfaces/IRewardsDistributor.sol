@@ -66,8 +66,6 @@ interface IRewardsDistributor {
 
     /* ============ External Functions ============ */
 
-    function sendTokensToContributor(address _to, uint256 _amount) external returns (uint256);
-
     function setProfitRewards(
         address _garden,
         uint256 _strategistShare,
@@ -93,4 +91,6 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
+
+    function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }

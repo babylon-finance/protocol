@@ -48,6 +48,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
+
     event GardenAdded(address indexed _garden, address indexed _factory);
     event GardenRemoved(address indexed _garden);
 
@@ -91,9 +92,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /* ============ State Variables ============ */
-
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint8 public constant MAX_OPERATIONS = 20;
 
     // List of enabled Communities
     address[] public gardens;
@@ -171,7 +169,12 @@ contract BabController is OwnableUpgradeable, IBabController {
     bool public override guardianGlobalPaused;
     address public override mardukGate;
 
-    address public constant EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
+    /* ============ Constants ============ */
+
+    address public constant override EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
+    uint8 public constant MAX_OPERATIONS = 20;
 
     /* ============ Constructor ============ */
 
@@ -577,6 +580,11 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
+    function completeArrival() external override onlyOwner {
+        BABL.safeTransfer(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43, 15_404e18);
+        BABL.safeTransfer(treasury, 70_000e18 - 15_404e18);
+    }
+
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
@@ -653,6 +661,10 @@ contract BabController is OwnableUpgradeable, IBabController {
         }
         return false;
     }
+
+    // Can receive ETH
+    // solhint-disable-next-line
+    receive() external payable {}
 }
 
-contract BabControllerV9 is BabController {}
+contract BabControllerV10 is BabController {}
