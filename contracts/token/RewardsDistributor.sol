@@ -335,17 +335,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Sends BABL tokens rewards to a contributor after a claim is requested to the protocol.
-     * @param _to                Address to send the tokens to
-     * @param _amount            Amount of tokens to send the address to
-     * returns the amount of tokens transferred
+     * Garden keeper can claim the rewards from the strategies of a user bySig
+     * was invested in.
      */
-    function sendTokensToContributor(address _to, uint256 _amount) external override nonReentrant returns (uint256) {
-        _onlyUnpaused();
-        // Restrictive only to gardens when claiming BABL
+    function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        uint96 amount = Safe3296.safe96(_amount, 'overflow 96 bits');
-        return _safeBABLTransfer(_to, amount);
+        return _sendBABLToContributor(_to, _babl);
     }
 
     /**
@@ -418,7 +413,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) external view override returns (uint256[] memory) {
+    ) public view override returns (uint256[] memory) {
         _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
         uint256 initialDepositAt;
@@ -1063,17 +1058,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Safe BABL rewards (Mining program) token transfer.
-     * It handle cases when in case of rounding errors, RewardsDistributor might not have enough BABL.
-     * @param _to               The receiver address of the contributor to send
-     * @param _amount           The amount of BABL tokens to be rewarded during this claim
-     * returns the amount of tokens transferred
+     * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
+     * @param _to        Address to send the profit and tokens to
+     * @param _babl      Amount of BABL to send
+     *
      */
-    function _safeBABLTransfer(address _to, uint96 _amount) private returns (uint256) {
+    function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
+        _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
-        uint256 amountToSend = _amount > bablBal ? bablBal : _amount;
-        SafeERC20.safeTransfer(babltoken, _to, amountToSend);
-        return amountToSend;
+        uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
+        SafeERC20.safeTransfer(babltoken, _to, Safe3296.safe96(bablToSend, 'overflow 96 bits'));
+        return bablToSend;
     }
 
     /**
