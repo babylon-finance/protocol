@@ -1169,7 +1169,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[13]: endingGardenSupply
 
         uint256 endTime = _strategyDetails[1] > 0 ? _strategyDetails[1] : block.timestamp;
-        if (endTime < gardenPowerByTimestamp[_garden][0].lastDepositAt) {
+        if (_strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt) {
             // Backward compatibility for old strategies
             return _getContributorPower(_garden, _contributor, endTime);
         }
