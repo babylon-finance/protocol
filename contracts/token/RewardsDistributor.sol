@@ -260,12 +260,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
 
+    IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+
     // A record of garden token checkpoints for each user at each garden, by index
     mapping(address => mapping(address => mapping(uint256 => Checkpoints))) private userCheckpoints;
 
     // The number of checkpoints for each user at each garden
     mapping(address => mapping(address => uint256)) private numCheckpoints;
-    IProphets public constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     /* ============ Constructor ============ */
 
@@ -330,8 +331,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Garden keeper can claim the rewards from the strategies of a user bySig
-     * was invested in.
+     * Sending BABL as part of the claim process (either by sig or standard claim)
+     *
      */
     function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
@@ -354,37 +355,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyController();
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
-    }
-
-    /**
-     * Change default BABL shares % by the governance
-     * @param _strategistShare      New % of BABL strategist share
-     * @param _stewardsShare        New % of BABL stewards share
-     * @param _lpShare              New % of BABL lp share
-     * @param _creatorBonus         New % of creator bonus
-     * @param _profitWeight         New % of profit weigth for strategy rewards
-     * @param _principalWeight      New % of principal weigth for strategy rewards
-     */
-    function setBABLMiningParameters(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare,
-        uint256 _creatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external override onlyOwner {
-        _require(
-            _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
-                _creatorBonus <= 1e18 &&
-                _profitWeight.add(_principalWeight) == 1e18,
-            Errors.INVALID_MINING_VALUES
-        );
-        strategistBABLPercentage = _strategistShare;
-        stewardsBABLPercentage = _stewardsShare;
-        lpsBABLPercentage = _lpShare;
-        gardenCreatorBonus = _creatorBonus;
-        bablProfitWeight = _profitWeight;
-        bablPrincipalWeight = _principalWeight;
     }
 
     /* ========== View functions ========== */
@@ -441,8 +411,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Gets the total amount of rewards for a given strategy
-     * @param _strategy                Strategy to check
+     * Gets the baseline amount of BABL rewards for a given strategy
+     * @param _strategy     Strategy to check
      */
     function getStrategyRewards(address _strategy) external view override returns (uint96) {
         IStrategy strategy = IStrategy(_strategy);

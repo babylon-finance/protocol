@@ -73,15 +73,6 @@ interface IRewardsDistributor {
         uint256 _lpShare
     ) external;
 
-    function setBABLMiningParameters(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare,
-        uint256 _creatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external;
-
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
     function updateGardenPowerAndContributor(
