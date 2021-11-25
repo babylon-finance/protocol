@@ -121,6 +121,7 @@ describe('RewardsDistributor', function () {
   let uniswapV3TradeIntegration;
   let masterSwapper;
   let mardukGate;
+  let nft;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -237,6 +238,7 @@ describe('RewardsDistributor', function () {
       dai,
       usdc,
       weth,
+      nft,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
@@ -1348,11 +1350,18 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14671.966667585869371740');
+      /* const rewards1 = parse('14671.966667585869371740');
       const rewards2 = parse('36096.951426471299806363');
       const rewards3 = parse('104047.210918636801712873');
       const rewards4 = parse('117451.286778501300195412');
-      const rewards5 = parse('147539.390039545454842836');
+      const rewards5 = parse('147539.390039545454842836'); */
+
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('14673.393319344954463656');
+      const rewards2 = parse('36096.950984452786879400');
+      const rewards3 = parse('104046.896057485702332952');
+      const rewards4 = parse('117449.939320854562745237');
+      const rewards5 = parse('147536.480743613679287247');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -1400,11 +1409,18 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15155.933452641217618416');
+      /* const rewards1 = parse('15155.933452641217618416');
       const rewards2 = parse('36096.936107085705229522');
       const rewards3 = parse('107479.271149546266710805');
       const rewards4 = parse('121325.449793500543897062');
-      const rewards5 = parse('152941.315399184640553240');
+      const rewards5 = parse('152941.315399184640553240'); */
+
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('15123.685155140945439330');
+      const rewards2 = parse('36096.928651851330106962');
+      const rewards3 = parse('107239.812891459833566632');
+      const rewards4 = parse('121054.105410329289883519');
+      const rewards5 = parse('152561.879804255854131469');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -2602,8 +2618,12 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
+
+      // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
+      // If we use block 13665320 to test NFT staking
+      expect(signer1Profit2.toString()).to.be.closeTo('11708791017819073', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2118621695754461', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
@@ -2690,6 +2710,309 @@ describe('RewardsDistributor', function () {
           long5.address,
         ]),
       ).to.be.revertedWith('BAB#073');
+    });
+  });
+  describe('NFT stake in Gardens to boost BABL rewards', function () {
+    it('can stake common prophet NFT in a garden to get 1% LP', async function () {
+      const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      await prophetsNFT.connect(raul).transferFrom(raul.address, signer2.address, 37, { gasPrice: 0 }); // NFT transfer
+      const [id, babl, strategist, voter, lp, creator, ts] = await prophetsNFT.getStakedProphetAttrs(
+        signer2.address,
+        garden1.address,
+      );
+      expect(id).to.eq(0);
+      expect(babl).to.eq(0);
+      expect(strategist).to.eq(0);
+      expect(voter).to.eq(0);
+      expect(lp).to.eq(0);
+      expect(creator).to.eq(0);
+      expect(ts).to.eq(0);
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      // Now we stake a prophet
+      const rewardsSigner2Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      await prophetsNFT.connect(signer2).stake(37, garden1.address, { gasPrice: 0 }); // NFT stake
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer2.address,
+        garden1.address,
+      );
+      const block = await ethers.provider.getBlock();
+      expect(id2).to.eq(37);
+      expect(babl2).to.eq(eth(5));
+      expect(strategist2).to.eq(0);
+      expect(voter2).to.eq(0);
+      expect(lp2).to.eq(eth(0.01));
+      expect(creator2).to.eq(0);
+      expect(ts2).to.eq(block.timestamp);
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+      const bonusLP = rewardsSigner2Long1[4].mul(lp2).div(eth(1));
+      const rewardsSigner2Long2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long2.address,
+      ]);
+      expect(rewardsSigner2Long2[4]).to.be.closeTo(rewardsSigner2Long1[4].add(bonusLP), rewardsSigner2Long2[4].div(50));
+    });
+    it('can stake great prophet NFT in a garden to get 3.5% strategist, 1.5% steward, 4.5% LP and 1% creator bonus', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We stake the great prophet in newGarden1
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT stake
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+      const block = await ethers.provider.getBlock();
+      expect(id2).to.eq(tokenId);
+      expect(babl2).to.eq(eth(55));
+      expect(strategist2).to.eq(eth(0.035));
+      expect(voter2).to.eq(eth(0.015));
+      expect(lp2).to.eq(eth(0.045));
+      expect(creator2).to.eq(eth(0.01));
+      expect(ts2).to.eq(block.timestamp);
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(rewardsSigner1Long2[4].add(bonusLP), rewardsSigner1Long1[4].div(50));
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can NOT use great prophet NFT bonuses if staked after the strategy ends', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(rewardsSigner1Long2[0], rewardsSigner1Long1[0].div(50));
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(rewardsSigner1Long2[2], rewardsSigner1Long1[2].div(50));
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(rewardsSigner1Long2[4], rewardsSigner1Long1[4].div(50));
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(rewardsSigner1Long2[7], rewardsSigner1Long1[7].div(50));
+    });
+    it('can get proportional 50% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 15);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 15);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.div(2)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.div(2)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.div(2)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.div(2)),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can get proportional 66% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.mul(2).div(3)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.mul(2).div(3)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.mul(2).div(3)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.mul(2).div(3)),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can get proportional 33% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.div(3)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.div(3)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.div(3)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.div(3)),
+        rewardsSigner1Long1[7].div(50),
+      );
     });
   });
 });

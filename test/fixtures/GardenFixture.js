@@ -182,7 +182,7 @@ async function setUpFixture(
   const usdcWhaleSigner = await impersonateAddress('0x0a59649758aa4d66e25f08dd01271e891fe52199');
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
   const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
-
+  const nft = await impersonateAddress('0x26231A65EF80706307BbE71F032dc1e5Bf28ce43');
   console.log('end garden fixture');
 
   return {
@@ -256,6 +256,8 @@ async function setUpFixture(
     wbtc,
 
     TOKEN_MAP,
+
+    nft,
   };
 }
 
