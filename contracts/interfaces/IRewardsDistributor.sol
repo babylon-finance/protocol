@@ -107,7 +107,5 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
-
-    function sendBABLBySig(address _to, uint256 _babl) external;
+    function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }

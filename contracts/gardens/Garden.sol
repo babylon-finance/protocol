@@ -474,6 +474,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
+     * User can claim the rewards from the strategies that his principal
+     * was invested in.
+     */
+    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
+        // Flashloan protection
+        _require(
+            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
+            Errors.DEPOSIT_HARDLOCK
+        );
+        uint256[] memory rewards = new uint256[](8);
+        rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
+        _sendRewardsInternal(msg.sender, rewards[5], rewards[6]);
+    }
+
+    /**
      * @notice
      *   This method allows users
      *   to claim their rewards either profits or BABL.
@@ -509,35 +524,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_fee > 0, Errors.FEE_TOO_LOW);
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
-        // 1st we send profit rewards
-        // It also makes nonce accounting++ and other accounting tasks
         _sendRewardsInternal(signer, _babl, _profits);
-        // 2nd Send BABL
-        rewardsDistributor.sendBABLBySig(signer, _babl);
-    }
-
-    /**
-     * Should be called only by Rewards Distributor during standard user claimRewards
-     *   getRewards calculated on-chain
-     *   The Keeper fee is paid out of user's shares and it is calculated off-chain.
-     *
-     * @param _contributor     Address of the contributor
-     * @param _babl            BABL tokens as part of the claim to make accounting for
-     * @param _profits         Profit rewards (strategist / steward) to claim.
-     */
-    function sendRewards(
-        address _contributor,
-        uint256 _babl,
-        uint256 _profits
-    ) external override nonReentrant {
-        _onlyUnpaused();
-        _require(IBabController(controller).rewardsDistributor() == msg.sender, Errors.ONLY_RD);
-        // Flashloan protection in normal claim vs. deposit
-        _require(
-            block.timestamp.sub(contributors[_contributor].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
-        _sendRewardsInternal(_contributor, _babl, _profits);
     }
 
     /**
@@ -798,7 +785,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     {
         Contributor storage contributor = contributors[_contributor];
         uint256 balance = balanceOf(_contributor);
-        uint256 supply = totalSupply();
         uint256 lockedBalance = getLockedBalance(_contributor);
         return (
             contributor.lastDepositAt,
@@ -811,7 +797,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 : 0,
             balance,
             lockedBalance,
-            balance.preciseDiv(supply > 0 ? supply : 1),
+            0, // Deprecated
             contributor.nonce
         );
     }
@@ -1057,6 +1043,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _babl,
         uint256 _profits
     ) internal {
+        _onlyUnpaused();
         _require(balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
@@ -1072,9 +1059,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
-            contributor.claimedBABL = contributor.claimedBABL.add(_babl); // BABL Rewards claimed properly
-            // Check-Effects. Interaction done at RD afterwards
-            emit BABLRewardsForContributor(_contributor, _babl);
+            uint256 bablSent = rewardsDistributor.sendBABLToContributor(_contributor, _babl);
+            contributor.claimedBABL = contributor.claimedBABL.add(bablSent); // BABL Rewards claimed properly
+            emit BABLRewardsForContributor(_contributor, bablSent);
         }
     }
 
@@ -1135,16 +1122,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
-        contributor.nonce = contributor.nonce + 1;
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
-        rewardsDistributor.updateGardenPowerAndContributor(
-            address(this),
-            _contributor,
-            _previousBalance,
-            _previousSupply,
-            _newTokens,
-            true // deposit
-        );
+        _updateGardenPowerAndContributor(_contributor, _previousBalance, _previousSupply, _newTokens, true);
+        // nonce update is done at updateGardenPowerAndContributor
     }
 
     /**
@@ -1169,15 +1149,30 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
         // We need to update at Rewards Distributor SC for rewards accurate calculations
+        _updateGardenPowerAndContributor(_contributor, _previousBalance, _previousSupply, _tokensToBurn, false);
+        // nonce update is done at updateGardenPowerAndContributor
+    }
+
+    /**
+     * We need to update at Rewards Distributor SC for rewards for rewards accurate calculations
+     */
+    function _updateGardenPowerAndContributor(
+        address _contributor,
+        uint256 _prevBalance,
+        uint256 _prevSupply,
+        uint256 _tokens,
+        bool _depositOrWithdraw
+    ) internal {
+        // We need to update at Rewards Distributor SC for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
-            _previousBalance,
-            _previousSupply,
-            _tokensToBurn,
-            false // withdraw
+            _prevBalance,
+            _prevSupply,
+            _tokens,
+            _depositOrWithdraw // true = deposit , false = withdraw
         );
-        contributor.nonce = contributor.nonce + 1;
+        contributors[_contributor].nonce++;
     }
 
     /**

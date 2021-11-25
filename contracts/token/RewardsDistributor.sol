@@ -334,20 +334,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
     }
 
-    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external override nonReentrant {
-        uint256[] memory rewards = new uint256[](8);
-        rewards = getRewards(_garden, msg.sender, _finalizedStrategies);
-        _sendRewardsToContributor(_garden, msg.sender, rewards[5], rewards[6], false);
-    }
-
     /**
      * Garden keeper can claim the rewards from the strategies of a user bySig
      * was invested in.
      */
-    function sendBABLBySig(address _to, uint256 _babl) external override nonReentrant {
+    function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        // getRewards executed off-chain by Keeper
-        _sendRewardsToContributor(msg.sender, _to, _babl, 0, true);
+        return _sendBABLToContributor(_to, _babl);
     }
 
     /**
@@ -1066,31 +1059,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
-     * @param _garden    Address of the garden
      * @param _to        Address to send the profit and tokens to
      * @param _babl      Amount of BABL to send
-     * @param _profits   Amount of profits to send
      *
      */
-    function _sendRewardsToContributor(
-        address _garden,
-        address _to,
-        uint256 _babl,
-        uint256 _profits,
-        bool _bySig
-    ) internal {
+    function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
-        _require(ERC20(_garden).balanceOf(_to) > 0, Errors.ONLY_CONTRIBUTOR);
-        _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
-        if (!_bySig) {
-            // Send profits and make accounting for both (profits and babl)
-            IGarden(_garden).sendRewards(_to, bablToSend, _profits);
-        }
-        // Send BABL
-        // In bySig ops, the accounting has been done already
         SafeERC20.safeTransfer(babltoken, _to, Safe3296.safe96(bablToSend, 'overflow 96 bits'));
+        return bablToSend;
     }
 
     /**

@@ -170,11 +170,7 @@ interface IGarden {
         bytes32 s
     ) external;
 
-    function sendRewards(
-        address _contributor,
-        uint256 _babl,
-        uint256 _profits
-    ) external;
+    function claimReturns(address[] calldata _finalizedStrategies) external;
 
     function claimRewardsBySig(
         uint256 _babl,
