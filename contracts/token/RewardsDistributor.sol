@@ -1229,7 +1229,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Avoid overflow
         return balanceEnd < finalSupplyEnd ? balanceEnd.preciseDiv(finalSupplyEnd) : 1e18;
     }
-    /** 
+
+    /**
      * Boost BABL Rewards in case of a staked NFT prophet
      * @param _garden           Garden address
      * @param _contributor      Contributor address
