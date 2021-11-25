@@ -1117,9 +1117,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
-        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
+        // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
-        // nonce update is done at updateGardenPowerAndContributor
+        // nonce update is done at _updateGardenPowerAndContributor
     }
 
     /**
@@ -1142,13 +1142,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
-        // We need to update at Rewards Distributor SC for rewards accurate calculations
+        // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
-        // nonce update is done at updateGardenPowerAndContributor
+        // nonce update is done at _updateGardenPowerAndContributor
     }
 
     /**
-     * We need to update at Rewards Distributor SC for rewards for rewards accurate calculations
+     * Rewards Distributor checkpoint updater at deposits / withdrawals
      */
     function _updateGardenPowerAndContributor(
         address _contributor,
@@ -1156,7 +1156,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _tokens,
         bool _depositOrWithdraw
     ) internal {
-        // We need to update at Rewards Distributor SC for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
