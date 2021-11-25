@@ -48,5 +48,5 @@ interface IPassiveIntegration {
 
     function getResultAsset(address _investmentAddress) external view returns (address);
 
-    function getRewards(address _investmentAddress) external view returns (address, uint256);
+    function getRewards(address _strategy, address _investmentAddress) external view returns (address, uint256);
 }

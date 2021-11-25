@@ -27,11 +27,11 @@ require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
-require('./lib/tasks/add-live-strategies');
 require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/strategy-expire');
+require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 
@@ -43,7 +43,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13171630;
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13665320; // old 13171630 new 13665320
 
 const CHAIN_IDS = {
   hardhat: 31337,

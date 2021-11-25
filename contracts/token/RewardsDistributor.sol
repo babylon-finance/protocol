@@ -36,6 +36,7 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IProphets} from '../interfaces/IProphets.sol';
 
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
@@ -258,6 +259,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
+
+    IProphets public constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     /* ============ Constructor ============ */
 
@@ -714,7 +717,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
-            // Get the contributor power until the the strategy exit timestamp
+            // Get the contributor power until the strategy exit timestamp
             uint256 contributorPower =
                 getContributorPower(
                     garden,
@@ -730,6 +733,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyDetails,
                 profitData
             );
+            // add Prophets NFT bonus if staked in the garden
+            rewards = _boostRewards(garden, _contributor, rewards, strategyDetails);
         }
         return rewards;
     }
@@ -1116,6 +1121,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
     }
 
+    /* ========== Internal View functions ========== */
+
     /**
      * Get an estimation of user rewards for active strategies
      * @param _garden               Address of the garden
@@ -1171,7 +1178,71 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return rewards;
     }
 
-    /* ========== Internal View functions ========== */
+    /**
+     * Boost BABL Rewards in case of a staked NFT prophet
+     * @param _garden           Garden address
+     * @param _contributor      Contributor address
+     * @param _rewards          Precalculated rewards array
+     * @param _strategyDetails  Array with strategy context
+     * @return Rewards array with boosted rewards (if any)
+     */
+    function _boostRewards(
+        address _garden,
+        address _contributor,
+        uint256[] memory _rewards,
+        uint256[] memory _strategyDetails
+    ) internal view returns (uint256[] memory) {
+        // _prophetBonus[0]: NFT id
+        // _prophetBonus[1]: BABL loot
+        // _prophetBonus[2]: strategist NFT bonus
+        // _prophetBonus[3]: steward NFT bonus (voter)
+        // _prophetBonus[4]: LP NFT bonus
+        // _prophetBonus[5]: creator bonus
+        // _prophetBonus[6]: stake NFT ts
+        uint256[7] memory prophetBonus = PROPHETS_NFT.getStakedProphetAttrs(_contributor, _garden);
+        // We calculate the percentage to apply or if any, depending on staking ts
+        uint256 percentage = _getNFTPercentage(prophetBonus[6], _strategyDetails[0], _strategyDetails[1]);
+        if (prophetBonus[0] != 0 && percentage > 0) {
+            // Has staked a prophet in the garden before the strategy finished
+            _rewards[0] = _rewards[0].add(_rewards[0].multiplyDecimal(prophetBonus[2].preciseMul(percentage)));
+            _rewards[2] = _rewards[2].add(_rewards[2].multiplyDecimal(prophetBonus[3].preciseMul(percentage)));
+            _rewards[4] = _rewards[4].add(_rewards[4].multiplyDecimal(prophetBonus[4].preciseMul(percentage)));
+            _rewards[7] = _rewards[7].add(_rewards[7].multiplyDecimal(prophetBonus[5].preciseMul(percentage)));
+            _rewards[5] = _rewards[0].add(_rewards[2]).add(_rewards[4]).add(_rewards[7]);
+        }
+        return _rewards;
+    }
+
+    /**
+     * Get the percentage to apply the NFT prophet bonus, if any depending on staking ts
+     * @param _stakedAt        Timestamp when the NFT was staked (if any)
+     * @param _executedAt      Strategy executedAt timestamp
+     * @param _exitedAt        Strategy exitedAt timestamp (it can be finished or not == 0)
+     * @return the estimated proportional percentage to apply from NFT bonuses
+     */
+    function _getNFTPercentage(
+        uint256 _stakedAt,
+        uint256 _executedAt,
+        uint256 _exitedAt
+    ) internal view returns (uint256) {
+        if (_stakedAt <= _executedAt && _executedAt > 0) {
+            // NFT staked before the strategy was executed
+            // gets 100% of Prophet bonuses
+            return 1e18;
+        } else if (_stakedAt < _exitedAt && _exitedAt > 0) {
+            // NFT staked after the strategy was executed + strategy finished
+            // gets proportional
+            return (_exitedAt.sub(_stakedAt)).preciseDiv(_exitedAt.sub(_executedAt));
+        } else if (_stakedAt < block.timestamp && _exitedAt == 0) {
+            // Strategy still live
+            // gets proportional
+            return (block.timestamp.sub(_stakedAt)).preciseDiv(block.timestamp.sub(_executedAt));
+        } else {
+            // Strategy finalized before staking the NFT
+            // NFT is not eligible then for this strategy
+            return 0;
+        }
+    }
 
     /**
      * Get the rewards for a specific contributor activately contributing in strategies of a specific garden
@@ -1235,6 +1306,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 strategyDetails,
                 profitData
             );
+            // add Prophets NFT bonus if staked in the garden
+            rewards = _boostRewards(_garden, _contributor, rewards, strategyDetails);
         }
 
         return rewards;
@@ -1242,10 +1315,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the BABL rewards (Mining program) for a Steward profile
-     * @param _strategy         Strategy address
-     * @param _contributor      Contributor address
-     * @param _strategyDetails  Strategy details data
-     * @param _profitData       Strategy profit data
+     * @param _strategy             Strategy address
+     * @param _contributor          Contributor address
+     * @param _strategyDetails      Strategy details data
+     * @param _profitData           Strategy profit data
      */
     function _getStrategyStewardBabl(
         address _strategy,
@@ -1260,7 +1333,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 totalVotes = _strategyDetails[4].add(_strategyDetails[5]);
 
         uint256 bablCap;
-
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl;
         if (userVotes > 0 && _profitData[0] == true && _profitData[1] == true) {
@@ -1343,8 +1415,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get the BABL rewards (Mining program) for a Strategist profile
-     * @param _strategyDetails     Strategy details data
-     * @param _profitData          Strategy details data
+     * @param _strategyDetails          Strategy details data
+     * @param _profitData               Strategy details data
      */
     function _getStrategyStrategistBabl(uint256[] memory _strategyDetails, bool[] memory _profitData)
         private
@@ -1354,23 +1426,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Assumptions:
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
-        uint256 bablCap;
         babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
         if (_profitData[0] == true && _profitData[1] == true) {
-            // Strategy with equal or higher profits than expected
-            bablCap = babl.mul(2); // Max cap
-            // The more the results are close to the expected the more bonus will get (limited by a x2 cap)
-            babl = babl.add(babl.preciseMul(_strategyDetails[8].preciseDiv(_strategyDetails[7])));
-            if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
+            uint256 bablCap = babl.mul(2); // Cap x2
+            // Strategist get a bonus based on the profits with a max cap of x2
+            babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
+            if (babl > bablCap) {
+                babl = bablCap;
+            }
+            return babl;
         } else if (_profitData[0] == true && _profitData[1] == false) {
             //under expectations
             // The more the results are close to the expected the less penalization it might have
-            babl = babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
+            return babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
         } else {
             // No positive profit, no BABL assigned to the strategist role
             return 0;
         }
-        return babl;
     }
 
     /**
@@ -1477,9 +1549,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Gives creator bonus to the user and returns original + bonus
-     * @param _garden           Address of the garden
-     * @param _contributor      Address of the contributor
-     * @param _contributorBABL  BABL obtained in the strategy
+     * @param _garden               Address of the garden
+     * @param _contributor          Address of the contributor
+     * @param _contributorBABL      BABL obtained in the strategy
      */
     function _getCreatorBonus(
         address _garden,
@@ -1546,8 +1618,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
-        // We apply a 0.25% rounding error margin at NAV
-        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(25e14));
+        // We apply a 0.15% rounding error margin at NAV
+        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(15e14));
         // Failsafe mode in case of wrong NAV (above 300%)
         strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
             ? strategyDetails[6]

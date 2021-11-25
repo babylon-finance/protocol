@@ -92,7 +92,7 @@ describe('CurvePoolIntegrationTest', function () {
         if (name !== 'tricrypto') {
           expect(await strategyContract.getNAV()).to.be.closeTo(
             ethers.utils.parseEther('1'),
-            ethers.utils.parseEther('1').div(10),
+            ethers.utils.parseEther('1').div(7),
           );
         }
       });
