@@ -2180,7 +2180,7 @@ describe('RewardsDistributor', function () {
       await daiGarden.connect(signer1).claimReturns([long2.address]);
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.0005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), signer1BalanceBABL.div(100));
       expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, signer1BABLDAI.div(50));
     });
     it('should provide correct % of strategy rewards per profile with profits', async function () {
