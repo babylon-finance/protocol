@@ -80,6 +80,8 @@ interface IBabController {
 
     function owner() external view returns (address);
 
+    function EMERGENCY_OWNER() external view returns (address);
+
     function guardianGlobalPaused() external view returns (bool);
 
     function guardianPaused(address _address) external view returns (bool);
@@ -143,4 +145,6 @@ interface IBabController {
     function protocolManagementFee() external view returns (uint256);
 
     function minLiquidityPerReserve(address _reserve) external view returns (uint256);
+
+    function completeArrival() external;
 }

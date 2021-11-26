@@ -35,13 +35,13 @@ describe('YearnVaultIntegrationTest', function () {
 
     describe('getPricePerShare', function () {
       it('get price per share', async function () {
-        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1008114909237872240');
+        expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1016868386987880382');
       });
     });
 
     describe('getExpectedShares', function () {
       it('get expected shares', async function () {
-        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('991950412434623098');
+        expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('983411435340371704');
       });
     });
 
@@ -59,7 +59,7 @@ describe('YearnVaultIntegrationTest', function () {
         { token: addresses.tokens.WBTC, name: 'WBTC' },
       ].forEach(({ token, name }) => {
         [
-          { vault: '0xa9fE4601811213c340e850ea305481afF02f5b28', symbol: 'yvWETH' }, // yvWETH vault
+          { vault: '0xa258C4606Ca8206D8aA700cE2143D7db854D168c', symbol: 'yvWETH' }, // yvWETH vault // old 0xa9fE4601811213c340e850ea305481afF02f5b28
           { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
           { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
           { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
