@@ -119,6 +119,14 @@ async function depositFunds(address, garden) {
       await WBTC.connect(signer3).approve(garden.address, from(10e6), { gasPrice: 0 });
       await garden.connect(signer3).deposit(from(10e6), 1, signer3.getAddress(), false);
       break;
+    case addresses.tokens.BABL.toLocaleLowerCase():
+      whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
+      whaleSigner = await impersonateAddress(whaleAddress);
+      const BABL = await getERC20(addresses.tokens.BABL);
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+      await BABL.connect(signer3).approve(garden.address, ethers.utils.parseEther('30'), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(ethers.utils.parseEther('30'), 1, signer3.getAddress(), false);
+      break;
   }
 }
 
@@ -127,6 +135,21 @@ async function transferFunds(address) {
   let whaleAddress;
   let whaleSigner;
   switch (address.toLowerCase()) {
+    case addresses.tokens.BABL.toLowerCase():
+      whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
+      whaleSigner = await impersonateAddress(whaleAddress);
+      const BABL = await getERC20(addresses.tokens.BABL);
+
+      await BABL.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('30'), {
+        gasPrice: 0,
+      });
+      await BABL.connect(whaleSigner).transfer(signer2.address, ethers.utils.parseEther('30'), {
+        gasPrice: 0,
+      });
+      await BABL.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('30'), {
+        gasPrice: 0,
+      });
+      break;
     case addresses.tokens.DAI.toLowerCase():
       whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
       whaleSigner = await impersonateAddress(whaleAddress);

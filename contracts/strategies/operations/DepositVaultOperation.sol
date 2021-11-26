@@ -67,7 +67,7 @@ contract DepositVaultOperation is Operation {
     function validateOperation(
         bytes calldata _data,
         IGarden, /* _garden */
-        address _integration,
+        address /* _integration */,
         uint256 /* _index */
     ) external view override onlyStrategy {
         require(BytesLib.decodeOpDataAddress(_data) != address(0), 'Incorrect vault address!');
