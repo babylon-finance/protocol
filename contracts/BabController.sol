@@ -34,6 +34,8 @@ import {IBabController} from './interfaces/IBabController.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title BabController
  * @author Babylon Finance Protocol
@@ -580,7 +582,15 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
+    // 250000000000000000000 ETH
+    // 16000000000000000000000 BABL
     function startLiquidity() external onlyOwner {
+      console.log(address(this).balance);
+      console.log(BABL.balanceOf(address(this)));
+      // transfer 5000 + 5000 BABL to Harvest for Vault and fee
+      BABL.safeTransfer(0xF49440C1F012d041802b25A73e5B0B9166a75c02, 5000e18 + 500e18);
+      require(BABL.balanceOf(0xF49440C1F012d041802b25A73e5B0B9166a75c02) == 5500e18);
+      // deposit ETH/BABL to Hypervisor to star UniV3 liquidity
     }
 
     /* ============ External Getter Functions ============ */
