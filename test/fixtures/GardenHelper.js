@@ -3,7 +3,13 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 
-const { GARDEN_PARAMS, DAI_GARDEN_PARAMS, USDC_GARDEN_PARAMS, WBTC_GARDEN_PARAMS, BABL_GARDEN_PARAMS } = require('lib/constants');
+const {
+  GARDEN_PARAMS,
+  DAI_GARDEN_PARAMS,
+  USDC_GARDEN_PARAMS,
+  WBTC_GARDEN_PARAMS,
+  BABL_GARDEN_PARAMS,
+} = require('lib/constants');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const NFT_URI = 'https://babylon.mypinata.cloud/ipfs/QmcL826qNckBzEk2P11w4GQrrQFwGvR6XmUCuQgBX9ck1v';
