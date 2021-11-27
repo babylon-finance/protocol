@@ -29,10 +29,6 @@ describe('BIP4', function () {
       const timelock = '0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193';
       const ownerV2 = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
 
-      await increaseBlock(await governor.votingPeriod());
-
-      await governor['queue(uint256)'](id);
-
       await increaseTime(ONE_DAY_IN_SECONDS);
 
       await governor['execute(uint256)'](id);

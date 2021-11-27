@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -30,11 +32,11 @@ import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import {IHypervisor} from './interfaces/IHypervisor.sol';
+import {IWETH} from './interfaces/external/weth/IWETH.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
-
-import 'hardhat/console.sol';
 
 /**
  * @title BabController
@@ -45,6 +47,7 @@ import 'hardhat/console.sol';
  */
 contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
+    using Address for address;
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -174,7 +177,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /* ============ Constants ============ */
 
     address public constant override EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
     uint8 public constant MAX_OPERATIONS = 20;
 
@@ -252,7 +255,7 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _initialContribution,
                 _publicGardenStrategistsStewards
             );
-        if (_reserveAsset != WETH || msg.value == 0) {
+        if (_reserveAsset != address(WETH) || msg.value == 0) {
             IERC20(_reserveAsset).safeTransferFrom(msg.sender, address(this), _initialContribution);
             IERC20(_reserveAsset).safeApprove(newGarden, _initialContribution);
         }
@@ -582,15 +585,42 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
-    // 250000000000000000000 ETH
-    // 16000000000000000000000 BABL
+    /**
+     * Sends 5k BABL to Harvest ETH/BABL vault
+     * Sends 500 BABL to Harvest multisig a a reward
+     * Deposits 250 ETH and 7500 BABL to Hypervisor to provide liquidity on UniV3
+     * Sends the remainng funds to treasury
+     * total 250000000000000000000 ETH
+     * total 16000000000000000000000 BABL
+     */
     function startLiquidity() external onlyOwner {
-      console.log(address(this).balance);
-      console.log(BABL.balanceOf(address(this)));
-      // transfer 5000 + 5000 BABL to Harvest for Vault and fee
-      BABL.safeTransfer(0xF49440C1F012d041802b25A73e5B0B9166a75c02, 5000e18 + 500e18);
-      require(BABL.balanceOf(0xF49440C1F012d041802b25A73e5B0B9166a75c02) == 5500e18);
-      // deposit ETH/BABL to Hypervisor to star UniV3 liquidity
+        uint256 ethAmount = 250000000000000000000;
+        uint256 bablAmount = 7500000000000000000000;
+
+        address harvestVault = 0xF49440C1F012d041802b25A73e5B0B9166a75c02;
+        // transfer 5000 + 5000 BABL to Harvest for Vault and fee
+        BABL.safeTransfer(harvestVault, 5000e18 + 500e18);
+        require(BABL.balanceOf(harvestVault) == 5500e18);
+
+        // deposit ETH/BABL to Hypervisor to start UniV3 liquidity
+        // token0 WETH; token1 BABL
+        IHypervisor visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
+        IERC20(WETH).safeApprove(address(visor), ethAmount);
+        BABL.safeApprove(address(visor), bablAmount);
+        IWETH(WETH).deposit{value: ethAmount}();
+
+        uint256 shares = visor.deposit(ethAmount, bablAmount, treasury);
+        require(shares == visor.balanceOf(treasury) && visor.balanceOf(treasury) > 0, 'Not enough lp tokens');
+
+        // add BABL as reserve assets
+        require(!validReserveAsset[address(BABL)], 'Reserve asset already added');
+        validReserveAsset[address(BABL)] = true;
+        reserveAssets.push(address(BABL));
+        emit ReserveAssetAdded(address(BABL));
+
+        // send the rest of the funds back to treasury
+        Address.sendValue(payable(treasury), address(this).balance);
+        BABL.safeTransfer(treasury, BABL.balanceOf(address(this)));
     }
 
     /* ============ External Getter Functions ============ */
