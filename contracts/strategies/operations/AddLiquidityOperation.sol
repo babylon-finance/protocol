@@ -190,8 +190,6 @@ contract AddLiquidityOperation is Operation {
         uint256 price = IPoolIntegration(_integration).getPricePerShare(_data);
         if (price != 0) {
             uint256 priceReserve = _getPrice(_garden.reserveAsset(), WETH);
-            console.log('priceReserve', priceReserve);
-            console.log('reserve', _garden.reserveAsset());
             return (
                 SafeDecimalMath.normalizeAmountTokens(
                     address(lpToken),
