@@ -8,7 +8,7 @@ const addresses = require('lib/addresses');
 const { getContracts, deployFixture } = require('lib/deploy');
 const { deploy } = deployments;
 
-const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
+const { increaseTime, increaseBlock, voteType, proposalState, getERC20 } = require('utils/test-helpers');
 const { getVoters, getGovernorMock, getProposal, castVotes, claimTokens } = require('utils/gov-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
@@ -26,12 +26,22 @@ describe('BIP4', function () {
 
     it.only('can execute bip', async () => {
       const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
-      const timelock = '0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193';
+      const timelock = await impersonateAddress('0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193');
       const ownerV2 = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
 
       await increaseTime(ONE_DAY_IN_SECONDS);
 
       await governor['execute(uint256)'](id);
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+
+      const treasury = await ethers.getContractAt('Treasury', '0xD7AAf4676F0F52993cb33aD36784BF970f0E1259');
+      await treasury
+        .connect(timelock)
+        .sendTreasuryFunds('0xf19f91d7889668a533f14d076adc187be781a458', eth(), ownerV2.address);
+
+      const visor = await getERC20('0xf19f91d7889668a533f14d076adc187be781a458');
+      expect(await visor.balanceOf(ownerV2.address)).to.eq(eth());
     });
   });
 });
