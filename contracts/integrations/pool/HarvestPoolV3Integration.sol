@@ -52,9 +52,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller)
-        PoolIntegration('harvest_univ3', _controller)
-    {
+    constructor(IBabController _controller) PoolIntegration('harvest_univ3', _controller) {
         require(address(_controller) != address(0), 'invalid address');
     }
 
@@ -78,6 +76,11 @@ contract HarvestPoolV3Integration is PoolIntegration {
         result[0] = 5e17; // 50%
         result[1] = 5e17; // 50%
         return result;
+    }
+
+    function getPricePerShare(bytes calldata _pool) external view override returns (uint256) {
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
+        return IHarvestUniv3Pool(poolAddress).getPricePerFullShare();
     }
 
     function getPoolTokensOut(
@@ -118,9 +121,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
         return IHarvestUniv3Pool(poolAddress).totalSupply() > 0;
     }
 
-    function _getSpender(
-        bytes calldata _pool
-    ) internal pure override returns (address) {
+    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
@@ -139,7 +140,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getJoinPoolCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         bytes calldata _pool,
         uint256, /* _poolTokensOut */
         address[] calldata _tokensIn,
@@ -159,25 +160,25 @@ contract HarvestPoolV3Integration is PoolIntegration {
         require(_maxAmountsIn.length == 2, 'Two amounts required');
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 sqrtPriceX96 = IHarvestUniv3Pool(poolAddress).getSqrtPriceX96();
-        return (poolAddress, 0, _getMethodData(sqrtPriceX96, _tokensIn, _maxAmountsIn));
+        return (poolAddress, 0, _getMethodData(sqrtPriceX96, _maxAmountsIn));
     }
 
-    function _getMethodData(
-        uint256 sqrtPriceX96,
-        address[] calldata _tokensIn,
-        uint256[] calldata /* _maxAmountsIn */
-    ) private pure returns (bytes memory) {
+    function _getMethodData(uint256 sqrtPriceX96, uint256[] calldata _maxAmountsIn)
+        private
+        view
+        returns (bytes memory)
+    {
         return
             abi.encodeWithSignature(
                 'deposit(uint256,uint256,bool,uint256,uint256,uint256,uint256,uint160)',
-                _tokensIn[0], //amount0
-                _tokensIn[1], // amount1
-                false,        // zap
+                _maxAmountsIn[0], //amount0
+                _maxAmountsIn[1], // amount1
+                false, // zap
                 sqrtPriceX96, // sqrtRatioX96
                 TOLERANCE, //tolerance
                 0, // maxamountzap0
                 0, // maxamountzap1
-                0  // maxprice
+                uint160(sqrtPriceX96) // maxprice
             );
     }
 
@@ -195,7 +196,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
      * @return bytes                     Trade calldata
      */
     function _getExitPoolCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         bytes memory _pool,
         uint256 _poolTokensIn,
         address[] calldata _tokensOut,
