@@ -17,6 +17,8 @@
 */
 
 pragma solidity 0.7.6;
+
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -30,6 +32,8 @@ import {IStrategy} from './interfaces/IStrategy.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import {IHypervisor} from './interfaces/IHypervisor.sol';
+import {IWETH} from './interfaces/external/weth/IWETH.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
@@ -43,6 +47,7 @@ import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
  */
 contract BabController is OwnableUpgradeable, IBabController {
     using AddressArrayUtils for address[];
+    using Address for address;
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -172,7 +177,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /* ============ Constants ============ */
 
     address public constant override EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
     uint8 public constant MAX_OPERATIONS = 20;
 
@@ -250,7 +255,7 @@ contract BabController is OwnableUpgradeable, IBabController {
                 _initialContribution,
                 _publicGardenStrategistsStewards
             );
-        if (_reserveAsset != WETH || msg.value == 0) {
+        if (_reserveAsset != address(WETH) || msg.value == 0) {
             IERC20(_reserveAsset).safeTransferFrom(msg.sender, address(this), _initialContribution);
             IERC20(_reserveAsset).safeApprove(newGarden, _initialContribution);
         }
@@ -580,9 +585,42 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
-    function completeArrival() external override onlyOwner {
-        BABL.safeTransfer(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43, 15_404e18);
-        BABL.safeTransfer(treasury, 70_000e18 - 15_404e18);
+    /**
+     * Sends 5k BABL to Harvest ETH/BABL vault
+     * Sends 500 BABL to Harvest multisig a a reward
+     * Deposits 250 ETH and 7500 BABL to Hypervisor to provide liquidity on UniV3
+     * Sends the remainng funds to treasury
+     * total 250000000000000000000 ETH
+     * total 16000000000000000000000 BABL
+     */
+    function startLiquidity() external onlyOwner {
+        uint256 ethAmount = 250000000000000000000;
+        uint256 bablAmount = 7500000000000000000000;
+
+        address harvestVault = 0xF49440C1F012d041802b25A73e5B0B9166a75c02;
+        // transfer 5000 + 5000 BABL to Harvest for Vault and fee
+        BABL.safeTransfer(harvestVault, 5000e18 + 500e18);
+        require(BABL.balanceOf(harvestVault) == 5500e18);
+
+        // deposit ETH/BABL to Hypervisor to start UniV3 liquidity
+        // token0 WETH; token1 BABL
+        IHypervisor visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
+        IERC20(WETH).safeApprove(address(visor), ethAmount);
+        BABL.safeApprove(address(visor), bablAmount);
+        IWETH(WETH).deposit{value: ethAmount}();
+
+        uint256 shares = visor.deposit(ethAmount, bablAmount, treasury);
+        require(shares == visor.balanceOf(treasury) && visor.balanceOf(treasury) > 0, 'Not enough lp tokens');
+
+        // add BABL as reserve assets
+        require(!validReserveAsset[address(BABL)], 'Reserve asset already added');
+        validReserveAsset[address(BABL)] = true;
+        reserveAssets.push(address(BABL));
+        emit ReserveAssetAdded(address(BABL));
+
+        // send the rest of the funds back to treasury
+        Address.sendValue(payable(treasury), address(this).balance);
+        BABL.safeTransfer(treasury, BABL.balanceOf(address(this)));
     }
 
     /* ============ External Getter Functions ============ */
@@ -617,61 +655,6 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function isPaused(address _contract) external view override returns (bool) {
         return guardianGlobalPaused || guardianPaused[_contract];
-    }
-
-    /**
-     * Check whether or not the strategies are beta protocol strategies deserving rewards
-     * @param _strategies              Smartcontract address to check for a global or specific pause
-     */
-    function isBetaStrategy(address[] memory _strategies)
-        external
-        view
-        override
-        returns (bool[] memory, uint256[] memory)
-    {
-        uint256[] memory capitalAllocated = new uint256[](_strategies.length);
-        bool[] memory isABetaStrategy = new bool[](_strategies.length);
-        uint256 startTime = IRewardsDistributor(rewardsDistributor).START_TIME();
-        for (uint256 i = 0; i < _strategies.length; i++) {
-            require(_strategies[i] != address(0), 'not a valid address');
-            address garden = address(IStrategy(_strategies[i]).garden());
-            // Only protocol strategies security cross-check
-            require(isGarden[garden] && IGarden(garden).isGardenStrategy(_strategies[i]), 'not a protocol strategy');
-            // ts[0]: executedAt, ts[1]: updatedAt
-            // isStrategyActive implies exitedAt == 0 (not finished yet)
-            uint256[] memory ts = new uint256[](2);
-            (, , , , ts[0], , ts[1]) = IStrategy(_strategies[i]).getStrategyState();
-            isABetaStrategy[i] =
-                ts[0] < startTime &&
-                ts[1] < startTime &&
-                IStrategy(_strategies[i]).isStrategyActive() &&
-                startTime != 0;
-            capitalAllocated[i] = IStrategy(_strategies[i]).capitalAllocated();
-        }
-        return (isABetaStrategy, capitalAllocated);
-    }
-
-    function getLiveStrategies(uint256 _size) external view override returns (address[] memory) {
-        uint256 pid;
-        address[] memory liveStrategies = new address[](_size);
-        // Get all protocol gardens at initialization of mining program
-        for (uint256 i = 0; i < gardens.length; i++) {
-            // get all strategies at each garden and check whether or not are active strategies
-            address[] memory strategies = IGarden(gardens[i]).getStrategies();
-            if (strategies.length == 0) {
-                continue;
-            }
-            for (uint256 j = 0; j < strategies.length; j++) {
-                if (IStrategy(strategies[j]).isStrategyActive()) {
-                    // We pre-select eligible strategies to call rewards distributor
-                    liveStrategies[pid] = address(strategies[j]);
-                    pid++;
-                }
-                if (pid == _size) break;
-            }
-            if (pid == _size) break;
-        }
-        return liveStrategies;
     }
 
     /**
@@ -722,4 +705,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV10 is BabController {}
+contract BabControllerV11 is BabController {}
