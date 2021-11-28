@@ -760,4 +760,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV10 is BabController {}
+contract BabControllerV11 is BabController {}
