@@ -67,5 +67,7 @@ interface IPoolIntegration {
 
     function isPool(bytes calldata _pool) external view returns (bool);
 
+    function poolWeightsByPrice(bytes calldata _pool) external view returns (bool);
+
     function getRewardTokens(bytes calldata _pool) external view returns (address[] memory);
 }

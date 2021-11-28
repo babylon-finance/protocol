@@ -19,13 +19,13 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {IUniVaultStorage} from '../../interfaces/external/uniswap-v3/IUniVaultStorage.sol';
+import {IUniswapViewer} from '../../interfaces/external/uniswap-v3/IUniswapViewer.sol';
 import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
 
 /**
@@ -43,6 +43,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
 
     /* ============ Constants ============ */
     uint256 private constant TOLERANCE = 150;
+    IUniswapViewer private constant uniswapViewer = IUniswapViewer(0x25c81e249F913C94F263923421622bA731E6555b);
 
     /* ============ Constructor ============ */
 
@@ -68,12 +69,17 @@ contract HarvestPoolV3Integration is PoolIntegration {
         return result;
     }
 
-    function getPoolWeights(
+    function poolWeightsByPrice(
         bytes calldata /* _pool */
-    ) external pure override returns (uint256[] memory) {
+    ) external pure override returns (bool) {
+        return true;
+    }
+
+    function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
+        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256[] memory result = new uint256[](2);
-        result[0] = 5e17; // 50%
-        result[1] = 5e17; // 50%
+        uint256 uniswapPosId = IUniVaultStorage(IHarvestUniv3Pool(poolAddress).getStorage()).posId();
+        (result[0], result[1]) = uniswapViewer.getAmountsForPosition(uniswapPosId);
         return result;
     }
 
@@ -164,7 +170,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
 
     function _getMethodData(uint256 sqrtPriceX96, uint256[] calldata _maxAmountsIn)
         private
-        view
+        pure
         returns (bytes memory)
     {
         return
