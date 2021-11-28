@@ -34,6 +34,8 @@ interface IHarvestUniv3Pool {
 
     function getSqrtPriceX96() external view returns (uint160);
 
+    function getStorage() external view returns (address);
+
     function getPricePerFullShare() external view returns (uint256);
 
     function balanceOf(address) external view returns (uint256);

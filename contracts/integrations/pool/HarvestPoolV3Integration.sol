@@ -44,7 +44,6 @@ contract HarvestPoolV3Integration is PoolIntegration {
     /* ============ Constants ============ */
     uint256 private constant TOLERANCE = 150;
 
-
     /* ============ Constructor ============ */
 
     /**

@@ -25,9 +25,11 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
-
+import {INFTPositionManager} from '../../interfaces/external/uniswap-v3/INFTPositionManager.sol';
+import {IUniswapViewer} from '../../interfaces/external/uniswap-v3/IUniswapViewer.sol';
+import {IUniVaultStorage} from '../../interfaces/external/uniswap-v3/IUniVaultStorage.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
-
+import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
 import {Operation} from './Operation.sol';
 
 /**
@@ -41,6 +43,10 @@ contract AddLiquidityOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+
+
+    INFTPositionManager private constant nftPositionManager = INFTPositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
+    IUniswapViewer private constant uniswapViewer = IUniswapViewer(0x25c81e249F913C94F263923421622bA731E6555b);
 
     /* ============ Constructor ============ */
 
@@ -189,15 +195,7 @@ contract AddLiquidityOperation is Operation {
         // Get price from pool
         uint256 price = IPoolIntegration(_integration).getPricePerShare(_data);
         if (price != 0) {
-            uint256 priceReserve = _getPrice(_garden.reserveAsset(), WETH);
-            return (
-                SafeDecimalMath.normalizeAmountTokens(
-                    address(lpToken),
-                    WETH,
-                    lpToken.balanceOf(msg.sender).preciseMul(price).preciseDiv(priceReserve)
-                ),
-                true
-            );
+            return (lpToken.balanceOf(msg.sender).preciseMul(price.preciseMul(_getPriceUniV3LpToken(pool, _garden.reserveAsset()))), true);
         }
         // Price lp token directly if possible
         price = _getPrice(address(lpToken), _garden.reserveAsset());
@@ -319,5 +317,35 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         } catch {}
+    }
+
+    /**
+     * Calculates the value of a univ3 lp token held by a harvest vault
+     * @param _pool                      Address of the harvest vault
+     * @param _reserve                   Address of the reserve asset
+     */
+    function _getPriceUniV3LpToken(
+      address _pool,
+      address _reserve
+    ) internal view returns (uint256) {
+      uint256 priceToken0 = _getPrice(IHarvestUniv3Pool(_pool).token0(), _reserve);
+      uint256 priceToken1 = _getPrice(IHarvestUniv3Pool(_pool).token1(), _reserve);
+      uint256 uniswapPosId = IUniVaultStorage(IHarvestUniv3Pool(_pool).getStorage()).posId();
+      (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(uniswapPosId);
+      (,,,,,,,uint128 totalSupply,,,,) = nftPositionManager.positions(uniswapPosId);
+      if (totalSupply == 0) {
+        return 0;
+      }
+      uint256 priceinReserveToken0 = SafeDecimalMath.normalizeAmountTokens(
+          IHarvestUniv3Pool(_pool).token0(),
+          _reserve,
+          amount0.mul(priceToken0).div(totalSupply)
+      );
+      uint256 priceinReserveToken1 = SafeDecimalMath.normalizeAmountTokens(
+          IHarvestUniv3Pool(_pool).token1(),
+          _reserve,
+          amount1.mul(priceToken1).div(totalSupply)
+      );
+      return priceinReserveToken0.add(priceinReserveToken1);
     }
 }
