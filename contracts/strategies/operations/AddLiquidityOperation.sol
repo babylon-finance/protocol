@@ -104,12 +104,11 @@ contract AddLiquidityOperation is Operation {
         if (IPoolIntegration(_integration).poolWeightsByPrice(_data)) {
             uint256 poolTotal = 0;
             for (uint256 i = 0; i < poolTokens.length; i++) {
-                _poolWeights[i] =
-                  SafeDecimalMath.normalizeAmountTokens(
-                      poolTokens[i],
-                      poolTokens[poolTokens.length - 1],
-                      _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
-                  );
+                _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
+                    poolTokens[i],
+                    poolTokens[poolTokens.length - 1],
+                    _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
+                );
                 poolTotal = poolTotal.add(_poolWeights[i]);
             }
             for (uint256 i = 0; i < poolTokens.length; i++) {
