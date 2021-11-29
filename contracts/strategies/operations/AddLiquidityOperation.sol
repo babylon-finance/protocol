@@ -102,23 +102,21 @@ contract AddLiquidityOperation is Operation {
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // if the weights need to be adjusted by price, do so
         try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
-          if (priceWeights) {
-            uint256 poolTotal = 0;
-            for (uint256 i = 0; i < poolTokens.length; i++) {
-                _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
-                    poolTokens[i],
-                    poolTokens[poolTokens.length - 1],
-                    _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
-                );
-                poolTotal = poolTotal.add(_poolWeights[i]);
+            if (priceWeights) {
+                uint256 poolTotal = 0;
+                for (uint256 i = 0; i < poolTokens.length; i++) {
+                    _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
+                        poolTokens[i],
+                        poolTokens[poolTokens.length - 1],
+                        _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
+                    );
+                    poolTotal = poolTotal.add(_poolWeights[i]);
+                }
+                for (uint256 i = 0; i < poolTokens.length; i++) {
+                    _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
+                }
             }
-            for (uint256 i = 0; i < poolTokens.length; i++) {
-                _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
-            }
-          }
-        } catch {
-
-        }
+        } catch {}
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
@@ -214,7 +212,7 @@ contract AddLiquidityOperation is Operation {
         // Get price from pool
         uint256 price = 0;
         try IPoolIntegration(_integration).getPricePerShare(_data) returns (uint256 pricePerShare) {
-          price = pricePerShare;
+            price = pricePerShare;
         } catch {}
         if (price != 0) {
             return (
