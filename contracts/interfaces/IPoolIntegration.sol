@@ -44,6 +44,8 @@ interface IPoolIntegration {
 
     function getPoolWeights(bytes calldata _pool) external view returns (uint256[] memory);
 
+    function getPricePerShare(bytes calldata _pool) external view returns (uint256);
+
     function getLPToken(address _pool) external view returns (address);
 
     function getPool(address _pool) external view returns (address);
@@ -64,6 +66,8 @@ interface IPoolIntegration {
         returns (uint256[] memory _minAmountsOut);
 
     function isPool(bytes calldata _pool) external view returns (bool);
+
+    function poolWeightsByPrice(bytes calldata _pool) external view returns (bool);
 
     function getRewardTokens(bytes calldata _pool) external view returns (address[] memory);
 }
