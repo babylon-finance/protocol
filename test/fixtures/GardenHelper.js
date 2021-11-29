@@ -111,7 +111,7 @@ async function depositFunds(address, garden) {
       await WETH.connect(signer3).approve(garden.address, eth(1), { gasPrice: 0 });
       await garden.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
       break;
-    case addresses.tokens.WBTC.toLocaleLowerCase():
+    case addresses.tokens.WBTC.toLowerCase():
       whaleAddress = '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656';
       whaleSigner = await impersonateAddress(whaleAddress);
       const WBTC = await getERC20(addresses.tokens.WBTC);
@@ -119,7 +119,7 @@ async function depositFunds(address, garden) {
       await WBTC.connect(signer3).approve(garden.address, from(10e6), { gasPrice: 0 });
       await garden.connect(signer3).deposit(from(10e6), 1, signer3.getAddress(), false);
       break;
-    case addresses.tokens.BABL.toLocaleLowerCase():
+    case addresses.tokens.BABL.toLowerCase():
       whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
       whaleSigner = await impersonateAddress(whaleAddress);
       const BABL = await getERC20(addresses.tokens.BABL);
@@ -195,7 +195,7 @@ async function transferFunds(address) {
         gasPrice: 0,
       });
       break;
-    case addresses.tokens.WBTC.toLocaleLowerCase():
+    case addresses.tokens.WBTC.toLowerCase():
       whaleAddress = '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656';
       whaleSigner = await impersonateAddress(whaleAddress);
       const WBTC = await getERC20(addresses.tokens.WBTC);
