@@ -101,7 +101,8 @@ contract AddLiquidityOperation is Operation {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // if the weights need to be adjusted by price, do so
-        if (IPoolIntegration(_integration).poolWeightsByPrice(_data)) {
+        try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
+          if (priceWeights) {
             uint256 poolTotal = 0;
             for (uint256 i = 0; i < poolTokens.length; i++) {
                 _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
@@ -114,6 +115,9 @@ contract AddLiquidityOperation is Operation {
             for (uint256 i = 0; i < poolTokens.length; i++) {
                 _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
             }
+          }
+        } catch {
+
         }
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
@@ -208,7 +212,10 @@ contract AddLiquidityOperation is Operation {
         pool = IPoolIntegration(_integration).getPool(pool);
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
         // Get price from pool
-        uint256 price = IPoolIntegration(_integration).getPricePerShare(_data);
+        uint256 price = 0;
+        try IPoolIntegration(_integration).getPricePerShare(_data) returns (uint256 pricePerShare) {
+          price = pricePerShare;
+        } catch {}
         if (price != 0) {
             return (
                 lpToken.balanceOf(msg.sender).preciseMul(
