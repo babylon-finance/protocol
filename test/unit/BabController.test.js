@@ -221,34 +221,6 @@ describe('BabController', function () {
       await expect(babController.connect(owner).enableGardenTokensTransfers()).not.to.be.reverted;
       expect(await babController.gardenTokensTransfersEnabled()).to.equal(true);
     });
-    it('should get live strategies', async function () {
-      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
-
-      const strategies = await babController.getLiveStrategies(2);
-      expect(strategies.length).to.equal(2);
-    });
-    it('should get a number of live strategies below the total number of live strategies', async function () {
-      const [long1, long2, long3] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-      ]);
-
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
-
-      const strategies = await babController.getLiveStrategies(2);
-      expect(strategies.length).to.equal(2);
-    });
   });
   describe('Pause guardian', function () {
     it('can set a pause guardian from owner', async function () {

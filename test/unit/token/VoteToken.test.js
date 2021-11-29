@@ -329,12 +329,16 @@ describe('VoteToken contract', function () {
       // new signature: 0xd961a2ca02d275ed2bc630429905e8f6b4bfff3a92ce38016c787180767abcf8604674566081714bd871966c9911caae3da7cfa66cfc1c171a3a096bc60604be1c
 
       // METAMASK:
-      /* const v = '28';
+      /*  const v = '28';
       const r = '0xf771e0dccf7287a7fbb97574829c07883d07bebdfd021bb8752a7a11e29f2066';
       const s = '0x2ed9c8789be1fb0d41ee6feabb98d8ad1cc29a501b1f8409b74ebaac906d5abe'; */
-      const v = '28';
+      const r = '0x973deb1716d2d07929d51d98db310b44b7b20c9ee264535b2fbd3f3e3aa02b15';
+      const s = '0x7b121841eed800322bcc47f53f06fa04677173b0cb600ffb4a8f75db6bc7b3b1';
+      const v = '27';
+
+      /* const v = '28'; // PR contract address
       const r = '0x61ddcec5cd0ca3778e5bd282b5d5957ffd7245e9ab81a4504998ae0725c97521';
-      const s = '0x08188b618a2762bd3e94f88df97afea7514065433213801d9eece33239400186';
+      const s = '0x08188b618a2762bd3e94f88df97afea7514065433213801d9eece33239400186'; */
       // console.log('vote token address', bablToken.address);
       await bablToken.delegateBySig(delegatee, nonce, expiry, v, r, s, true);
       // await bablToken.delegateBySig(delegatee, nonce, expiry, sig.v, sig.r, sig.s, true);
