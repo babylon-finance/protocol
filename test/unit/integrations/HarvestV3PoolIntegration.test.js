@@ -70,15 +70,6 @@ describe('HarvestUniV3PoolIntegrationTest', function () {
     } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedUni = await harvestV3VaultIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedUni).to.equal(true);
-    });
-  });
-
   describe('Liquidity Pools', function () {
     let fDaiWethVault;
 
@@ -126,9 +117,7 @@ describe('HarvestUniV3PoolIntegrationTest', function () {
       );
       await executeStrategy(strategyContract);
       expect(await fDaiWethVault.balanceOf(strategyContract.address)).to.be.gt(0);
-      const nav = await strategyContract.getNAV();
-      console.log('nav', ethers.utils.formatEther(nav));
-      expect(nav).to.be.closeTo(eth(), eth().div(50));
+      expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(50));
     });
   });
 
@@ -157,15 +146,17 @@ describe('HarvestUniV3PoolIntegrationTest', function () {
           const amount = STRATEGY_EXECUTE_MAP[token];
 
           await executeStrategy(strategyContract, { amount });
-          // Check NAV
-          // expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
 
           const tokenContract = await getERC20(token);
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
+
           expect(await harvestVault.balanceOf(strategyContract.address)).to.be.gt(0);
 
           await finalizeStrategy(strategyContract, 0);
           expect(await harvestVault.balanceOf(strategyContract.address)).to.equal(0);
+
           expect(await tokenContract.balanceOf(garden.address)).to.be.gt(executionTokenBalance);
         });
       });
