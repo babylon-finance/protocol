@@ -1196,12 +1196,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool betaUser =
             (numCheckpoints[_garden][_contributor] == 0 ||
                 (numCheckpoints[_garden][_contributor] > 0 &&
-                    userCheckpoints[_garden][_contributor][0].fromTime > endTime)) &&
+                    userCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
         // contributorPerGarden[_garden][_contributor].initialDepositAt > 0 && IERC20(_garden).balanceOf(_contributor) > 1e10;
         // bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt && _strategyDetails[13] == 0;
-        bool oldStrategy =
+        /*         bool oldStrategy =
             _strategyDetails[1] < gardenPowerByTimestamp[_garden][0].lastDepositAt && _strategyDetails[1] != 0;
+ */
+        bool oldStrategy = _strategyDetails[1] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         // console.log('RD:: % real', IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply()));
         if (betaUser && oldStrategy) {
             // Backward compatibility for old strategies
@@ -1218,7 +1220,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Take the closest position prior to _endTime
         (uint256 timestamp, uint256 balanceEnd) = _getPriorBalance(_garden, _contributor, endTime);
         // console.log('RD::share % balance', balanceEnd);
-        if (balanceEnd == 0) {
+        if (balanceEnd < 1e10) {
+            // zero or dust balance
             // Avoid gas consuming
             return 0;
         }
@@ -1235,6 +1238,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // console.log(timestamp > startTime, timestamp, startTime);
         if (timestamp > startTime) {
             // If the balance fluctuated during the strategy duration we take proportional start vs end
+            // TODO loop to get an accurate average balance
             // Take the last position closest to _startTime
             (, uint256 balanceStart) = _getPriorBalance(_garden, _contributor, startTime);
             // console.log('RD::share % balanceStart', balanceStart);

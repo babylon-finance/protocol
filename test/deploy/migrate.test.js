@@ -255,7 +255,7 @@ describe('migrate', function () {
       expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100)); // 1%
       expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(20)); // 5% affected by above
     });
-    it('Pending rewards are deterministic and implement firewalling for new deposit giving only proportional', async () => {
+    it.only('Pending rewards are deterministic and implement firewalling for new deposit giving only proportional', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await upgradeRD();
       console.log('RD upgraded !');
@@ -286,10 +286,10 @@ describe('migrate', function () {
       expect(estimateRewards2[1]).to.be.closeTo(estimateRewards1[1], estimateRewards1[1].div(100)); // 1%
       expect(estimateRewards2[2]).to.be.closeTo(estimateRewards1[2], estimateRewards1[2].div(100)); // 1%
       expect(estimateRewards2[3]).to.be.closeTo(estimateRewards1[3], estimateRewards1[3].div(100)); // 1%
-      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(15)); // 7% slippage due to passing from c-power to deterministic
-      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(20)); // 5% affected by above
+      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(100)); // 7% slippage due to passing from c-power to deterministic
+      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(100)); // 5% affected by above
       expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100)); // 1%
-      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(20)); // 5% affected by above
+      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(100)); // 5% affected by above
     });
     it('Pending rewards are deterministic != 0 for a new user and implement firewalling giving only proportional vs. strategy start time', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
@@ -353,16 +353,18 @@ describe('migrate', function () {
       expect(estimateRewards2[1]).to.be.closeTo(estimateRewards1[1], estimateRewards1[1].div(100)); // 1%
       expect(estimateRewards2[2]).to.be.closeTo(estimateRewards1[2], estimateRewards1[2].div(100)); // 1%
       expect(estimateRewards2[3]).to.be.closeTo(estimateRewards1[3], estimateRewards1[3].div(100)); // 1%
-      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(15)); // 7% slippage due to passing from c-power to deterministic
-      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(20)); // 5% affected by above
+      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(100)); // 7% slippage due to passing from c-power to deterministic
+      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(100)); // 5% affected by above
       expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100)); // 1%
-      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(20)); // 5% affected by above
+      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(100)); // 5% affected by above
     });
-    it.only('Pending rewards become zero if withdrawal all', async () => {
+    it('LP Pending rewards become zero if withdrawal all', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, gardenMember.address);
       await upgradeRD();
       console.log('RD upgraded !');
-      console.log('Partial withdrawing in course....');
+      console.log('Estimating rewards 2...');
+      const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, gardenMember.address);
+      console.log('WithdrawAll in course....');
       // The first checkpoint is created for the user -> we then know prev balance
       await gardenContract
         .connect(gardenMember)
@@ -376,8 +378,6 @@ describe('migrate', function () {
             gasPrice: 0,
           },
         );
-      console.log('Estimating rewards 2...');
-      const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, gardenMember.address);
       console.log('Increasing time...');
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       console.log('Estimating rewards 3...');
@@ -387,22 +387,22 @@ describe('migrate', function () {
       console.log('estimateRewards 3', estimateRewards3.toString());
       // mining is delivering more BABL along the time
       // new blocks has less profit in this example
-      expect(estimateRewards3[0]).to.be.gt(estimateRewards2[0]).to.be.gt(estimateRewards1[0]);
-      expect(estimateRewards3[1]).to.be.lt(estimateRewards2[1]).to.be.lt(estimateRewards1[1]);
+      expect(estimateRewards3[0]).to.be.eq(estimateRewards2[0]).to.be.eq(estimateRewards1[0]).to.be.eq(0);
+      expect(estimateRewards3[1]).to.be.eq(estimateRewards2[1]).to.be.eq(estimateRewards1[1]).to.be.eq(0);
       expect(estimateRewards3[2]).to.be.gt(estimateRewards2[2]).to.be.gt(estimateRewards1[2]);
       expect(estimateRewards3[3]).to.be.lt(estimateRewards2[3]).to.be.lt(estimateRewards1[3]);
-      expect(estimateRewards3[4]).to.be.gt(estimateRewards2[4]).to.be.gt(estimateRewards1[4]); // after upgrade we pass from c-power to deterministic so it decreases a bit
-      expect(estimateRewards3[5]).to.be.gt(estimateRewards2[5]).to.be.gt(estimateRewards1[5]); // after upgrade we pass from c-power to deterministic so it decreases a bit
+      expect(estimateRewards3[4]).to.be.eq(0); // LP BABL is zero after withdrawAll
+      expect(estimateRewards3[5]).to.be.lt(estimateRewards2[5]).to.be.lt(estimateRewards1[5]); // after withdrawAll LP is zero but strategist && stewards are kept
       expect(estimateRewards3[6]).to.be.lt(estimateRewards2[6]).to.be.lt(estimateRewards1[6]);
-      expect(estimateRewards3[7]).to.be.gt(estimateRewards2[7]).to.be.gt(estimateRewards1[7]); // after upgrade we pass from c-power to deterministic so it decreases a bit
+      expect(estimateRewards3[7]).to.be.eq(estimateRewards2[7]).to.be.eq(estimateRewards1[7]).to.be.eq(0); // after upgrade we pass from c-power to deterministic so it decreases a bit
       expect(estimateRewards2[0]).to.be.closeTo(estimateRewards1[0], estimateRewards1[0].div(100)); // 1%
       expect(estimateRewards2[1]).to.be.closeTo(estimateRewards1[1], estimateRewards1[1].div(100)); // 1%
       expect(estimateRewards2[2]).to.be.closeTo(estimateRewards1[2], estimateRewards1[2].div(100)); // 1%
       expect(estimateRewards2[3]).to.be.closeTo(estimateRewards1[3], estimateRewards1[3].div(100)); // 1%
-      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(15)); // 7% slippage due to passing from c-power to deterministic
-      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(20)); // 5% affected by above
+      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(100)); // 7% slippage due to passing from c-power to deterministic
+      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(100)); // 5% affected by above
       expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100)); // 1%
-      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(20)); // 5% affected by above
+      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(100)); // 5% affected by above
     });
     it('Pending rewards become zero if a new user leaves right after depositing', async () => {});
 
