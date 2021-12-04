@@ -1040,11 +1040,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _profits
     ) internal {
         _onlyUnpaused();
-        _require(balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
+        Contributor storage contributor = contributors[_contributor];
+        _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
-        Contributor storage contributor = contributors[_contributor];
-        // Avoid race condition between rewardsBySig and claimRewards or even between 2 of each
+        // Avoid replay attack between rewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim

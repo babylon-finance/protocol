@@ -1144,6 +1144,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _time = block.timestamp;
             }
             if (powerData[2] < 1e10 && _time < block.timestamp) {
+                console.log('Route X');
                 // old members who left (or leave dust) need backward compatibility
                 (, powerData[2]) = _getPriorBalance(_garden, _contributor, _time);
             }
@@ -1165,7 +1166,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (virtualPower > 1e18) {
                 virtualPower = 1e18; // Overflow limit
             }
-            if (virtualPower == 0 && powerData[2] > 0) {
+            if (virtualPower == 0 && powerData[2] > 1e10) {
+                console.log('Route Y');
                 virtualPower = powerData[2].preciseDiv(powerData[8]); // backward compatibility
             }
             // console.log('C.Power', virtualPower);
@@ -1382,7 +1384,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Get the contributor power until the the strategy exit timestamp
             // console.log('RD:: Strategy - start Garden Supply - end Garden Supply', _strategy, strategyDetails[12], strategyDetails[13]);
             uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
-            // console.log('RD %s :: contributorShare %s', _strategy, contributorShare);
+            console.log('RD %s :: contributorShare %s', _strategy, contributorShare);
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
