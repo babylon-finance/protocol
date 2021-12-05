@@ -669,7 +669,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         powerData[6] = garden.accGardenPower;
         powerData[7] = garden.avgGardenBalance;
         powerData[8] = ERC20(_garden).totalSupply();
-        // (, powerData[9]) = _getPriorBalance(_garden, _contributor, _time);
+        // (, powerData[9], ) = _getPriorBalance(_garden, _contributor, _time);
         return powerData;
     }
 
@@ -1047,7 +1047,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256 _blockTime
-    ) internal view virtual returns (uint256, uint256) {
+    ) internal view virtual returns (uint256, uint256, uint256) {
         // flashloan protection along the time
         _blockTime = _blockTime.sub(1);
         uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
@@ -1056,12 +1056,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 balance = ERC20(_garden).balanceOf(_contributor);
         if (nCheckpoints == 0 && !betaUser) {
             console.log('Route 1');
-            return (0, 0);
+            return (0, 0, 0);
         } else if (nCheckpoints == 0 && betaUser) {
             // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
             // It also consider burning for bad strategist
             console.log('Route 2');
-            return (contributor.initialDepositAt, balance);
+            return (contributor.initialDepositAt, balance, 0);
         }
         // There are at least one checkpoint from this point
         // First check most recent balance
@@ -1073,7 +1073,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 userCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime,
                 userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens > balance
                     ? balance
-                    : userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens
+                    : userCheckpoints[_garden][_contributor][nCheckpoints - 1].userTokens,
+                nCheckpoints - 1
             );
         }
 
@@ -1081,12 +1082,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime && !betaUser) {
             console.log('Route 4');
             // backward compatible
-            return (0, 0);
+            return (0, 0, 0);
         } else if (userCheckpoints[_garden][_contributor][0].fromTime > _blockTime && betaUser) {
             // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
             // First checkpoint stored its previous balance so we use it to guess the user past
             console.log('Route 5');
-            return (contributor.initialDepositAt, userCheckpoints[_garden][_contributor][0].prevBalance);
+            return (contributor.initialDepositAt, userCheckpoints[_garden][_contributor][0].prevBalance, 0);
         }
         // It has more checkpoints but the time is between different checkpoints, we look for it
         uint256 lower = 0;
@@ -1095,7 +1096,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
             Checkpoints memory cp = userCheckpoints[_garden][_contributor][center];
             if (cp.fromTime == _blockTime) {
-                return (cp.fromTime, cp.userTokens);
+                return (cp.fromTime, cp.userTokens, center);
             } else if (cp.fromTime < _blockTime) {
                 lower = center;
             } else {
@@ -1105,7 +1106,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         console.log('Route 6');
         return (
             userCheckpoints[_garden][_contributor][lower].fromTime,
-            userCheckpoints[_garden][_contributor][lower].userTokens
+            userCheckpoints[_garden][_contributor][lower].userTokens,
+            lower
         );
     }
 
@@ -1146,7 +1148,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (powerData[2] < 1e10 && _time < block.timestamp) {
                 console.log('Route X');
                 // old members who left (or leave dust) need backward compatibility
-                (, powerData[2]) = _getPriorBalance(_garden, _contributor, _time);
+                (, powerData[2], ) = _getPriorBalance(_garden, _contributor, _time);
             }
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
@@ -1220,7 +1222,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         console.log('RD::NEW PATH', endTime == block.timestamp, betaUser, oldStrategy);
         // Take the closest position prior to _endTime
-        (uint256 timestamp, uint256 balanceEnd) = _getPriorBalance(_garden, _contributor, endTime);
+        (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = _getPriorBalance(_garden, _contributor, endTime);
         // console.log('RD::share % balance', balanceEnd);
         if (balanceEnd < 1e10) {
             // zero or dust balance
@@ -1242,14 +1244,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If the balance fluctuated during the strategy duration we take proportional start vs end
             // TODO loop to get an accurate average balance
             // Take the last position closest to _startTime
-            (, uint256 balanceStart) = _getPriorBalance(_garden, _contributor, startTime);
+            // (, uint256 balanceStart, uint256 cp) = _getPriorBalance(_garden, _contributor, startTime);
             // console.log('RD::share % balanceStart', balanceStart);
             // We take proportional from the 2 significative checkpoints
-            console.log('RD::balance end before', balanceEnd);
-            balanceEnd = (balanceStart.mul(timestamp.sub(startTime)).add(balanceEnd.mul(endTime.sub(timestamp)))).div(
-                endTime.sub(startTime)
+            // console.log('RD::balance end before', balanceEnd);
+            
+            uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, timestamp);
+            console.log('balance End before', balanceEnd);
+            console.log('avg balance', avgBalance);
+            balanceEnd = (avgBalance.mul(timestamp.sub(startTime)).add(balanceEnd.mul(endTime.sub(timestamp)))).div(
+                 endTime.sub(startTime)
             );
-            console.log('RD::after adjusting due to intermediate deposit', balanceStart, balanceEnd);
+            console.log('balance End after', balanceEnd);
+            // console.log('RD::after adjusting due to intermediate deposit', balanceStart, balanceEnd);
         }
         // console.log('RD::share % Draft 2', balanceEnd.preciseDiv(finalSupplyEnd));
         // Avoid overflow
@@ -1261,6 +1268,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         ); */
         // console.log('RD:: % garden Supply used', finalSupplyEnd, _strategyDetails[12], _strategyDetails[13]);
         return balanceEnd < finalSupplyEnd ? balanceEnd.preciseDiv(finalSupplyEnd) : 1e18;
+    }
+    function _getAvgBalance(address _garden, address _contributor, uint256 _start, uint256 _cpEnd, uint256 _endTime) internal view returns(uint256) {
+        (uint256 prevTime, , uint256 cpStart) = _getPriorBalance(_garden, _contributor, _start);
+        uint256 avgBalance;
+        for (uint256 i = cpStart; i < _cpEnd; i++) {
+            // console.log('i', i);
+            uint256 timeDiff = userCheckpoints[_garden][_contributor][i.add(1)].fromTime.sub(userCheckpoints[_garden][_contributor][i].fromTime);
+            avgBalance += userCheckpoints[_garden][_contributor][i].userTokens.mul(timeDiff);
+            console.log('i balance timeDiff', i, userCheckpoints[_garden][_contributor][i].userTokens, timeDiff);
+        }
+        return avgBalance.div(_endTime.sub(prevTime));
     }
 
     /**
