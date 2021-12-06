@@ -105,6 +105,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
     bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
         keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
+
     /* ============ Structs ============ */
 
     struct Contributor {
@@ -1048,9 +1049,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
         Contributor storage contributor = contributors[_contributor];
-        // Avoid race condition between rewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
-        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED); // race condition check
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
