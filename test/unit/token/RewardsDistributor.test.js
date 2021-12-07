@@ -1726,23 +1726,28 @@ describe('RewardsDistributor', function () {
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
     });
-    it('getSafeUserSharePerStrategy gets prox to 0 if deposit just during start and finalization', async function () {
+    it('rewards are very little compared to other users if deposits are just during start and finalization and withdrawAll', async function () {
       const token = addresses.tokens.WETH;
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await weth.connect(signer3).approve(garden1.address, eth(5), { gasPrice: 0 });
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const estimatedSigner3BABL1 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       await executeStrategy(long1, ONE_ETH);
       // Quick in and out
       await increaseTime(5);
+      // WithdrawAll
       await garden1
         .connect(signer3)
         .withdraw(await garden1.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO, {
           gasPrice: 0,
         });
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedSigner3BABL4 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
+      // join again the garden just before finalization
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await increaseTime(1);
+      const estimatedSigner3BABL5 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       const gardenBalance = await garden1.totalSupply();
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1755,7 +1760,11 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
-      // Withdraw everything
+      const estimatedSigner3BABL6 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
+      const rewardsSigner11 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long1.address]);
+      const rewardsSigner31 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
+      const rewardsSigner21 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long1.address]);
+      // WithdrawAll again just right after strategy finished
       await garden1
         .connect(signer3)
         .withdraw(await garden1.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO, {
@@ -1766,11 +1775,25 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
+      const rewardsSigner32 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
-      expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
-      // After withdrawing everything loose rewards with it
-      expect(signer3ShareLong12).to.be.equal(0);
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.01')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(eth(0.004), eth('0.0001')); // 0.4%
+      // After withdrawing all, user still keep rewards
+      expect(signer3ShareLong12).to.be.eq(signer3ShareLong1).to.be.gt(0);
+      expect(rewardsSigner31[4]).to.be.eq(rewardsSigner32[4]).to.be.gt(0); // deterministic
+      expect(rewardsSigner31[5]).to.be.eq(rewardsSigner32[5]).to.be.gt(0); // deterministic after withdrawAll
+      expect(estimatedSigner3BABL1[4])
+        .to.be.eq(estimatedSigner3BABL4[4])
+        .to.be.eq(estimatedSigner3BABL6[4])
+        .to.be.eq(0);
+      expect(estimatedSigner3BABL1[5])
+        .to.be.eq(estimatedSigner3BABL4[5])
+        .to.be.eq(estimatedSigner3BABL6[5])
+        .to.be.eq(0);
+      expect(rewardsSigner32[4]).to.be.closeTo(estimatedSigner3BABL5[4], eth(0.1));
+      expect(rewardsSigner31[5]).to.be.lt(rewardsSigner11[5].div(100)); // gets x100 times less than strategist
+      expect(rewardsSigner31[5]).to.be.lt(rewardsSigner21[5].div(80)); // gets x80 times less than strategist
     });
     it('getSafeUserSharePerStrategy does consider burned tokens in a non profit strategy', async function () {
       const [long1, long2, long3, long4] = await createStrategies([

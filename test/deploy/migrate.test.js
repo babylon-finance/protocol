@@ -11,6 +11,7 @@ const { increaseTime, increaseBlock, getERC20 } = require('../utils/test-helpers
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 const { impersonateAddress } = require('../../lib/rpc');
+const { ethers } = require('ethers');
 
 describe('migrate', function () {
   let owner;
