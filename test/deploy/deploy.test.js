@@ -6,6 +6,8 @@ const addresses = require('lib/addresses');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
+const { whiteBright } = require('chalk');
+const { getERC20 } = require('../utils/test-helpers');
 
 const STUCK_EXECUTE = [
   // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
@@ -21,8 +23,8 @@ const STUCK_EXECUTE = [
   // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
-  '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48', // Can't finalize Leverage long eth ++ curve
-
+  // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48', // Can't finalize Leverage long eth ++ curve
+  '0xdbe61F21fd74A0d197ADC20CEC2A44571BE753D0', // Long XED
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // Lend WBTc... Can't execute
 ];
 
@@ -143,7 +145,10 @@ describe('deploy', function () {
       const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
+      const token = await getERC20(addresses.tokens.WETH);
+      console.log('weth balance before', (await token.balanceOf(gardenContract.address)).toString());
       await finalizeStrategy(strategyContract, name, reserveAsset);
+      console.log('weth balance after', (await token.balanceOf(gardenContract.address)).toString());
     }
   }
 

@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -181,6 +182,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) private {
+        console.log('TRADING....');
+        console.log(_sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         if (_sendToken == _receiveToken) {
             return;
         }
@@ -295,6 +298,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
+            console.log('TRYING UNIV2');
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
             if (_sendToken != WETH) {
@@ -306,8 +310,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
                 } catch {}
+            } else if (_sendToken != WETH && _receiveToken == WETH) {
+                // swap already done
+                return;
             }
         }
+        console.log('sendBalance NOT SWAP', _sendToken, _receiveToken, _sendQuantity);
         require(false, 'Master swapper could not swap');
     }
 

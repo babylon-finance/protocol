@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -152,8 +153,9 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             // Invoke protocol specific call
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
-
+        console.log('before validate post trade');
         uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
+        console.log('after validate post trade');
         uint256 newSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
         emit ComponentExchanged(
             tradeInfo.garden,
@@ -164,6 +166,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             newSendTokens,
             exchangedQuantity
         );
+        console.log('END TRADE');
     }
 
     /* ============ Internal Functions ============ */
