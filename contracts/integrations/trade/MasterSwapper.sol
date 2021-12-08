@@ -311,8 +311,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
                 } catch {}
-            } else if (_sendToken != WETH && _receiveToken == WETH) {
-                // swap already done
+            } else if (_sendToken != WETH) {
+                // swap already done into WETH
+                // receiveToken == WETH
                 return;
             }
         }
