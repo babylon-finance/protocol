@@ -301,16 +301,18 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             console.log('TRYING UNIV2');
             // Try on univ2 (only direct trade) through WETH
             uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
+            bool tradedWETH;
             if (_sendToken != WETH) {
                 try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
                     sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
+                    tradedWETH = true;
                 } catch {}
             }
             if (_receiveToken != WETH) {
                 try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
                 } catch {}
-            } else if (_sendToken != WETH) {
+            } else if (tradedWETH) {
                 // swap already done into WETH
                 // receiveToken == WETH
                 return;
