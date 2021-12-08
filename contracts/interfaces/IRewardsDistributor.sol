@@ -58,11 +58,18 @@ interface IRewardsDistributor {
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);
 
-    function getContributorPerGarden(
+    function getPriorBalance(
         address _garden,
         address _contributor,
-        uint256 _time
-    ) external view returns (uint256[] memory);
+        uint256 _timestamp
+    )
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
 
     /* ============ External Functions ============ */
 

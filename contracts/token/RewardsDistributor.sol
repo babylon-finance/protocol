@@ -608,6 +608,31 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
+     * Get token power at a specific block for an account
+     *
+     * @param _garden       Address of the garden
+     * @param _contributor  Address of the contributor
+     * @param _timestamp    Block timestamp to get token power at
+     * @return Token power for an account at specific block
+     */
+    function getPriorBalance(
+        address _garden,
+        address _contributor,
+        uint256 _timestamp
+    )
+        external
+        view
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return _getPriorBalance(_garden, _contributor, _timestamp);
+    }
+
+    /**
      * Get an estimation of strategy BABL rewards for active strategies in the mining program
      * @param _strategy        Address of the strategy to estimate BABL rewards
      * @return the estimated BABL rewards
@@ -619,38 +644,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else {
             return 0;
         }
-    }
-
-    function getContributorPerGarden(
-        address _garden,
-        address _contributor,
-        uint256 _time
-    ) public view override returns (uint256[] memory) {
-        uint256[] memory powerData = new uint256[](10);
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
-
-        // powerData[0]: lastDepositAt (contributor)
-        // powerData[1]: initialDepositAt (contributor)
-        // powerData[2]: balance (contributor)
-        // powerData[3]: power (contributor)
-        // powerData[4]: avgBalance (contributor)
-        // powerData[5]: lastDepositAt (garden)
-        // powerData[6]: accGardenPower (garden)
-        // powerData[7]: avgGardenBalance (garden)
-        // powerData[8]: totalSupply (garden)
-        // powerData[9]: _getPriorBalance(contributor)
-        powerData[0] = contributor.lastDepositAt;
-        powerData[1] = contributor.initialDepositAt;
-        powerData[2] = ERC20(_garden).balanceOf(_contributor);
-        powerData[3] = contributor.tsContributions[0].power;
-        powerData[4] = contributor.tsContributions[0].avgBalance;
-        powerData[5] = garden.lastDepositAt;
-        powerData[6] = garden.accGardenPower;
-        powerData[7] = garden.avgGardenBalance;
-        powerData[8] = ERC20(_garden).totalSupply();
-        // (, powerData[9], ) = _getPriorBalance(_garden, _contributor, _time);
-        return powerData;
     }
 
     /* ============ Internal Functions ============ */
@@ -1106,38 +1099,31 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _time
     ) internal view returns (uint256) {
-        // Check to avoid out of bounds
-        uint256[] memory powerData = new uint256[](10);
-        // powerData[0]: lastDepositAt (contributor)
-        // powerData[1]: initialDepositAt (contributor)
-        // powerData[2]: balance (contributor)
-        // powerData[3]: power (contributor)
-        // powerData[4]: avgBalance (contributor)
-        // powerData[5]: lastDepositAt (garden)
-        // powerData[6]: accGardenPower (garden)
-        // powerData[7]: avgGardenBalance (garden)
-        // powerData[8]: totalSupply (garden)
-        // powerData[9]: getPriorBalance (contributor)
-        powerData = getContributorPerGarden(_garden, _contributor, _time);
-        if (powerData[1] == 0 || powerData[1] > _time) {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
+        uint256 balance = ERC20(_garden).balanceOf(_contributor);
+        uint256 supply = ERC20(_garden).totalSupply();
+        if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
             return 0;
         } else {
             // Safe check to avoid underflow, time travel only works for a past date
             if (_time > block.timestamp) {
                 _time = block.timestamp;
             }
-            if (powerData[2] < 1e10 && _time < block.timestamp) {
-                // old members who left (or leave dust) need backward compatibility
-                (, powerData[2], ) = _getPriorBalance(_garden, _contributor, _time);
+            if (balance < 1e10 && _time < block.timestamp) {
+                // old members who left (or leave dust) are allowed to grab old rewards
+                (, balance, ) = _getPriorBalance(_garden, _contributor, _time);
             }
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
-            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
-            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
+            uint256 updatedPower =
+                contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
+            uint256 updatedGardenPower =
+                garden.accGardenPower.add((block.timestamp.sub(garden.lastDepositAt)).mul(supply));
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_to" timestamp
             uint256 timeDiff = block.timestamp.sub(_time);
-            uint256 userPowerDiff = powerData[4].mul(timeDiff);
-            uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
+            uint256 userPowerDiff = contributor.tsContributions[0].avgBalance.mul(timeDiff);
+            uint256 gardenPowerDiff = garden.avgGardenBalance.mul(timeDiff);
             // Avoid underflow conditions 0 at user, 1 at garden
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
@@ -1145,8 +1131,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (virtualPower > 1e18) {
                 virtualPower = 1e18; // Overflow limit
             }
-            if (virtualPower == 0 && powerData[2] > 1e10) {
-                virtualPower = powerData[2].preciseDiv(powerData[8]); // backward compatibility
+            if (virtualPower == 0 && balance > 1e10) {
+                virtualPower = balance.preciseDiv(supply); // backward compatibility
             }
             return virtualPower;
         }
@@ -1202,9 +1188,18 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 endTime.sub(startTime)
             );
         }
-        return balanceEnd < finalSupplyEnd ? balanceEnd.preciseDiv(finalSupplyEnd) : 1e18;
+        return balanceEnd.preciseDiv(finalSupplyEnd);
     }
 
+    /**
+     * Get Avg User Balance in a garden between two points
+     * @param _garden           Garden address
+     * @param _contributor      Contributor address
+     * @param _start            Start timestamp
+     * @param _cpEnd            End time checkpoint number
+     * @param _endTime          End timestamp
+     * @return Avg user garden token balance
+     */
     function _getAvgBalance(
         address _garden,
         address _contributor,

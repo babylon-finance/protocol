@@ -1430,173 +1430,174 @@ describe('RewardsDistributor', function () {
       });
       const block = await ethers.provider.getBlock();
 
-      const priorBalance = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block.timestamp,
       );
-      await expect(priorBalance[9].toString()).to.be.equal(eth('0'));
+
+      await expect(priorBalance).to.be.equal(eth('0'));
     });
     it('getPriorBalance is the balance the next block after depositing', async function () {
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
-      const priorBalance = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block.timestamp,
       );
-      await expect(priorBalance[9]).to.be.equal(eth('0'));
+      await expect(priorBalance).to.be.equal(eth('0'));
       await increaseBlock(1);
       const block2 = await ethers.provider.getBlock();
-      const priorBalance2 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance2] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block2.timestamp,
       );
-      await expect(priorBalance2[9]).to.be.equal(eth('1'));
+      await expect(priorBalance2).to.be.equal(eth('1'));
     });
     it('getPriorBalance is providing the right balance for each deposits', async function () {
       const block = await ethers.provider.getBlock();
-      const priorBalance = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block.timestamp,
       );
-      await expect(priorBalance[9]).to.be.equal(eth('0'));
+      await expect(priorBalance).to.be.equal(eth('0'));
 
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
-      const priorBalance2 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance2] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block2.timestamp,
       );
-      await expect(priorBalance2[9]).to.be.equal(eth('0'));
+      await expect(priorBalance2).to.be.equal(eth('0'));
 
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
-      const priorBalance3 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance3] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block3.timestamp,
       );
-      await expect(priorBalance3[9]).to.be.equal(eth('1'));
+      await expect(priorBalance3).to.be.equal(eth('1'));
 
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
-      const priorBalance4 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance4] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block4.timestamp,
       );
-      await expect(priorBalance4[9]).to.be.equal(eth('1'));
+      await expect(priorBalance4).to.be.equal(eth('1'));
 
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
-      const priorBalance5 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance5] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block5.timestamp,
       );
-      await expect(priorBalance5[9]).to.be.equal(eth('2'));
+      await expect(priorBalance5).to.be.equal(eth('2'));
     });
     it('getPriorBalance can back to the future in a deterministic way ;)', async function () {
       const block1 = await ethers.provider.getBlock();
-      const priorBalance1 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance1] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block1.timestamp,
       );
-      await expect(priorBalance1[9]).to.be.equal(eth('0'));
+      await expect(priorBalance1).to.be.equal(eth('0'));
       // 1st deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
-      const priorBalance2 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance2] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block2.timestamp,
       );
       // flashloan protection worked
-      await expect(priorBalance2[9]).to.be.equal(eth('0'));
+      await expect(priorBalance2).to.be.equal(eth('0'));
       await increaseBlock(1);
       const block3 = await ethers.provider.getBlock();
-      const priorBalance3 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance3] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block3.timestamp,
       );
-      await expect(priorBalance3[9]).to.be.equal(eth('1'));
+      await expect(priorBalance3).to.be.equal(eth('1'));
       // 2nd deposit
       await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
-      const priorBalance4 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance4] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block4.timestamp,
       );
-      await expect(priorBalance4[9]).to.be.equal(eth('1'));
+      await expect(priorBalance4).to.be.equal(eth('1'));
       await increaseBlock(1);
       const block5 = await ethers.provider.getBlock();
-      const priorBalance5 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance5] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block5.timestamp,
       );
-      await expect(priorBalance5[9]).to.be.equal(eth('2'));
+      await expect(priorBalance5).to.be.equal(eth('2'));
       await increaseBlock(20);
       await increaseTime(ONE_DAY_IN_SECONDS * 365);
 
       // We now check past blocks
-      const priorBalance6 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance6] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block1.timestamp,
       );
-      await expect(priorBalance6[9]).to.be.equal(eth('0'));
+      await expect(priorBalance6).to.be.equal(eth('0'));
       // As we are in the future, flashloan protection still works
-      const priorBalance7 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance7] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block1.timestamp - 1,
       );
-      await expect(priorBalance7[9]).to.be.equal(eth('0'));
-      const priorBalance8 = await rewardsDistributor.getContributorPerGarden(
+      await expect(priorBalance7).to.be.equal(eth('0'));
+      const [, priorBalance8] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block2.timestamp,
       );
-      await expect(priorBalance8[9]).to.be.equal(eth('0'));
-      const priorBalance9 = await rewardsDistributor.getContributorPerGarden(
+      await expect(priorBalance8).to.be.equal(eth('0'));
+      const [, priorBalance9] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block3.timestamp,
       );
-      await expect(priorBalance9[9]).to.be.equal(eth('1'));
+      await expect(priorBalance9).to.be.equal(eth('1'));
       // As we are in the future, flashloan protection still works
-      const priorBalance10 = await rewardsDistributor.getContributorPerGarden(
+      const [, priorBalance10] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block4.timestamp,
       );
-      await expect(priorBalance10[9]).to.be.equal(eth('1'));
-      const priorBalance11 = await rewardsDistributor.getContributorPerGarden(
+      await expect(priorBalance10).to.be.equal(eth('1'));
+      const [, priorBalance11] = await rewardsDistributor.getPriorBalance(
         garden1.address,
         signer3.address,
         block5.timestamp,
       );
-      await expect(priorBalance11[9]).to.be.equal(eth('2'));
+      await expect(priorBalance11).to.be.equal(eth('2'));
     });
     it('getSafeUserSharePerStrategy if deposit was before strategy start', async function () {
       const token = addresses.tokens.WETH;
@@ -1620,7 +1621,7 @@ describe('RewardsDistributor', function () {
       );
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.equal(precalculatedSigner3Share);
     });
     it('getSafeUserSharePerStrategy if deposit was after the strategy starts (a quarter of strategy duration)', async function () {
@@ -1646,7 +1647,7 @@ describe('RewardsDistributor', function () {
       );
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.mul(3).div(4), eth('0.001'));
     });
     it('getSafeUserSharePerStrategy if deposit was after the strategy starts (half of strategy duration)', async function () {
@@ -1672,8 +1673,8 @@ describe('RewardsDistributor', function () {
       );
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
-      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(2), eth('0.0001'));
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(2), eth('0.001'));
     });
     it('getSafeUserSharePerStrategy if deposit was after the strategy starts (3/4 of strategy duration)', async function () {
       const token = addresses.tokens.WETH;
@@ -1698,8 +1699,8 @@ describe('RewardsDistributor', function () {
       );
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
-      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(4), eth('0.0001'));
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
+      expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(4), eth('0.001'));
     });
     it('getSafeUserSharePerStrategy gets prox to 0 if deposit was just before the end of the strategy', async function () {
       const token = addresses.tokens.WETH;
@@ -1723,7 +1724,7 @@ describe('RewardsDistributor', function () {
       );
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       // const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
-      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.0001')); // it has penalty
+      expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
     });
     it('rewards are very little compared to other users if deposits are just during start and finalization and withdrawAll', async function () {
