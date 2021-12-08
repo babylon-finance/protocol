@@ -189,6 +189,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken == _receiveToken) {
             return;
         }
+        string memory error;
+
         // Synthetix Direct
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
@@ -207,7 +209,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 )
             {
                 return;
-            } catch {}
+            } catch Error(string memory _err) {
+                error = _err;
+            }
         }
         // Curve Direct
         if (_curveSwap(_strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
@@ -227,7 +231,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _minReceiveQuantity
                 );
                 return;
-            } catch {}
+            } catch Error(string memory _err) {
+                error = _err;
+            }
         }
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
@@ -247,14 +253,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 )
             {
                 return;
-            } catch {
-                require(false, 'Failed midway in out synth');
+            } catch Error(string memory _err) {
+                revert(string(abi.encodePacked('Failed midway in out synth', _err)));
             }
         }
         // Go through UNIv3 first
         try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
             return;
-        } catch {}
+        } catch Error(string memory _err) {
+            error = _err;
+        }
+
         // Try Curve through reserve assets
         if (
             _checkCurveThroughReserves(
@@ -291,11 +300,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 sendBalance = _getTokenOrETHBalance(_strategy, DAI).sub(sendBalance);
                 try ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
-                } catch {
+                } catch Error(string memory _err) {
+                    error = _err;
                     // Revert trade
                     ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _sendToken, 1);
                 }
-            } catch {}
+            } catch Error(string memory _err) {
+                error = _err;
+            }
         }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
@@ -307,19 +319,23 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
                     sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
                     tradedWETH = true;
-                } catch {}
+                } catch Error(string memory _err) {
+                    error = _err;
+                }
             }
             if (_receiveToken != WETH) {
                 try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
                     return;
-                } catch {}
+                } catch Error(string memory _err) {
+                    error = _err;
+                }
             } else if (tradedWETH) {
                 // swap already done into WETH
                 // receiveToken == WETH
                 return;
             }
         }
-        require(false, 'Master swapper could not swap');
+        revert(string(abi.encodePacked('Master swapper could not swap:', error)));
     }
 
     function _checkCurveThroughReserves(
