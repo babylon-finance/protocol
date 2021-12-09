@@ -1292,17 +1292,17 @@ describe('RewardsDistributor', function () {
       const rewards5 = parse('147539.390039545454842836'); */
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
-      /* const rewards1 = parse('14673.393319344954463656');
+      const rewards1 = parse('14673.393319344954463656');
       const rewards2 = parse('36096.950984452786879400');
       const rewards3 = parse('104046.896057485702332952');
       const rewards4 = parse('117449.939320854562745237');
-      const rewards5 = parse('147536.480743613679287247'); */
+      const rewards5 = parse('147536.480743613679287247');
 
-      const rewards1 = parse('14624.289585793126876845');
+      /* const rewards1 = parse('14624.289585793126876845');
       const rewards2 = parse('35979.709729818305287689');
       const rewards3 = parse('103709.435742028315867514');
       const rewards4 = parse('117070.185217734572428162');
-      const rewards5 = parse('147060.895332063147596550');
+      const rewards5 = parse('147060.895332063147596550'); */
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -1357,17 +1357,17 @@ describe('RewardsDistributor', function () {
       const rewards5 = parse('152941.315399184640553240'); */
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
-      /* const rewards1 = parse('15123.685155140945439330');
+      const rewards1 = parse('15123.685155140945439330');
       const rewards2 = parse('36096.928651851330106962');
       const rewards3 = parse('107239.812891459833566632');
       const rewards4 = parse('121054.105410329289883519');
-      const rewards5 = parse('152561.879804255854131469'); */
+      const rewards5 = parse('152561.879804255854131469');
 
-      const rewards1 = parse('15030.354785791245383112');
+      /* const rewards1 = parse('15030.354785791245383112');
       const rewards2 = parse('35979.697580246930234024');
       const rewards3 = parse('106589.069710705235804561');
       const rewards4 = parse('120320.770021082383672360');
-      const rewards5 = parse('151593.348573966784035415');
+      const rewards5 = parse('151593.348573966784035415'); */
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
       expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
@@ -3478,7 +3478,7 @@ describe('RewardsDistributor', function () {
 
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.0005'));
       expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, ethers.utils.parseEther('0.0005'));
-      expect(signer1Profit.toString()).to.be.closeTo('2546428806402981', ethers.utils.parseEther('0.0005'));
+      expect(signer1Profit.toString()).to.be.closeTo('3560666055242298', ethers.utils.parseEther('0.0005'));
       expect(signer2Profit.toString()).to.be.closeTo('871026681481226', ethers.utils.parseEther('0.0005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
         long3.address,
@@ -3511,8 +3511,8 @@ describe('RewardsDistributor', function () {
       // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
       // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
       // If we use block 13665320 to test NFT staking
-      expect(signer1Profit2.toString()).to.be.closeTo('8624832252061395', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('1561340289931194', ethers.utils.parseEther('0.00005'));
+      expect(signer1Profit2.toString()).to.be.closeTo('11708791017819073', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2118621695754461', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
