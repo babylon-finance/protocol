@@ -112,7 +112,7 @@ describe('rewards', function () {
   async function claim(gardens) {
     for (const garden of gardens) {
       for (let signer of users) {
-        await rewardsDistributor.connect(signer).claimRewards(garden.address, await garden.getFinalizedStrategies());
+        await garden.connect(signer).claimReturns(await garden.getFinalizedStrategies());
         await increaseTime(3600);
       }
     }
@@ -131,12 +131,11 @@ describe('rewards', function () {
         // const nonce = depositNum + 2;
         const nonce = (await garden.getContributor(signer.address))[9];
         const maxFee = 1;
-        const pricePerShare = eth();
         const fee = 1;
         const sig = await getRewardsSig(garden.address, signer, babl, profits, nonce, maxFee);
         await garden
           .connect(keeper)
-          .rewardsBySig(babl, profits, nonce, maxFee, pricePerShare, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
       }
     }
   }
