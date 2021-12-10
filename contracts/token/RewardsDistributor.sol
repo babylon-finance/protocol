@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-// import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -534,7 +533,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Get an estimation of user rewards for active strategies
      * @param _strategy        Address of the strategy to estimate BABL rewards
      * @param _contributor     Address of the garden contributor
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
@@ -962,7 +961,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributorPower     Contributor power in a specific time
      * @param _strategyDetails      Details of the strategy in that specific moment
      * @param _profitData           Array of profit Data (if profit as well distance)
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
@@ -1132,7 +1131,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 virtualPower = 1e18; // Overflow limit
             }
             if (virtualPower == 0 && balance > 1e10) {
-                virtualPower = balance.preciseDiv(supply); // backward compatibility
+                // backward compatibility
+                virtualPower = balance.preciseDiv(supply);
             }
             return virtualPower;
         }
@@ -1175,15 +1175,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // If it finished already and has garden supply checkpoint, then use it
         // If it has not finished yet, use current totalSupply
-        // At this point there should not be old strategies w/o the garden supply checkpoint, trust getPriorBalance supply guessing
+        // At this point there should not be old strategies w/o the garden ending supply checkpoint
         uint256 finalSupplyEnd =
             (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
-        // Security check (avoid flashloans and other position attacks depositing after half of the period)
+        // Security check (avoid flashloans and other position attacks depositing after the strategy execution)
         uint256 startTime = _strategyDetails[0];
-        // At this point all strategies must be started or even finished startTime != 0
+        // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
-            // If the balance fluctuated during the strategy duration we take proportional
+            // If the user balance fluctuated during the strategy duration, we take real average balance
             uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, timestamp);
+            // Now we update it until endTime
             balanceEnd = (avgBalance.mul(timestamp.sub(startTime)).add(balanceEnd.mul(endTime.sub(timestamp)))).div(
                 endTime.sub(startTime)
             );
