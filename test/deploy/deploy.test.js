@@ -183,12 +183,6 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
-    it('NAV of a specific strategy', async () => {
-      const stratContract = await ethers.getContractAt('Strategy', '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5');
-      const nav = await stratContract.getNAV();
-      console.log('IB Curve NAV', nav.toString());
-    });
-
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('Garden', garden);

@@ -30,15 +30,6 @@ describe('CurvePoolIntegrationTest', function () {
     ({ curvePoolIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedCurve = await curvePoolIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedCurve).to.equal(true);
-    });
-  });
-
   describe('Liquidity Pools', function () {
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
@@ -90,10 +81,8 @@ describe('CurvePoolIntegrationTest', function () {
         // TODO tricrypto NAV is wrong > 40% difference
         // Workaround set meanwhile
         if (name !== 'tricrypto') {
-          expect(await strategyContract.getNAV()).to.be.closeTo(
-            ethers.utils.parseEther('1'),
-            ethers.utils.parseEther('1').div(7),
-          );
+          // TODO: Check slippage, might be to high
+          expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(7));
         }
       });
     });
