@@ -263,9 +263,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     // A record of garden token checkpoints for each user at each garden, by index
+    // garden -> user -> index checkpoint -> checkpoint struct data
     mapping(address => mapping(address => mapping(uint256 => Checkpoints))) private userCheckpoints;
 
     // The number of checkpoints for each user at each garden
+    // garden -> user -> number of checkpoints
     mapping(address => mapping(address => uint256)) private numCheckpoints;
 
     /* ============ Constructor ============ */
@@ -291,7 +293,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bablPrincipalWeight = 35e16; // 35%
 
         status = NOT_ENTERED;
-        // We start BABL rewards as they were started by bip#1
+        // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
     }
 
@@ -1099,7 +1101,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _time
     ) internal view returns (uint256) {
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
+        GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
         uint256 balance = ERC20(_garden).balanceOf(_contributor);
         uint256 supply = ERC20(_garden).totalSupply();
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
@@ -1117,12 +1119,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 updatedPower =
                 contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
             uint256 updatedGardenPower =
-                garden.accGardenPower.add((block.timestamp.sub(garden.lastDepositAt)).mul(supply));
+                gardenData.accGardenPower.add((block.timestamp.sub(gardenData.lastDepositAt)).mul(supply));
             // We then time travel back to when the strategy exitedAt
-            // Calculate the power at "_to" timestamp
+            // Calculate the power at "_time" timestamp
             uint256 timeDiff = block.timestamp.sub(_time);
             uint256 userPowerDiff = contributor.tsContributions[0].avgBalance.mul(timeDiff);
-            uint256 gardenPowerDiff = garden.avgGardenBalance.mul(timeDiff);
+            uint256 gardenPowerDiff = gardenData.avgGardenBalance.mul(timeDiff);
             // Avoid underflow conditions 0 at user, 1 at garden
             updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
@@ -1215,7 +1217,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 userCheckpoints[_garden][_contributor][i.add(1)].fromTime.sub(
                     userCheckpoints[_garden][_contributor][i].fromTime
                 );
-            avgBalance += userCheckpoints[_garden][_contributor][i].userTokens.mul(timeDiff);
+            avgBalance = avgBalance.add(userCheckpoints[_garden][_contributor][i].userTokens.mul(timeDiff));
         }
         return avgBalance.div(_endTime.sub(prevTime));
     }
