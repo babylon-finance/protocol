@@ -124,6 +124,7 @@ describe('ConvexStakeIntegrationTest', function () {
       [crvpool, 0, cvxpool, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token];
+    const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
@@ -140,7 +141,11 @@ describe('ConvexStakeIntegrationTest', function () {
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await convexRewardToken.balanceOf(strategyContract.address)).to.equal(0);
 
-    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gt(balanceBeforeExiting);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
+      balanceBeforeExecuting,
+      balanceBeforeExecuting.div(50),
+    );
   }
 
   async function tryDepositAndStakeStrategy(crvpool, cvxpool, token) {
