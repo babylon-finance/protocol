@@ -175,7 +175,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
     function _getExitInvestmentCalldata(
         address, /* _strategy */
         address _asset,
-        uint256, /* _investmentTokensIn */
+        uint256 _investmentTokensIn,
         address, /* _tokenOut */
         uint256 /* _minAmountOut */
     )
@@ -189,7 +189,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
         )
     {
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true);
+        bytes memory methodData = abi.encodeWithSignature('withdrawAndUnwrap(uint256,bool)', _investmentTokensIn, true);
         // Go through the reward pool instead of the booster
         return (_getRewardPool(_asset), 0, methodData);
     }
