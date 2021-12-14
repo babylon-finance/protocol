@@ -23,6 +23,8 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
@@ -41,8 +43,6 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
 
     /* ============ State Variables ============ */
 
-    mapping(address => address) poolToStakeContract;
-
     /* ============ Constructor ============ */
 
     /**
@@ -51,18 +51,10 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
      * @param _controller                   Address of the controller
      */
     constructor(IBabController _controller) PassiveIntegration('harvest_stake_v3', _controller) {
-        poolToStakeContract[0xadb16df01b9474347e8fffd6032360d3b54627fb] = 0x3e6397E309f68805FA8Ef66A6216bD2010DdAF19; // fBablWeth
-        poolToStakeContract[0x65383Abd40f9f831018dF243287F7AE3612c62AC] = 0x11301B7C82Cd953734440aaF0D5Dd0B36E2aB1d8; // fWethSeth
-        poolToStakeContract[0xc53DaB6fDD18AF6CD5cF37fDE7C941d368f8664f] = 0x6055d7f2E84e334176889f6d8c3F84580cA4F507; // fWethUsdt 3-4.5k
-        poolToStakeContract[0xEA46CfcB43D5274991344cF6F56765e39A7Eae1a] = 0xFd1121b2292eBD475791Ee2d646ccC8451c9F7Ae; // fWethUsdt 4.2-5.5k
-        poolToStakeContract[0x503Ea79B73995Cf0C8d323C17782047ED5cC72B2] = 0xEFb78d1E3BA4272E7D806b9dC88e239e08e4082D; // fDaiWeth 3-4.5k
-        poolToStakeContract[0x8137ac6dF358fe2D0DFbB1b5aA87C110950A16Cd] = 0x35De0D0F9448B35a09e1E884C7d23A00027fbD8f; // fDaiWeth 4.2-5.5k
-        poolToStakeContract[0x3b2ED6013f961404AbA5a030e20A2AceB486832d] = 0x7931D6263798f99A082Caf1416b2457605628e2D; // fUsdcWeth 3-4.5k
-        poolToStakeContract[0xC74075F5c9aD58C655a6160bA955B4aCD5dE8d0B] = 0xe9D5571a741AF8201e6ca11241aF4d2D635D6c85; // fUsdcWeth 4.2-5.5k;
     }
 
     /* ============ Internal Functions ============ */
-    function _getSpender(address _stakingPool, uint8 /* _op */) internal view override returns (address) {
+    function _getSpender(address _stakingPool, uint8 /* _op */) internal pure override returns (address) {
         return _stakingPool;
     }
 
@@ -144,7 +136,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         uint256 /* _minAmountOut */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -158,6 +150,41 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         return (_asset, 0, methodData);
     }
 
+    /**
+     * Return exit investment calldata to execute after exit if any
+     *
+     * @param  _pool                           Address of the reward pool
+     * hparam  _amount                         Amount of tokens
+     * @param  _passiveOp                      enter is 0, exit is 1
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getPostActionCallData(
+        address _pool,
+        uint256 /* _amount */,
+        uint256 _passiveOp
+    )
+        internal
+        pure
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Don't do anything on enter
+        if (_passiveOp == 0) {
+          return (address(0), 0, bytes(''));
+        }
+        // Withdraw all and claim
+        bytes memory methodData = abi.encodeWithSignature('getAllRewards()');
+        // Go through the reward pool instead of the booster
+        return (_pool, 0, methodData);
+    }
+
 
     function _getRewards(address _strategy, address _asset)
         internal
@@ -167,17 +194,17 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
     {
         IHarvestV3Stake pool = IHarvestV3Stake(_asset);
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        address reserveAsset = IGarden(IStrategy(_strategy).garden()).reserveAsset();
         uint256 rewardsLength = pool.rewardTokensLength();
+        uint256 totalAmount = 0;
         if (rewardsLength > 0) {
             for (uint256 i = 0; i < rewardsLength; i++) {
                 uint rewardAmount = pool.earned(i, _strategy);
                 totalAmount = totalAmount.add(
-                    oracle.getPrice(rewards.extraRewards(i), extraRewards.rewardToken()).preciseMul(
-                        extraRewards.earned(_strategy)
-                    )
+                    oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
                 );
             }
         }
-        return (rewards.rewardToken(), totalAmount);
+        return (reserveAsset, totalAmount);
     }
 }

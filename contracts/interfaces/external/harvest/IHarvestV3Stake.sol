@@ -16,5 +16,5 @@ interface IHarvestV3Stake {
 
     function getAllRewards() external;
 
-    function rewardPerToken(uint256 i) external view returns (uint256);
+    function rewardTokens(uint256 i) external view returns (address);
 }
