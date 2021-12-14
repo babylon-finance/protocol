@@ -960,7 +960,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategy             Address of the strategy to estimate rewards
      * @param _strategist           Address of the strategist
      * @param _contributor          Address of the garden contributor
-     * @param _contributorPower     Contributor power in a specific time
+     * @param _contributorShare     Contributor share in a specific time
      * @param _strategyDetails      Details of the strategy in that specific moment
      * @param _profitData           Array of profit Data (if profit as well distance)
      * @return Array of size 8 with the following distribution:
@@ -978,7 +978,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategy,
         address _strategist,
         address _contributor,
-        uint256 _contributorPower,
+        uint256 _contributorShare,
         uint256[] memory _strategyDetails,
         bool[] memory _profitData
     ) internal view returns (uint256[] memory) {
@@ -997,7 +997,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             : 0;
         // Get LP rewards
         // Contributor power is fluctuating along the way for each new deposit
-        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorPower);
+        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorShare);
         // Total BABL including creator bonus (if any)
         rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
         // Total profit
