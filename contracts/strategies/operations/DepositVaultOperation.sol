@@ -275,7 +275,7 @@ contract DepositVaultOperation is Operation {
         }
     }
 
-    function _patchConvexIntegration(address _integration) private returns (address) {
+    function _patchConvexIntegration(address _integration) private view returns (address) {
         if (
             _integration == 0xFe06f1d501f417e6E87531aB7618c65D42735995 || // ConvexV1
             _integration == 0xee919d9E48289e0A2900BA4b6aF9464459E428CD || // ConvexV2
