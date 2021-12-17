@@ -27,13 +27,12 @@ describe('HarvestStakeIntegrationTest', function () {
   describe('Harvest Stake Multigarden multiasset', function () {
     [
       { token: addresses.tokens.WETH, nameT: 'WETH' },
-      // { token: addresses.tokens.DAI, nameT: 'DAI' },
-      // { token: addresses.tokens.USDC, nameT: 'USDC' },
-      // { token: addresses.tokens.WBTC, nameT: 'WBTC' },
+      { token: addresses.tokens.DAI, nameT: 'DAI' },
+      { token: addresses.tokens.USDC, nameT: 'USDC' },
+      { token: addresses.tokens.WBTC, nameT: 'WBTC' },
     ].forEach(async ({ token, nameT }) => {
       Object.entries(addresses.harvest.v3vaults).forEach(([name, harvestLpAdd]) => {
         it(`can enter ${name} Harvest univ3 pool in ${nameT} garden and stake it`, async function () {
-          console.log('name', name, harvestLpAdd, addresses.harvest.v3ToRewardPool[harvestLpAdd]);
           await depositAndStakeStrategy(harvestLpAdd, addresses.harvest.v3ToRewardPool[harvestLpAdd], token);
         });
       });
@@ -62,10 +61,12 @@ describe('HarvestStakeIntegrationTest', function () {
       [harvestLpAdd, 0, harvestStakeAdd, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token];
+    const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
+
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.gt(amount.sub(amount.div(35)));
+    expect(nav).to.be.gt(amount.sub(amount.div(20)));
 
     expect(await harvestLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await harvestStakeToken.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -79,6 +80,10 @@ describe('HarvestStakeIntegrationTest', function () {
     expect(await harvestStakeToken.balanceOf(strategyContract.address)).to.equal(0);
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gt(balanceBeforeExiting);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
+      balanceBeforeExecuting,
+      balanceBeforeExecuting.div(20),
+    );
   }
 
   async function tryDepositAndStakeStrategy(harvestLpAdd, harvestStakeAdd, token) {

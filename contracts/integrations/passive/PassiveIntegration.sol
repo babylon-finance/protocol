@@ -178,8 +178,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
         // Pre actions
-        (targetAddressP, callValueP, methodDataP) =
-            _getPostActionCallData(_investmentAddress, _investmentTokenIn, 1);
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_investmentAddress, _investmentTokenIn, 1);
 
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call

@@ -203,20 +203,20 @@ contract DepositVaultOperation is Operation {
             pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
             // Normalization of pricePerShare
             pricePerShare = pricePerShare.mul(
-              10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
             );
         }
         uint256 NAV;
         // If vault asset cannot be priced
         if (price == 0) {
-          // If asset is an Uni V3 lp token. Already normalizes
-          price = _getPriceUniV3LpToken(vaultAsset, _garden.reserveAsset());
-          require(price != 0, 'Vault asset cannot be priced');
-          NAV = pricePerShare.preciseMul(balance).preciseMul(price);
+            // If asset is an Uni V3 lp token. Already normalizes
+            price = _getPriceUniV3LpToken(vaultAsset, _garden.reserveAsset());
+            require(price != 0, 'Vault asset cannot be priced');
+            NAV = pricePerShare.preciseMul(balance).preciseMul(price);
         } else {
-          //Balance normalization
-          balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-          NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+            //Balance normalization
+            balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
+            NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         }
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));

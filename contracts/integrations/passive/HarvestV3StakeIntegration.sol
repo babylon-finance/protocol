@@ -50,11 +50,13 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('harvest_stake_v3', _controller) {
-    }
+    constructor(IBabController _controller) PassiveIntegration('harvest_stake_v3', _controller) {}
 
     /* ============ Internal Functions ============ */
-    function _getSpender(address _stakingPool, uint8 /* _op */) internal pure override returns (address) {
+    function _getSpender(
+        address _stakingPool,
+        uint8 /* _op */
+    ) internal pure override returns (address) {
         return _stakingPool;
     }
 
@@ -163,7 +165,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
      */
     function _getPostActionCallData(
         address _pool,
-        uint256 /* _amount */,
+        uint256, /* _amount */
         uint256 _passiveOp
     )
         internal
@@ -177,14 +179,13 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
     {
         // Don't do anything on enter
         if (_passiveOp == 0) {
-          return (address(0), 0, bytes(''));
+            return (address(0), 0, bytes(''));
         }
         // Withdraw all and claim
         bytes memory methodData = abi.encodeWithSignature('getAllRewards()');
         // Go through the reward pool instead of the booster
         return (_pool, 0, methodData);
     }
-
 
     function _getRewards(address _strategy, address _asset)
         internal
@@ -199,7 +200,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         uint256 totalAmount = 0;
         if (rewardsLength > 0) {
             for (uint256 i = 0; i < rewardsLength; i++) {
-                uint rewardAmount = pool.earned(i, _strategy);
+                uint256 rewardAmount = pool.earned(i, _strategy);
                 totalAmount = totalAmount.add(
                     oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
                 );
