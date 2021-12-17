@@ -99,6 +99,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        _integration = _patchConvexIntegration(_integration);
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
@@ -155,6 +156,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        _integration = _patchConvexIntegration(_integration);
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
@@ -187,6 +189,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        _integration = _patchConvexIntegration(_integration);
         address vault = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
@@ -279,5 +282,18 @@ contract DepositVaultOperation is Operation {
         } catch {
             return 0;
         }
+    }
+
+    function _patchConvexIntegration(address _integration) private returns (address) {
+        if (
+            _integration == 0xFe06f1d501f417e6E87531aB7618c65D42735995 || // ConvexV1
+            _integration == 0xee919d9E48289e0A2900BA4b6aF9464459E428CD || // ConvexV2
+            _integration == 0x27725Cd03f82e9Af5811940da6cB27bc6A51CEDC || // ConvexV3
+            _integration == 0xDcCDf2D78239aBB788aD728D63ac45d90dEfe24A || // ConvexV4
+            _integration == 0x22619F6710C7D82D7b7FE31449D351B61373D63D // ConvexV5
+        ) {
+            _integration = 0xccE114848A694152Ba45a8caff440Fcb12f73862; // ConvexV6
+        }
+        return _integration;
     }
 }
