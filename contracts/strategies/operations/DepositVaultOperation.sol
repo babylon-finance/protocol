@@ -196,10 +196,10 @@ contract DepositVaultOperation is Operation {
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
-        uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         // try to get price of an investment token from Oracle
         // markets sometimes price assets differently than
         // their underlying protocols, e.g., stETH/Lido
+        uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         uint256 pricePerShare = _getPrice(vault, vaultAsset);
         // if failed to fetch price from Oracle get it from the underlying protocol
         if (pricePerShare == 0) {
@@ -209,9 +209,18 @@ contract DepositVaultOperation is Operation {
                 10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
             );
         }
-        //Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-        uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        uint256 NAV;
+        // If vault asset cannot be priced
+        if (price == 0) {
+            // If asset is an Uni V3 lp token. Already normalizes
+            price = _getPriceUniV3LpToken(vaultAsset, _garden.reserveAsset());
+            require(price != 0, 'Vault asset cannot be priced');
+            NAV = pricePerShare.preciseMul(balance).preciseMul(price);
+        } else {
+            //Balance normalization
+            balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
+            NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        }
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
