@@ -6,7 +6,6 @@ const addresses = require('lib/addresses');
 const { increaseTime, getERC20 } = require('utils/test-helpers');
 const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
-
 // TODO: Fais due to old block number. Fix the block nubmer issue
 describe.skip('HarvestStakeIntegrationTest', function () {
   let harvestV3StakeIntegration;
