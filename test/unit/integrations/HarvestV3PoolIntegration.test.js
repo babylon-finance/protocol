@@ -14,7 +14,7 @@ const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 
 // TODO: Fais due to old block number. Fix the block nubmer issue
-describe.only('HarvestUniV3PoolIntegrationTest', function () {
+describe.skip('HarvestUniV3PoolIntegrationTest', function () {
   let harvestV3VaultIntegration;
   let garden1;
   let signer1;
