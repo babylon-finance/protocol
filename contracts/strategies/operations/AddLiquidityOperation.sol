@@ -165,16 +165,18 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = _garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i])) {
+                if (_isETH(poolTokens[i]) && address(msg.sender).balance > 0) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    IStrategy(msg.sender).trade(
-                        poolTokens[i],
-                        IERC20(poolTokens[i]).balanceOf(msg.sender),
-                        reserveAsset
-                    );
+                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > 0) {
+                      IStrategy(msg.sender).trade(
+                          poolTokens[i],
+                          IERC20(poolTokens[i]).balanceOf(msg.sender),
+                          reserveAsset
+                      );
+                    }
                 }
             }
         }
@@ -301,7 +303,9 @@ contract AddLiquidityOperation is Operation {
     ) internal returns (uint256[] memory) {
         uint256[] memory maxAmountsIn = new uint256[](poolTokens.length);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+            if (_poolWeights[i] > 0) {
+              maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+            }
         }
         return maxAmountsIn;
     }
