@@ -124,11 +124,11 @@ contract CurvePoolIntegration is PoolIntegration {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // If it's a meta pool, deposit and withdraw from the stable one
         if (curveRegistry.is_meta(poolAddress)) {
-          result[0] = uint256(1e18);
+            result[0] = uint256(1e18);
         } else {
-          for (uint8 i = 0; i < poolTokens.length; i++) {
-            result[i] = uint256(1e18).div(poolTokens.length);
-          }
+            for (uint8 i = 0; i < poolTokens.length; i++) {
+                result[i] = uint256(1e18).div(poolTokens.length);
+            }
         }
         return result;
     }
@@ -380,12 +380,13 @@ contract CurvePoolIntegration is PoolIntegration {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // For meta remove everything in the stable coin
         if (curveRegistry.is_meta(_poolAddress)) {
-          return abi.encodeWithSignature(
-              'remove_liquidity_one_coin(uint256,int128,uint256)',
-              _poolTokensIn,
-              int128(0),
-              _minAmountsOut[0]
-          );
+            return
+                abi.encodeWithSignature(
+                    'remove_liquidity_one_coin(uint256,int128,uint256)',
+                    _poolTokensIn,
+                    int128(0),
+                    _minAmountsOut[0]
+                );
         }
         if (ncoins == 2) {
             if (supportsUnderlyingParam[_poolAddress]) {
