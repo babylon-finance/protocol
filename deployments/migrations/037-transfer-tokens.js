@@ -4,10 +4,10 @@ const { ONE_ETH } = require('../../lib/constants');
 
 let MULTISIG = process.env.MULTISIG || '';
 
-module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getRapid }) => {
+module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getGasPrice }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
 
   if (chainId === '31337') {
     // use the third signer as MULTISIG

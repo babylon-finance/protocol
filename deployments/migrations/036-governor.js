@@ -1,6 +1,6 @@
-module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getRapid, network, tenderly }) => {
+module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getGasPrice, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const { deploy } = deployments;
   const signer = await getSigner(deployer);
 

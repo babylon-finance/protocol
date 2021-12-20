@@ -4,9 +4,11 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { DEFAULT_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
 const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
+const { increaseTime } = require('utils/test-helpers');
 
 const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
+const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
 describe('Babylon Viewer', function () {
   let garden1;
@@ -15,9 +17,20 @@ describe('Babylon Viewer', function () {
   let signer3;
   let uniswapV3TradeIntegration;
   let babViewer;
+  let owner;
+  let babController;
 
   beforeEach(async () => {
-    ({ uniswapV3TradeIntegration, signer1, signer2, signer3, babViewer, garden1 } = await setupTests()());
+    ({
+      uniswapV3TradeIntegration,
+      signer1,
+      signer2,
+      signer3,
+      babViewer,
+      garden1,
+      owner,
+      babController,
+    } = await setupTests()());
   });
 
   describe('can call getter methods', async function () {
@@ -34,15 +47,14 @@ describe('Babylon Viewer', function () {
       const paramsCreation = gardenDetails[7];
       expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock
       expect(paramsCreation[1]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
-      expect(paramsCreation[2]).to.equal(100); // Max contributors
-      expect(paramsCreation[3]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
-      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[8]); // Min Voters
-      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
-      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
-      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
-      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[3]); // Min contribution
-      expect(paramsCreation[9]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
-      expect(paramsCreation[10]).to.equal(0); // Keeper fees
+      expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
+      expect(paramsCreation[3]).to.equal(GARDEN_PARAMS[8]); // Min Voters
+      expect(paramsCreation[4]).to.equal(GARDEN_PARAMS[6]); // Min Strategy Duration
+      expect(paramsCreation[5]).to.equal(GARDEN_PARAMS[7]); // Max Strategy Duration
+      expect(paramsCreation[6]).to.equal(GARDEN_PARAMS[4]); // Strategy cooldown
+      expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[3]); // Min contribution
+      expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
+      expect(paramsCreation[9]).to.equal(0); // Keeper fees
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
@@ -55,7 +67,8 @@ describe('Babylon Viewer', function () {
       expect(status[8]).to.equal(0); // Seed
     });
 
-    it('calls get permissions', async function () {
+    // TODO: has to update block number so Prophets NFT exists
+    it.skip('calls get permissions', async function () {
       const globalPermissions = await babViewer.getPermissions(signer1.address);
       expect(globalPermissions[0]).to.equal(true);
       expect(globalPermissions[1]).to.equal(true);
@@ -83,8 +96,11 @@ describe('Babylon Viewer', function () {
     it('calls get complete strategy', async function () {
       const gardenDetails = await babViewer.getGardenDetails(garden1.address);
       const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[5][0]);
+
       expect(strategyDetails[0]).to.equal(signer1.address); // Strategist
+
       expect(strategyDetails[1]).to.equal('Strategy Name'); // Name
+
       expect(strategyDetails[2][0]).to.equal(1); // Ops count
       expect(strategyDetails[2][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
       expect(strategyDetails[2][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
@@ -98,12 +114,39 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[2][10]).to.equal(0); // Get NAV
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
       expect(strategyDetails[2][12]).to.equal(DEFAULT_STRATEGY_PARAMS[4]); // Max Allocation Percentage
+      expect(strategyDetails[2][13]).to.equal(eth(0.05)); // maxAllocationPercentage
+      expect(strategyDetails[2][14]).to.equal(eth(0.05)); // maxTradeSlippagePercentage
+      expect(strategyDetails[2][15]).to.equal(0); // Strategy Rewards
+
       expect(strategyDetails[3][0]).to.equal(false); // Active
       expect(strategyDetails[3][1]).to.equal(true); // Data set
       expect(strategyDetails[3][2]).to.equal(false); // Finalized
+
       expect(strategyDetails[4][0]).to.equal(0); // Executed at
       expect(strategyDetails[4][1]).to.equal(0); // Exited At
       expect(strategyDetails[4][2]).to.equal(0); // Updated At
+    });
+
+    it('calls get contribution and rewards', async function () {
+      const newGarden = await createGarden();
+      await getStrategy({ state: 'active', garden: newGarden, specificParams: [addresses.tokens.USDC, 0] });
+      const [, , pendingRewards] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
+      await increaseTime(ONE_DAY_IN_SECONDS);
+      const [, , pendingRewards2] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
+      expect(pendingRewards[0]).to.equal(0); // Not profit strategy, strategist gets 0 BABL
+      expect(pendingRewards[1]).to.equal(0); // Not profit strategy, strategist gets 0 profit
+      expect(pendingRewards[2]).to.equal(0); // Not profit strategy, steward voting for gets 0 BABL
+      expect(pendingRewards[3]).to.equal(0); // Not profit strategy, steward gets 0 profit
+      expect(pendingRewards[4]).to.equal(0); // Just started, still 0
+      expect(pendingRewards[5]).to.equal(0); // Just started, still 0
+      expect(pendingRewards[6]).to.equal(0); // Just started, still 0
+      expect(pendingRewards2[0]).to.equal(0); // Not profit strategy, strategist gets 0
+      expect(pendingRewards2[1]).to.equal(0); // Not profit strategy, strategist gets 0 profit
+      expect(pendingRewards2[2]).to.equal(0); // Not profit strategy, steward voting for gets 0
+      expect(pendingRewards2[3]).to.equal(0); // Not profit strategy, steward gets 0 profit
+      expect(pendingRewards2[4]).to.be.gt(0); // get BABL estimation for LP
+      expect(pendingRewards2[5]).to.be.gt(0); // get total BABL estimation
+      expect(pendingRewards2[6]).to.equal(0); // no profit strategy
     });
 
     it('calls get user gardens', async function () {

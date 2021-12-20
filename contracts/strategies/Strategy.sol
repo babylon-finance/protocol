@@ -93,7 +93,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not a Garden's integration or integration not enabled
      */
     function _onlyOperation() private view {
-        bool found = false;
+        bool found;
         for (uint8 i = 0; i < opTypes.length; i++) {
             found = found || msg.sender == controller.enabledOperations(opTypes[i]);
         }
@@ -112,7 +112,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not a keeper in the protocol
      */
     function _onlyIntegration(address _address) private view {
-        bool isIntegration = false;
+        bool isIntegration;
         for (uint256 i = 0; i < opIntegrations.length; i++) {
             if (opIntegrations[i] == _address) {
                 isIntegration = true;
@@ -133,7 +133,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Constants ============ */
 
-    uint256 private constant SLIPPAGE_ALLOWED = 5e16; // 5%
+    uint256 private constant DEFAULT_TRADE_SLIPPAGE = 25e15; // 2.5%
     uint256 private constant HUNDRED_PERCENT = 1e18; // 100%
     uint256 private constant MAX_CANDIDATE_PERIOD = 7 days;
 
@@ -190,7 +190,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     bool private finalized; // Flag that indicates whether we exited the strategy
     bool private active; // Whether the strategy has met the voting quorum
     bool private dataSet;
-    bool private hasMiningStarted;
+    bool private hasMiningStarted; // DEPRECATED
 
     uint256 public override duration; // Duration of the bet
     uint256 public override stake; // Amount of stake by the strategist (in reserve asset) needs to be positive
@@ -198,12 +198,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     uint256 public override capitalAllocated; // Current amount of capital allocated
     uint256 public override expectedReturn; // Expect return by this strategy
     uint256 public override capitalReturned; // Actual return by this strategy
-    uint256 private minRebalanceCapital; // DEPRECATED
+    uint256 private startingGardenSupply; // garden token supply when strategy starts
     address[] private tokensNeeded; // Not used anymore
     uint256[] private tokenAmountsNeeded; // Not used anymore
 
     uint256 public override strategyRewards; // Rewards allocated for this strategy updated on finalized
-    uint256 private rewardsTotalOverhead; // DEPRECATED
+    uint256 private endingGardenSupply; // garden token supply when strategy ends
 
     // Voters mapped to their votes.
     mapping(address => int256) private votes;
@@ -215,6 +215,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     IRewardsDistributor private rewardsDistributor;
 
     uint256 public override maxAllocationPercentage; //  Relative to garden capital. (1% = 1e16, 10% 1e17)
+
+    uint256 public override maxGasFeePercentage; // Relative to the capital allocated to the strategy (1% = 1e16, 10% 1e17)
+
+    uint256 public override maxTradeSlippagePercentage; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
 
     /* ============ Constructor ============ */
 
@@ -229,6 +233,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _strategyDuration              Strategy duration in seconds
      * @param _expectedReturn                Expected return
      * @param _maxAllocationPercentage       Max allocation percentage of garden capital
+     * @param _maxGasFeePercentage           Max gas fee percentage of garden capital
+     * @param _maxTradeSlippagePercentage    Max slippage allowed per trade in % of capital
      */
     function initialize(
         address _strategist,
@@ -238,40 +244,33 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _maxAllocationPercentage
+        uint256 _maxAllocationPercentage,
+        uint256 _maxGasFeePercentage,
+        uint256 _maxTradeSlippagePercentage
     ) external override initializer {
         controller = IBabController(_controller);
-        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         garden = IGarden(_garden);
+
+        _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(
-            IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
-            Errors.TOKENS_STAKED
-        );
-        // TODO: adjust this calc
-        _require(_stake > 0, Errors.STAKE_HAS_TO_AT_LEAST_ONE);
-        _require(
-            _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
-            Errors.DURATION_MUST_BE_IN_RANGE
-        );
-        _require(_maxAllocationPercentage <= 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
-        _require(_maxCapitalRequested > 0, Errors.ZERO_CAPITAL_REQUESTED);
-        maxAllocationPercentage = _maxAllocationPercentage;
+        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
+
+        maxCapitalRequested = _maxCapitalRequested;
+
+        _setStake(_stake, _strategist);
+        _setDuration(_strategyDuration);
+        _setMaxTradeSlippage(_maxTradeSlippagePercentage);
+        _setMaxGasFeePercentage(_maxGasFeePercentage);
+        _setMaxAllocationPercentage(_maxAllocationPercentage);
+
         strategist = _strategist;
         enteredAt = block.timestamp;
-        stake = _stake;
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        hasMiningStarted = ((enteredAt > rewardsDistributor.START_TIME()) && (rewardsDistributor.START_TIME() != 0));
-        duration = _strategyDuration;
         expectedReturn = _expectedReturn;
-        capitalAllocated = 0;
-        maxCapitalRequested = _maxCapitalRequested;
 
         votes[_strategist] = _stake.toInt256();
         totalPositiveVotes = _stake;
-
-        dataSet = false;
     }
 
     /* ============ External Functions ============ */
@@ -293,10 +292,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
-            (_opTypes.length == _opIntegrations.length) && (_opIntegrations.length == opEncodedLength),
+            opEncodedLength < MAX_OPERATIONS &&
+                opEncodedLength > 0 &&
+                (_opTypes.length == _opIntegrations.length) &&
+                (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
         );
-        _require(opEncodedLength < MAX_OPERATIONS && opEncodedLength > 0, Errors.TOO_MANY_OPS);
         for (uint256 i = 0; i < _opTypes.length; i++) {
             IOperation(controller.enabledOperations(_opTypes[i])).validateOperation(
                 BytesLib.get64Bytes(_opEncodedData, i),
@@ -327,7 +328,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
-
+        _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
 
         // set votes to zero expecting keeper to provide correct values
@@ -363,6 +364,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
+        _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
         _executesStrategy(_capital, _fee, msg.sender);
     }
 
@@ -377,8 +379,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
-        _require(executedAt > 0, Errors.STRATEGY_IS_NOT_EXECUTED);
-        _require(block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
+        _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
@@ -403,9 +404,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Partially unwinds an strategy.
      * Triggered from an immediate withdraw in the Garden.
-     * @param _amountToUnwind              The amount of capital to unwind
+     * @param _amountToUnwind  The amount of capital to unwind
+     * @param _strategyNAV     NAV of the strategy to unwind.
      */
-    function unwindStrategy(uint256 _amountToUnwind) external override nonReentrant {
+    function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external override nonReentrant {
         _require(
             (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
                 msg.sender == controller.owner(),
@@ -414,19 +416,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         // An unwind should not allow users to remove all capital from a strategy
-        _require(_amountToUnwind < capitalAllocated, Errors.INVALID_CAPITAL_TO_UNWIND);
+        _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
-        _exitStrategy(_amountToUnwind.preciseDiv(capitalAllocated));
+        _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
 
-        // Accounting of strategy power contribution along the time
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // Only if the Mining program started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
-        }
+        rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
+
         // Send the amount back to the garden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
         IERC20(garden.reserveAsset()).safeTransfer(
@@ -464,16 +460,26 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Lets the strategist change the duration of the strategy
-     * @param _newDuration            New duration of the strategy
+     * Allows strategist to update some strategy params
+     * @dev
+     *   _params[0]  duration
+     *   _params[1]  maxGasFeePercentage
+     *   _params[2]  maxTradeSlippagePercentage
+     *   _params[3]  maxAllocationPercentage
+     * @param _params  New params
      */
-    function changeStrategyDuration(uint256 _newDuration) external override {
+    function updateParams(uint256[4] calldata _params) external override {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
-        _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        _require(_newDuration < duration, Errors.DURATION_NEEDS_TO_BE_LESS);
-        emit StrategyDurationChanged(_newDuration, duration);
-        duration = _newDuration;
+
+        _require(_params[0] < duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+
+        _setDuration(_params[0]);
+        _setMaxGasFeePercentage(_params[1]);
+        _setMaxTradeSlippage(_params[2]);
+        _setMaxAllocationPercentage(_params[3]);
+
+        emit StrategyDurationChanged(_params[0], duration);
     }
 
     /**
@@ -481,13 +487,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token             Address of the token to sweep
      */
-    function sweep(address _token) external {
+    function sweep(address _token) external nonReentrant {
         _onlyUnpaused();
         _require(
             IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
                 IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_CONTRIBUTOR
         );
+        _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
 
@@ -631,7 +638,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](12);
+        uint256[] memory data = new uint256[](14);
         bool[] memory boolData = new bool[](2);
 
         data[0] = executedAt;
@@ -648,6 +655,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         boolData[1] = capitalReturned >= data[8] ? true : false;
         data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
+        data[12] = startingGardenSupply;
+        data[13] = endingGardenSupply;
         return (strategist, data, boolData);
     }
 
@@ -686,6 +695,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bytes memory
         )
     {
+        _require(_index >= 0 && _index < opTypes.length, Errors.NOT_IN_RANGE);
         // _getOpDecodedData guarantee backward compatibility with OpData
         return (opTypes[_index], opIntegrations[_index], _getOpDecodedData(_index));
     }
@@ -749,12 +759,44 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Internal Functions ============ */
 
-    /*
+    function _setStake(uint256 _stake, address _strategist) internal {
+        _require(
+            _stake > 0 &&
+                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
+            Errors.TOKENS_STAKED
+        );
+        stake = _stake;
+    }
+
+    function _setMaxAllocationPercentage(uint256 _maxAllocationPercentage) internal {
+        _require(_maxAllocationPercentage <= 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
+        maxAllocationPercentage = _maxAllocationPercentage;
+    }
+
+    function _setMaxGasFeePercentage(uint256 _maxGasFeePercentage) internal {
+        _require(_maxGasFeePercentage <= 10e16, Errors.MAX_GAS_FEE_PERCENTAGE);
+        maxGasFeePercentage = _maxGasFeePercentage;
+    }
+
+    function _setMaxTradeSlippage(uint256 _maxTradeSlippagePercentage) internal {
+        _require(_maxTradeSlippagePercentage <= 20e16, Errors.MAX_TRADE_SLIPPAGE_PERCENTAGE);
+        maxTradeSlippagePercentage = _maxTradeSlippagePercentage;
+    }
+
+    function _setDuration(uint256 _strategyDuration) internal {
+        _require(
+            _strategyDuration >= garden.minStrategyDuration() && _strategyDuration <= garden.maxStrategyDuration(),
+            Errors.DURATION_MUST_BE_IN_RANGE
+        );
+        duration = _strategyDuration;
+    }
+
+    /**
      * Executes an strategy that has been activated and gone through the cooldown period.
      * Keeper will validate that quorum is reached, cacluates all the voting data and push it.
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
-     * @param _keepers                  The address of the keeper to pay
+     * @param _keeper                   The address of the keeper to pay
      */
     function _executesStrategy(
         uint256 _capital,
@@ -774,15 +816,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
+            // Checkpoint of garden supply at start
+            startingGardenSupply = IERC20(address(garden)).totalSupply();
         }
-        // We consider also strategies on candidate state when mining program is activated
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // The Mining program has not started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(_capital, true);
-        }
+        rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
@@ -849,11 +886,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Deletes this strategy and returns the stake to the strategist
      */
     function _deleteCandidateStrategy() private {
-        _require(executedAt == 0, Errors.STRATEGY_IS_EXECUTED);
-        _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-
+        _require(executedAt == 0 && !finalized, Errors.STRATEGY_IS_EXECUTED);
         IGarden(garden).expireCandidateStrategy(address(this));
-        // TODO: Call selfdestruct??
     }
 
     /**
@@ -895,7 +929,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken
     ) private returns (uint256) {
-        address tradeIntegration = IBabController(controller).masterSwapper();
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
@@ -906,8 +939,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ITradeIntegration(tradeIntegration).trade(
+        uint256 minAmountExpected =
+            exactAmount.sub(
+                exactAmount.preciseMul(
+                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
+                )
+            );
+        ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,
             _sendQuantity,
@@ -928,7 +966,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
-            IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+            if (protocolProfits > 0) {
+                // We avoid a transfer in case capitalReturned == capitalAllocated
+                IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+            }
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
             // Returns were negative so let's burn the strategiest stake
@@ -943,21 +984,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
+        endingGardenSupply = IERC20(address(garden)).totalSupply();
         garden.finalizeStrategy(
             profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
             strategyReturns,
             burningAmount
         );
-        // Substract the Principal in the Rewards Distributor to update the Protocol power value
-        if (
-            hasMiningStarted ||
-            (block.timestamp > rewardsDistributor.START_TIME() && rewardsDistributor.START_TIME() != 0)
-        ) {
-            // Only if the Mining program started on time for this strategy
-            rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
-            // Must be zero in case the mining program didnt started on time
-            strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
-        }
+        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        // Must be zero in case the mining program didnt started on time
+        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
@@ -972,9 +1008,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     // backward compatibility with OpData in case of ongoing strategies with deprecated OpData
     function _getOpDecodedData(uint256 _index) private view returns (bytes memory) {
-        bytes memory decodedData =
+        return
             opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
-        return decodedData;
     }
 
     function _handleWeth(bool _isDeposit, uint256 _wethAmount) private {
@@ -990,4 +1025,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV11 is Strategy {}
+contract StrategyV14 is Strategy {}

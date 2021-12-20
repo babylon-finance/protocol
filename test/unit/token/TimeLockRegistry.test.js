@@ -9,7 +9,7 @@ const { increaseTime } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getCombinedModifierFlags } = require('typescript');
 
-const TOTAL_REGISTERED_TOKENS = eth(272950);
+const TOTAL_REGISTERED_TOKENS = eth(287012);
 const investorsVestingStart = new Date(2021, 6, 27); // July 27th real token vesting start for investors
 const teamVestingStart = new Date(2021, 2, 15); // 15th March
 
@@ -75,7 +75,7 @@ describe('TimeLockRegistry', function () {
     });
 
     it('should have all registrations', async function () {
-      expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(80);
+      expect((await timeLockRegistry.getRegistrations()).length).to.be.eq(81);
     });
 
     it('vestingStartDate should not be before March 15st PST for Team and NOW for Investors', async function () {
@@ -92,10 +92,10 @@ describe('TimeLockRegistry', function () {
       }
     });
 
-    it('vesting amount should not be above 24,750', async function () {
+    it('vesting amount should not be above 25,000', async function () {
       const registrations = await timeLockRegistry.getRegistrations();
       for (let i = 0; i < registrations.length; i++) {
-        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(eth(24750));
+        expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.lte(eth(25000));
         expect(await timeLockRegistry.checkRegisteredDistribution(registrations[i])).to.be.gt(0);
       }
     });

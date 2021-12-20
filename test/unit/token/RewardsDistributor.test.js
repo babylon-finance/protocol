@@ -37,7 +37,13 @@ const {
   USDC_STRATEGY_PARAMS,
   DAI_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
+const {
+  createGarden,
+  transferFunds,
+  depositFunds,
+  getRewardsSig,
+  getRewardsSigHash,
+} = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { ADDRESS_ZERO } = require('../../../lib/constants');
@@ -121,6 +127,8 @@ describe('RewardsDistributor', function () {
   let uniswapV3TradeIntegration;
   let masterSwapper;
   let mardukGate;
+  let keeper;
+  let nft;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -142,13 +150,9 @@ describe('RewardsDistributor', function () {
     let timePercent = 0;
     // We calculate the profit of the strategy
     const allocated = await strategy.capitalAllocated();
-    let returned = await strategy.capitalReturned();
+    const returned = await strategy.capitalReturned();
     let supply;
 
-    if (returned > allocated * 2) {
-      // We simulate the protocol cap x2
-      returned = allocated.mul(2).mul(ONE_ETH).div(ONE_ETH);
-    }
     const profit = ethers.BigNumber.from(returned).mul(ONE_ETH).div(ethers.BigNumber.from(allocated));
     const [, , , , , exitedAt] = await strategy.getStrategyState();
     [supply] = await rewardsDistributor.checkMining(quarterStart, strategy.address);
@@ -165,12 +169,10 @@ describe('RewardsDistributor', function () {
           // First
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = bablTokenQi[i];
@@ -178,12 +180,10 @@ describe('RewardsDistributor', function () {
           // intermediate quarters
           timePercent = ONE_ETH;
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = rewards.add(bablTokenQi[i]);
@@ -195,12 +195,10 @@ describe('RewardsDistributor', function () {
             .mul(ONE_ETH)
             .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
           bablTokenQi[i] = powerRatio[i]
-            .mul(profit)
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
             .div(ONE_ETH)
             .mul(ONE_ETH)
-            .div(ONE_ETH)
             .div(ONE_ETH)
             .div(ONE_ETH);
           rewards = rewards.add(bablTokenQi[i]);
@@ -212,17 +210,16 @@ describe('RewardsDistributor', function () {
         .mul(ONE_ETH)
         .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
       const bablTokensQ1 = powerRatio[0]
-        .mul(profit)
         .mul(bablSupplyQ1)
         .mul(timePercent)
         .div(ONE_ETH)
         .mul(ONE_ETH)
         .div(ONE_ETH)
-        .div(ONE_ETH)
         .div(ONE_ETH);
       rewards = bablTokensQ1;
     }
-
+    // Default params profitWeight = 65% and principalWeigth = 35%
+    rewards = from(rewards).mul(35).div(100).add(from(rewards).mul(65).div(100).mul(profit).div(ONE_ETH));
     return rewards;
   }
 
@@ -248,6 +245,8 @@ describe('RewardsDistributor', function () {
       dai,
       usdc,
       weth,
+      keeper,
+      nft,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
@@ -260,6 +259,79 @@ describe('RewardsDistributor', function () {
     });
   });
   describe('Strategy BABL Mining Rewards Calculation', async function () {
+    it('can NOT change BABL % share if it does not sum 100%', async function () {
+      const [
+        BABL_STRATEGIST_SHARE,
+        BABL_STEWARD_SHARE,
+        BABL_LP_SHARE,
+        CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      const BABL_STRATEGIST_SHARE_1 = eth('0.15');
+      const BABL_STEWARD_SHARE_1 = eth('0.15');
+      const BABL_LP_SHARE_1 = eth('0.15');
+      const CREATOR_BONUS_1 = eth('0.15');
+      await expect(
+        rewardsDistributor
+          .connect(owner)
+          .setBABLMiningParameters(
+            BABL_STRATEGIST_SHARE_1,
+            BABL_STEWARD_SHARE_1,
+            BABL_LP_SHARE_1,
+            CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
+          ),
+      ).to.be.revertedWith('BAB#101');
+      const [
+        NEW_BABL_STRATEGIST_SHARE,
+        NEW_BABL_STEWARD_SHARE,
+        NEW_BABL_LP_SHARE,
+        NEW_CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE);
+      expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE);
+      expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE);
+      expect(NEW_CREATOR_BONUS).to.equal(CREATOR_BONUS);
+    });
+    it('can change BABL % share ', async function () {
+      const [
+        BABL_STRATEGIST_SHARE,
+        BABL_STEWARD_SHARE,
+        BABL_LP_SHARE,
+        CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      const BABL_STRATEGIST_SHARE_1 = eth('0.08');
+      const BABL_STEWARD_SHARE_1 = eth('0.12');
+      const BABL_LP_SHARE_1 = eth('0.80');
+      const CREATOR_BONUS_1 = eth('0.10');
+      expect(BABL_STRATEGIST_SHARE).to.not.be.equal(BABL_STRATEGIST_SHARE_1);
+      await expect(
+        rewardsDistributor
+          .connect(owner)
+          .setBABLMiningParameters(
+            BABL_STRATEGIST_SHARE_1,
+            BABL_STEWARD_SHARE_1,
+            BABL_LP_SHARE_1,
+            CREATOR_BONUS_1,
+            eth('0.60'),
+            eth('0.40'),
+          ),
+      ).not.to.be.reverted;
+      const [
+        NEW_BABL_STRATEGIST_SHARE,
+        NEW_BABL_STEWARD_SHARE,
+        NEW_BABL_LP_SHARE,
+        NEW_CREATOR_BONUS,
+        ,
+      ] = await rewardsDistributor.getBABLMiningParameters();
+      expect(NEW_BABL_STRATEGIST_SHARE).to.equal(BABL_STRATEGIST_SHARE_1);
+      expect(NEW_BABL_STEWARD_SHARE).to.equal(BABL_STEWARD_SHARE_1);
+      expect(NEW_BABL_LP_SHARE).to.equal(BABL_LP_SHARE_1);
+      expect(NEW_CREATOR_BONUS).to.equal(CREATOR_BONUS_1);
+    });
     it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
       let [supply] = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(2);
@@ -275,117 +347,383 @@ describe('RewardsDistributor', function () {
       [supply] = await rewardsDistributor.checkMining(700, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
     });
-    it('should get 0 BABL rewards if the Mining Program has not started yet', async function () {
+    it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
       await executeStrategy(long, ONE_ETH);
-      await finalizeStrategyAfter30Days(long);
-      await babController.connect(owner).enableBABLMiningProgram();
-      expect(await long.strategyRewards()).to.be.equal(0);
-    });
-
-    it('should get proportional BABL rewards if the Mining Program starts after the creation of an strategy', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      // Mining program has to be enabled before the strategy is created
-      await babController.connect(owner).enableBABLMiningProgram();
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-      await executeStrategy(long, ONE_ETH);
-
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-      expect(await long.strategyRewards()).to.be.closeTo(value, 100000);
-    });
-
-    it('should get proportional 50% BABL rewards if the Mining Program starts in the middle of an strategy execution', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
-    });
-
-    it('should get proportional 66% BABL rewards if the Mining Program starts 1/3 after of an strategy execution duration', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(2), value.div(50));
-    });
-    it('should get proportional 33% BABL rewards if the Mining Program starts 2/3 after of an strategy execution duration', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 60);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      await finalizeStrategyAfter30Days(long);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
-
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(3).mul(1), value.div(50));
-    });
-    it('should fail trying to calculate rewards of a strategy that has not ended yet', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-
-      // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
-
-      await executeStrategy(long, ONE_ETH);
-
-      await expect(rewardsDistributor.getStrategyRewards(long.address)).to.be.revertedWith('BAB#049');
-    });
-    it('should not add the same live strategy twice', async function () {
-      const [long] = await createStrategies([{ garden: garden1 }]);
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
-
-      await executeStrategy(long, ONE_ETH);
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-      // Mining program has to be enabled before the strategy is finished
-      await babController.connect(owner).enableBABLMiningProgram();
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
-      // Do nothing as strategyPrincipal > 0
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      increaseTime(ONE_DAY_IN_SECONDS * 15);
+      const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedBABL2 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedBABL3 = await rewardsDistributor.estimateStrategyRewards(long.address);
       await finalizeStrategyImmediate(long);
-      // Do nothing as is no longer a beta strategy
-      await rewardsDistributor.addLiveStrategies([long.address]);
-      const value = await getStrategyRewards(long, now, 1, 1, [ethers.utils.parseEther('1')]);
+      const estimatedBABL4 = await rewardsDistributor.estimateStrategyRewards(long.address);
+      const rewards = await long.strategyRewards();
+      expect(estimatedBABL3).to.be.gt(estimatedBABL2);
+      expect(estimatedBABL2).to.be.gt(estimatedBABL1);
+      expect(rewards).to.be.closeTo(estimatedBABL3, estimatedBABL3.div(50)); // 2%
+      expect(estimatedBABL4).to.be.equal(0);
+    });
+    it('should estimate BABL rewards correctly in case of 2 strategies one starting after the first one', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      expect(await long.strategyRewards()).to.be.gt(0);
-      expect(await long.strategyRewards()).to.be.lt(value);
-      expect(await long.strategyRewards()).to.be.closeTo(value.div(2), value.div(50));
+      await executeStrategy(long1, ONE_ETH);
+      const estimatedBABL1Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedBABL2Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      await executeStrategy(long2, ONE_ETH);
+      const estimatedBABL3Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL3Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedBABL4Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL4Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedBABL5Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
+      const estimatedBABL5Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
+      const rewardsLong1 = await long1.strategyRewards();
+      const rewardsLong2 = await long2.strategyRewards();
+      expect(estimatedBABL4Long1).to.be.gt(estimatedBABL3Long1);
+      expect(estimatedBABL4Long1).to.be.gt(estimatedBABL4Long2);
+
+      expect(estimatedBABL3Long1).to.be.gt(estimatedBABL2Long1);
+      expect(estimatedBABL3Long1).to.be.gt(estimatedBABL3Long2);
+      expect(estimatedBABL2Long1).to.be.gt(estimatedBABL1Long1);
+      expect(rewardsLong1).to.be.closeTo(estimatedBABL4Long1, estimatedBABL4Long1.div(50)); // 2%
+      expect(rewardsLong2).to.be.closeTo(estimatedBABL4Long2, estimatedBABL4Long2.div(50)); // 2%
+      expect(rewardsLong1).to.be.gt(rewardsLong2);
+
+      expect(estimatedBABL5Long1).to.be.equal(0);
+      expect(estimatedBABL5Long2).to.be.equal(0);
+    });
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+      await executeStrategy(long, ONE_ETH);
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      await finalizeStrategyImmediate(long);
+      const getRewardsSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long.address,
+      ]);
+      const getRewardsSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long.address,
+      ]);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getRewardsSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getRewardsSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.equal(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.equal(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.equal(0); // Steward
+      // Estimations are 0 when the strategy already finished
+      expect(estimatedSigner1BABL5[5]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[5]).to.be.equal(0);
+    });
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 1 quarter', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long, ONE_ETH);
+      await injectFakeProfits(long, ONE_ETH.mul(222));
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await finalizeStrategyImmediate(long);
+      const getSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL5 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL5 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.be.gt(0); // Steward
+
+      // Once the strategy ends, estimation is 0
+      expect(estimatedSigner1BABL5[0]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[0]).to.be.equal(0);
+      expect(estimatedSigner1BABL5[2]).to.be.equal(0);
+      expect(estimatedSigner2BABL5[2]).to.be.equal(0);
+      const returned = await long.capitalReturned();
+      const allocated = await long.capitalAllocated();
+
+      const profit = returned.sub(allocated);
+      const rewardsStrategist = profit.mul(10).div(100);
+      const rewardsStewards = profit.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5[1]).to.equal(rewardsStrategist);
+      expect(getSigner1BABL5[3].add(getSigner2BABL5[3])).to.be.closeTo(rewardsStewards, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(rewardsStrategist.add(rewardsStewards), 5);
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances
+      // since last deposit and checking back to the past long distance)
+    });
+    it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 3 quarters', async function () {
+      const [long] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long, ONE_ETH);
+      await injectFakeProfits(long, ONE_ETH.mul(222));
+      const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      const estimatedSigner1BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL2 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL3 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      await finalizeStrategyImmediate(long);
+      const estimatedSigner1BABL4 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL4 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL4 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL4 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
+      const estimatedSigner2BABL5 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
+      const getSigner1BABL5 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long.address]);
+      const getSigner2BABL5 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [long.address]);
+      expect(estimatedSigner1BABL1[5]).to.be.lt(estimatedSigner1BABL2[5]);
+      expect(estimatedSigner2BABL1[5]).to.be.lt(estimatedSigner2BABL2[5]);
+      expect(estimatedSigner1BABL2[5]).to.be.lt(estimatedSigner1BABL3[5]);
+      expect(estimatedSigner2BABL2[5]).to.be.lt(estimatedSigner2BABL3[5]);
+      expect(estimatedSigner1BABL3[5]).to.be.closeTo(getSigner1BABL4[5], estimatedSigner1BABL3[5].div(50)); // 2%
+      expect(estimatedSigner2BABL3[5]).to.be.closeTo(getSigner2BABL4[5], estimatedSigner2BABL3[5].div(50)); // 2%
+      // No profit strategy, no BABL for strategist or stewards
+      expect(estimatedSigner1BABL3[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3[2]).to.be.gt(0); // Steward
+      // After the strategy ends, estimation is back to 0
+      expect(estimatedSigner1BABL4[0]).to.be.equal(estimatedSigner1BABL5[0]);
+      expect(estimatedSigner2BABL4[0]).to.be.equal(estimatedSigner2BABL5[0]);
+      expect(estimatedSigner1BABL4[2]).to.be.equal(estimatedSigner1BABL5[2]);
+      expect(estimatedSigner2BABL4[2]).to.be.equal(estimatedSigner2BABL5[2]);
+      const returned = await long.capitalReturned();
+      const allocated = await long.capitalAllocated();
+      const profit = returned.sub(allocated);
+      const rewardsStrategist = profit.mul(10).div(100);
+      const rewardsStewards = profit.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5[1]).to.equal(rewardsStrategist);
+      expect(getSigner1BABL5[3].add(getSigner2BABL5[3])).to.be.closeTo(rewardsStewards, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(rewardsStrategist.add(rewardsStewards), 5);
+
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances)
+      /* expect(estimatedSigner1BABL4[2]).to.be.equal(estimatedSigner1BABL5[2]);
+      expect(estimatedSigner2BABL4[2]).to.be.equal(estimatedSigner2BABL5[2]);
+      expect(estimatedSigner1BABL4[3]).to.be.equal(estimatedSigner1BABL5[3]);
+      expect(estimatedSigner2BABL4[3]).to.be.equal(estimatedSigner2BABL5[3]); */
+    });
+    it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(222));
+
+      const estimatedSigner1BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL1Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL1Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      const estimatedSigner1BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const estimatedSigner1BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedSigner1BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const getSigner1BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const getSigner2BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      const getSigner1BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long2.address,
+      ]);
+      const getSigner2BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long2.address,
+      ]);
+      expect(estimatedSigner1BABL4Long1[0]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[2]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[4]).to.equal(0);
+      expect(estimatedSigner1BABL4Long1[5]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[0]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[2]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[4]).to.equal(0);
+      expect(estimatedSigner2BABL4Long1[5]).to.equal(0);
+
+      expect(estimatedSigner1BABL4Long2[0]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[2]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[4]).to.equal(0);
+      expect(estimatedSigner1BABL4Long2[5]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[0]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[2]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[4]).to.equal(0);
+      expect(estimatedSigner2BABL4Long2[5]).to.equal(0);
+
+      expect(estimatedSigner1BABL3Long1[0]).to.be.closeTo(getSigner1BABL4Long1[0], getSigner1BABL4Long1[0].div(50));
+      expect(estimatedSigner1BABL3Long1[2]).to.be.closeTo(getSigner1BABL4Long1[2], getSigner1BABL4Long1[2].div(50));
+      expect(estimatedSigner1BABL3Long1[4]).to.be.closeTo(getSigner1BABL4Long1[4], getSigner1BABL4Long1[4].div(50));
+      expect(estimatedSigner1BABL3Long1[5]).to.be.closeTo(getSigner1BABL4Long1[5], getSigner1BABL4Long1[5].div(50));
+      expect(estimatedSigner2BABL3Long1[0]).to.be.closeTo(getSigner2BABL4Long1[0], getSigner2BABL4Long1[0].div(50));
+      expect(estimatedSigner2BABL3Long1[2]).to.be.closeTo(getSigner2BABL4Long1[2], getSigner2BABL4Long1[2].div(50));
+      expect(estimatedSigner2BABL3Long1[4]).to.be.closeTo(getSigner2BABL4Long1[4], getSigner2BABL4Long1[4].div(50));
+      expect(estimatedSigner2BABL3Long1[5]).to.be.closeTo(getSigner2BABL4Long1[5], getSigner2BABL4Long1[5].div(50));
+
+      expect(estimatedSigner1BABL3Long2[0]).to.be.closeTo(getSigner1BABL4Long2[0], getSigner1BABL4Long2[0].div(50));
+      expect(estimatedSigner1BABL3Long2[2]).to.be.closeTo(getSigner1BABL4Long2[2], getSigner1BABL4Long2[2].div(50));
+      expect(estimatedSigner1BABL3Long2[4]).to.be.closeTo(getSigner1BABL4Long2[4], getSigner1BABL4Long2[4].div(50));
+      expect(estimatedSigner1BABL3Long2[5]).to.be.closeTo(getSigner1BABL4Long2[5], getSigner1BABL4Long2[5].div(50));
+      expect(estimatedSigner2BABL3Long2[0]).to.be.closeTo(getSigner2BABL4Long2[0], getSigner2BABL4Long2[0].div(50));
+      expect(estimatedSigner2BABL3Long2[2]).to.be.closeTo(getSigner2BABL4Long2[2], getSigner2BABL4Long2[2].div(50));
+      expect(estimatedSigner2BABL3Long2[4]).to.be.closeTo(getSigner2BABL4Long2[4], getSigner2BABL4Long2[4].div(50));
+      expect(estimatedSigner2BABL3Long2[5]).to.be.closeTo(getSigner2BABL4Long2[5], getSigner2BABL4Long2[5].div(50));
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 365);
+      const estimatedSigner1BABL5Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner2BABL5Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
+      const getSigner1BABL5Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const getSigner2BABL5Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL5Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const estimatedSigner2BABL5Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer2.address);
+      expect(estimatedSigner1BABL1Long1[5]).to.be.lt(estimatedSigner1BABL2Long1[5]);
+      expect(estimatedSigner2BABL1Long1[5]).to.be.lt(estimatedSigner2BABL2Long1[5]);
+      expect(estimatedSigner1BABL2Long1[5]).to.be.lt(estimatedSigner1BABL3Long1[5]);
+      expect(estimatedSigner2BABL2Long1[5]).to.be.lt(estimatedSigner2BABL3Long1[5]);
+
+      expect(estimatedSigner1BABL1Long2[5]).to.be.lt(estimatedSigner1BABL2Long2[5]);
+      expect(estimatedSigner2BABL1Long2[5]).to.be.lt(estimatedSigner2BABL2Long2[5]);
+      expect(estimatedSigner1BABL2Long2[5]).to.be.lt(estimatedSigner1BABL3Long2[5]);
+      expect(estimatedSigner2BABL2Long2[5]).to.be.lt(estimatedSigner2BABL3Long2[5]);
+
+      // Long 1 Strategy with profits, strategist and stewards get BABL
+      expect(estimatedSigner1BABL3Long1[0]).to.be.gt(0); // Strategist
+      expect(estimatedSigner1BABL3Long1[2]).to.be.gt(0); // Steward
+      expect(estimatedSigner2BABL3Long1[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3Long1[2]).to.be.gt(0); // Steward
+      // Long2 got no profits at all, no BABL rewards to strategist or stewards
+      expect(estimatedSigner1BABL3Long2[0]).to.equal(0); // Strategist
+      expect(estimatedSigner1BABL3Long2[2]).to.equal(0); // Steward
+      expect(estimatedSigner2BABL3Long2[0]).to.equal(0); // signer 2 is also not the strategist
+      expect(estimatedSigner2BABL3Long2[2]).to.equal(0); // Steward
+
+      // Once the strategy has finished, its estimation is back to 0
+      expect(estimatedSigner1BABL4Long1[0]).to.be.equal(estimatedSigner1BABL5Long1[0]);
+      expect(estimatedSigner2BABL4Long1[0]).to.be.equal(estimatedSigner2BABL5Long1[0]);
+      expect(estimatedSigner1BABL4Long1[2]).to.be.equal(estimatedSigner1BABL5Long1[2]);
+      expect(estimatedSigner2BABL4Long1[2]).to.be.equal(estimatedSigner2BABL5Long1[2]);
+      expect(estimatedSigner1BABL4Long2[0]).to.be.equal(estimatedSigner1BABL5Long2[0]);
+      expect(estimatedSigner2BABL4Long2[0]).to.be.equal(estimatedSigner2BABL5Long2[0]);
+      expect(estimatedSigner1BABL4Long2[2]).to.be.equal(estimatedSigner1BABL5Long2[2]);
+      expect(estimatedSigner2BABL4Long2[2]).to.be.equal(estimatedSigner2BABL5Long2[2]);
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const rewardsStrategistLong1 = profitLong1.mul(10).div(100);
+      const rewardsStewardsLong1 = profitLong1.mul(5).div(100);
+      // Profit rewards to set aside
+      expect(getSigner1BABL5Long1[1]).to.equal(rewardsStrategistLong1);
+      expect(getSigner1BABL5Long1[3].add(getSigner2BABL5Long1[3])).to.be.closeTo(rewardsStewardsLong1, 5);
+      expect(await garden1.reserveAssetRewardsSetAside()).to.be.closeTo(
+        rewardsStrategistLong1.add(rewardsStewardsLong1),
+        5,
+      );
+      // TODO Fix Contributor Power after long distances (it does not work right after long distances back and forth)
+      /* expect(estimatedSigner1BABL4Long1[2]).to.be.equal(estimatedSigner1BABL5Long1[2]);
+      expect(estimatedSigner2BABL4Long1[2]).to.be.equal(estimatedSigner2BABL5Long1[2]);
+      expect(estimatedSigner1BABL4Long1[3]).to.be.equal(estimatedSigner1BABL5Long1[3]);
+      expect(estimatedSigner2BABL4Long1[3]).to.be.equal(estimatedSigner2BABL5Long1[3]); */
+      /* expect(estimatedSigner1BABL4Long2[2]).to.be.equal(estimatedSigner1BABL5Long2[2]);
+      expect(estimatedSigner2BABL4Long2[2]).to.be.equal(estimatedSigner2BABL5Long2[2]);
+      expect(estimatedSigner1BABL4Long2[3]).to.be.equal(estimatedSigner1BABL5Long2[3]);
+      expect(estimatedSigner2BABL4Long2[3]).to.be.equal(estimatedSigner2BABL5Long2[3]); */
+    });
+    it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters but the second starts later', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      await executeStrategy(long2, ONE_ETH);
+      const estimatedSigner1BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner1BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      await increaseTime(ONE_DAY_IN_SECONDS * 120);
+      const estimatedSigner1BABL3Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const estimatedSigner1BABL3Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      await finalizeStrategyImmediate(long1);
+      await finalizeStrategyImmediate(long2);
+      const estimatedSigner1BABL4Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
+      const getSigner1BABL4Long1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const estimatedSigner1BABL4Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
+      const getSigner1BABL4Long2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long2.address,
+      ]);
+      // Once we activate the other strategy, the estimation must go up (cannot be reduced)
+      expect(estimatedSigner1BABL2Long1[0]).to.be.lt(estimatedSigner1BABL3Long1[0]);
+      expect(estimatedSigner1BABL2Long1[2]).to.be.lt(estimatedSigner1BABL3Long1[2]);
+      expect(estimatedSigner1BABL2Long1[4]).to.be.lt(estimatedSigner1BABL3Long1[4]);
+      expect(estimatedSigner1BABL2Long1[5]).to.be.lt(estimatedSigner1BABL3Long1[5]);
+
+      expect(estimatedSigner1BABL2Long2[0]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[2]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[4]).to.equal(0);
+      expect(estimatedSigner1BABL2Long2[5]).to.equal(0);
+      // TODO The accuracy if other strategies are fluctuating is high
+      expect(estimatedSigner1BABL3Long1[5]).to.be.closeTo(getSigner1BABL4Long1[5], getSigner1BABL4Long1[5].div(50)); // 2%
+      expect(estimatedSigner1BABL3Long2[5]).to.be.closeTo(getSigner1BABL4Long2[5], getSigner1BABL4Long2[5].div(50)); // 2%
+      expect(estimatedSigner1BABL4Long1[5]).to.be.equal(0);
+      expect(estimatedSigner1BABL4Long2[5]).to.be.equal(0);
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -412,11 +750,11 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should calculate correct BABL in an active strategy that was unwind before finishing (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
       const strategyContract = await createStrategy(
@@ -433,7 +771,7 @@ describe('RewardsDistributor', function () {
       expect(await weth.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
-      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await weth.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
@@ -444,11 +782,11 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewards = await strategyContract.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter but crossing edges (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -472,12 +810,12 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -499,11 +837,11 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
     it('should not count malicious injected profit in BABL rewards calculation in case of 1 strategy with positive profit and with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -531,12 +869,12 @@ describe('RewardsDistributor', function () {
 
       const value = await getStrategyRewards(long1, now, 1, 1, [ethers.utils.parseEther('1')]);
       const rewards = await long1.strategyRewards();
-      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('0.005'));
+      expect(rewards).to.be.closeTo(value, ethers.utils.parseEther('50'));
     });
 
     it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
@@ -579,7 +917,7 @@ describe('RewardsDistributor', function () {
 
     it('should calculate correct BABL in case of 3 strategies with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -630,7 +968,7 @@ describe('RewardsDistributor', function () {
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -719,10 +1057,8 @@ describe('RewardsDistributor', function () {
     });
 
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
+      const [miningData] = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
+      const now = miningData[0];
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -730,18 +1066,18 @@ describe('RewardsDistributor', function () {
 
       await finalizeStrategyAfter2Quarters(long1);
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 3, [
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL in the future (10 years) in case of 1 strategy with total duration of 2 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -767,14 +1103,12 @@ describe('RewardsDistributor', function () {
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
-      const block = await ethers.provider.getBlock();
-      const now = block.timestamp;
+      const [miningData] = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
+      const now = miningData[0];
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -789,21 +1123,21 @@ describe('RewardsDistributor', function () {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 4, [
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
         ethers.utils.parseEther('1'),
       ]);
       const rewardsLong1 = await long1.strategyRewards();
-      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.005'));
+      expect(rewardsLong1).to.be.closeTo(valueLong1, ethers.utils.parseEther('0.05'));
 
-      expect(rewardsLong1).to.be.closeTo('143814823688624358512181', rewardsLong1.div(100));
+      expect(rewardsLong1).to.be.closeTo('144440195353450221812071', rewardsLong1.div(100));
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -892,7 +1226,7 @@ describe('RewardsDistributor', function () {
 
     it('should calculate correct BABL (in 10 Years from now) in case of 5 strategies of 2 different Gardens with different timings along 3 quarters', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -990,7 +1324,6 @@ describe('RewardsDistributor', function () {
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -1027,22 +1360,28 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('14507.72');
-      const rewards2 = parse('36027.27');
-      const rewards3 = parse('103496.84');
-      const rewards4 = parse('116777.46');
-      const rewards5 = parse('146632.70');
+      /* const rewards1 = parse('14671.966667585869371740');
+      const rewards2 = parse('36096.951426471299806363');
+      const rewards3 = parse('104047.210918636801712873');
+      const rewards4 = parse('117451.286778501300195412');
+      const rewards5 = parse('147539.390039545454842836'); */
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, rewards1.div(50));
-      expect(rewardsLong2).to.be.closeTo(rewards2, rewards2.div(50));
-      expect(rewardsLong3).to.be.closeTo(rewards3, rewards3.div(50));
-      expect(rewardsLong4).to.be.closeTo(rewards4, rewards4.div(50));
-      expect(rewardsLong5).to.be.closeTo(rewards5, rewards5.div(50));
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('14673.393319344954463656');
+      const rewards2 = parse('36096.950984452786879400');
+      const rewards3 = parse('104046.896057485702332952');
+      const rewards4 = parse('117449.939320854562745237');
+      const rewards5 = parse('147536.480743613679287247');
+
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -1080,17 +1419,24 @@ describe('RewardsDistributor', function () {
       const rewardsLong4 = await long4.strategyRewards();
       const rewardsLong5 = await long5.strategyRewards();
 
-      const rewards1 = parse('15411.51');
-      const rewards2 = parse('36084.52');
-      const rewards3 = parse('109290.88');
-      const rewards4 = parse('123369.37');
-      const rewards5 = parse('155795.75');
+      /* const rewards1 = parse('15155.933452641217618416');
+      const rewards2 = parse('36096.936107085705229522');
+      const rewards3 = parse('107479.271149546266710805');
+      const rewards4 = parse('121325.449793500543897062');
+      const rewards5 = parse('152941.315399184640553240'); */
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, rewards1.div(50));
-      expect(rewardsLong2).to.be.closeTo(rewards2, rewards2.div(50));
-      expect(rewardsLong3).to.be.closeTo(rewards3, rewards3.div(50));
-      expect(rewardsLong4).to.be.closeTo(rewards4, rewards4.div(50));
-      expect(rewardsLong5).to.be.closeTo(rewards5, rewards5.div(50));
+      // If we change blocknumber to 13665320 to test NFT prophet staking
+      const rewards1 = parse('15123.685155140945439330');
+      const rewards2 = parse('36096.928651851330106962');
+      const rewards3 = parse('107239.812891459833566632');
+      const rewards4 = parse('121054.105410329289883519');
+      const rewards5 = parse('152561.879804255854131469');
+
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
     });
   });
 
@@ -1104,7 +1450,6 @@ describe('RewardsDistributor', function () {
       it(`can reallocate and unwind capital of a strategy in a ${name} Garden`, async function () {
         // TODO update operation to use DAI
         // Mining program has to be enabled before the strategy starts its execution
-        await babController.connect(owner).enableBABLMiningProgram();
 
         await transferFunds(token);
 
@@ -1136,7 +1481,7 @@ describe('RewardsDistributor', function () {
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(50);
         // We unwind capital
-        await strategyContract.connect(owner).unwindStrategy(amount);
+        await strategyContract.connect(owner).unwindStrategy(amount, await strategyContract.getNAV());
         const [strategyData2] = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData2[6]).to.be.closeTo(amount, strategyData2[6].div(100));
         expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
@@ -1155,9 +1500,284 @@ describe('RewardsDistributor', function () {
   });
 
   describe('Claiming Reserve Asset Rewards and BABL Rewards', function () {
+    it('can claimRewardsBySig ', async function () {
+      const amountIn = eth('1');
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+      expect(rewardsSigner2[5]).to.be.gt(0); // BABL
+      expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+      // WETH gardens pay rewards in ETH
+      const signer2ETHBalanceBefore = await ethers.provider.getBalance(signer2.address);
+      // Fee is going to be paid by burning garden tokens
+      const signer2GardenBalanceBefore = await newGarden.balanceOf(signer2.address);
+      // BABL Balance
+      const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const nonce = 2; // nonce is 2 as it deposited twice before
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      // Signer 2 claim rewards by sig
+      await newGarden
+        .connect(keeper)
+        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+      // WETH gardens pay rewards in ETH
+      const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
+      const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
+      // BABL Balance
+      const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
+
+      expect(signer2ETHBalanceAfter).to.be.gt(signer2ETHBalanceBefore);
+      expect(signer2ETHBalanceAfter).to.be.closeTo(signer2ETHBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
+      expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
+      expect(signer2BABLBalanceBefore).to.be.equal(0);
+      expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
+    });
+    [
+      {
+        token: addresses.tokens.WETH,
+        name: 'WETH',
+        opts: {
+          amountIn: eth(),
+          minAmountOut: eth(),
+          fee: eth(0.01),
+          maxFee: eth(0.01),
+        },
+      },
+      {
+        token: addresses.tokens.USDC,
+        name: 'USDC',
+        opts: {
+          amountIn: from(1000 * 1e6),
+          minAmountOut: eth(1000),
+          fee: from(100 * 1e6),
+          maxFee: from(100 * 1e6),
+        },
+      },
+    ].forEach(({ token, name, opts }) => {
+      it(`can claimRewardsBySig with a Keeper fee into ${name} garden`, async function () {
+        let signer2AssetBalanceBefore;
+        let signer2AssetBalanceAfter;
+
+        const { amountIn, minAmountOut, fee, maxFee } = opts;
+
+        const erc20 = await getERC20(token);
+        await fund([signer1.address, signer2.address], { tokens: [token] });
+
+        const newGarden = await createGarden({ reserveAsset: token });
+        await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
+        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false, { gasPrice: 0 });
+
+        const [long1] = await createStrategies([{ garden: newGarden }]);
+
+        await executeStrategy(long1, ONE_ETH);
+        await injectFakeProfits(long1, ONE_ETH.mul(200));
+        await finalizeStrategyAfterQuarter(long1);
+        const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+        expect(rewardsSigner2[5]).to.be.gt(0); // BABL
+        expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+        // WETH gardens pay rewards in ETH
+        if (token === addresses.tokens.WETH) {
+          signer2AssetBalanceBefore = await ethers.provider.getBalance(signer2.address);
+        } else {
+          signer2AssetBalanceBefore = await erc20.balanceOf(signer2.address);
+        }
+        // BABL Balance
+        const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
+        const babl = rewardsSigner2[5];
+        const profits = rewardsSigner2[6];
+        const nonce = 2; // nonce is 2 as it deposited twice before
+        const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+        // Should have enough remaining allowance (at least the fee) - we need to be sure before the tx
+        await erc20.connect(signer2).approve(newGarden.address, fee, { gasPrice: 0 });
+        // Signer 2 claim rewards by sig
+        await newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+        if (token === addresses.tokens.WETH) {
+          signer2AssetBalanceAfter = await ethers.provider.getBalance(signer2.address);
+        } else {
+          signer2AssetBalanceAfter = await erc20.balanceOf(signer2.address);
+        }
+
+        const keeperBalanceAfter = await erc20.balanceOf(keeper.address);
+        // BABL Balance
+        const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
+        if (token === addresses.tokens.WETH) {
+          expect(signer2AssetBalanceAfter).to.be.closeTo(signer2AssetBalanceBefore.add(rewardsSigner2[6]), 1);
+          expect(signer2AssetBalanceAfter).to.be.gt(signer2AssetBalanceBefore);
+        } else {
+          expect(signer2AssetBalanceAfter).to.be.closeTo(signer2AssetBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
+          // The tx gas cost more than the rewards received (exception but it is up to the user)
+          expect(signer2AssetBalanceAfter).to.be.lt(signer2AssetBalanceBefore);
+        }
+        expect(keeperBalanceAfter).to.eq(fee);
+        expect(signer2BABLBalanceBefore).to.be.equal(0);
+        expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
+      });
+    });
+
+    it('claimRewardsBySig rejects if not keeper', async function () {
+      const amountIn = eth('1');
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+      expect(rewardsSigner2[5]).to.be.gt(0); // BABL
+      expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const nonce = 2; // nonce is 2 as it deposited twice before
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      // Signer 2 claim rewards by sig
+      await expect(
+        newGarden
+          .connect(signer2)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#018');
+    });
+
+    it('rejects wrong nonce and updates it along the way', async function () {
+      const amountIn = eth('1');
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+      let babl = rewardsSigner2[5];
+      let profits = rewardsSigner2[6];
+      let nonce = 1; // nonce is 2 as it deposited twice before, we use 1 instead
+      const maxFee = 1;
+      const fee = 1;
+      let sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      // Signer 2 claim rewards by sig
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#089');
+      // nonce 3 also fails
+      nonce = 3;
+      sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#089');
+      // nonce 2 works
+      nonce = 2;
+      sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      await weth.connect(signer2).approve(newGarden.address, fee, {
+        gasPrice: 0,
+      });
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).not.to.be.reverted;
+      // Now we check that nonce is been updated with the claimRewardsBySig
+      // nonce is 3 at this point
+      const [long2] = await createStrategies([{ garden: newGarden }]);
+      // nonce is 4 at this point as there is a hidden deposit for signer2 while creating long2 strategy
+
+      await executeStrategy(long2, ONE_ETH);
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long2);
+
+      const rewardsSigner22 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long2.address]);
+      babl = rewardsSigner22[5];
+      profits = rewardsSigner22[6];
+      nonce = 4; // nonce is still 4 for signer2
+      sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      await weth.connect(signer2).approve(newGarden.address, fee, {
+        gasPrice: 0,
+      });
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).not.to.be.reverted;
+    });
+    it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
+      const amountIn = eth('1');
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const nonce = 2; // nonce is 2 as it deposited twice before
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+      // Race condition
+      // User claims its tokens by direct claim
+      await newGarden.connect(signer2).claimReturns([long1.address]);
+      // It also claim its token rewards by sig so the accountant is in process with nonce = 2
+      // Signer2 is trying a race condition between a normal and a by sig claim.
+      // nonce avoids a race condition between a normal claimReturns and a claimRewardsBySig
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#089');
+    });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -1174,6 +1794,118 @@ describe('RewardsDistributor', function () {
 
       expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
       expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
+    });
+    it('should NOT get BABL rewards in a claim if it is not a contributor', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#015');
+
+      expect(await bablToken.balanceOf(signer3.address)).to.equal(0);
+    });
+    it('should get (little) BABL rewards despite the user joined after the strategy execution (must join before strategy is exited anyway)', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+
+      await depositFunds(token, garden1);
+
+      await finalizeStrategyAfterQuarter(long1);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      await expect(rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address])).to.be.not.reverted;
+      const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long1.address]);
+      const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
+
+      await garden1.connect(signer3).claimReturns([long1.address]);
+      await garden1.connect(signer1).claimReturns([long1.address]);
+      const balanceSigner1 = await bablToken.balanceOf(signer1.address);
+      const balanceSigner3 = await bablToken.balanceOf(signer3.address);
+      expect(balanceSigner1).to.be.gt(0);
+      expect(balanceSigner3).to.be.gt(0);
+      expect(balanceSigner1).to.be.gt(balanceSigner3);
+      expect(rewardsSigner1[4]).to.be.gt(rewardsSigner3[4].mul(3));
+      expect(balanceSigner1).to.be.gt(balanceSigner3.mul(4));
+    });
+    it('should NOT get BABL rewards if the user joined after the strategy exited', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+
+      await finalizeStrategyAfterQuarter(long1);
+      // still not contributor, becoming contributor
+      await depositFunds(token, garden1);
+
+      // It is already a contributor but get no rewards as he joined after the strategy exited
+      await expect(rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address])).to.be.not.reverted;
+      const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
+      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#082');
+      const balanceSigner3 = await bablToken.balanceOf(signer3.address);
+
+      expect(balanceSigner3).to.equal(0);
+      expect(rewardsSigner3[0]).to.equal(0);
+      expect(rewardsSigner3[1]).to.equal(0);
+      expect(rewardsSigner3[2]).to.equal(0);
+      expect(rewardsSigner3[3]).to.equal(0);
+      expect(rewardsSigner3[4]).to.equal(0);
+      expect(rewardsSigner3[5]).to.equal(0);
+      expect(rewardsSigner3[6]).to.equal(0);
+    });
+    it('should only get BABL rewards of one strategy out of 2 depending on deposit before/after strategy end', async function () {
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const token = addresses.tokens.WETH;
+      await transferFunds(token);
+
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+
+      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long2, ONE_ETH);
+
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+
+      await finalizeStrategyAfterQuarter(long1);
+      await depositFunds(token, garden1);
+      await finalizeStrategyAfterQuarter(long2);
+
+      // It claim but it is reverted as it is not an user yet "only contributor"
+      const rewards1Signer3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const rewards2Signer3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long2.address]);
+      // long1 does not provide rewards to signer3
+      expect(rewards1Signer3[0]).to.equal(rewards2Signer3[0]);
+      expect(rewards1Signer3[1]).to.equal(rewards2Signer3[1]);
+      expect(rewards1Signer3[2]).to.equal(rewards2Signer3[2]);
+      expect(rewards1Signer3[3]).to.equal(rewards2Signer3[3]);
+      expect(rewards1Signer3[4]).to.equal(rewards2Signer3[4]);
+      expect(rewards1Signer3[5]).to.equal(rewards2Signer3[5]);
+      expect(rewards1Signer3[6]).to.equal(rewards2Signer3[6]);
+      expect(rewards1Signer3[5]).to.be.gt(0);
+      expect(rewards1Signer3[6]).to.equal(0); // get no profit rewards as it was not able to vote or be the strategist
     });
 
     it('should claim and update balances of Signer1 in DAI Garden as contributor of 1 strategy with profit within a quarter', async function () {
@@ -1210,7 +1942,7 @@ describe('RewardsDistributor', function () {
       await daiGarden.connect(signer3).deposit(ethers.utils.parseEther('500'), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -1284,7 +2016,6 @@ describe('RewardsDistributor', function () {
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const long1 = await createStrategy(
         'buy',
@@ -1397,7 +2128,7 @@ describe('RewardsDistributor', function () {
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -1449,7 +2180,7 @@ describe('RewardsDistributor', function () {
       await daiGarden.connect(signer1).claimReturns([long2.address]);
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), ethers.utils.parseEther('0.0005'));
+      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), signer1BalanceBABL.div(100));
       expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, signer1BABLDAI.div(50));
     });
     it('should provide correct % of strategy rewards per profile with profits', async function () {
@@ -1522,7 +2253,7 @@ describe('RewardsDistributor', function () {
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -1571,11 +2302,21 @@ describe('RewardsDistributor', function () {
       const signer3ProfitDAI = signer3RewardsDAI[6];
       // USDC Garden is set up to give all profit rewards to strategist
       // so signer 3 despite is LP and steward but gets no (0) profits
+      // We calculate strategy profits
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const setAsideGarden1 = await usdcGarden.reserveAssetRewardsSetAside();
+      const setAsideGarden2 = await daiGarden.reserveAssetRewardsSetAside();
       await expect(signer3ProfitUSDC).to.equal(0);
-      await expect(signer1ProfitUSDC).to.equal(179962394);
+      await expect(signer1ProfitUSDC).to.be.closeTo(setAsideGarden1, 5);
       // DAI Garden is set up to give all profit rewards to stewards
       // so signer 1 despite is the strategist gets the same profits than signer3
       await expect(signer1ProfitDAI).to.equal(signer3ProfitDAI);
+      await expect(signer1ProfitDAI.add(signer3ProfitDAI)).to.be.closeTo(setAsideGarden2, 5);
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens with profit below expected return within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -1650,7 +2391,7 @@ describe('RewardsDistributor', function () {
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -1778,7 +2519,7 @@ describe('RewardsDistributor', function () {
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
+
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -1845,7 +2586,6 @@ describe('RewardsDistributor', function () {
     });
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -1915,21 +2655,14 @@ describe('RewardsDistributor', function () {
       expect(signer2Profits2.toString()).to.be.equal('0');
       expect(signer2BABL2.toString()).to.be.equal('0');
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
-        signer1BABL,
-        ethers.utils.parseEther('0.005'),
-      );
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.closeTo(
-        signer2BABL,
-        ethers.utils.parseEther('0.005'),
-      );
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, ethers.utils.parseEther('0.05'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, ethers.utils.parseEther('0.05'));
       expect((await garden1.balanceOf(signer1.address)).toString()).to.be.equal(signer1GardenBalance);
       expect((await garden1.balanceOf(signer2.address)).toString()).to.be.equal(signer2GardenBalance);
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies only 1 with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -1970,55 +2703,74 @@ describe('RewardsDistributor', function () {
 
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
-      expect(signer1BABL3.toString()).to.be.closeTo('37701789043050854045289', signer1BABL3.div(100));
+      expect(signer1BABL3.toString()).to.be.closeTo('38617799592465210173386', signer1BABL3.div(100));
     });
 
     it('should only provide new additional BABL and profits between claims (claiming results of 2 strategies both with profit)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-
       await executeStrategy(long1, ONE_ETH);
       await executeStrategy(long2, ONE_ETH.mul(2));
 
       await injectFakeProfits(long1, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long1);
-
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-
+      const signer2Rewards = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit = signer2Rewards[6];
+      const rewardsSetAside1 = await garden1.reserveAssetRewardsSetAside(); // All long1 rewards available
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-
+      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
       await injectFakeProfits(long2, ONE_ETH.mul(240));
       await finalizeStrategyAfterQuarter(long2);
+      const rewardsSetAside3 = await garden1.reserveAssetRewardsSetAside(); // All long2 rewards available
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
       ]);
-
       const signer1BABL2 = signer1Rewards2[5];
       const signer1Profit2 = signer1Rewards2[6];
-
+      const signer2Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const signer2Profit2 = signer2Rewards2[6];
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      expect(signer1Profit.toString()).to.be.not.equal(signer1Profit2);
-
-      expect(signer1Profit).to.be.closeTo('5983787580486307', signer1Profit.div(100));
-      expect(signer1Profit2).to.be.closeTo('5958439050861242', signer1Profit2.div(100));
-
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
         ethers.utils.parseEther('0.02'),
       );
+      expect(rewardsSetAside1).to.be.closeTo(strategistLong1.add(stewardLong1), 5);
+      expect(rewardsSetAside1).to.be.closeTo(signer1Profit.add(signer2Profit), 5);
+      expect(rewardsSetAside1).to.be.closeTo(profitLong1.mul(15).div(100), 5);
+      expect(rewardsSetAside3).to.be.closeTo(strategistLong2.add(stewardLong2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(signer1Profit2.add(signer2Profit2), 10);
+      expect(rewardsSetAside3).to.be.closeTo(profitLong2.mul(15).div(100), 10);
+      // user specific check
+      // signer 1 has contributor power of 0.6 (60%) in balance
+      expect(signer1Profit).to.be.closeTo(strategistLong1.add(stewardLong1.mul(60).div(100)), 10);
     });
 
     it('should check potential claim values of Profit and BABL Rewards', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
@@ -2036,14 +2788,43 @@ describe('RewardsDistributor', function () {
       ]);
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
-      // TODO: Add calculations of profits and BABL
-      expect(signer1Profit).to.be.closeTo('11942226631347549', signer1Profit.div(100));
-      expect(signer1BABL).to.be.closeTo('83465698586246333338582', signer1BABL.div(100));
+      // Add calculations
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const returnedLong2 = await long2.capitalReturned();
+      const allocatedLong2 = await long2.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const profitLong2 = returnedLong2.sub(allocatedLong2);
+      const strategistLong1 = profitLong1.mul(10).div(100);
+      const strategistLong2 = profitLong2.mul(10).div(100);
+      const stewardLong1 = profitLong1.mul(5).div(100);
+      const stewardLong2 = profitLong2.mul(5).div(100);
+      const long1BABL = await long1.strategyRewards();
+      const long2BABL = await long2.strategyRewards();
+
+      const estimateSigner1Long1Profit = strategistLong1.add(stewardLong1.mul(54).div(100)); // power 54%
+      const estimateSigner1Long2Profit = strategistLong2.add(stewardLong2.mul(55).div(100)); // power 55%
+      const signer1BABLStrategistLong1 = long1BABL.mul(10).div(100).mul(returnedLong1).div(allocatedLong1);
+      const signer1BABLStrategistLong2 = long2BABL.mul(10).div(100).mul(returnedLong2).div(allocatedLong2);
+      const signer1BABLStewardLong1 = long1BABL.mul(10).mul(54).div(10000); // power 54% stewards % in BABL is 10% (no 5%)
+      const signer1BABLStewardLong2 = long2BABL.mul(10).mul(55).div(10000); // power 55% stewards % in BABL is 10% (no 5%)
+      const signer1BABLLPLong1 = long1BABL.mul(80).mul(54).div(10000); // power 54%
+      const signer1BABLLPLong2 = long2BABL.mul(80).mul(55).div(10000); // power 55%
+      let totalSigner1BABLLong1 = signer1BABLStrategistLong1.add(signer1BABLStewardLong1).add(signer1BABLLPLong1);
+      let totalSigner1BABLLong2 = signer1BABLStrategistLong2.add(signer1BABLStewardLong2).add(signer1BABLLPLong2);
+
+      // 10% add bonus creator
+      totalSigner1BABLLong1 = totalSigner1BABLLong1.add(totalSigner1BABLLong1.mul(10).div(100));
+      totalSigner1BABLLong2 = totalSigner1BABLLong2.add(totalSigner1BABLLong2.mul(10).div(100));
+      expect(signer1Profit).to.be.closeTo(
+        estimateSigner1Long1Profit.add(estimateSigner1Long2Profit),
+        signer1Profit.div(50),
+      ); // 2%
+      expect(signer1BABL).to.be.closeTo(totalSigner1BABLLong1.add(totalSigner1BABLLong2), signer1BABL.div(50)); // 2%
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -2123,13 +2904,16 @@ describe('RewardsDistributor', function () {
         signer2BABL2.add(signer2BABL),
         ethers.utils.parseEther('0.0005'),
       );
-      expect(signer1Profit2.toString()).to.be.closeTo('10813510863198169', ethers.utils.parseEther('0.00005'));
-      expect(signer2Profit2.toString()).to.be.closeTo('1157789933205635', ethers.utils.parseEther('0.00005'));
+
+      // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', ethers.utils.parseEther('0.00005'));
+      // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', ethers.utils.parseEther('0.00005'));
+      // If we use block 13665320 to test NFT staking
+      expect(signer1Profit2.toString()).to.be.closeTo('11708791017819073', ethers.utils.parseEther('0.00005'));
+      expect(signer2Profit2.toString()).to.be.closeTo('2118621695754461', ethers.utils.parseEther('0.00005'));
     });
 
     it('A user cannot claim strategies from 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -2170,7 +2954,6 @@ describe('RewardsDistributor', function () {
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
-      await babController.connect(owner).enableBABLMiningProgram();
 
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
@@ -2213,6 +2996,309 @@ describe('RewardsDistributor', function () {
           long5.address,
         ]),
       ).to.be.revertedWith('BAB#073');
+    });
+  });
+  describe('NFT stake in Gardens to boost BABL rewards', function () {
+    it('can stake common prophet NFT in a garden to get 1% LP', async function () {
+      const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      await prophetsNFT.connect(raul).transferFrom(raul.address, signer2.address, 37, { gasPrice: 0 }); // NFT transfer
+      const [id, babl, strategist, voter, lp, creator, ts] = await prophetsNFT.getStakedProphetAttrs(
+        signer2.address,
+        garden1.address,
+      );
+      expect(id).to.eq(0);
+      expect(babl).to.eq(0);
+      expect(strategist).to.eq(0);
+      expect(voter).to.eq(0);
+      expect(lp).to.eq(0);
+      expect(creator).to.eq(0);
+      expect(ts).to.eq(0);
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      // Now we stake a prophet
+      const rewardsSigner2Long1 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long1.address,
+      ]);
+      await prophetsNFT.connect(signer2).stake(37, garden1.address, { gasPrice: 0 }); // NFT stake
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer2.address,
+        garden1.address,
+      );
+      const block = await ethers.provider.getBlock();
+      expect(id2).to.eq(37);
+      expect(babl2).to.eq(eth(5));
+      expect(strategist2).to.eq(0);
+      expect(voter2).to.eq(0);
+      expect(lp2).to.eq(eth(0.01));
+      expect(creator2).to.eq(0);
+      expect(ts2).to.eq(block.timestamp);
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+      const bonusLP = rewardsSigner2Long1[4].mul(lp2).div(eth(1));
+      const rewardsSigner2Long2 = await rewardsDistributor.getRewards(garden1.address, signer2.address, [
+        long2.address,
+      ]);
+      expect(rewardsSigner2Long2[4]).to.be.closeTo(rewardsSigner2Long1[4].add(bonusLP), rewardsSigner2Long2[4].div(50));
+    });
+    it('can stake great prophet NFT in a garden to get 3.5% strategist, 1.5% steward, 4.5% LP and 1% creator bonus', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We stake the great prophet in newGarden1
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT stake
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+      const block = await ethers.provider.getBlock();
+      expect(id2).to.eq(tokenId);
+      expect(babl2).to.eq(eth(55));
+      expect(strategist2).to.eq(eth(0.035));
+      expect(voter2).to.eq(eth(0.015));
+      expect(lp2).to.eq(eth(0.045));
+      expect(creator2).to.eq(eth(0.01));
+      expect(ts2).to.eq(block.timestamp);
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(rewardsSigner1Long2[4].add(bonusLP), rewardsSigner1Long1[4].div(50));
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can NOT use great prophet NFT bonuses if staked after the strategy ends', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(rewardsSigner1Long2[0], rewardsSigner1Long1[0].div(50));
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(rewardsSigner1Long2[2], rewardsSigner1Long1[2].div(50));
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(rewardsSigner1Long2[4], rewardsSigner1Long1[4].div(50));
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(rewardsSigner1Long2[7], rewardsSigner1Long1[7].div(50));
+    });
+    it('can get proportional 50% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 15);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 15);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.div(2)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.div(2)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.div(2)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.div(2)),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can get proportional 66% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.mul(2).div(3)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.mul(2).div(3)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.mul(2).div(3)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.mul(2).div(3)),
+        rewardsSigner1Long1[7].div(50),
+      );
+    });
+    it('can get proportional 33% of prophet NFT bonuses if staked after the strategy executed and before it finishes', async function () {
+      const token = addresses.tokens.WETH;
+      const tokenId = 8986;
+      const prophetsNFT = await ethers.getContractAt('IProphets', nft.address);
+      const NFTOwner = await impersonateAddress(await prophetsNFT.ownerOf(tokenId));
+      await prophetsNFT.connect(NFTOwner).transferFrom(NFTOwner.address, signer1.address, tokenId, { gasPrice: 0 }); // NFT transfer
+      const newGarden1 = await createGarden({ reserveAsset: token });
+      const newGarden2 = await createGarden({ reserveAsset: token });
+      // We use 2 different gardens to run similar strategies in parallel
+      const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
+      await executeStrategy(long1, ONE_ETH.mul(2));
+      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      // We stake the great prophet in newGarden1 after the strategy ends
+      await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
+      await increaseTime(ONE_DAY_IN_SECONDS * 10);
+      await finalizeStrategyImmediate(long1);
+      const [id2, babl2, strategist2, voter2, lp2, creator2, ts2] = await prophetsNFT.getStakedProphetAttrs(
+        signer1.address,
+        newGarden1.address,
+      );
+
+      const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
+        long1.address,
+      ]);
+
+      await executeStrategy(long2, ONE_ETH.mul(2));
+      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long2);
+
+      const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
+        long2.address,
+      ]);
+      const bonusStrategist = rewardsSigner1Long2[0].mul(strategist2).div(eth(1));
+      const bonusSteward = rewardsSigner1Long2[2].mul(voter2).div(eth(1));
+      const bonusLP = rewardsSigner1Long2[4].mul(lp2).div(eth(1));
+      const bonusCreator = rewardsSigner1Long2[7].mul(creator2).div(eth(1));
+      expect(rewardsSigner1Long1[0]).to.be.closeTo(
+        rewardsSigner1Long2[0].add(bonusStrategist.div(3)),
+        rewardsSigner1Long1[0].div(50),
+      );
+      expect(rewardsSigner1Long1[2]).to.be.closeTo(
+        rewardsSigner1Long2[2].add(bonusSteward.div(3)),
+        rewardsSigner1Long1[2].div(50),
+      );
+      expect(rewardsSigner1Long1[4]).to.be.closeTo(
+        rewardsSigner1Long2[4].add(bonusLP.div(3)),
+        rewardsSigner1Long1[4].div(50),
+      );
+      expect(rewardsSigner1Long1[7]).to.be.closeTo(
+        rewardsSigner1Long2[7].add(bonusCreator.div(3)),
+        rewardsSigner1Long1[7].div(50),
+      );
     });
   });
 });

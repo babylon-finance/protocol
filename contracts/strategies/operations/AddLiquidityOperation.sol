@@ -25,9 +25,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
-
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
-
 import {Operation} from './Operation.sol';
 
 /**
@@ -94,6 +92,23 @@ contract AddLiquidityOperation is Operation {
     {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
+        // if the weights need to be adjusted by price, do so
+        try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
+            if (priceWeights) {
+                uint256 poolTotal = 0;
+                for (uint256 i = 0; i < poolTokens.length; i++) {
+                    _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
+                        poolTokens[i],
+                        poolTokens[poolTokens.length - 1],
+                        _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
+                    );
+                    poolTotal = poolTotal.add(_poolWeights[i]);
+                }
+                for (uint256 i = 0; i < poolTokens.length; i++) {
+                    _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
+                }
+            }
+        } catch {}
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
@@ -186,8 +201,21 @@ contract AddLiquidityOperation is Operation {
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         pool = IPoolIntegration(_integration).getPool(pool);
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
+        // Get price from pool
+        uint256 price = 0;
+        try IPoolIntegration(_integration).getPricePerShare(_data) returns (uint256 pricePerShare) {
+            price = pricePerShare;
+        } catch {}
+        if (price != 0) {
+            return (
+                lpToken.balanceOf(msg.sender).preciseMul(
+                    price.preciseMul(_getPriceUniV3LpToken(pool, _garden.reserveAsset()))
+                ),
+                true
+            );
+        }
         // Price lp token directly if possible
-        uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
+        price = _getPrice(address(lpToken), _garden.reserveAsset());
         if (price != 0) {
             return (
                 SafeDecimalMath.normalizeAmountTokens(

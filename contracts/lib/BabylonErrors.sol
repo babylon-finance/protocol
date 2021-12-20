@@ -288,4 +288,16 @@ library Errors {
     uint256 internal constant ZERO_CAPITAL_REQUESTED = 99;
     // Unwind capital above the limit
     uint256 internal constant INVALID_CAPITAL_TO_UNWIND = 100;
+    // Mining % sharing does not match
+    uint256 internal constant INVALID_MINING_VALUES = 101;
+    // Max trade slippage percentage
+    uint256 internal constant MAX_TRADE_SLIPPAGE_PERCENTAGE = 102;
+    // Max gas fee percentage
+    uint256 internal constant MAX_GAS_FEE_PERCENTAGE = 103;
+    // Mismatch between voters and votes
+    uint256 internal constant INVALID_VOTES_LENGTH = 104;
+    // Only Rewards Distributor
+    uint256 internal constant ONLY_RD = 105;
+    // Fee is too LOW
+    uint256 internal constant FEE_TOO_LOW = 106;
 }

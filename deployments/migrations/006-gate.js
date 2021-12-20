@@ -5,13 +5,13 @@ module.exports = async ({
   getNamedAccounts,
   deployments,
   ethers,
-  getRapid,
+  getGasPrice,
   getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getRapid();
+  const gasPrice = await getGasPrice();
   const contract = 'IshtarGate';
 
   const controller = await getController();
@@ -25,7 +25,7 @@ module.exports = async ({
 
   if (deployment.newlyDeployed) {
     console.log(`Setting ishtar gate on controller ${deployment.address}`);
-    await (await controller.editIshtarGate(deployment.address, { gasPrice })).wait();
+    // await (await controller.editIshtarGate(deployment.address, { gasPrice })).wait();
 
     const ishtarGate = await ethers.getContractAt('IshtarGate', deployment.address, signer);
     for (const address of [

@@ -23,7 +23,9 @@ const ZEROMAXCAP_STRATEGY_PARAMS = [
   eth(0.1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage
+  eth(0.1), // 10% _maxAllocationPercentage,
+  eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
 ];
 
 describe('Strategy', function () {
@@ -93,10 +95,6 @@ describe('Strategy', function () {
   });
 
   describe('Strategy Deployment', async function () {
-    it('should deploy contract successfully', async function () {
-      const deployed = await strategyDataset.deployed();
-      expect(!!deployed).to.equal(true);
-    });
     it('should NOT initialize a strategy with maxcapitalrequested of 0', async function () {
       await expect(
         getStrategy({
@@ -104,19 +102,24 @@ describe('Strategy', function () {
           params: ZEROMAXCAP_STRATEGY_PARAMS,
           specificParams: [addresses.tokens.USDT, 0],
         }),
-      ).to.be.revertedWith('BAB#099');
+      ).to.be.revertedWith('BAB#041');
     });
   });
 
-  describe('changeStrategyDuration', function () {
-    it('strategist should be able to change the duration of an strategy strategy', async function () {
-      await expect(strategyDataset.connect(signer1).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.not.be.reverted;
+  describe('updateParams', function () {
+    it('strategist can update duration, maxGasFeePercentage, maxAllocationPercentage, and maxTradeSlippagePercentage of a strategy', async function () {
+      await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1), eth()]);
+
+      expect(await strategyDataset.duration()).to.eq(ONE_DAY_IN_SECONDS * 3);
+      expect(await strategyDataset.maxGasFeePercentage()).to.eq(eth(0.1));
+      expect(await strategyDataset.maxTradeSlippagePercentage()).to.eq(eth(0.1));
+      expect(await strategyDataset.maxAllocationPercentage()).to.eq(eth());
     });
 
-    it('other member should NOT be able to change the duration of an strategy', async function () {
-      await expect(strategyDataset.connect(signer3).changeStrategyDuration(ONE_DAY_IN_SECONDS * 3)).to.be.revertedWith(
-        'BAB#032',
-      );
+    it('only strategist or gov can update params', async function () {
+      await expect(
+        strategyDataset.connect(signer3).updateParams([ONE_DAY_IN_SECONDS * 3, 0, 0, eth()]),
+      ).to.be.revertedWith('BAB#032');
     });
   });
 
@@ -315,7 +318,7 @@ describe('Strategy', function () {
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
 
-      await strategyContract.connect(owner).unwindStrategy(ONE_ETH);
+      await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
 
       expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
       expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
@@ -541,9 +544,6 @@ describe('Strategy', function () {
 
   describe('Profits and re-staking (compounding) calculations', async function () {
     it('should correctly calculate profits (strategist and stewards) and re-staking values of 5 strategies', async function () {
-      // Mining program has to be enabled before the strategy is created
-      await babController.connect(owner).enableBABLMiningProgram();
-
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -563,42 +563,62 @@ describe('Strategy', function () {
       await injectFakeProfits(long1, ONE_ETH.mul(200));
       await finalizeStrategy(long1);
 
+      // Add calculations long1
+      const returnedLong1 = await long1.capitalReturned();
+      const allocatedLong1 = await long1.capitalAllocated();
+      const profitLong1 = returnedLong1.sub(allocatedLong1);
+      const calculatedSetAsideLong1 = profitLong1.mul(15).div(100);
+
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong1).to.be.closeTo(
-        '7465310015245664',
+        calculatedSetAsideLong1,
         reserveAssetRewardsSetAsideLong1.div(100),
       );
 
       // Strategy long2 has not profits
       await finalizeStrategy(long2);
-
       const reserveAssetRewardsSetAsideLong2 = await garden1.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong2).to.be.equal(reserveAssetRewardsSetAsideLong1);
 
       await injectFakeProfits(long3, ONE_ETH.mul(200));
       await finalizeStrategy(long3);
+      // Add calculations long3
+      const returnedLong3 = await long3.capitalReturned();
+      const allocatedLong3 = await long3.capitalAllocated();
+      const profitLong3 = returnedLong3.sub(allocatedLong3);
+      const calculatedSetAsideLong3 = profitLong3.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong3 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong3).to.be.closeTo(
-        '7457155378612255',
+        calculatedSetAsideLong3,
         reserveAssetRewardsSetAsideLong3.div(100),
       );
 
       await injectFakeProfits(long4, ONE_ETH.mul(222));
       await finalizeStrategy(long4);
+      // Add calculations long4
+      const returnedLong4 = await long4.capitalReturned();
+      const allocatedLong4 = await long4.capitalAllocated();
+      const profitLong4 = returnedLong4.sub(allocatedLong4);
+      const calculatedSetAsideLong4 = profitLong4.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong4 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong4).to.be.closeTo(
-        '15746963198401948',
+        calculatedSetAsideLong4.add(calculatedSetAsideLong3),
         reserveAssetRewardsSetAsideLong4.div(100),
       );
 
       await injectFakeProfits(long5, ONE_ETH.mul(222));
       await finalizeStrategy(long5);
+      // Add calculations long5
+      const returnedLong5 = await long5.capitalReturned();
+      const allocatedLong5 = await long5.capitalAllocated();
+      const profitLong5 = returnedLong5.sub(allocatedLong5);
+      const calculatedSetAsideLong5 = profitLong5.mul(15).div(100);
 
       const reserveAssetRewardsSetAsideLong5 = await garden2.reserveAssetRewardsSetAside();
       expect(reserveAssetRewardsSetAsideLong5).to.be.closeTo(
-        '24032618688505816',
+        calculatedSetAsideLong5.add(calculatedSetAsideLong4.add(calculatedSetAsideLong3)),
         reserveAssetRewardsSetAsideLong5.div(100),
       );
     });

@@ -34,7 +34,9 @@ interface IStrategy {
         uint256 _stake,
         uint256 _strategyDuration,
         uint256 _expectedReturn,
-        uint256 _maxAllocationPercentage
+        uint256 _maxAllocationPercentage,
+        uint256 _maxGasFeePercentage,
+        uint256 _maxTradeSlippagePercentage
     ) external;
 
     function resolveVoting(
@@ -42,6 +44,8 @@ interface IStrategy {
         int256[] calldata _votes,
         uint256 fee
     ) external;
+
+    function updateParams(uint256[4] calldata _params) external;
 
     function setData(
         uint8[] calldata _opTypes,
@@ -68,9 +72,7 @@ interface IStrategy {
 
     function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
 
-    function unwindStrategy(uint256 _amountToUnwind) external;
-
-    function changeStrategyDuration(uint256 _newDuration) external;
+    function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external;
 
     function invokeFromIntegration(
         address _target,
@@ -151,6 +153,10 @@ interface IStrategy {
     function maxCapitalRequested() external view returns (uint256);
 
     function maxAllocationPercentage() external view returns (uint256);
+
+    function maxTradeSlippagePercentage() external view returns (uint256);
+
+    function maxGasFeePercentage() external view returns (uint256);
 
     function expectedReturn() external view returns (uint256);
 

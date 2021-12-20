@@ -18,11 +18,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {IERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
@@ -117,7 +115,7 @@ contract BabylonViewer {
             bool[4] memory,
             address[] memory,
             address[] memory,
-            uint256[11] memory,
+            uint256[10] memory,
             uint256[10] memory,
             uint256[3] memory
         )
@@ -158,7 +156,6 @@ contract BabylonViewer {
             [
                 garden.depositHardlock(),
                 garden.minVotesQuorum(),
-                garden.maxContributors(),
                 garden.maxDepositLimit(),
                 garden.minVoters(),
                 garden.minStrategyDuration(),
@@ -198,7 +195,7 @@ contract BabylonViewer {
         returns (
             address,
             string memory,
-            uint256[13] memory,
+            uint256[16] memory,
             bool[] memory,
             uint256[] memory
         )
@@ -227,7 +224,10 @@ contract BabylonViewer {
                 strategy.enteredAt(),
                 strategy.getNAV(),
                 rewards,
-                strategy.maxAllocationPercentage()
+                strategy.maxAllocationPercentage(),
+                strategy.maxGasFeePercentage(),
+                strategy.maxTradeSlippagePercentage(),
+                strategy.isStrategyActive() ? _estimateStrategyRewards(_strategy) : 0
             ],
             status,
             ts
@@ -257,7 +257,8 @@ contract BabylonViewer {
 
     function getPermissions(address _user) external view returns (bool, bool) {
         IMardukGate gate = IMardukGate(controller.mardukGate());
-        return (gate.canAccessBeta(_user), gate.canCreate(_user));
+        bool hasProphet = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43).balanceOf(_user) > 0;
+        return (gate.canAccessBeta(_user) || hasProphet, gate.canCreate(_user) || hasProphet);
     }
 
     function getGardenPermissions(address _garden, address _user)
@@ -280,9 +281,10 @@ contract BabylonViewer {
 
     function getGardensUser(address _user, uint256 _offset) external view returns (address[] memory, bool[] memory) {
         address[] memory gardens = controller.getGardens();
-        address[] memory userGardens = new address[](50);
-        bool[] memory hasUserDeposited = new bool[](50);
-        uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
+        address[] memory userGardens = new address[](100);
+        bool[] memory hasUserDeposited = new bool[](100);
+        uint256 limit = gardens.length <= 100 ? gardens.length : _offset.add(100);
+        limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
         for (uint256 i = _offset; i < limit; i++) {
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
@@ -351,10 +353,15 @@ contract BabylonViewer {
     function getContributionAndRewards(address _garden, address _user)
         external
         view
-        returns (uint256[] memory, uint256[] memory)
+        returns (
+            uint256[] memory,
+            uint256[] memory,
+            uint256[] memory
+        )
     {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](10);
+        uint256[] memory pendingRewards = new uint256[](4);
         (
             contribution[0],
             contribution[1],
@@ -376,7 +383,8 @@ contract BabylonViewer {
                 garden.getFinalizedStrategies()
             );
         contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
-        return (contribution, totalRewards);
+        pendingRewards = _estimateUserRewards(_user, garden.getStrategies());
+        return (contribution, totalRewards, pendingRewards);
     }
 
     function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
@@ -384,6 +392,16 @@ contract BabylonViewer {
             IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
             _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
+    }
+
+    function getAllProphets(address _address) public view returns (uint256[] memory) {
+        IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+        uint256 prophetsNumber = prophets.balanceOf(_address);
+        uint256[] memory prophetIds = new uint256[](prophetsNumber);
+        for (uint256 i = 0; i < prophetsNumber; i++) {
+            prophetIds[i] = prophets.tokenOfOwnerByIndex(_address, i);
+        }
+        return prophetIds;
     }
 
     /* ============ Private Functions ============ */
@@ -451,5 +469,41 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
+    }
+
+    /**
+     * returns the estimated accrued BABL of a strategy
+     */
+    function _estimateStrategyRewards(address _strategy) private view returns (uint256) {
+        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy);
+    }
+
+    /**
+     * returns the estimated accrued BABL for a user related to one strategy
+     */
+    function _estimateUserRewards(address _contributor, address[] memory _strategies)
+        private
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory totalRewards = new uint256[](8);
+        address rewardsDistributor = address(controller.rewardsDistributor());
+        for (uint256 i = 0; i < _strategies.length; i++) {
+            uint256[] memory tempRewards = new uint256[](8);
+            if (!IStrategy(_strategies[i]).isStrategyActive()) {
+                continue;
+            }
+            tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserRewards(_strategies[i], _contributor);
+
+            totalRewards[0] = totalRewards[0].add(tempRewards[0]);
+            totalRewards[1] = totalRewards[1].add(tempRewards[1]);
+            totalRewards[2] = totalRewards[2].add(tempRewards[2]);
+            totalRewards[3] = totalRewards[3].add(tempRewards[3]);
+            totalRewards[4] = totalRewards[4].add(tempRewards[4]);
+            totalRewards[5] = totalRewards[5].add(tempRewards[5]);
+            totalRewards[6] = totalRewards[6].add(tempRewards[6]);
+            totalRewards[7] = totalRewards[7].add(tempRewards[7]);
+        }
+        return totalRewards;
     }
 }

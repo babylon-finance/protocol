@@ -21,7 +21,7 @@ pragma solidity 0.7.6;
  * @title IRewardsDistributor
  * @author Babylon Finance
  *
- * Interface for the distribute rewards of the BABL Mining Program.
+ * Interface for the rewards distributor in charge of the BABL Mining Program.
  */
 
 interface IRewardsDistributor {
@@ -46,29 +46,54 @@ interface IRewardsDistributor {
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
+    function getBABLMiningParameters()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
+
     function checkMining(uint256 _quarterNum, address _strategy)
         external
         view
         returns (uint256[] memory, bool[] memory);
 
-    function getBetaMigration(address _garden, address _contributor)
+    function getContributorPerGarden(address _garden, address _contributor)
         external
         view
         returns (uint256[] memory, bool[] memory);
 
+    function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
+
+    function estimateStrategyRewards(address _strategy) external view returns (uint256);
+
     /* ============ External Functions ============ */
 
-    function startBABLRewards() external;
-
-    function addLiveStrategies(address[] memory _strategies) external;
-
-    function sendTokensToContributor(address _to, uint256 _amount) external;
+    function updateStrategyCheckpoint(
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) external;
 
     function setProfitRewards(
         address _garden,
         uint256 _strategistShare,
         uint256 _stewardsShare,
         uint256 _lpShare
+    ) external;
+
+    function setBABLMiningParameters(
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare,
+        uint256 _creatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeight
     ) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
@@ -82,5 +107,5 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function migrateBetaUsers(address _garden, address[] memory _contributors) external;
+    function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }

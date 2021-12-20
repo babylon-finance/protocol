@@ -20,7 +20,6 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
@@ -68,9 +67,11 @@ contract DepositVaultOperation is Operation {
     function validateOperation(
         bytes calldata _data,
         IGarden, /* _garden */
-        address _integration,
+        address, /* _integration */
         uint256 /* _index */
-    ) external view override onlyStrategy {}
+    ) external view override onlyStrategy {
+        require(BytesLib.decodeOpDataAddress(_data) != address(0), 'Incorrect vault address!');
+    }
 
     /**
      * Executes the deposit vault operation
@@ -98,6 +99,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        _integration = _patchConvexIntegration(_integration);
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         if (vaultAsset != _asset) {
@@ -154,6 +156,7 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        _integration = _patchConvexIntegration(_integration);
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
@@ -186,21 +189,38 @@ contract DepositVaultOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override returns (uint256, bool) {
+        _integration = _patchConvexIntegration(_integration);
         address vault = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault);
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
+        // try to get price of an investment token from Oracle
+        // markets sometimes price assets differently than
+        // their underlying protocols, e.g., stETH/Lido
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        uint256 pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
-        // Normalization of pricePerShare
-        pricePerShare = pricePerShare.mul(
-            10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-        );
-        //Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-        uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        uint256 pricePerShare = _getPrice(vault, vaultAsset);
+        // if failed to fetch price from Oracle get it from the underlying protocol
+        if (pricePerShare == 0) {
+            pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
+            // Normalization of pricePerShare
+            pricePerShare = pricePerShare.mul(
+                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+            );
+        }
+        uint256 NAV;
+        // If vault asset cannot be priced
+        if (price == 0) {
+            // If asset is an Uni V3 lp token. Already normalizes
+            price = _getPriceUniV3LpToken(vaultAsset, _garden.reserveAsset());
+            require(price != 0, 'Vault asset cannot be priced');
+            NAV = pricePerShare.preciseMul(balance).preciseMul(price);
+        } else {
+            //Balance normalization
+            balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
+            NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        }
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
@@ -228,7 +248,7 @@ contract DepositVaultOperation is Operation {
         ) {
             uint256 nav =
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * 2
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender).mul(2)
                 );
             nav = nav.add(
                 _getPrice(LDO, _reserveAsset).preciseMul(
@@ -241,10 +261,20 @@ contract DepositVaultOperation is Operation {
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
             return
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * 2
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender).mul(2)
                 );
         }
-        try IPassiveIntegration(_integration).getRewards(_yieldVault) returns (address rewardToken, uint256 amount) {
+        // Patching IB
+        if (_yieldVault == 0x912EC00eaEbf3820a9B0AC7a5E15F381A1C91f22) {
+            return
+                _getPrice(CRV, _reserveAsset).preciseMul(
+                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender).mul(2)
+                );
+        }
+        try IPassiveIntegration(_integration).getRewards(msg.sender, _yieldVault) returns (
+            address rewardToken,
+            uint256 amount
+        ) {
             if (rewardToken != address(0) && amount > 0) {
                 return _getPrice(rewardToken, _reserveAsset).preciseMul(amount);
             }
@@ -252,5 +282,18 @@ contract DepositVaultOperation is Operation {
         } catch {
             return 0;
         }
+    }
+
+    function _patchConvexIntegration(address _integration) private view returns (address) {
+        if (
+            _integration == 0xFe06f1d501f417e6E87531aB7618c65D42735995 || // ConvexV1
+            _integration == 0xee919d9E48289e0A2900BA4b6aF9464459E428CD || // ConvexV2
+            _integration == 0x27725Cd03f82e9Af5811940da6cB27bc6A51CEDC || // ConvexV3
+            _integration == 0xDcCDf2D78239aBB788aD728D63ac45d90dEfe24A || // ConvexV4
+            _integration == 0x22619F6710C7D82D7b7FE31449D351B61373D63D // ConvexV5
+        ) {
+            _integration = 0xccE114848A694152Ba45a8caff440Fcb12f73862; // ConvexV6
+        }
+        return _integration;
     }
 }

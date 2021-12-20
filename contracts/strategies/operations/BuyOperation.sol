@@ -62,6 +62,7 @@ contract BuyOperation is Operation {
         uint256 /* _index */
     ) external view override onlyStrategy {
         address asset = BytesLib.decodeOpDataAddress(_data);
+        require(asset != address(0), 'Incorrect asset address');
         require(asset != _garden.reserveAsset(), 'Receive token must be different');
     }
 
@@ -80,7 +81,7 @@ contract BuyOperation is Operation {
         uint8, /* _assetStatus */
         bytes calldata _data,
         IGarden, /* _garden */
-        address _integration
+        address /* _integration */
     )
         external
         override
@@ -91,8 +92,12 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        _trade(_data, _integration, _asset, _capital);
         address token = BytesLib.decodeOpDataAddress(_data);
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
+        IStrategy(msg.sender).trade(_asset, _capital, token);
         return (token, ERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -107,7 +112,7 @@ contract BuyOperation is Operation {
         uint256 _percentage,
         bytes calldata _data,
         IGarden _garden,
-        address _integration
+        address /* _integration */
     )
         external
         override
@@ -119,13 +124,15 @@ contract BuyOperation is Operation {
         )
     {
         address token = BytesLib.decodeOpDataAddress(_data);
-        require(_percentage <= 1e18, 'Unwind Percentage <= 100%');
-        ITradeIntegration(_integration).trade(
-            msg.sender,
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
+        require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        IStrategy(msg.sender).trade(
             token,
             ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset(),
-            2 // TO be able to get back an univ2. Univ2 checks more than 1
+            _garden.reserveAsset()
         );
         return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
@@ -147,6 +154,10 @@ contract BuyOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
+        // Replace old AXS with new AXS
+        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
         uint256 NAV =
             SafeDecimalMath
@@ -154,29 +165,5 @@ contract BuyOperation is Operation {
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
-    }
-
-    /* Private Function */
-
-    function _trade(
-        bytes calldata _data,
-        address _integration,
-        address _asset,
-        uint256 _capital
-    ) private {
-        (address token, uint256 minimumPerBigUnit) = BytesLib.decodeOpDataAddressAndUint(_data);
-        uint256 minimum = 0;
-        if (minimumPerBigUnit > 0) {
-            minimum = SafeDecimalMath.normalizeAmountTokens(
-                _asset,
-                token,
-                _capital.mul(minimumPerBigUnit).div(10**ERC20(_asset).decimals())
-            );
-            // If minimum is too low, set to 2 to execute
-            if (minimum == 0) {
-                minimum = 2;
-            }
-        }
-        ITradeIntegration(_integration).trade(msg.sender, _asset, _capital, token, minimum);
     }
 }

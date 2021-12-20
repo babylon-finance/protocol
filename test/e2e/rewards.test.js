@@ -31,7 +31,14 @@ const {
   injectFakeProfits,
 } = require('fixtures/StrategyHelper');
 
-const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
+const {
+  createGarden,
+  getDepositSig,
+  getWithdrawSig,
+  transferFunds,
+  depositFunds,
+  getRewardsSig,
+} = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
@@ -80,7 +87,7 @@ describe('rewards', function () {
       weth,
       wbtc,
     } = await setupTests()());
-    await babController.connect(owner).enableBABLMiningProgram();
+
     const reserveContract = await getERC20(addresses.tokens.WETH);
     users = await createWallets(userNum, {
       tokens: [addresses.tokens.WETH, addresses.tokens.ETH],
@@ -107,6 +114,28 @@ describe('rewards', function () {
       for (let signer of users) {
         await garden.connect(signer).claimReturns(await garden.getFinalizedStrategies());
         await increaseTime(3600);
+      }
+    }
+  }
+
+  async function claimBySig(gardens) {
+    for (const garden of gardens) {
+      for (const signer of users) {
+        const rewards = await rewardsDistributor.getRewards(
+          garden.address,
+          signer.address,
+          await garden.getFinalizedStrategies(),
+        );
+        const babl = rewards[5];
+        const profits = rewards[6];
+        // const nonce = depositNum + 2;
+        const nonce = (await garden.getContributor(signer.address))[9];
+        const maxFee = 1;
+        const fee = 1;
+        const sig = await getRewardsSig(garden.address, signer, babl, profits, nonce, maxFee);
+        await garden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
       }
     }
   }
@@ -184,7 +213,8 @@ describe('rewards', function () {
     await finalize(strategies);
 
     await increaseTime(ONE_DAY_IN_SECONDS);
-    await claim(gardens);
+    // await claim(gardens);
+    await claimBySig(gardens);
 
     await increaseTime(ONE_DAY_IN_SECONDS);
     await withdraw(gardens);

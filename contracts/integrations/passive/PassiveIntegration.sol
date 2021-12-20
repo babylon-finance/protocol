@@ -176,6 +176,15 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+
+        // Pre actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_investmentAddress, _investmentTokenIn, 1);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         _validatePostExitInvestmentData(investmentInfo);
 
         emit InvestmentExited(
@@ -233,11 +242,18 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Gets the rewards and the token that they are denominated in
      *
+     * @param _strategy                           Address of the strategy
+     * @param _investmentAddress                  Address of the investment
      * @return address                            Returns the address with the token of extra rewards
      * @return uint256                            Extra rewards received so far
      */
-    function getRewards(address _investmentAddress) external view override returns (address, uint256) {
-        return _getRewards(_investmentAddress);
+    function getRewards(address _strategy, address _investmentAddress)
+        external
+        view
+        override
+        returns (address, uint256)
+    {
+        return _getRewards(_strategy, _investmentAddress);
     }
 
     /* ============ Internal Functions ============ */
@@ -384,6 +400,34 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     }
 
     /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                 Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _passiveOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
      * Return exit investment calldata which is already generated from the investment API
      *
      * hparam  _strategy                       Address of the strategy
@@ -431,6 +475,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     ) internal view virtual returns (address);
 
     function _getRewards(
+        address, // _strategy
         address //_investmentAddress
     ) internal view virtual returns (address, uint256) {
         return (address(0), 0);
