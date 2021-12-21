@@ -103,7 +103,10 @@ describe('CurvePoolIntegrationTest', function () {
         await finalizeStrategy(strategyContract, 0);
 
         expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
-        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, gardenBeforeExecuteBalance.div(20));
+        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(
+          gardenBeforeExecuteBalance,
+          gardenBeforeExecuteBalance.div(20),
+        );
       });
     });
   });

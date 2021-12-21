@@ -219,17 +219,17 @@ contract AddLiquidityOperation is Operation {
         // Price lp token directly if possible
         // not for tricrypto2
         if (address(lpToken) != 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff) {
-          price = _getPrice(address(lpToken), _garden.reserveAsset());
-          if (price != 0) {
-              return (
-                  SafeDecimalMath.normalizeAmountTokens(
-                      address(lpToken),
-                      _garden.reserveAsset(),
-                      lpToken.balanceOf(msg.sender).preciseMul(price)
-                  ),
-                  true
-              );
-          }
+            price = _getPrice(address(lpToken), _garden.reserveAsset());
+            if (price != 0) {
+                return (
+                    SafeDecimalMath.normalizeAmountTokens(
+                        address(lpToken),
+                        _garden.reserveAsset(),
+                        lpToken.balanceOf(msg.sender).preciseMul(price)
+                    ),
+                    true
+                );
+            }
         }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
