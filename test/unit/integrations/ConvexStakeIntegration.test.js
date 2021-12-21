@@ -70,13 +70,6 @@ describe('ConvexStakeIntegrationTest', function () {
     ({ curvePoolIntegration, convexStakeIntegration, signer1, signer2, signer3 } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await convexStakeIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
-  });
-
   describe('Convex Stake Multigarden multiasset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
