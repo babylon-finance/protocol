@@ -28,8 +28,6 @@ import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {Operation} from './Operation.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title AddLiquidityOperation
  * @author Babylon Finance
@@ -121,10 +119,11 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        address lpToken = _getLPTokenFromBytes(_integration, _data);
-        console.log('lpToken', lpToken);
-        console.log('lpToken balance', IERC20(lpToken).balanceOf(msg.sender));
-        return (lpToken, IERC20(lpToken).balanceOf(msg.sender), 0); // liquid
+        return (
+            _getLPTokenFromBytes(_integration, _data),
+            IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
+            0
+        ); // liquid
     }
 
     /**
@@ -220,25 +219,21 @@ contract AddLiquidityOperation is Operation {
         // Price lp token directly if possible
         // not for tricrypto2
         if (address(lpToken) != 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff) {
-            console.log('lpToken', address(lpToken));
-            price = _getPrice(address(lpToken), _garden.reserveAsset());
-            console.log('DAI LP price', _getPrice(address(lpToken), 0x6B175474E89094C44Da98b954EedeAC495271d0F));
-            console.log('price', price);
-            if (price != 0) {
-                return (
-                    SafeDecimalMath.normalizeAmountTokens(
-                        address(lpToken),
-                        _garden.reserveAsset(),
-                        lpToken.balanceOf(msg.sender).preciseMul(price)
-                    ),
-                    true
-                );
-            }
+          price = _getPrice(address(lpToken), _garden.reserveAsset());
+          if (price != 0) {
+              return (
+                  SafeDecimalMath.normalizeAmountTokens(
+                      address(lpToken),
+                      _garden.reserveAsset(),
+                      lpToken.balanceOf(msg.sender).preciseMul(price)
+                  ),
+                  true
+              );
+          }
         }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            console.log('poolToken', poolTokens[i]);
             address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
             price = _getPrice(_garden.reserveAsset(), asset);
             // If the actual token doesn't have a price, use underlying as approx
@@ -274,19 +269,13 @@ contract AddLiquidityOperation is Operation {
     ) private returns (uint256) {
         uint256 normalizedAssetAmount = _capital.preciseMul(_poolWeight);
         uint256 price = _getPrice(_asset, _isETH(_poolToken) ? WETH : _poolToken);
-        console.log('price', price);
-        console.log('price', _getPrice(_poolToken, WETH));
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
-            console.log('_asset', _asset);
-            console.log('_poolToken', _poolToken);
-            console.log('normalizedAssetAmount', normalizedAssetAmount);
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
             normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
                 ? normalizedTokenAmount
                 : IERC20(_poolToken).balanceOf(msg.sender);
-            console.log('normalizedTokenAmount', IERC20(_poolToken).balanceOf(msg.sender));
             return normalizedTokenAmount;
         }
         if (_isETH(_poolToken)) {

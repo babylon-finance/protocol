@@ -30,8 +30,6 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title CurvePoolIntegration
  * @author Babylon Finance Protocol
@@ -44,7 +42,7 @@ contract CurvePoolIntegration is PoolIntegration {
     using BytesLib for uint256;
 
     /* ============ Constant ============ */
-    address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // USDT/BTC/ETH pool
+    address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
     address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
@@ -109,7 +107,6 @@ contract CurvePoolIntegration is PoolIntegration {
             coins = curveRegistry.get_coins(poolAddress);
         }
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
-            console.log('coin', coins[i]);
             result[i] = coins[i];
         }
         return result;
