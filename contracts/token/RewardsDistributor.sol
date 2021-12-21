@@ -996,7 +996,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             ? _getStrategyStewardProfits(_garden, _strategy, _contributor, _strategyDetails, _profitData)
             : 0;
         // Get LP rewards
-        // Contributor power is fluctuating along the way for each new deposit
+        // Contributor share is fluctuating along the way in each new deposit
         rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorShare);
         // Total BABL including creator bonus (if any)
         rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
@@ -1090,31 +1090,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Gets the contributor power from one timestamp to the other
-     * @param _garden      Address of the garden where the contributor belongs to
-     * @param _contributor Address of the contributor
-     * @param _time        Timestamp to check power
-     * @return uint256     Contributor power during that period
+     * @param _garden       Address of the garden where the contributor belongs to
+     * @param _contributor  Address of the contributor
+     * @param _time         Timestamp to check power
+     * @param _gardenSupply Garden supply tokens (new strategies)
+     * @return uint256      Contributor power during that period
      */
     function _getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _time
+        uint256 _time,
+        uint256 _gardenSupply
     ) internal view returns (uint256) {
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
-        uint256 balance = ERC20(_garden).balanceOf(_contributor);
-        uint256 supply = ERC20(_garden).totalSupply();
+
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
             return 0;
         } else {
-            // Safe check to avoid underflow, time travel only works for a past date
-            if (_time > block.timestamp) {
-                _time = block.timestamp;
-            }
-            if (balance < 1e10 && _time < block.timestamp) {
-                // old members who left (or leave dust) are allowed to grab old rewards
-                (, balance, ) = _getPriorBalance(_garden, _contributor, _time);
-            }
+            (, uint256 balance, ) = _getPriorBalance(_garden, _contributor, _time);
+            uint256 supply = _gardenSupply > 0 ? _gardenSupply : ERC20(_garden).totalSupply();
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower =
                 contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
@@ -1131,10 +1126,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
             if (virtualPower > 1e18) {
                 virtualPower = 1e18; // Overflow limit
-            }
-            if (virtualPower == 0 && balance > 1e10) {
-                // backward compatibility
-                virtualPower = balance.preciseDiv(supply);
             }
             return virtualPower;
         }
@@ -1163,10 +1154,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 (numCheckpoints[_garden][_contributor] > 0 &&
                     userCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
-        bool oldStrategy = _strategyDetails[1] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
+        bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy) {
             // Backward compatibility for old strategies
-            return _getContributorPower(_garden, _contributor, endTime);
+            return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
         }
         // Take the closest position prior to _endTime
         (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = _getPriorBalance(_garden, _contributor, endTime);
@@ -1177,19 +1168,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // If it finished already and has garden supply checkpoint, then use it
         // If it has not finished yet, use current totalSupply
-        // At this point there should not be old strategies w/o the garden ending supply checkpoint
+        // TODO Use garden avg balance instead of static totalSupply() as we do for users
         uint256 finalSupplyEnd =
             (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
-        // Security check (avoid flashloans and other position attacks depositing after the strategy execution)
         uint256 startTime = _strategyDetails[0];
         // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
             // If the user balance fluctuated during the strategy duration, we take real average balance
-            uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, timestamp);
-            // Now we update it until endTime
-            balanceEnd = (avgBalance.mul(timestamp.sub(startTime)).add(balanceEnd.mul(endTime.sub(timestamp)))).div(
-                endTime.sub(startTime)
-            );
+            balanceEnd = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
         }
         return balanceEnd.preciseDiv(finalSupplyEnd);
     }
@@ -1210,16 +1196,37 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _cpEnd,
         uint256 _endTime
     ) internal view returns (uint256) {
-        (uint256 prevTime, , uint256 cpStart) = _getPriorBalance(_garden, _contributor, _start);
-        uint256 avgBalance;
-        for (uint256 i = cpStart; i < _cpEnd; i++) {
-            uint256 timeDiff =
-                userCheckpoints[_garden][_contributor][i.add(1)].fromTime.sub(
-                    userCheckpoints[_garden][_contributor][i].fromTime
-                );
-            avgBalance = avgBalance.add(userCheckpoints[_garden][_contributor][i].userTokens.mul(timeDiff));
+        (, uint256 prevBalance, uint256 cpStart) = _getPriorBalance(_garden, _contributor, _start);
+        uint256 userPower;
+        uint256 timeDiff;
+        // We calculate the avg balance of a user within a time range based on its segments between all checkpoints
+        // avg balance = userPower / total period considered
+        // userPower = sum(balance x each period between checkpoints)
+        // Initialize userPower last segment (since last checkpoint until _endTime)
+        userPower = userCheckpoints[_garden][_contributor][_cpEnd].userTokens.mul(
+            _endTime.sub(userCheckpoints[_garden][_contributor][_cpEnd].fromTime)
+        );
+        // Then, we add userPower data from all intermediate checkpoints
+        // between starting checkpoint and ending checkpoint (if any)
+        // We go from the newest checkpoint to the oldest
+        for (uint256 i = _cpEnd; i > cpStart; i--) {
+            // We only take proportional userPower of cpStart checkpoint (from _start onwards)
+            // Usually [cpStart].fromTime <= _start except when cpStart == 0 AND beta users
+            // Those cases are handled below to add previous user power
+            Checkpoints memory userPrevCheckpoint = userCheckpoints[_garden][_contributor][i.sub(1)];
+            timeDiff = userCheckpoints[_garden][_contributor][i].fromTime.sub(
+                userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
+            );
+            userPower = userPower.add(userPrevCheckpoint.userTokens.mul(timeDiff));
         }
-        return avgBalance.div(_endTime.sub(prevTime));
+        // We now handle the previous userPower of beta users (if applicable)
+        uint256 fromTimeCp0 = userCheckpoints[_garden][_contributor][0].fromTime;
+        if (cpStart == 0 && fromTimeCp0 > _start) {
+            // Beta user with previous balance before _start
+            userPower = userPower.add(prevBalance.mul(fromTimeCp0.sub(_start)));
+        }
+        // avg balance = userPower / total period considered
+        return userPower.div(_endTime.sub(_start));
     }
 
     /**
@@ -1295,14 +1302,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributor          Contributor address
      * @param _claimedAt            User last claim timestamp
 
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL 
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
      * rewards[3]: Steward Profit
      * rewards[4]: LP BABL
-     * rewards[5]: total BABL
-     * rewards[6]: total Profits
+     * rewards[5]: Total BABL
+     * rewards[6]: Total Profits
+     * rewards[7]: Creator bonus
      */
     function _getStrategyProfitsAndBABL(
         address _garden,
@@ -1404,7 +1412,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             bablCap = babl.mul(2); // Max cap
             // We add a bonus inverse to the error of expected return vs real returns
             babl = babl.add(babl.preciseMul(_strategyDetails[11].preciseDiv(_strategyDetails[8])));
-            if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
+            if (babl > bablCap) {
+                // We limit 2x by a Cap
+                babl = bablCap;
+            }
         } else if (userVotes < 0 && _profitData[1] == true) {
             babl = 0;
         }
@@ -1477,7 +1488,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             return babl;
         } else if (_profitData[0] == true && _profitData[1] == false) {
-            //under expectations
+            // under expectations
             // The more the results are close to the expected the less penalization it might have
             return babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
         } else {
@@ -1503,12 +1514,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Get the BABL rewards (Mining program) for a LP profile
      * @param _strategyRewards      Strategy rewards
-     * @param _contributorPower     Contributor power
+     * @param _contributorShare     Contributor share in the period
      */
-    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorPower) private view returns (uint256) {
+    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorShare) private view returns (uint256) {
         uint256 babl;
         // All params must have 18 decimals precision
-        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorPower);
+        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorShare);
         return babl;
     }
 
@@ -1637,12 +1648,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         strategyDetails[7] = IStrategy(_strategy).getNAV();
         // We apply a 0.15% rounding error margin at NAV
         strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(15e14));
-        // Failsafe mode in case of wrong NAV (above 300%)
-        strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
-            ? strategyDetails[6]
-            : strategyDetails[7];
-        profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
-        profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
+        profitData[0] = strategyDetails[7] >= strategyDetails[6];
+        profitData[1] = strategyDetails[7] >= strategyDetails[8];
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
         // We consider that it potentially will have profits so the protocol will take profitFee
         // If 0 it does nothing

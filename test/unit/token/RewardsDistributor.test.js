@@ -1791,7 +1791,7 @@ describe('RewardsDistributor', function () {
       const rewardsSigner32 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
       const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.01')); // it has penalty
-      expect(signer3ShareLong1).to.be.closeTo(eth(0.004), eth('0.0001')); // 0.4%
+      expect(signer3ShareLong1).to.be.closeTo(eth(0.0000004), eth('0.0001')); // 0.00004%
       // After withdrawing all, user still keep rewards
       expect(signer3ShareLong12).to.be.eq(signer3ShareLong1).to.be.gt(0);
       expect(rewardsSigner31[4]).to.be.eq(rewardsSigner32[4]).to.be.gt(0); // deterministic
