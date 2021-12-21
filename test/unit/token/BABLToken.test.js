@@ -9,7 +9,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const MULTISIG_BALANCE = ONE_ETH.mul(23000);
 const REGISTRY_BALANCE = ONE_ETH.mul(305000);
 
-describe('BABLToken contract', function () {
+describe.skip('BABLToken contract', function () {
   let owner;
   let signer1;
   let signer2;

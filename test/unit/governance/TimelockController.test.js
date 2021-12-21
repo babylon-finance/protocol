@@ -6,7 +6,7 @@ const { increaseTime } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('TimelockController', function () {
+describe.skip('TimelockController', function () {
   let owner;
   let signer1;
   let signer2;

@@ -7,7 +7,7 @@ const { impersonateAddress } = require('lib/rpc');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('VoteToken contract', function () {
+describe.skip('VoteToken', function () {
   let owner;
   let signer1;
   let signer2;
