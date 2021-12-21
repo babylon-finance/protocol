@@ -113,21 +113,21 @@ describe('OneInchPoolIntegrationTest', function () {
 
     it('tests mooniswap directly', async function () {
       expect(
-        await daiToken.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('500'), {
+        await daiToken.connect(whaleSigner).transfer(signer1.address, eth('500'), {
           gasPrice: 0,
         }),
       );
 
       // Approve
-      await daiToken.connect(signer1).approve(daiWethPair.address, ethers.utils.parseEther('500'));
+      await daiToken.connect(signer1).approve(daiWethPair.address, eth('500'));
       // Deposit
       await daiWethPair
         .connect(signer1)
         .deposit(
-          [ethers.utils.parseEther('0.1'), ethers.utils.parseEther('100')],
-          [ethers.utils.parseEther('0'), ethers.utils.parseEther('95')],
+          [eth('0.1'), eth('100')],
+          [eth('0'), eth('95')],
           {
-            value: ethers.utils.parseEther('0.1'),
+            value: eth('0.1'),
           },
         );
       expect(await daiWethPair.balanceOf(signer1.address)).to.be.gt(0);

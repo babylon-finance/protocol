@@ -237,7 +237,7 @@ describe.skip('BabylonGovernor', function () {
       // Enable BABL token transfers to use signer1 account as voter
       await increaseTime(ONE_YEAR_IN_SECONDS * 4); // get out of vesting
       await bablToken.connect(owner).enableTokensTransfers();
-      await bablToken.connect(voter1).transfer(signer1.address, ethers.utils.parseEther('100'));
+      await bablToken.connect(voter1).transfer(signer1.address, eth('100'));
 
       // propose
       await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
@@ -532,7 +532,7 @@ describe.skip('BabylonGovernor', function () {
 
       // Time travel to avoid vesting lock for transfer tokens despite blocks are not traveling equally
       await increaseTime(ONE_YEAR_IN_SECONDS * 4);
-      expect(await bablToken.balanceOf(voter1.address)).to.equal(ethers.utils.parseEther('20000'));
+      expect(await bablToken.balanceOf(voter1.address)).to.equal(eth('20000'));
 
       const voter1Balance = await bablToken.balanceOf(voter1.address);
       // Enable BABL token transfers to remove tokens from proposer running low on babl tokens
@@ -1023,12 +1023,12 @@ describe.skip('BabylonGovernor', function () {
   describe('quorumVotes ', function () {
     it('quorumVotes', async function () {
       // 4% 40K BABL Tokens for quorum reached
-      await expect(await babGovernor.quorumVotes()).to.equal(ethers.utils.parseEther('40000'));
+      await expect(await babGovernor.quorumVotes()).to.equal(eth('40000'));
     });
     it('quorum', async function () {
       const block = await ethers.provider.getBlock();
       // 4% 40K BABL Tokens for quorum reached
-      await expect(await babGovernor.quorum(block.number)).to.equal(ethers.utils.parseEther('40000'));
+      await expect(await babGovernor.quorum(block.number)).to.equal(eth('40000'));
     });
   });
 });

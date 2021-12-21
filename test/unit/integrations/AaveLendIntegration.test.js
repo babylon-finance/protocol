@@ -99,7 +99,7 @@ describe('AaveLendIntegrationTest', function () {
       increaseTime(ONE_DAY_IN_SECONDS);
       const NAV = await strategyContract.getNAV();
       const aaveAccrued = await aaveLendIntegration.getRewardsAccrued(strategyContract.address);
-      expect(NAV.sub(aaveAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
+      expect(NAV.sub(aaveAccrued)).to.be.closeTo(eth('1'), eth('1').div(100));
     });
   });
 });

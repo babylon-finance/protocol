@@ -90,10 +90,10 @@ describe('BabController', function () {
       const dai = await getERC20(addresses.tokens.DAI);
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
-      await dai.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+      await dai.connect(whaleSigner).transfer(signer1.address, eth('1000'), {
         gasPrice: 0,
       });
-      await dai.connect(signer1).approve(babController.address, ethers.utils.parseEther('1000'), {
+      await dai.connect(signer1).approve(babController.address, eth('1000'), {
         gasPrice: 0,
       });
       await babController
@@ -105,11 +105,11 @@ describe('BabController', function () {
           'http...',
           0,
           GARDEN_PARAMS_STABLE,
-          ethers.utils.parseEther('100'),
+          eth('100'),
           [false, false, false],
           [0, 0, 0],
           {
-            value: ethers.utils.parseEther('100'),
+            value: eth('100'),
           },
         );
       const gardens = await babController.getGardens();
@@ -127,11 +127,11 @@ describe('BabController', function () {
             'http...',
             0,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('1'),
+            eth('1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('1'),
+              value: eth('1'),
             },
           ),
       ).to.be.reverted;
@@ -253,8 +253,8 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await expect(babController.connect(signer1).setGlobalPause(true)).to.be.not.reverted;
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden1.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.revertedWith('BAB#083');
     });
@@ -263,15 +263,15 @@ describe('BabController', function () {
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden2.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
-      expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(ethers.utils.parseEther('1'));
+      expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(eth('1'));
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden1.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.revertedWith('BAB#083');
     });
@@ -291,7 +291,7 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([bablToken.address], true);
       await expect(
-        bablToken.connect(owner).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+        bablToken.connect(owner).transfer(signer1.address, eth('1000'), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('BAB#083');
@@ -309,21 +309,21 @@ describe('BabController', function () {
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden2.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
-      expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(ethers.utils.parseEther('1'));
+      expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(eth('1'));
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden1.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([garden1.address], false);
       await expect(
-        garden1.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        garden1.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.not.be.reverted;
     });
@@ -344,13 +344,13 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([bablToken.address], true);
       await expect(
-        bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('1000'), {
+        bablToken.connect(MULTISIG).transfer(signer1.address, eth('1000'), {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([bablToken.address], false);
       await expect(
-        bablToken.connect(MULTISIG).transfer(signer1.address, ethers.utils.parseEther('10'), {
+        bablToken.connect(MULTISIG).transfer(signer1.address, eth('10'), {
           gasPrice: 0,
         }),
       ).to.not.be.reverted;

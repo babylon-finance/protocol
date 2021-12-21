@@ -111,7 +111,7 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
 
       const nav = await strategyContract.getNAV();
-      expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
+      expect(nav).to.be.closeTo(eth('1'), eth('1').div(10));
     });
   });
 

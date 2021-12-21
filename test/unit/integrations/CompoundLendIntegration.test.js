@@ -89,13 +89,13 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
       await finalizeStrategy(strategyContract);
       expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
-        ethers.utils.parseEther('0'),
-        ethers.utils.parseEther('0.01'),
+        eth('0'),
+        eth('0.01'),
       );
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await strategyContract.capitalReturned()).to.be.closeTo(
-        ethers.utils.parseEther('1'),
-        ethers.utils.parseEther('0.01'),
+        eth('1'),
+        eth('0.01'),
       );
     });
 
@@ -115,7 +115,7 @@ describe('CompoundLendIntegrationTest', function () {
       increaseTime(ONE_DAY_IN_SECONDS);
       const NAV = await strategyContract.getNAV();
       const compAccrued = await compoundLendIntegration.getRewardsAccrued(strategyContract.address);
-      expect(NAV.sub(compAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
+      expect(NAV.sub(compAccrued)).to.be.closeTo(eth('1'), eth('1').div(100));
     });
   });
 });
