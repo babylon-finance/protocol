@@ -157,40 +157,39 @@ describe.skip('BABLToken contract', function () {
     });
 
     it('Should fail it trying to approve itself', async function () {
-      await expect(
-        bablToken.connect(owner).approve(owner.address, eth('305000')),
-      ).to.be.revertedWith('TimeLockedToken::approve: spender cannot be the msg.sender');
+      await expect(bablToken.connect(owner).approve(owner.address, eth('305000'))).to.be.revertedWith(
+        'TimeLockedToken::approve: spender cannot be the msg.sender',
+      );
     });
 
     it('Should fail if trying to increase allowance to an address above the unlocked balance', async function () {
-      await expect(
-        bablToken.connect(owner).increaseAllowance(signer2.address, eth('305000')),
-      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
+      await expect(bablToken.connect(owner).increaseAllowance(signer2.address, eth('305000'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Not enough unlocked tokens',
+      );
     });
     it('Should fail if trying to increase allowance to an address above the unlocked balance in small chunks', async function () {
       await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth('10'), false, now);
       await bablToken.connect(signer1).claimMyTokens();
       await increaseTime(ONE_DAY_IN_SECONDS * 366);
-      await expect(
-        bablToken.connect(signer1).increaseAllowance(signer2.address, eth('4')),
-      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
-      await expect(bablToken.connect(signer1).increaseAllowance(signer2.address, eth('2'))).not.to
-        .be.reverted;
-      await expect(
-        bablToken.connect(signer1).increaseAllowance(signer2.address, eth('2')),
-      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Not enough unlocked tokens');
+      await expect(bablToken.connect(signer1).increaseAllowance(signer2.address, eth('4'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Not enough unlocked tokens',
+      );
+      await expect(bablToken.connect(signer1).increaseAllowance(signer2.address, eth('2'))).not.to.be.reverted;
+      await expect(bablToken.connect(signer1).increaseAllowance(signer2.address, eth('2'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Not enough unlocked tokens',
+      );
     });
 
     it('Should fail if trying to increase allowance to the zero address', async function () {
-      await expect(
-        bablToken.connect(MULTISIG).increaseAllowance(ADDRESS_ZERO, eth('16000')),
-      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Spender cannot be zero address');
+      await expect(bablToken.connect(MULTISIG).increaseAllowance(ADDRESS_ZERO, eth('16000'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Spender cannot be zero address',
+      );
     });
 
     it('Should fail if trying to increase allowance to itself', async function () {
-      await expect(
-        bablToken.connect(MULTISIG).increaseAllowance(MULTISIG.address, eth('16000')),
-      ).to.be.revertedWith('TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender');
+      await expect(bablToken.connect(MULTISIG).increaseAllowance(MULTISIG.address, eth('16000'))).to.be.revertedWith(
+        'TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender',
+      );
     });
 
     it('Should increase allowance properly', async function () {
@@ -207,16 +206,16 @@ describe.skip('BABLToken contract', function () {
 
     it('Should fail if trying to decrease allowance below 0 (underflow condition)', async function () {
       await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, eth('16000'));
-      await expect(
-        bablToken.connect(MULTISIG).decreaseAllowance(signer1.address, eth('305001')),
-      ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Underflow condition');
+      await expect(bablToken.connect(MULTISIG).decreaseAllowance(signer1.address, eth('305001'))).to.be.revertedWith(
+        'TimeLockedToken::decreaseAllowance:Underflow condition',
+      );
     });
 
     it('Should fail if trying to decrease allowance to itself', async function () {
       await bablToken.connect(MULTISIG).increaseAllowance(signer1.address, eth('16000'));
-      await expect(
-        bablToken.connect(signer1).decreaseAllowance(signer1.address, eth('16000')),
-      ).to.be.revertedWith('TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender');
+      await expect(bablToken.connect(signer1).decreaseAllowance(signer1.address, eth('16000'))).to.be.revertedWith(
+        'TimeLockedToken::decreaseAllowance:Spender cannot be the msg.sender',
+      );
     });
 
     it('Should fail if trying to decrease allowance to Time Lock Registry', async function () {
@@ -256,9 +255,9 @@ describe.skip('BABLToken contract', function () {
     it('Should fail a transfer without enough unlocked balance', async function () {
       await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth('2300'), true, now);
       await bablToken.connect(signer1).claimMyTokens();
-      await expect(
-        bablToken.connect(signer1).transfer(signer2.address, eth('1000')),
-      ).to.be.revertedWith('TimeLockedToken:: _transfer: attempting to transfer locked funds');
+      await expect(bablToken.connect(signer1).transfer(signer2.address, eth('1000'))).to.be.revertedWith(
+        'TimeLockedToken:: _transfer: attempting to transfer locked funds',
+      );
     });
   });
 
@@ -319,9 +318,7 @@ describe.skip('BABLToken contract', function () {
     });
     it('Should fail as Time Lock Registry contract address cannot be registered itself', async function () {
       await expect(
-        timeLockRegistry
-          .connect(MULTISIG)
-          .register(timeLockRegistry.address, eth('26000'), true, now),
+        timeLockRegistry.connect(MULTISIG).register(timeLockRegistry.address, eth('26000'), true, now),
       ).to.be.revertedWith('TimeLockRegistry::register: Time Lock Registry contract cannot be an investor');
     });
 

@@ -88,15 +88,9 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
       await finalizeStrategy(strategyContract);
-      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
-        eth('0'),
-        eth('0.01'),
-      );
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(eth('0'), eth('0.01'));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await strategyContract.capitalReturned()).to.be.closeTo(
-        eth('1'),
-        eth('0.01'),
-      );
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(eth('1'), eth('0.01'));
     });
 
     it('can supply and get NAV including rewards', async function () {

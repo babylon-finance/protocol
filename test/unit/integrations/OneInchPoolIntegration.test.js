@@ -121,15 +121,9 @@ describe('OneInchPoolIntegrationTest', function () {
       // Approve
       await daiToken.connect(signer1).approve(daiWethPair.address, eth('500'));
       // Deposit
-      await daiWethPair
-        .connect(signer1)
-        .deposit(
-          [eth('0.1'), eth('100')],
-          [eth('0'), eth('95')],
-          {
-            value: eth('0.1'),
-          },
-        );
+      await daiWethPair.connect(signer1).deposit([eth('0.1'), eth('100')], [eth('0'), eth('95')], {
+        value: eth('0.1'),
+      });
       expect(await daiWethPair.balanceOf(signer1.address)).to.be.gt(0);
     });
 

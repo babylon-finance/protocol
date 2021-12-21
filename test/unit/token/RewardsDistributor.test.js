@@ -771,10 +771,7 @@ describe('RewardsDistributor', function () {
       expect(await weth.balanceOf(garden1.address)).to.be.gt(eth('1'));
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
       await finalizeStrategyAfter30Days(strategyContract);
-      const value = await getStrategyRewards(strategyContract, now, 1, 2, [
-        eth('1'),
-        eth('1'),
-      ]);
+      const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth('1'), eth('1')]);
       const rewards = await strategyContract.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -799,10 +796,7 @@ describe('RewardsDistributor', function () {
         quarter: 2,
         timeListPointer: 1,
       });
-      const value = await getStrategyRewards(long1, now, 1, 2, [
-        eth('1'),
-        eth('1'),
-      ]);
+      const value = await getStrategyRewards(long1, now, 1, 2, [eth('1'), eth('1')]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -1060,11 +1054,7 @@ describe('RewardsDistributor', function () {
 
       await finalizeStrategyAfter2Quarters(long1);
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [
-        eth('1'),
-        eth('1'),
-        eth('1'),
-      ]);
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [eth('1'), eth('1'), eth('1')]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -1091,11 +1081,7 @@ describe('RewardsDistributor', function () {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [
-        eth('1'),
-        eth('1'),
-        eth('1'),
-      ]);
+      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [eth('1'), eth('1'), eth('1')]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -1164,12 +1150,7 @@ describe('RewardsDistributor', function () {
         timeListPointer: 9,
       });
       const powerLong1 = [eth('0.2053968535'), eth('0.2000000000')];
-      const powerLong2 = [
-        eth('0.2026984162'),
-        eth('0.2272712659'),
-        eth('0.25'),
-        eth('0.25'),
-      ];
+      const powerLong2 = [eth('0.2026984162'), eth('0.2272712659'), eth('0.25'), eth('0.25')];
       const powerLong3 = [
         eth('0.1999999946'),
         eth('0.2272712659'),
@@ -1256,12 +1237,7 @@ describe('RewardsDistributor', function () {
       });
 
       const powerLong1 = [eth('0.2127901644'), eth('0.2000000000')];
-      const powerLong2 = [
-        eth('0.2063950695'),
-        eth('0.2017925594'),
-        eth('0.25'),
-        eth('0.25'),
-      ];
+      const powerLong2 = [eth('0.2063950695'), eth('0.2017925594'), eth('0.25'), eth('0.25')];
       const powerLong3 = [
         eth('0.1999999746'),
         eth('0.2017925594'),
@@ -2890,14 +2866,8 @@ describe('RewardsDistributor', function () {
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
-        signer1BABL2.add(signer1BABL),
-        eth('0.0005'),
-      );
-      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(
-        signer2BABL2.add(signer2BABL),
-        eth('0.0005'),
-      );
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL2.add(signer1BABL), eth('0.0005'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL2.add(signer2BABL), eth('0.0005'));
 
       // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', eth('0.00005'));
       // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', eth('0.00005'));
