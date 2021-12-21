@@ -9,11 +9,10 @@ const {
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
 const { ONE_ETH } = require('lib/constants');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { getERC20, eth } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
-  let babController;
   let signer1;
   let signer2;
   let signer3;
@@ -26,14 +25,49 @@ describe('CurvePoolIntegrationTest', function () {
     };
   });
 
+  // Used to create addresses info. do not remove
+  async function logCurvePools() {
+    const crvAddressProvider = await ethers.getContractAt(
+      'ICurveAddressProvider',
+      '0x0000000022d53366457f9d5e68ec105046fc4383',
+    );
+    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
+    const curvePoolsD = {};
+    const curvePools = await Promise.all(
+      [...Array((await crvRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+        return await getCurvePoolInfo(pid, crvRegistry);
+      }),
+    );
+    curvePools
+      .filter((c) => c)
+      .forEach((pool) => {
+        curvePoolsD[pool.name === '3pool' ? 'tripool' : pool.name] = pool.address;
+      });
+    console.log('pools', curvePoolsD);
+  }
+
+  async function getCurvePoolInfo(pid, crvRegistry) {
+    const address = await crvRegistry.pool_list(pid);
+    const name = await crvRegistry.get_pool_name(address);
+    if (name) {
+      return {
+        name,
+        address,
+      };
+    }
+    return null;
+  }
+
+  // logCurvePools();
+
   beforeEach(async () => {
-    ({ curvePoolIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests()());
+    ({ curvePoolIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Liquidity Pools', function () {
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tricrypto, 0]);
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tricrypto2, 0]);
       expect(await curvePoolIntegration.isPool(data)).to.equal(true);
     });
 
@@ -45,6 +79,7 @@ describe('CurvePoolIntegrationTest', function () {
 
     pools.forEach(({ name, pool }) => {
       it(`can enter and exit the ${name} pool`, async function () {
+        const reserveAsset = await getERC20(await garden1.reserveAsset());
         const strategyContract = await createStrategy(
           'lp',
           'vote',
@@ -54,36 +89,21 @@ describe('CurvePoolIntegrationTest', function () {
           DEFAULT_STRATEGY_PARAMS,
           [pool, 0],
         );
-        await executeStrategy(strategyContract, { amount: ONE_ETH.mul(1) });
-        expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
-        const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await getERC20(lpToken);
-        expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        await finalizeStrategy(strategyContract, 0);
-        expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
-      });
 
-      it(`can get the NAV of the ${name} pool`, async function () {
-        const strategyContract = await createStrategy(
-          'lp',
-          'vote',
-          [signer1, signer2, signer3],
-          curvePoolIntegration.address,
-          garden1,
-          DEFAULT_STRATEGY_PARAMS,
-          [pool, 0],
-        );
-        await executeStrategy(strategyContract);
-        expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+        const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
+        await executeStrategy(strategyContract, { amount: eth() });
+
+        expect(await strategyContract.capitalAllocated()).to.equal(eth());
         const lpToken = await curvePoolIntegration.getLPToken(pool);
         const poolContract = await getERC20(lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        // TODO tricrypto NAV is wrong > 40% difference
-        // Workaround set meanwhile
-        if (name !== 'tricrypto') {
-          // TODO: Check slippage, might be to high
-          expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(7));
-        }
+        expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(20));
+
+        const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
+        await finalizeStrategy(strategyContract, 0);
+
+        expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
+        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, gardenBeforeExecuteBalance.div(20));
       });
     });
   });
