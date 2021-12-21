@@ -252,12 +252,6 @@ describe('RewardsDistributor', function () {
     await bablToken.connect(owner).enableTokensTransfers();
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy BABL Mining Rewards Distributor contract', async function () {
-      const deployedc = await rewardsDistributor.deployed(bablToken.address, babController.address);
-      expect(!!deployedc).to.equal(true);
-    });
-  });
   describe('Strategy BABL Mining Rewards Calculation', async function () {
     it('can NOT change BABL % share if it does not sum 100%', async function () {
       const [

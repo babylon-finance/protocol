@@ -72,20 +72,6 @@ describe('SushiswapPoolIntegrationTest', function () {
     } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedUni = await sushiswapPoolIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedUni).to.equal(true);
-    });
-
-    it('overrides the name', async function () {
-      const name = await sushiswapPoolIntegration.name();
-      expect(name).to.equal('sushiswap_pool');
-    });
-  });
-
   describe('Liquidity Pools', function () {
     let daiWethPair;
 

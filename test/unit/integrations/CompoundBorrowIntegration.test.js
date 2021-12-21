@@ -90,13 +90,6 @@ describe('CompoundBorrowIntegrationTest', function () {
     WBTC = await getERC20(addresses.tokens.WBTC);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await compoundBorrowIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
-  });
-
   describe('Compound Borrow', function () {
     it('can supply DAI and borrow USDC in a WETH Garden', async function () {
       const strategyContract = await createStrategy(

@@ -30,16 +30,6 @@ describe.skip('BABLToken contract', function () {
   });
 
   describe('Deployment', function () {
-    it('should successfully deploy BABLToken contract', async function () {
-      const deployedc = await bablToken.deployed();
-      expect(!!deployedc).to.equal(true);
-    });
-
-    it('should successfully deploy TimeLockRegistry contract', async function () {
-      const deployedc2 = await timeLockRegistry.deployed();
-      expect(!!deployedc2).to.equal(true);
-    });
-
     it('should successfully have assigned the TimeLockRegistry address to BABLToken contract', async function () {
       const addressRegistry = await bablToken.timeLockRegistry();
       expect(timeLockRegistry.address).to.equal(addressRegistry);

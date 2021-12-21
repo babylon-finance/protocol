@@ -70,13 +70,6 @@ describe('BabController', function () {
     MULTISIG = signers[2];
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      expect(!!deployed).to.equal(true);
-    });
-  });
-
   describe('Interacting with Communities', function () {
     it('should start with 3 gardens', async function () {
       const gardens = await babController.getGardens();

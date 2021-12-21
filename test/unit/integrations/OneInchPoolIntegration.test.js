@@ -87,15 +87,6 @@ describe('OneInchPoolIntegrationTest', function () {
     } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedUni = await oneInchPoolIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedUni).to.equal(true);
-    });
-  });
-
   describe('Liquidity Pools', function () {
     let daiWethPair;
     let daiToken;

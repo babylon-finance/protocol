@@ -36,15 +36,6 @@ describe('AaveLendIntegrationTest', function () {
     WETH = await getERC20(addresses.tokens.WETH);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const babControlerDeployed = await babController.deployed();
-      const lendDeployed = await aaveLendIntegration.deployed();
-      expect(!!babControlerDeployed).to.equal(true);
-      expect(!!lendDeployed).to.equal(true);
-    });
-  });
-
   describe('Aave Lend', function () {
     it('can supply to valid aToken', async function () {
       expect(await aaveLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);

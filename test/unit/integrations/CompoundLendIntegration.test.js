@@ -30,13 +30,6 @@ describe('CompoundLendIntegrationTest', function () {
     WETH = await getERC20(addresses.tokens.WETH);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const compoundLendDeployed = await compoundLendIntegration.deployed();
-      expect(!!compoundLendDeployed).to.equal(true);
-    });
-  });
-
   describe('Compound Lend', function () {
     it('can supply to valid cToken', async function () {
       expect(await compoundLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
