@@ -1,6 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { GARDEN_PARAMS } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
@@ -52,11 +53,11 @@ describe('IshtarGate', function () {
             'http:',
             0,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -74,11 +75,11 @@ describe('IshtarGate', function () {
             'http...',
             1,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -104,11 +105,11 @@ describe('IshtarGate', function () {
             'http...',
             2,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.be.reverted;
@@ -125,17 +126,17 @@ describe('IshtarGate', function () {
           'http:',
           0,
           GARDEN_PARAMS,
-          ethers.utils.parseEther('0.1'),
+          eth('0.1'),
           [false, false, false],
           [0, 0, 0],
           {
-            value: ethers.utils.parseEther('0.1'),
+            value: eth('0.1'),
           },
         );
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
-      await newGarden.connect(signer2).deposit(ethers.utils.parseEther('1'), 1, signer2.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
+      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), false, {
+        value: eth('1'),
       });
     });
 
@@ -151,11 +152,11 @@ describe('IshtarGate', function () {
             'http:',
             0,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -197,19 +198,19 @@ describe('IshtarGate', function () {
             'http:',
             0,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
       await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
-      await newGarden.connect(signer1).deposit(ethers.utils.parseEther('1'), 1, signer1.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
+      await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+        value: eth('1'),
       });
       await expect(
         createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden),
@@ -228,11 +229,11 @@ describe('IshtarGate', function () {
             'http:',
             0,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -257,11 +258,11 @@ describe('IshtarGate', function () {
             'http...',
             3,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -271,8 +272,8 @@ describe('IshtarGate', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
       });
     });
 
@@ -287,11 +288,11 @@ describe('IshtarGate', function () {
             'http...',
             4,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -301,8 +302,8 @@ describe('IshtarGate', function () {
       const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
 
       await expect(
-        newGarden.connect(WALLET_ADDRESSES[4]).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-          value: ethers.utils.parseEther('1'),
+        newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), false, {
+          value: eth('1'),
         }),
       ).to.be.reverted;
     });
@@ -318,11 +319,11 @@ describe('IshtarGate', function () {
             'http...',
             5,
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -344,11 +345,11 @@ describe('IshtarGate', function () {
             'AAA',
             'http...',
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -360,8 +361,8 @@ describe('IshtarGate', function () {
         .connect(signer1)
         .grantGardenAccessBatch(newGarden.address, [signer3.address], [1], { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(ethers.utils.parseEther('1'), 1, signer3.getAddress(), false, {
-        value: ethers.utils.parseEther('1'),
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        value: eth('1'),
       });
     });
     it('should revert if we try to go beyond the max number of invitations', async function () {
@@ -374,11 +375,11 @@ describe('IshtarGate', function () {
             'AAA',
             'http...',
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;
@@ -405,11 +406,11 @@ describe('IshtarGate', function () {
             'AAA',
             'http...',
             GARDEN_PARAMS,
-            ethers.utils.parseEther('0.1'),
+            eth('0.1'),
             [false, false, false],
             [0, 0, 0],
             {
-              value: ethers.utils.parseEther('0.1'),
+              value: eth('0.1'),
             },
           ),
       ).to.not.be.reverted;

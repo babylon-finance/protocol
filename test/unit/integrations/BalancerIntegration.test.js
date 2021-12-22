@@ -10,7 +10,7 @@ const {
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, ONE_ETH } = require('lib/constants');
 
-describe('BalancerIntegrationTest', function () {
+describe.skip('BalancerIntegrationTest', function () {
   let balancerIntegration;
   let babController;
   let signer1;
@@ -22,16 +22,7 @@ describe('BalancerIntegrationTest', function () {
     ({ balancerIntegration, babController, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedBalancer = await balancerIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedBalancer).to.equal(true);
-    });
-  });
-
-  describe.skip('Liquidity Pools', function () {
+  describe('Liquidity Pools', function () {
     let daiWethPool;
 
     beforeEach(async () => {

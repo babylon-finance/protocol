@@ -176,6 +176,15 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+
+        // Pre actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_investmentAddress, _investmentTokenIn, 1);
+
+        if (targetAddressP != address(0)) {
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         _validatePostExitInvestmentData(investmentInfo);
 
         emit InvestmentExited(
@@ -377,6 +386,34 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         address, /* _asset */
         uint256, /* _amount */
         uint256 /* _borrowOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                 Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _passiveOp */
     )
         internal
         view
