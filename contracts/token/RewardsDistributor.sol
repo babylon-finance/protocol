@@ -580,7 +580,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
-            // Get the contributor share until the the strategy exit timestamp
+            // Get the contributor share % within the strategy window out of the total garden and users
             uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, strategyDetails);
             rewards = _getRewardsPerRole(
                 garden,
@@ -1036,7 +1036,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256
         )
     {
-        // flashloan protection along the time
+        // We get the previous (prior) balance to _blockTime timestamp
+        // Actually it also acts as a flashloan protection along the time
         _blockTime = _blockTime.sub(1);
         uint256 nCheckpoints = numCheckpoints[_garden][_address];
         bool betaUser;
@@ -1052,7 +1053,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // user checkpoint
             ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
             initializedAt = contributor.initialDepositAt;
-            // betaUser = initializedAt > 0 && initializedAt <= _blockTime;
             betaUser = initializedAt > 0;
             balance = ERC20(_garden).balanceOf(_address);
         }
@@ -1215,20 +1215,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (, uint256 prevBalance, uint256 cpStart) = _getPriorBalance(_garden, _address, _start);
         uint256 addressPower;
         uint256 timeDiff;
-        // We calculate the avg balance of an address within a time range based on its segments between all checkpoints
+        // We calculate the avg balance of an address within a time range
         // avg balance = addressPower / total period considered
-        // addressPower = sum(balance x each period between checkpoints)
-        // Initialize addressPower last segment (since last checkpoint until _endTime)
+        // addressPower = sum(balance x time of each period between checkpoints)
+        // Initializing addressPower since the last known checkpoint _endTime
+        // addressPower since _cpEnd checkpoint is "balance x time difference (endTime - checkpoint timestamp)"
         addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens.mul(
             _endTime.sub(gardenCheckpoints[_garden][_address][_cpEnd].fromTime)
         );
-        // Then, we add addressPower data from all intermediate checkpoints
-        // between starting checkpoint and ending checkpoint (if any)
+        // Then, we add addressPower data from periods between all intermediate checkpoints (if any)
+        // periods between starting checkpoint and ending checkpoint (if any)
         // We go from the newest checkpoint to the oldest
         for (uint256 i = _cpEnd; i > cpStart; i--) {
             // We only take proportional addressPower of cpStart checkpoint (from _start onwards)
             // Usually [cpStart].fromTime <= _start except when cpStart == 0 AND beta addresses
-            // Those cases are handled below to add previous user power
+            // Those cases are handled below to add previous address power happening before the first checkpoint
             Checkpoints memory userPrevCheckpoint = gardenCheckpoints[_garden][_address][i.sub(1)];
             timeDiff = gardenCheckpoints[_garden][_address][i].fromTime.sub(
                 userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
@@ -1241,7 +1242,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Beta address with previous balance before _start
             addressPower = addressPower.add(prevBalance.mul(fromTimeCp0.sub(_start)));
         }
-        // avg balance = addressPower / total period considered
+        // avg balance = addressPower / total period of the "strategy" considered
         return addressPower.div(_endTime.sub(_start));
     }
 
@@ -1361,7 +1362,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Users might get BABL rewards if they join the garden before the strategy ends
         // Contributor power will check their exact contribution (avoiding flashloans)
         if (strategyDetails[1] > _claimedAt) {
-            // Get the contributor power until the the strategy exit timestamp
+            // Get the contributor share until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
             rewards = _getRewardsPerRole(
                 _garden,
