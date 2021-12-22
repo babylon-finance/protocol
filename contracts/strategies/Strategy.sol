@@ -516,8 +516,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override {
         _onlyIntegration(msg.sender);
         _onlyUnpaused();
-        // IERC20(_asset).safeApprove(_spender, 0);
-        // Above Fails for some tokens like hbtc
+        // 0 Fails for some tokens like hbtc.
+        uint256 allowance = IERC20(_asset).allowance(address(this), _spender);
+        if (allowance > 0) {
+          IERC20(_asset).safeApprove(_spender, 0);
+        }
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
