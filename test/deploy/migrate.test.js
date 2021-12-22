@@ -710,7 +710,7 @@ describe('migrate', function () {
         .to.be.gt(estimateRewards2[7])
         .to.be.gt(estimateRewards1[7]);
     });
-    it('Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
+    it.only('Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
       console.log('Estimating rewards 1...');
       const [, , estimateRewards1Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards1GardenMember] = await viewerContract.getContributionAndRewards(
@@ -809,7 +809,7 @@ describe('migrate', function () {
       console.log('estimateRewards 5 New User', estimateRewards5NewUser.toString());
       console.log('estimateRewards 6 New User', estimateRewards6NewUser.toString());
     });
-    it.only('Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
+    it('RE-CHECK MY POSITION Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
       console.log('New user depositing using old garden and RD');
       await gardenContract
         .connect(wallets[0])
@@ -857,6 +857,7 @@ describe('migrate', function () {
         .connect(gardenMember)
         .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
       console.log('Estimating rewards 4...');
+      await increaseTime(1);
       const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
         arkadGarden,
