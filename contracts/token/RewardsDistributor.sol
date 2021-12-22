@@ -583,7 +583,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, strategyDetails);
-            console.log('contributorShare', contributorShare);
+            console.log(
+                'contributorShare',
+                contributorShare,
+                ERC20(garden).balanceOf(_contributor).preciseDiv(ERC20(garden).totalSupply())
+            );
             rewards = _getRewardsPerRole(
                 garden,
                 _strategy,
@@ -1020,13 +1024,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Get token power at a specific block for an account
      *
      * @param _garden       Address of the garden
-     * @param _contributor  Address of the contributor
+     * @param _address      Address to get prior balance for
      * @param _blockTime  Block timestamp to get token power at
      * @return Token power for an account at specific block
      */
     function _getPriorBalance(
         address _garden,
-        address _contributor,
+        address _address,
         uint256 _blockTime
     )
         internal
@@ -1040,11 +1044,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     {
         // flashloan protection along the time
         _blockTime = _blockTime.sub(1);
-        uint256 nCheckpoints = numCheckpoints[_garden][_contributor];
+        uint256 nCheckpoints = numCheckpoints[_garden][_address];
         bool betaUser;
         uint256 balance;
         uint256 initializedAt;
-        if (_garden == _contributor) {
+        if (_garden == _address) {
             // garden checkpoint
             GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
             initializedAt = IGarden(_garden).gardenInitializedAt();
@@ -1053,12 +1057,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             console.log('Garden route - beta garden', betaUser);
         } else {
             // user checkpoint
-            ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+            ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
             initializedAt = contributor.initialDepositAt;
             // betaUser = initializedAt > 0 && initializedAt <= _blockTime;
             betaUser = initializedAt > 0;
-            balance = ERC20(_garden).balanceOf(_contributor);
-            console.log('User route - beta user', _contributor, betaUser);
+            balance = ERC20(_garden).balanceOf(_address);
+            console.log('User route - beta user', _address, betaUser);
         }
 
         if (nCheckpoints == 0 && !betaUser) {
@@ -1072,36 +1076,36 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // There are at least one checkpoint from this point
         // First check most recent balance
-        if (gardenCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime <= _blockTime) {
+        if (gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime <= _blockTime) {
             console.log('Route 3');
             // Burning security protection at userTokens
             // It only limit the balance in case of burnt tokens and only if using last checkpoint
             return (
-                gardenCheckpoints[_garden][_contributor][nCheckpoints - 1].fromTime,
-                gardenCheckpoints[_garden][_contributor][nCheckpoints - 1].tokens > balance
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime,
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens > balance
                     ? balance
-                    : gardenCheckpoints[_garden][_contributor][nCheckpoints - 1].tokens,
+                    : gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens,
                 nCheckpoints - 1
             );
         }
 
         // Next check implicit zero balance
-        if (gardenCheckpoints[_garden][_contributor][0].fromTime > _blockTime && !betaUser) {
+        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !betaUser) {
             console.log('Route 4');
             // backward compatible
             return (0, 0, 0);
-        } else if (gardenCheckpoints[_garden][_contributor][0].fromTime > _blockTime && betaUser) {
+        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && betaUser) {
             console.log('Route 5');
             // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
             // First checkpoint stored its previous balance so we use it to guess the user past
-            return (initializedAt, gardenCheckpoints[_garden][_contributor][0].prevBalance, 0);
+            return (initializedAt, gardenCheckpoints[_garden][_address][0].prevBalance, 0);
         }
         // It has more checkpoints but the time is between different checkpoints, we look for it
         uint256 lower = 0;
         uint256 upper = nCheckpoints - 1;
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            Checkpoints memory cp = gardenCheckpoints[_garden][_contributor][center];
+            Checkpoints memory cp = gardenCheckpoints[_garden][_address][center];
             if (cp.fromTime == _blockTime) {
                 return (cp.fromTime, cp.tokens, center);
             } else if (cp.fromTime < _blockTime) {
@@ -1112,8 +1116,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         console.log('Route 6');
         return (
-            gardenCheckpoints[_garden][_contributor][lower].fromTime,
-            gardenCheckpoints[_garden][_contributor][lower].tokens,
+            gardenCheckpoints[_garden][_address][lower].fromTime,
+            gardenCheckpoints[_garden][_address][lower].tokens,
             lower
         );
     }
@@ -1136,8 +1140,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
             return 0;
         } else {
-            (, uint256 balance, ) = _getPriorBalance(_garden, _contributor, _time);
-            (, uint256 supply, ) = _getPriorBalance(_garden, _garden, _time);
+            (, uint256 balance, ) = _getPriorBalance(_garden, _contributor, contributor.lastDepositAt);
+            (, uint256 supply, ) = _getPriorBalance(_garden, _garden, gardenData.lastDepositAt);
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower =
                 contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
@@ -1404,7 +1408,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
-            console.log('contributorShare', contributorShare);
+            console.log(
+                'contributorShare',
+                contributorShare,
+                ERC20(_garden).balanceOf(_contributor).preciseDiv(ERC20(_garden).totalSupply())
+            );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,

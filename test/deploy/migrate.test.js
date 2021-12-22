@@ -200,6 +200,34 @@ describe('migrate', function () {
       expect(rewards3[4]).to.be.closeTo(rewards2[4], rewards2[4].div(3)); // 33% slippage
       expect(rewards3[5]).to.be.closeTo(rewards2[5], rewards2[5].div(3));
     });
+    it('Unclaimed rewards of garden creator are equivalent after new deposit by a new user (big deposit)', async () => {
+      const rewards1 = await distributor.getRewards(arkadGarden, await gardenContract.creator(), [...strategies]);
+      console.log('---upgrading RD...');
+      await upgradeRD();
+      console.log('---RD upgraded !');
+      console.log('Making a big new deposit by a new user....');
+      await gardenContract
+        .connect(wallets[0])
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await increaseTime(1);
+      const rewards2 = await distributor.getRewards(arkadGarden, creator, [...strategies]);
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      const rewards3 = await distributor.getRewards(arkadGarden, creator, [...strategies]);
+      console.log('rewards 1', await normalizeToken(rewards1[4]).toString());
+      console.log('rewards 2', await normalizeToken(rewards2[4]).toString());
+      console.log('rewards 3', await normalizeToken(rewards3[4]).toString());
+      // unclaimed rewards that are always deterministic (strategist/stewards -> both profit and BABL)
+      expect(rewards3[0]).to.be.eq(rewards2[0]).to.be.eq(rewards1[0]);
+      expect(rewards3[1]).to.be.eq(rewards2[1]).to.be.eq(rewards1[1]);
+      expect(rewards3[2]).to.be.eq(rewards2[2]).to.be.eq(rewards1[2]);
+      expect(rewards3[3]).to.be.eq(rewards2[3]).to.be.eq(rewards1[3]);
+      expect(rewards3[6]).to.be.eq(rewards2[6]).to.be.eq(rewards1[6]);
+      // RD upgrade is smooth (no slippage) as c-power is kept for old strategies but it might produce slippage in the future
+      expect(rewards2[4]).to.be.closeTo(rewards1[4], rewards1[4].div(100)); // 1%
+      expect(rewards2[5]).to.be.closeTo(rewards1[5], rewards1[5].div(100));
+      expect(rewards3[4]).to.be.closeTo(rewards2[4], rewards2[4].div(20)); // 5% slippage, new big deposit does not affect
+      expect(rewards3[5]).to.be.closeTo(rewards2[5], rewards2[5].div(20));
+    });
     it('Unclaimed rewards (old garden strategies) are 0 for new users depositing into a garden', async () => {
       await upgradeRD();
       const rewards1 = await distributor.getRewards(arkadGarden, wallets[0].address, [...strategies]);
@@ -337,12 +365,13 @@ describe('migrate', function () {
       expect(rewards4[5]).to.be.closeTo(rewards3[5], rewards3[5].div(30));
     });
     it('Unclaimed rewards can still be claimed after withdrawAll by garden member (slippage limited to previous balance)', async () => {
+      console.log('Getting rewards 1...');
       const rewards1 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       console.log('---upgrading RD...');
       await upgradeRD();
       await increaseTime(1);
       console.log('---RD upgraded !');
-      console.log('Getting rewards 3...');
+      console.log('Getting rewards 2...');
       const rewards2 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       console.log('WithdrawAll in course....');
       // The first checkpoint is created for the user on withdraw so RD knows its prev balance for calculation
@@ -365,6 +394,7 @@ describe('migrate', function () {
       console.log('Getting rewards 4...');
       const rewards4 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       await gardenContract.connect(gardenMember).claimReturns([...strategies]); // claim all
+      console.log('Getting rewards 5...');
       const rewards5 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       console.log('rewards 1', rewards1.toString());
       console.log('rewards 2', rewards2.toString());
@@ -395,12 +425,13 @@ describe('migrate', function () {
       expect(rewards5[7]).to.be.eq(0);
     });
     it('Unclaimed rewards are equivalent if trying to be hacked by withdrawAll and a new big deposit', async () => {
+      console.log('Getting rewards 1...');
       const rewards1 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       console.log('---upgrading RD...');
       await upgradeRD();
       await increaseTime(1);
       console.log('---RD upgraded !');
-      console.log('Getting rewards 3...');
+      console.log('Getting rewards 2...');
       const rewards2 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       console.log('WithdrawAll in course....');
       // The first checkpoint is created for the user on withdraw so RD knows its prev balance for calculation
@@ -449,11 +480,13 @@ describe('migrate', function () {
       // RD upgrade is smooth (no slippage) as c-power is kept for old strategies but it might produce slippage in the future
       expect(rewards2[4]).to.be.closeTo(rewards1[4], rewards1[4].div(100)); // 1%
       expect(rewards2[5]).to.be.closeTo(rewards1[5], rewards1[5].div(100)); // 1%
+      // After withdrawAll it is still equivalent and claimable
       expect(rewards3[4]).to.be.closeTo(rewards2[4], rewards2[4].div(100)); // 1%
       expect(rewards3[5]).to.be.closeTo(rewards2[5], rewards2[5].div(100)); // 1%
-      expect(rewards4[4]).to.be.closeTo(rewards3[4], rewards3[4].div(3)); // 33% slippage after withdrawAll
-      expect(rewards4[5]).to.be.closeTo(rewards3[5], rewards3[5].div(3)); // 33% slippage after withdrawAll
-      // After new deposit it is still equivalent
+      // Time passes (old c.power produce some slippage)
+      expect(rewards4[4]).to.be.closeTo(rewards3[4], rewards3[4].div(3)); // 33% slippage due to old c-power time
+      expect(rewards4[5]).to.be.closeTo(rewards3[5], rewards3[5].div(3)); // 33% slippage due to old c-power time
+      // After new deposit it is still equivalent (no additional impact on top of the slippage)
       expect(rewards5[4]).to.be.closeTo(rewards4[4], rewards4[4].div(100)); // 1%
       expect(rewards5[5]).to.be.closeTo(rewards4[5], rewards4[5].div(100)); // 1%
     });
@@ -523,6 +556,50 @@ describe('migrate', function () {
       expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100));
       expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(100));
     });
+    it('Pending rewards are equivalent if no new deposit of garden creator but a new member with big deposit', async () => {
+      const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      await upgradeRD();
+      await increaseTime(1);
+      console.log('RD upgraded !');
+      console.log('Estimating rewards 2...');
+      const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      console.log('Increasing time...');
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      console.log('Estimating rewards 3...');
+      const [, , estimateRewards3] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      await increaseTime(1);
+      await gardenContract
+        .connect(wallets[0])
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await increaseTime(1);
+      const [, , estimateRewards4] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      console.log('estimateRewards 1', estimateRewards1.toString());
+      console.log('estimateRewards 2', estimateRewards2.toString());
+      console.log('estimateRewards 3', estimateRewards3.toString());
+      console.log('estimateRewards 4', estimateRewards4.toString());
+      // mining is delivering more BABL along the time
+      // new blocks has less profit in this example (strategies are getting less NAV)
+      expect(estimateRewards3[0]).to.be.gt(estimateRewards2[0]).to.be.gt(estimateRewards1[0]);
+      expect(estimateRewards3[1]).to.be.lt(estimateRewards2[1]).to.be.lt(estimateRewards1[1]);
+      expect(estimateRewards3[2]).to.be.gt(estimateRewards2[2]).to.be.gt(estimateRewards1[2]);
+      expect(estimateRewards3[3]).to.be.lt(estimateRewards2[3]).to.be.lt(estimateRewards1[3]);
+      expect(estimateRewards3[4]).to.be.gt(estimateRewards2[4]).to.be.gt(estimateRewards1[4]);
+      expect(estimateRewards3[5]).to.be.gt(estimateRewards2[5]).to.be.gt(estimateRewards1[5]);
+      expect(estimateRewards3[6]).to.be.lt(estimateRewards2[6]).to.be.lt(estimateRewards1[6]);
+      expect(estimateRewards3[7]).to.be.gt(estimateRewards2[7]).to.be.gt(estimateRewards1[7]);
+      expect(estimateRewards2[0]).to.be.closeTo(estimateRewards1[0], estimateRewards1[0].div(100)); // 1%
+      expect(estimateRewards2[1]).to.be.closeTo(estimateRewards1[1], estimateRewards1[1].div(100));
+      expect(estimateRewards2[2]).to.be.closeTo(estimateRewards1[2], estimateRewards1[2].div(100));
+      expect(estimateRewards2[3]).to.be.closeTo(estimateRewards1[3], estimateRewards1[3].div(100));
+      expect(estimateRewards2[4]).to.be.closeTo(estimateRewards1[4], estimateRewards1[4].div(100));
+      expect(estimateRewards2[5]).to.be.closeTo(estimateRewards1[5], estimateRewards1[5].div(100));
+      expect(estimateRewards2[6]).to.be.closeTo(estimateRewards1[6], estimateRewards1[6].div(100));
+      expect(estimateRewards2[7]).to.be.closeTo(estimateRewards1[7], estimateRewards1[7].div(100));
+
+      // New deposit does not affect old c-power
+      expect(estimateRewards4[4]).to.be.closeTo(estimateRewards3[4], estimateRewards3[4].div(100)); // 1%
+      expect(estimateRewards4[5]).to.be.closeTo(estimateRewards3[5], estimateRewards3[5].div(100));
+    });
     it('Pending rewards are zero if a new user has not joined yet', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
       await upgradeRD();
@@ -591,6 +668,7 @@ describe('migrate', function () {
       expect(estimateRewards3[7]).to.be.closeTo(estimateRewards2[7], estimateRewards2[7].div(22)); // 4%
 
       // Deposit replaces c-power by checkpoints so historic time impact is no longer valid so there is a slightly reduction despite a deposit
+      // The reduction is based on real adjustment of user avg balance
       expect(estimateRewards3[4]).to.be.lt(estimateRewards2[4]);
 
       // mining is delivering more BABL along the time
@@ -629,7 +707,7 @@ describe('migrate', function () {
         .to.be.gt(estimateRewards2[7])
         .to.be.gt(estimateRewards1[7]);
     });
-    it('Pending rewards are equivalent for a beta user after a new big deposit of a new joining member', async () => {
+    it('Pending rewards are equivalent for a beta user after a new big deposit of a new joining member (it does not affect)', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await upgradeRD();
       console.log('RD upgraded !');
@@ -671,8 +749,8 @@ describe('migrate', function () {
       expect(estimateRewards3[6]).to.be.closeTo(estimateRewards2[6], estimateRewards2[6].div(100));
       expect(estimateRewards3[7]).to.be.closeTo(estimateRewards2[7], estimateRewards2[7].div(100));
 
-      // the new big deposit by a different user is affecting a bit to current user
-      expect(estimateRewards3[4]).to.be.lt(estimateRewards2[4]);
+      // the new big deposit by a different user is NOT longer affecting to current user
+      expect(estimateRewards3[4]).to.be.gt(estimateRewards2[4]);
 
       // mining is delivering more BABL along the time
       // new blocks has less profit in this example
@@ -710,7 +788,95 @@ describe('migrate', function () {
         .to.be.gt(estimateRewards2[7])
         .to.be.gt(estimateRewards1[7]);
     });
-    it.only('Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
+
+    it('Pending rewards are equivalent for 2 beta users after a new big deposit of a new joining member', async () => {
+      console.log('Estimating rewards 1...');
+      const [, , estimateRewards1Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      const [, , estimateRewards1GardenMember] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        gardenMember.address,
+      );
+      const [, , estimateRewards1NewUser] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        wallets[0].address,
+      );
+      await upgradeRD();
+      console.log('RD upgraded !');
+      console.log('Estimating rewards 2...');
+      const [, , estimateRewards2Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      const [, , estimateRewards2GardenMember] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        gardenMember.address,
+      );
+      const [, , estimateRewards2NewUser] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        wallets[0].address,
+      );
+      console.log('New member BIG deposit in course....');
+      await increaseTime(1);
+      await gardenContract
+        .connect(wallets[0])
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      console.log('Estimating rewards 3...');
+      await increaseTime(1);
+      const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        gardenMember.address,
+      );
+      const [, , estimateRewards3NewUser] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        wallets[0].address,
+      );
+      console.log('Increasing time...');
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      console.log('Estimating rewards 4...');
+      const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
+      const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        gardenMember.address,
+      );
+      const [, , estimateRewards4NewUser] = await viewerContract.getContributionAndRewards(
+        arkadGarden,
+        wallets[0].address,
+      );
+      console.log('estimateRewards 1 Creator', estimateRewards1Creator.toString());
+      console.log('estimateRewards 2 Creator', estimateRewards2Creator.toString());
+      console.log('estimateRewards 3 Creator', estimateRewards3Creator.toString());
+      console.log('estimateRewards 4 Creator', estimateRewards4Creator.toString());
+
+      console.log('estimateRewards 1 Garden Member', estimateRewards1GardenMember.toString());
+      console.log('estimateRewards 2 Garden Member', estimateRewards2GardenMember.toString());
+      console.log('estimateRewards 3 Garden Member', estimateRewards3GardenMember.toString());
+      console.log('estimateRewards 4 Garden Member', estimateRewards4GardenMember.toString());
+
+      console.log('estimateRewards 1 New User', estimateRewards1NewUser.toString());
+      console.log('estimateRewards 2 New User', estimateRewards2NewUser.toString());
+      console.log('estimateRewards 3 New User', estimateRewards3NewUser.toString());
+      console.log('estimateRewards 4 New User', estimateRewards4NewUser.toString());
+      // No impact at all to previous users for new users joining
+      expect(estimateRewards4Creator[4])
+        .to.be.gt(estimateRewards3Creator[4])
+        .to.be.gt(estimateRewards2Creator[4])
+        .to.be.gt(estimateRewards1Creator[4]);
+      expect(estimateRewards4GardenMember[4])
+        .to.be.gt(estimateRewards3GardenMember[4])
+        .to.be.gt(estimateRewards2GardenMember[4])
+        .to.be.gt(estimateRewards1GardenMember[4]);
+      expect(estimateRewards4NewUser[4])
+        .to.be.gt(estimateRewards3NewUser[4])
+        .to.be.gt(estimateRewards2NewUser[4])
+        .to.be.gt(estimateRewards1NewUser[4]);
+      // zero if not a garden member
+      expect(estimateRewards2NewUser[4]).to.be.eq(estimateRewards1NewUser[4]).to.be.eq(0);
+      // Despite it is a big deposit, it gets just proportional
+      expect(estimateRewards3NewUser[4]).to.be.lt(estimateRewards3GardenMember[4]);
+    });
+    it('Pending rewards are equivalent for 2 beta users after they both make a new deposit + a big deposit of a new joining member (big slippage for garden member)', async () => {
+      // Note: the slippage to gardenMember by its own deposit, not by someone else
+      // The reason is that after first deposit users are migrated from old c.power to checkpoints but only for live strategies
+      // unclaimed (previous strategies) remain the same
+      // On the other hand bigger balances are not impacted more than 7%
       console.log('Estimating rewards 1...');
       const [, , estimateRewards1Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards1GardenMember] = await viewerContract.getContributionAndRewards(
@@ -808,8 +974,53 @@ describe('migrate', function () {
       console.log('estimateRewards 4 New User', estimateRewards4NewUser.toString());
       console.log('estimateRewards 5 New User', estimateRewards5NewUser.toString());
       console.log('estimateRewards 6 New User', estimateRewards6NewUser.toString());
+
+      // beta creator is equivalent until its first deposit using checkpoints
+      expect(estimateRewards2Creator[4]).to.be.gt(estimateRewards1Creator[4]);
+      // % share is reduced a bit by its own deposit, then it follows the new increasing path
+      expect(estimateRewards3Creator[4]).to.be.lt(estimateRewards2Creator[4]);
+      expect(estimateRewards3Creator[4]).to.be.closeTo(estimateRewards2Creator[4], estimateRewards2Creator[4].div(13)); // 7%
+      expect(estimateRewards6Creator[4])
+        .to.be.gt(estimateRewards5Creator[4])
+        .to.be.gt(estimateRewards4Creator[4])
+        .to.be.gt(estimateRewards3Creator[4]);
+
+      // beta garden member is equivalent until its first deposit using checkpoints
+      expect(estimateRewards4GardenMember[4])
+        .to.be.gt(estimateRewards3GardenMember[4])
+        .to.be.gt(estimateRewards2GardenMember[4])
+        .to.be.gt(estimateRewards1GardenMember[4]);
+      // % share is reduced a bit by its own deposit, then it follows the new increasing path
+      expect(estimateRewards5GardenMember[4]).to.be.lt(estimateRewards4GardenMember[4]);
+      // BIG SLIPPAGE caused by its own deposit (it goes from c.power track to checkpoints track)
+      // The slipagge is higher for those users with more time in the garden and lower balances
+      // Once the migration occur, it only happens once, no new migration paths might be needed
+      expect(estimateRewards5GardenMember[4]).to.be.closeTo(
+        estimateRewards4GardenMember[4].mul(307).div(1000),
+        estimateRewards4GardenMember[4].div(100),
+      ); // aprox. 70% very big slippage caused by its own deposit (reseting its c.power into checkpoints)
+      expect(estimateRewards6GardenMember[4]).to.be.gt(estimateRewards5GardenMember[4]);
+      // New user - deterministic path
+      expect(estimateRewards6NewUser[4])
+        .to.be.gt(estimateRewards5NewUser[4])
+        .to.be.gt(estimateRewards4NewUser[4])
+        .to.be.gt(estimateRewards3NewUser[4])
+        .to.be.gt(estimateRewards2NewUser[4])
+        .to.be.gt(estimateRewards1NewUser[4]);
+      // zero if not a garden member
+      expect(estimateRewards4NewUser[4])
+        .to.be.eq(estimateRewards3NewUser[4])
+        .to.be.eq(estimateRewards2NewUser[4])
+        .to.be.eq(estimateRewards1NewUser[4])
+        .to.be.eq(0);
+      // Despite it is a big deposit, it gets just proportional
+      expect(estimateRewards5NewUser[4]).to.be.lt(estimateRewards5GardenMember[4]);
+      // new user 200K pass garden member but not garden creator yet due to proportional balance
+      expect(estimateRewards6NewUser[4]).to.be.gt(estimateRewards6GardenMember[4]).to.be.lt(estimateRewards6Creator[4]);
+      expect(await gardenContract.balanceOf(wallets[0].address)).to.be.gt(await gardenContract.balanceOf(creator));
     });
-    it('RE-CHECK MY POSITION Pending rewards are equivalent for 2 beta users after a new deposit from them + a big deposit of a new joining member', async () => {
+    it('Pending rewards has some slippage for 2 beta users after a new deposit from them + x2 a big deposit of a new joining member (before and after upgrades)', async () => {
+      // The new member joins with a big deposit using old SC
       console.log('New user depositing using old garden and RD');
       await gardenContract
         .connect(wallets[0])
@@ -914,6 +1125,47 @@ describe('migrate', function () {
       console.log('estimateRewards 4 New User', estimateRewards4NewUser.toString());
       console.log('estimateRewards 5 New User', estimateRewards5NewUser.toString());
       console.log('estimateRewards 6 New User', estimateRewards6NewUser.toString());
+
+      // beta creator is equivalent until its first deposit using checkpoints
+      expect(estimateRewards2Creator[4]).to.be.gt(estimateRewards1Creator[4]);
+      // % share is reduced a bit by its own deposit, then it follows the new increasing path
+      expect(estimateRewards3Creator[4]).to.be.lt(estimateRewards2Creator[4]);
+      expect(estimateRewards3Creator[4]).to.be.closeTo(estimateRewards2Creator[4], estimateRewards2Creator[4].div(6)); // 16% slippage
+      // Once it is migrated into checkpoints, it is a deterministic path
+      expect(estimateRewards6Creator[4])
+        .to.be.gt(estimateRewards5Creator[4])
+        .to.be.gt(estimateRewards4Creator[4])
+        .to.be.gt(estimateRewards3Creator[4]);
+
+      // beta garden member is equivalent until its first deposit using checkpoints
+      expect(estimateRewards3GardenMember[4])
+        .to.be.gt(estimateRewards2GardenMember[4])
+        .to.be.gt(estimateRewards1GardenMember[4]);
+      // % share is reduced a bit by its own deposit, then it follows the new increasing path
+      expect(estimateRewards4GardenMember[4]).to.be.lt(estimateRewards3GardenMember[4]);
+      // BIG SLIPPAGE caused by its own deposit (it goes from c.power track to checkpoints track)
+      // The slipagge is higher for those users with more time in the garden and lower balances
+      // Once the migration occur, it only happens once, no new migration paths might be needed
+      expect(estimateRewards4GardenMember[4]).to.be.closeTo(
+        estimateRewards3GardenMember[4].mul(277).div(1000),
+        estimateRewards3GardenMember[4].div(100),
+      ); // aprox. 73% -> very big slippage caused by its own deposit (reseting its c.power into checkpoints)
+      expect(estimateRewards6GardenMember[4])
+        .to.be.gt(estimateRewards5GardenMember[4])
+        .to.be.gt(estimateRewards4GardenMember[4]);
+      // New user - deterministic path
+      expect(estimateRewards6NewUser[4])
+        .to.be.gt(estimateRewards5NewUser[4])
+        .to.be.gt(estimateRewards4NewUser[4])
+        .to.be.gt(estimateRewards3NewUser[4])
+        .to.be.gt(estimateRewards2NewUser[4])
+        .to.be.gt(estimateRewards1NewUser[4]);
+      // non-zero as it is a garden member
+      expect(estimateRewards1NewUser[4]).to.be.gt(0);
+      // Despite it is a big deposit, it gets just proportional, so it still gets less than creator and garden member
+      expect(estimateRewards4NewUser[4]).to.be.lt(estimateRewards4GardenMember[4]).to.be.lt(estimateRewards4Creator[4]);
+      // new user 200K pass garden member and also garden creator yet due to proportional balance
+      expect(estimateRewards5NewUser[4]).to.be.gt(estimateRewards5GardenMember[4]).to.be.gt(estimateRewards5Creator[4]);
     });
     it('Pending rewards are deterministic and implement firewall-ing for new deposit giving only proportional (multideposit by creator)', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
@@ -1033,7 +1285,7 @@ describe('migrate', function () {
       expect(estimateRewards2[4]).to.be.eq(estimateRewards1[4]).to.be.eq(0);
       expect(estimateRewards2[5]).to.be.eq(estimateRewards1[5]).to.be.eq(0);
     });
-    it('Pending rewards follow the deterministic path after a partial withdrawal', async () => {
+    it.only('Pending rewards follow the deterministic path after a partial withdrawal', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await upgradeRD();
       await increaseTime(1);
