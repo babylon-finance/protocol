@@ -319,12 +319,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external override nonReentrant {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
-        uint256 supply = IERC20(_garden).totalSupply();
-        uint256 prevSupply = _addOrSubstract ? supply.sub(_tokenDiff) : supply.add(_tokenDiff);
         // User checkpoint
         _writeCheckpoint(_garden, _contributor, newBalance, _previousBalance);
-        // Garden supply checkpoint
-        _writeCheckpoint(_garden, _garden, supply, prevSupply);
     }
 
     /**
@@ -1040,26 +1036,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Actually it also acts as a flashloan protection along the time
         _blockTime = _blockTime.sub(1);
         uint256 nCheckpoints = numCheckpoints[_garden][_address];
-        bool betaUser;
-        uint256 balance;
-        uint256 initializedAt;
-        if (_garden == _address) {
-            // garden supply checkpoint
-            GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
-            initializedAt = IGarden(_garden).gardenInitializedAt();
-            betaUser = gardenData.lastDepositAt > 0 && initializedAt <= _blockTime;
-            balance = ERC20(_garden).totalSupply();
-        } else {
-            // user checkpoint
-            ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
-            initializedAt = contributor.initialDepositAt;
-            betaUser = initializedAt > 0;
-            balance = ERC20(_garden).balanceOf(_address);
-        }
-
-        if (nCheckpoints == 0 && !betaUser) {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
+        // beta user if initializedAt > 0
+        uint256 initializedAt = contributor.initialDepositAt;
+        uint256 balance = ERC20(_garden).balanceOf(_address);
+        if (nCheckpoints == 0 && !(initializedAt > 0)) {
             return (0, 0, 0);
-        } else if (nCheckpoints == 0 && betaUser) {
+        } else if (nCheckpoints == 0 && initializedAt > 0) {
             // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
             // It also consider burning for bad strategist
             return (initializedAt, balance, 0);
@@ -1077,12 +1060,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 nCheckpoints - 1
             );
         }
-
         // Next check implicit zero balance
-        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !betaUser) {
+        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !(initializedAt > 0)) {
             // backward compatible
             return (0, 0, 0);
-        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && betaUser) {
+        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && initializedAt > 0) {
             // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
             // First checkpoint stored its previous balance so we use it to guess the user past
             return (initializedAt, gardenCheckpoints[_garden][_address][0].prevBalance, 0);
@@ -1118,16 +1100,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getContributorPower(
         address _garden,
         address _contributor,
-        uint256 _time
+        uint256 _time,
+        uint256 _gardenSupply
     ) internal view returns (uint256) {
         ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
         GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
-
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
             return 0;
         } else {
             (, uint256 balance, ) = _getPriorBalance(_garden, _contributor, contributor.lastDepositAt);
-            (, uint256 supply, ) = _getPriorBalance(_garden, _garden, gardenData.lastDepositAt);
+            uint256 supply = _gardenSupply > 0 ? _gardenSupply : ERC20(_garden).totalSupply();
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower =
                 contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
@@ -1175,7 +1157,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy) {
             // Backward compatibility for old strategies
-            return _getContributorPower(_garden, _contributor, endTime);
+            return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
         }
         // Take the closest position prior to _endTime
         (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = _getPriorBalance(_garden, _contributor, endTime);
@@ -1185,16 +1167,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return 0;
         }
         uint256 startTime = _strategyDetails[0];
-        (uint256 gardenTimestamp, uint256 finalSupplyEnd, uint256 cpGardenEnd) =
-            _getPriorBalance(_garden, _garden, endTime);
+        uint256 finalSupplyEnd =
+            (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
         // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
             // If the user balance fluctuated during the strategy duration, we take real average balance
-            balanceEnd = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
-        }
-        if (gardenTimestamp > startTime) {
-            // If the garden supply fluctuated during the strategy duration, we take real avg supply
-            finalSupplyEnd = _getAvgBalance(_garden, _garden, startTime, cpGardenEnd, endTime);
+            uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
+            // Avoid specific malicious attacks
+            balanceEnd = avgBalance > balanceEnd ? balanceEnd : avgBalance;
         }
         return balanceEnd.preciseDiv(finalSupplyEnd);
     }
