@@ -1185,12 +1185,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return 0;
         }
         uint256 startTime = _strategyDetails[0];
-        (, , uint256 cpGardenEnd) = _getPriorBalance(_garden, _garden, endTime);
-        uint256 finalSupplyEnd = _getAvgBalance(_garden, _garden, startTime, cpGardenEnd, endTime);
+        (uint256 gardenTimestamp, uint256 finalSupplyEnd, uint256 cpGardenEnd) =
+            _getPriorBalance(_garden, _garden, endTime);
         // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
             // If the user balance fluctuated during the strategy duration, we take real average balance
             balanceEnd = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
+        }
+        if (gardenTimestamp > startTime) {
+            // If the garden supply fluctuated during the strategy duration, we take real avg supply
+            finalSupplyEnd = _getAvgBalance(_garden, _garden, startTime, cpGardenEnd, endTime);
         }
         return balanceEnd.preciseDiv(finalSupplyEnd);
     }
@@ -1213,37 +1217,42 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _endTime
     ) internal view returns (uint256) {
         (, uint256 prevBalance, uint256 cpStart) = _getPriorBalance(_garden, _address, _start);
-        uint256 addressPower;
-        uint256 timeDiff;
-        // We calculate the avg balance of an address within a time range
-        // avg balance = addressPower / total period considered
-        // addressPower = sum(balance x time of each period between checkpoints)
-        // Initializing addressPower since the last known checkpoint _endTime
-        // addressPower since _cpEnd checkpoint is "balance x time difference (endTime - checkpoint timestamp)"
-        addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens.mul(
-            _endTime.sub(gardenCheckpoints[_garden][_address][_cpEnd].fromTime)
-        );
-        // Then, we add addressPower data from periods between all intermediate checkpoints (if any)
-        // periods between starting checkpoint and ending checkpoint (if any)
-        // We go from the newest checkpoint to the oldest
-        for (uint256 i = _cpEnd; i > cpStart; i--) {
-            // We only take proportional addressPower of cpStart checkpoint (from _start onwards)
-            // Usually [cpStart].fromTime <= _start except when cpStart == 0 AND beta addresses
-            // Those cases are handled below to add previous address power happening before the first checkpoint
-            Checkpoints memory userPrevCheckpoint = gardenCheckpoints[_garden][_address][i.sub(1)];
-            timeDiff = gardenCheckpoints[_garden][_address][i].fromTime.sub(
-                userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
+        if (_start == _endTime) {
+            // Avoid underflow
+            return prevBalance;
+        } else {
+            uint256 addressPower;
+            uint256 timeDiff;
+            // We calculate the avg balance of an address within a time range
+            // avg balance = addressPower / total period considered
+            // addressPower = sum(balance x time of each period between checkpoints)
+            // Initializing addressPower since the last known checkpoint _endTime
+            // addressPower since _cpEnd checkpoint is "balance x time difference (endTime - checkpoint timestamp)"
+            addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens.mul(
+                _endTime.sub(gardenCheckpoints[_garden][_address][_cpEnd].fromTime)
             );
-            addressPower = addressPower.add(userPrevCheckpoint.tokens.mul(timeDiff));
+            // Then, we add addressPower data from periods between all intermediate checkpoints (if any)
+            // periods between starting checkpoint and ending checkpoint (if any)
+            // We go from the newest checkpoint to the oldest
+            for (uint256 i = _cpEnd; i > cpStart; i--) {
+                // We only take proportional addressPower of cpStart checkpoint (from _start onwards)
+                // Usually [cpStart].fromTime <= _start except when cpStart == 0 AND beta addresses
+                // Those cases are handled below to add previous address power happening before the first checkpoint
+                Checkpoints memory userPrevCheckpoint = gardenCheckpoints[_garden][_address][i.sub(1)];
+                timeDiff = gardenCheckpoints[_garden][_address][i].fromTime.sub(
+                    userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
+                );
+                addressPower = addressPower.add(userPrevCheckpoint.tokens.mul(timeDiff));
+            }
+            // We now handle the previous addressPower of beta addresses (if applicable)
+            uint256 fromTimeCp0 = gardenCheckpoints[_garden][_address][0].fromTime;
+            if (cpStart == 0 && fromTimeCp0 > _start) {
+                // Beta address with previous balance before _start
+                addressPower = addressPower.add(prevBalance.mul(fromTimeCp0.sub(_start)));
+            }
+            // avg balance = addressPower / total period of the "strategy" considered
+            return addressPower.div(_endTime.sub(_start));
         }
-        // We now handle the previous addressPower of beta addresses (if applicable)
-        uint256 fromTimeCp0 = gardenCheckpoints[_garden][_address][0].fromTime;
-        if (cpStart == 0 && fromTimeCp0 > _start) {
-            // Beta address with previous balance before _start
-            addressPower = addressPower.add(prevBalance.mul(fromTimeCp0.sub(_start)));
-        }
-        // avg balance = addressPower / total period of the "strategy" considered
-        return addressPower.div(_endTime.sub(_start));
     }
 
     /**
