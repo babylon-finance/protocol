@@ -79,6 +79,7 @@ describe('CurvePoolIntegrationTest', function () {
 
     pools.forEach(({ name, pool }) => {
       it(`can enter and exit the ${name} pool`, async function () {
+        const slippage = ['compound', 'susd', 'y'].includes(name) ? eth().div(4) : eth().div(20);
         const reserveAsset = await getERC20(await garden1.reserveAsset());
         const strategyContract = await createStrategy(
           'lp',
@@ -97,16 +98,13 @@ describe('CurvePoolIntegrationTest', function () {
         const lpToken = await curvePoolIntegration.getLPToken(pool);
         const poolContract = await getERC20(lpToken);
         expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(20));
+        expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
 
         const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
         await finalizeStrategy(strategyContract, 0);
 
         expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
-        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(
-          gardenBeforeExecuteBalance,
-          gardenBeforeExecuteBalance.div(20),
-        );
+        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
       });
     });
   });
