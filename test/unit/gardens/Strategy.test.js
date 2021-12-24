@@ -143,17 +143,17 @@ describe('Strategy', function () {
 
       expect(address).to.equal(strategyDataset.address);
       expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(ethers.utils.parseEther('0.1'));
+      expect(stake).to.equal(eth('0.1'));
 
-      expect(totalPositiveVotes).to.equal(ethers.utils.parseEther('0.1'));
+      expect(totalPositiveVotes).to.equal(eth('0.1'));
       expect(totalNegativeVotes).to.equal(0);
 
       expect(operationsCount).to.equal(1);
       expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
       expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
       expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
-      expect(expectedReturn).to.equal(ethers.utils.parseEther('0.05'));
-      expect(maxCapitalRequested).to.equal(ethers.utils.parseEther('10'));
+      expect(expectedReturn).to.equal(eth('0.05'));
+      expect(maxCapitalRequested).to.equal(eth('10'));
       expect(strategyNft).to.equal(await babController.strategyNFT());
       expect(enteredAt.isZero()).to.equal(false);
     });
@@ -302,7 +302,7 @@ describe('Strategy', function () {
         uniswapV3TradeIntegration.address,
         garden1,
       );
-      await expect(strategyContract.unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
+      await expect(strategyContract.unwindStrategy(eth('1'))).to.be.reverted;
     });
 
     it('should be able to unwind an active strategy with enough capital', async function () {
@@ -316,12 +316,12 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
-      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('2'));
+      expect(await strategyContract.capitalAllocated()).to.equal(eth('2'));
 
       await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
 
-      expect(await strategyContract.capitalAllocated()).to.equal(ethers.utils.parseEther('1'));
-      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('1'));
+      expect(await strategyContract.capitalAllocated()).to.equal(eth('1'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(eth('1'));
     });
 
     it('should not be able to unwind an active strategy with enough capital if it is not the owner', async function () {
@@ -332,11 +332,11 @@ describe('Strategy', function () {
         uniswapV3TradeIntegration.address,
         garden1,
       );
-      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(ethers.utils.parseEther('2'));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.gt(eth('2'));
 
       await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
 
-      await expect(strategyContract.connect(signer3).unwindStrategy(ethers.utils.parseEther('1'))).to.be.reverted;
+      await expect(strategyContract.connect(signer3).unwindStrategy(eth('1'))).to.be.reverted;
     });
 
     it('can execute strategy twice', async function () {
@@ -519,7 +519,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await injectFakeProfits(strategyContract, ethers.utils.parseEther('1000'));
+      await injectFakeProfits(strategyContract, eth('1000'));
       await finalizeStrategy(strategyContract);
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();

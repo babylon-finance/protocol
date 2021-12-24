@@ -92,8 +92,8 @@ async function depositFunds(address, garden) {
       whaleSigner = await impersonateAddress(whaleAddress);
       const DAI = await getERC20(addresses.tokens.DAI);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await DAI.connect(signer3).approve(garden.address, ethers.utils.parseEther('10000'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(ethers.utils.parseEther('5000'), 1, signer3.getAddress(), false);
+      await DAI.connect(signer3).approve(garden.address, eth('10000'), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(eth('5000'), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.USDC.toLowerCase():
       whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503';
@@ -124,8 +124,8 @@ async function depositFunds(address, garden) {
       whaleSigner = await impersonateAddress(whaleAddress);
       const BABL = await getERC20(addresses.tokens.BABL);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await BABL.connect(signer3).approve(garden.address, ethers.utils.parseEther('30'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(ethers.utils.parseEther('30'), 1, signer3.getAddress(), false);
+      await BABL.connect(signer3).approve(garden.address, eth('30'), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(eth('30'), 1, signer3.getAddress(), false);
       break;
   }
 }
@@ -140,13 +140,13 @@ async function transferFunds(address) {
       whaleSigner = await impersonateAddress(whaleAddress);
       const BABL = await getERC20(addresses.tokens.BABL);
 
-      await BABL.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('30'), {
+      await BABL.connect(whaleSigner).transfer(signer1.address, eth('30'), {
         gasPrice: 0,
       });
-      await BABL.connect(whaleSigner).transfer(signer2.address, ethers.utils.parseEther('30'), {
+      await BABL.connect(whaleSigner).transfer(signer2.address, eth('30'), {
         gasPrice: 0,
       });
-      await BABL.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('30'), {
+      await BABL.connect(whaleSigner).transfer(signer3.address, eth('30'), {
         gasPrice: 0,
       });
       break;
@@ -155,13 +155,13 @@ async function transferFunds(address) {
       whaleSigner = await impersonateAddress(whaleAddress);
       const DAI = await getERC20(addresses.tokens.DAI);
 
-      await DAI.connect(whaleSigner).transfer(signer1.address, ethers.utils.parseEther('20000'), {
+      await DAI.connect(whaleSigner).transfer(signer1.address, eth('20000'), {
         gasPrice: 0,
       });
-      await DAI.connect(whaleSigner).transfer(signer2.address, ethers.utils.parseEther('10000'), {
+      await DAI.connect(whaleSigner).transfer(signer2.address, eth('10000'), {
         gasPrice: 0,
       });
-      await DAI.connect(whaleSigner).transfer(signer3.address, ethers.utils.parseEther('10000'), {
+      await DAI.connect(whaleSigner).transfer(signer3.address, eth('10000'), {
         gasPrice: 0,
       });
       break;

@@ -37,6 +37,7 @@ async function setUpFixture(
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
   const harvestV3VaultIntegration = await getContract('HarvestPoolV3Integration');
+  const harvestV3StakeIntegration = await getContract('HarvestV3StakeIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
@@ -85,11 +86,11 @@ async function setUpFixture(
       'http...',
       0,
       gardenParams,
-      ethers.utils.parseEther('1'),
+      eth('1'),
       [false, false, false],
       [0, 0, 0],
       {
-        value: ethers.utils.parseEther('1'),
+        value: eth('1'),
       },
     );
   await babController
@@ -101,11 +102,11 @@ async function setUpFixture(
       'http...',
       1,
       gardenParams,
-      ethers.utils.parseEther('1'),
+      eth('1'),
       [false, false, false],
       [0, 0, 0],
       {
-        value: ethers.utils.parseEther('1'),
+        value: eth('1'),
       },
     );
 
@@ -118,11 +119,11 @@ async function setUpFixture(
       'http...',
       2,
       gardenParams,
-      ethers.utils.parseEther('1'),
+      eth('1'),
       [false, false, false],
       [0, 0, 0],
       {
-        value: ethers.utils.parseEther('1'),
+        value: eth('1'),
       },
     );
 
@@ -135,11 +136,11 @@ async function setUpFixture(
       'http...',
       3,
       gardenParams,
-      ethers.utils.parseEther('1'),
+      eth('1'),
       [false, false, false],
       [0, 0, 0],
       {
-        value: ethers.utils.parseEther('1'),
+        value: eth('1'),
       },
     );
 
@@ -209,6 +210,7 @@ async function setUpFixture(
     aaveLendIntegration,
     aaveBorrowIntegration,
     harvestV3VaultIntegration,
+    harvestV3StakeIntegration,
     lidoIntegration,
     babViewer,
     timelockController,

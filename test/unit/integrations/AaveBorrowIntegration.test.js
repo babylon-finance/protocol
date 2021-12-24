@@ -96,13 +96,6 @@ describe('AaveBorrowIntegrationTest', function () {
     WETH = await getERC20(addresses.tokens.WETH);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await aaveBorrowIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
-  });
-
   describe('gets NAV', function () {
     it(`gets NAV of a borrow/lend strategy at WETH Garden`, async function () {
       const garden = await createGarden({});
@@ -118,7 +111,7 @@ describe('AaveBorrowIntegrationTest', function () {
       await executeStrategy(strategyContract);
 
       const nav = await strategyContract.getNAV();
-      expect(nav).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(10));
+      expect(nav).to.be.closeTo(eth('1'), eth('1').div(10));
     });
   });
 

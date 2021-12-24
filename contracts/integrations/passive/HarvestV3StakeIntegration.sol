@@ -23,31 +23,25 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
+import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IBooster} from '../../interfaces/external/convex/IBooster.sol';
-import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
+import {IHarvestV3Stake} from '../../interfaces/external/harvest/IHarvestV3Stake.sol';
 
 /**
- * @title ConvexStakeIntegration
+ * @title HarvestV3StakeIntegration
  * @author Babylon Finance Protocol
  *
- * Lido Integration
+ * Harvest V3 Stake Integration
  */
-contract ConvexStakeIntegration is PassiveIntegration {
+contract HarvestV3StakeIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
-
-    IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
-    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
-
-    mapping(address => uint256) private cacheConvexTokenToPid;
-    uint256 private elementsCached = 0;
 
     /* ============ Constructor ============ */
 
@@ -56,52 +50,14 @@ contract ConvexStakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('convex_v2', _controller) {
-        _updateCache();
-    }
-
-    /**
-     * Gets the PID in convex of a convex lp token
-     * @param _asset                         Address of the convex lp token
-     * @return uint256                       Pid of the pool in convex
-     */
-    function getPid(address _asset) public view returns (bool, uint256) {
-        if (cacheConvexTokenToPid[_asset] > 0) {
-            return (true, cacheConvexTokenToPid[_asset] - 1);
-        }
-        uint256 poolLength = booster.poolLength();
-        if (elementsCached >= poolLength) {
-            return (false, 0);
-        }
-        for (uint256 i = elementsCached; i < poolLength; i++) {
-            (, address token, , , , ) = booster.poolInfo(i);
-            if (token == _asset) {
-                return (true, i);
-            }
-        }
-        return (false, 0);
-    }
+    constructor(IBabController _controller) PassiveIntegration('harvest_stake_v3', _controller) {}
 
     /* ============ Internal Functions ============ */
-
-    function _updateCache() public {
-        uint256 poolLength = booster.poolLength();
-        if (elementsCached >= poolLength) {
-            return;
-        }
-        for (uint256 i = elementsCached; i < poolLength; i++) {
-            (, address token, , , , ) = booster.poolInfo(i);
-            cacheConvexTokenToPid[token] = i + 1;
-        }
-        elementsCached = poolLength;
-    }
-
-    function _getSpender(address _asset, uint8 _op) internal view override returns (address) {
-        if (_op == 0) {
-            return address(booster);
-        }
-        // Reward pool
-        return _getRewardPool(_asset);
+    function _getSpender(
+        address _stakingPool,
+        uint8 /* _op */
+    ) internal pure override returns (address) {
+        return _stakingPool;
     }
 
     function _getExpectedShares(
@@ -118,9 +74,11 @@ contract ConvexStakeIntegration is PassiveIntegration {
     }
 
     function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
-        (bool found, uint256 pid) = getPid(_asset);
-        require(found, 'Pid not found');
-        (lptoken, , , , , ) = booster.poolInfo(pid);
+        return IHarvestV3Stake(_asset).lpToken();
+    }
+
+    function _getResultAsset(address _investment) internal view virtual override returns (address) {
+        return _investment;
     }
 
     /**
@@ -152,11 +110,11 @@ contract ConvexStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        (bool found, uint256 pid) = getPid(_asset);
-        require(found, 'Convex pool does not exist');
+        address lpToken = _getInvestmentAsset(_asset);
+        require(lpToken != address(0), 'Harvest V3 Stake pool does not exist');
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', pid, _maxAmountIn, true);
-        return (address(booster), 0, methodData);
+        bytes memory methodData = abi.encodeWithSignature('stake(uint256)', _maxAmountIn);
+        return (_asset, 0, methodData);
     }
 
     /**
@@ -180,7 +138,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
         uint256 /* _minAmountOut */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -189,25 +147,44 @@ contract ConvexStakeIntegration is PassiveIntegration {
         )
     {
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdrawAndUnwrap(uint256,bool)', _investmentTokensIn, true);
+        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
         // Go through the reward pool instead of the booster
-        return (_getRewardPool(_asset), 0, methodData);
+        return (_asset, 0, methodData);
     }
 
-    function _getRewardPool(address _asset) private view returns (address reward) {
-        (bool found, uint256 pid) = getPid(_asset);
-        require(found, 'Pid not found');
-        (, , , reward, , ) = booster.poolInfo(pid);
-    }
-
-    function _getResultAsset(address _investment) internal view virtual override returns (address) {
-        return _getRewardPool(_investment);
-    }
-
-    function _getConvexLPToken(address _asset) private view returns (address token) {
-        (bool found, uint256 pid) = getPid(_asset);
-        require(found, 'Pid not found');
-        (, token, , , , ) = booster.poolInfo(pid);
+    /**
+     * Return exit investment calldata to execute after exit if any
+     *
+     * @param  _pool                           Address of the reward pool
+     * hparam  _amount                         Amount of tokens
+     * @param  _passiveOp                      enter is 0, exit is 1
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getPostActionCallData(
+        address _pool,
+        uint256, /* _amount */
+        uint256 _passiveOp
+    )
+        internal
+        pure
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        // Don't do anything on enter
+        if (_passiveOp == 0) {
+            return (address(0), 0, bytes(''));
+        }
+        // Withdraw all and claim
+        bytes memory methodData = abi.encodeWithSignature('getAllRewards()');
+        // Go through the reward pool instead of the booster
+        return (_pool, 0, methodData);
     }
 
     function _getRewards(address _strategy, address _asset)
@@ -216,21 +193,19 @@ contract ConvexStakeIntegration is PassiveIntegration {
         override
         returns (address token, uint256 balance)
     {
-        IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
+        IHarvestV3Stake pool = IHarvestV3Stake(_asset);
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = rewards.earned(_strategy).mul(2); // * 2 accounts roughly for CVX
-        // add extra rewards and convert to reward token
-        uint256 extraRewardsLength = rewards.extraRewardsLength();
-        if (extraRewardsLength > 0) {
-            for (uint256 i = 0; i < extraRewardsLength; i++) {
-                IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
+        address reserveAsset = IGarden(IStrategy(_strategy).garden()).reserveAsset();
+        uint256 rewardsLength = pool.rewardTokensLength();
+        uint256 totalAmount = 0;
+        if (rewardsLength > 0) {
+            for (uint256 i = 0; i < rewardsLength; i++) {
+                uint256 rewardAmount = pool.earned(i, _strategy);
                 totalAmount = totalAmount.add(
-                    oracle.getPrice(rewards.extraRewards(i), extraRewards.rewardToken()).preciseMul(
-                        extraRewards.earned(_strategy)
-                    )
+                    oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
                 );
             }
         }
-        return (rewards.rewardToken(), totalAmount);
+        return (reserveAsset, totalAmount);
     }
 }

@@ -23,6 +23,10 @@ interface ICurveRegistry {
 
     function is_meta(address _pool) external view returns (bool);
 
+    function pool_count() external view returns (uint256);
+
+    function pool_list(uint256 i) external view returns (address);
+
     function get_pool_name(address _pool) external view returns (string memory);
 
     function get_A(address _pool) external view returns (uint256);

@@ -4,7 +4,7 @@ const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20 } = require('utils/test-helpers');
 const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('ConvexStakeIntegrationTest', function () {
@@ -15,14 +15,38 @@ describe('ConvexStakeIntegrationTest', function () {
   let signer3;
 
   // Used to create addresses info. do not remove
-  // async function logConvexPools() {
-  //   const convexpools = await Promise.all(
-  //     [...Array(40).keys()].map(async (pid) => {
-  //       return await createConvexPoolInfo(pid);
-  //     }),
-  //   );
-  //   console.log(convexpools.filter((c) => c));
-  // }
+  async function logConvexPools() {
+    const convexpools = await Promise.all(
+      [...Array(40).keys()].map(async (pid) => {
+        return await createConvexPoolInfo(pid);
+      }),
+    );
+    console.log(convexpools.filter((c) => c));
+  }
+
+  async function createConvexPoolInfo(pid) {
+    const crvAddressProvider = await ethers.getContractAt(
+      'ICurveAddressProvider',
+      '0x0000000022d53366457f9d5e68ec105046fc4383',
+    );
+    const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
+    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
+    const poolInfo = await convexBooster.poolInfo(pid);
+    const crvLpTokens = await Promise.all(
+      Object.values(addresses.curve.pools.v3).map(async (address) => {
+        return await crvRegistry.get_lp_token(address);
+      }),
+    );
+    const foundIndex = crvLpTokens.findIndex((e) => e === poolInfo[0]);
+    if (foundIndex > -1) {
+      return {
+        name: Object.keys(addresses.curve.pools.v3)[foundIndex],
+        crvpool: Object.values(addresses.curve.pools.v3)[foundIndex],
+        cvxpool: poolInfo[1],
+      };
+    }
+  }
+
   // logConvexPools();
   // const pools = [
   // {
@@ -42,38 +66,8 @@ describe('ConvexStakeIntegrationTest', function () {
   //   },
   // ];
 
-  // async function createConvexPoolInfo(pid) {
-  //   const crvAddressProvider = await ethers.getContractAt(
-  //     'ICurveAddressProvider',
-  //     '0x0000000022d53366457f9d5e68ec105046fc4383',
-  //   );
-  //   const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
-  //   const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
-  //   const poolInfo = await convexBooster.poolInfo(pid);
-  //   const crvLpTokens = await Promise.all(
-  //     Object.values(addresses.curve.pools.v3).map(async (address) => {
-  //       return await crvRegistry.get_lp_token(address);
-  //     }),
-  //   );
-  //   const foundIndex = crvLpTokens.findIndex((e) => e === poolInfo[0]);
-  //   if (foundIndex > -1) {
-  //     return {
-  //       name: Object.keys(addresses.curve.pools.v3)[foundIndex],
-  //       crvpool: Object.values(addresses.curve.pools.v3)[foundIndex],
-  //       cvxpool: poolInfo[1],
-  //     };
-  //   }
-  // }
-
   beforeEach(async () => {
     ({ curvePoolIntegration, convexStakeIntegration, signer1, signer2, signer3 } = await setupTests()());
-  });
-
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await convexStakeIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
   });
 
   describe('Convex Stake Multigarden multiasset', function () {
@@ -124,6 +118,7 @@ describe('ConvexStakeIntegrationTest', function () {
       [crvpool, 0, cvxpool, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token];
+    const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
@@ -140,7 +135,11 @@ describe('ConvexStakeIntegrationTest', function () {
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await convexRewardToken.balanceOf(strategyContract.address)).to.equal(0);
 
-    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gt(balanceBeforeExiting);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
+      balanceBeforeExecuting,
+      balanceBeforeExecuting.div(50),
+    );
   }
 
   async function tryDepositAndStakeStrategy(crvpool, cvxpool, token) {
