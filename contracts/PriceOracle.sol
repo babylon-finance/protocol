@@ -492,7 +492,6 @@ contract PriceOracle is IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
-        console.log('get price', _tokenIn, _tokenOut);
         uint256 exchangeRate;
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
@@ -539,35 +538,39 @@ contract PriceOracle is IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // Direct curve pair
         price = _checkPairThroughCurve(_tokenIn, _tokenOut);
-        console.log('oracle', _tokenIn, _tokenOut, price);
         if (price != 0) {
             return price;
         }
 
         // Curve LP tokens
 
-        address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-        if (crvPool != address(0)) {
-            address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-            uint256 lpTokenPrice;
-            if (_tokenIn != TRI_CURVE_POOL_2_LP) {
-              lpTokenPrice = curveRegistry.get_virtual_price_from_lp_token(_tokenIn);
-            } else {
-              lpTokenPrice = IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
-            }
-            return lpTokenPrice.preciseMul(getPrice(denominator, _tokenOut));
+        if (_tokenIn != TRI_CURVE_POOL_2_LP) {
+          address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+          console.log('_tokenIn', _tokenIn, _tokenOut, crvPool);
+          if (crvPool != address(0)) {
+              address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+              return
+                  curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
+                      getPrice(denominator, _tokenOut)
+                  );
+          }
+        } else {
+          // TRI2
+          return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(getPrice(DAI, _tokenOut));
         }
-
-        crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
-        if (crvPool != address(0)) {
-            address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-            uint256 lpTokenPrice;
-            if (_tokenOut != TRI_CURVE_POOL_2_LP) {
-              lpTokenPrice = curveRegistry.get_virtual_price_from_lp_token(_tokenOut);
-            } else {
-              lpTokenPrice = IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
+        // Token out is a curve lp
+        if (_tokenOut != TRI_CURVE_POOL_2_LP) {
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                return
+                    getPrice(_tokenIn, denominator).preciseDiv(
+                        curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
+                    );
             }
-            return getPrice(_tokenIn, denominator).preciseDiv(lpTokenPrice);
+        } else {
+          // TRI2
+          return getPrice(_tokenIn, DAI).preciseDiv(IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price());
         }
 
         // Yearn vaults
@@ -844,7 +847,7 @@ contract PriceOracle is IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (_curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46) {
+        if (_curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 || _curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5) {
             price = ICurvePoolV3(_curvePool).get_dy(
                 uint256(i),
                 uint256(j),
