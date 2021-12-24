@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -33,6 +34,7 @@ import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRat
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
 import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
@@ -73,7 +75,7 @@ contract PriceOracle is IPriceOracle {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    address private constant TRI_CURVE_POOL = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
+    address private constant TRI_CURVE_POOL_2_LP = 0x903C9974aAA431A765e60bC07aF45f0A1B3b61fb;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -490,6 +492,7 @@ contract PriceOracle is IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+        console.log('get price', _tokenIn, _tokenOut);
         uint256 exchangeRate;
         // Comp assets
         if (cTokenToAsset[_tokenIn] != address(0)) {
@@ -536,31 +539,35 @@ contract PriceOracle is IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // Direct curve pair
         price = _checkPairThroughCurve(_tokenIn, _tokenOut);
-
+        console.log('oracle', _tokenIn, _tokenOut, price);
         if (price != 0) {
             return price;
         }
 
         // Curve LP tokens
-        if (_tokenIn != TRI_CURVE_POOL) {
-            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-            if (crvPool != address(0)) {
-                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                return
-                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
-                        getPrice(denominator, _tokenOut)
-                    );
+
+        address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+        if (crvPool != address(0)) {
+            address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+            uint256 lpTokenPrice;
+            if (_tokenIn != TRI_CURVE_POOL_2_LP) {
+              lpTokenPrice = curveRegistry.get_virtual_price_from_lp_token(_tokenIn);
+            } else {
+              lpTokenPrice = IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
             }
+            return lpTokenPrice.preciseMul(getPrice(denominator, _tokenOut));
         }
-        if (_tokenOut != TRI_CURVE_POOL) {
-            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
-            if (crvPool != address(0)) {
-                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                return
-                    getPrice(_tokenIn, denominator).preciseDiv(
-                        curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
-                    );
+
+        crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+        if (crvPool != address(0)) {
+            address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+            uint256 lpTokenPrice;
+            if (_tokenOut != TRI_CURVE_POOL_2_LP) {
+              lpTokenPrice = curveRegistry.get_virtual_price_from_lp_token(_tokenOut);
+            } else {
+              lpTokenPrice = IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
             }
+            return getPrice(_tokenIn, denominator).preciseDiv(lpTokenPrice);
         }
 
         // Yearn vaults
@@ -837,7 +844,7 @@ contract PriceOracle is IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (_curvePool == TRI_CURVE_POOL) {
+        if (_curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46) {
             price = ICurvePoolV3(_curvePool).get_dy(
                 uint256(i),
                 uint256(j),

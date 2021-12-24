@@ -18,13 +18,6 @@ describe.skip('HarvestStakeIntegrationTest', function () {
     ({ harvestV3VaultIntegration, harvestV3StakeIntegration, signer1, signer2, signer3 } = await setupTests()());
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await harvestV3StakeIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
-  });
-
   describe('Harvest Stake Multigarden multiasset', function () {
     [
       { token: addresses.tokens.WETH, nameT: 'WETH' },

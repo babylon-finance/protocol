@@ -46,18 +46,34 @@ describe('ConvexStakeIntegrationTest', function () {
       };
     }
   }
+<<<<<<< HEAD
 
   // logConvexPools();
 
+=======
+
+  // logConvexPools();
+  // const pools = [
+  // {
+  //   crvpool: '0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7',
+  //   cvxpool: '0x30d9410ed1d5da1f6c8391af5338c93ab8d4035c',
+  //   name: 'tripool',
+  // },
+  // {
+  //   crvpool: '0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56',
+  //   cvxpool: '0x32512Bee3848bfcBb7bEAf647aa697a100f3b706',
+  //   name: 'compound',
+  // },
+  //   {
+  //     crvpool: '0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C',
+  //     cvxpool: '0xA1c3492b71938E144ad8bE4c2fB6810b01A43dD8',
+  //     name: 'usdt',
+  //   },
+  // ];
+
+>>>>>>> 68572eab4d4c8962755941cfabef7c6dd53adbb2
   beforeEach(async () => {
     ({ curvePoolIntegration, convexStakeIntegration, signer1, signer2, signer3 } = await setupTests()());
-  });
-
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const lendDeployed = await convexStakeIntegration.deployed();
-      expect(!!lendDeployed).to.equal(true);
-    });
   });
 
   describe('Convex Stake Multigarden multiasset', function () {

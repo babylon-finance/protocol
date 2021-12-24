@@ -30,13 +30,6 @@ describe('CompoundLendIntegrationTest', function () {
     WETH = await getERC20(addresses.tokens.WETH);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const compoundLendDeployed = await compoundLendIntegration.deployed();
-      expect(!!compoundLendDeployed).to.equal(true);
-    });
-  });
-
   describe('Compound Lend', function () {
     it('can supply to valid cToken', async function () {
       expect(await compoundLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
@@ -95,15 +88,9 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
       await finalizeStrategy(strategyContract);
-      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(
-        ethers.utils.parseEther('0'),
-        ethers.utils.parseEther('0.01'),
-      );
+      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(eth('0'), eth('0.01'));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await strategyContract.capitalReturned()).to.be.closeTo(
-        ethers.utils.parseEther('1'),
-        ethers.utils.parseEther('0.01'),
-      );
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(eth('1'), eth('0.01'));
     });
 
     it('can supply and get NAV including rewards', async function () {
@@ -122,7 +109,7 @@ describe('CompoundLendIntegrationTest', function () {
       increaseTime(ONE_DAY_IN_SECONDS);
       const NAV = await strategyContract.getNAV();
       const compAccrued = await compoundLendIntegration.getRewardsAccrued(strategyContract.address);
-      expect(NAV.sub(compAccrued)).to.be.closeTo(ethers.utils.parseEther('1'), ethers.utils.parseEther('1').div(100));
+      expect(NAV.sub(compAccrued)).to.be.closeTo(eth('1'), eth('1').div(100));
     });
   });
 });
