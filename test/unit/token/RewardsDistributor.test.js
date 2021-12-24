@@ -1641,11 +1641,10 @@ describe('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await executeStrategy(long1, ONE_ETH);
-      const gardenBalance1 = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
-      const gardenBalance2 = await garden1.totalSupply();
+      const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1658,9 +1657,8 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
-      const avgGardenBalance = gardenBalance1.mul(1).div(4).add(gardenBalance2.mul(3).div(4));
-      const precalculatedSigner1Share = eth(3).mul(eth()).div(avgGardenBalance);
-      const precalculatedSigner3Share = eth(1).mul(eth()).div(avgGardenBalance);
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, precalculatedSigner1Share.div(100)); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(
         precalculatedSigner3Share.mul(3).div(4),
@@ -1672,11 +1670,10 @@ describe('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await executeStrategy(long1, ONE_ETH);
-      const gardenBalance1 = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
-      const gardenBalance2 = await garden1.totalSupply();
+      const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1689,9 +1686,8 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
-      const avgGardenBalance = gardenBalance1.mul(1).div(2).add(gardenBalance2.mul(1).div(2));
-      const precalculatedSigner1Share = eth(3).mul(eth()).div(avgGardenBalance);
-      const precalculatedSigner3Share = eth(1).mul(eth()).div(avgGardenBalance);
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(2), eth('0.001'));
     });
@@ -1700,11 +1696,10 @@ describe('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await executeStrategy(long1, ONE_ETH);
-      const gardenBalance1 = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
-      const gardenBalance2 = await garden1.totalSupply();
+      const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1717,9 +1712,8 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
-      const avgGardenBalance = gardenBalance1.mul(3).div(4).add(gardenBalance2.mul(1).div(4));
-      const precalculatedSigner1Share = eth(3).mul(eth()).div(avgGardenBalance);
-      const precalculatedSigner3Share = eth(1).mul(eth()).div(avgGardenBalance);
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(precalculatedSigner3Share.div(4), eth('0.001'));
     });
@@ -1728,10 +1722,10 @@ describe('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await executeStrategy(long1, ONE_ETH);
-      const gardenBalance1 = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      const gardenBalance = await garden1.totalSupply();
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
         garden1.address,
@@ -1743,8 +1737,8 @@ describe('RewardsDistributor', function () {
         signer3.address,
         long1.address,
       );
-      // Note: We use gardenBalance1 as most of the strategy duration had such supply
-      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance1);
+      const precalculatedSigner1Share = eth(3).mul(eth()).div(gardenBalance);
+      // const precalculatedSigner3Share = eth(1).mul(eth()).div(gardenBalance);
       expect(signer1ShareLong1).to.be.closeTo(precalculatedSigner1Share, eth('0.001')); // it has penalty
       expect(signer3ShareLong1).to.be.closeTo(eth(0), eth('0.0000001'));
     });
@@ -1764,13 +1758,13 @@ describe('RewardsDistributor', function () {
         .withdraw(await garden1.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO, {
           gasPrice: 0,
         });
-      const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const estimatedSigner3BABL4 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       // join again the garden just before finalization
       await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
       await increaseTime(1);
       const estimatedSigner3BABL5 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
+      const gardenBalance = await garden1.totalSupply();
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
         garden1.address,
