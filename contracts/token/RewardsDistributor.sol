@@ -117,6 +117,16 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant DECAY_RATE = 12e16;
     // Duration of its EPOCH in days  // BABL & profits split from the protocol
     uint256 private constant EPOCH_DURATION = 90 days;
+    // DAI normalize asset
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    // Reentrancy guard countermeasure
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
+    // NFT Prophets
+    IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+
+    /* ============ State Variables ============ */
 
     // solhint-disable-next-line
     uint256 private START_TIME; // Starting time of the rewards distribution
@@ -137,13 +147,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private profitProtocolFee;
     // solhint-disable-next-line
     uint256 private gardenCreatorBonus;
-
-    // DAI normalize asset
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
-    // Reentrancy guard countermeasure
-    uint256 private constant NOT_ENTERED = 1;
-    uint256 private constant ENTERED = 2;
 
     /* ============ Structs ============ */
 
@@ -259,8 +262,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
-
-    IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     // A record of garden token checkpoints for each address of each garden, by index
     // garden -> address -> index checkpoint -> checkpoint struct data
