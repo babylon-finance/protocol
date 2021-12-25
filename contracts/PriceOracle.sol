@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -546,7 +545,6 @@ contract PriceOracle is IPriceOracle {
 
         if (_tokenIn != TRI_CURVE_POOL_2_LP) {
           address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-          console.log('_tokenIn', _tokenIn, _tokenOut, crvPool);
           if (crvPool != address(0)) {
               address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
               return
