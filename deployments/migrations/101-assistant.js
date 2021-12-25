@@ -22,12 +22,14 @@ module.exports = async ({
     },
   );
 
-  console.log('Verify on Etherscan');
-  await hre.run('verify:verify', {
-    contract: 'contracts/governance/Assistant.sol:Assistant',
-    address: (await deployments.get('Assistant')).address,
-    constructorArguments: [],
-  });
+  if (network.live && deployment.newlyDeployed) {
+    console.log('Verify on Etherscan');
+    await hre.run('verify:verify', {
+      contract: 'contracts/governance/Assistant.sol:Assistant',
+      address: (await deployments.get('Assistant')).address,
+      constructorArguments: [],
+    });
+  }
 };
 
 module.exports.tags = ['Assistant'];
