@@ -544,17 +544,18 @@ contract PriceOracle is IPriceOracle {
         // Curve LP tokens
 
         if (_tokenIn != TRI_CURVE_POOL_2_LP) {
-          address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-          if (crvPool != address(0)) {
-              address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-              return
-                  curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
-                      getPrice(denominator, _tokenOut)
-                  );
-          }
+            address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                return
+                    curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
+                        getPrice(denominator, _tokenOut)
+                    );
+            }
         } else {
-          // TRI2
-          return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(getPrice(DAI, _tokenOut));
+            // TRI2
+            return
+                IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(getPrice(DAI, _tokenOut));
         }
         // Token out is a curve lp
         if (_tokenOut != TRI_CURVE_POOL_2_LP) {
@@ -567,8 +568,8 @@ contract PriceOracle is IPriceOracle {
                     );
             }
         } else {
-          // TRI2
-          return getPrice(_tokenIn, DAI).preciseDiv(IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price());
+            // TRI2
+            return getPrice(_tokenIn, DAI).preciseDiv(IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price());
         }
 
         // Yearn vaults
@@ -845,7 +846,10 @@ contract PriceOracle is IPriceOracle {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (_curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 || _curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5) {
+        if (
+            _curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 ||
+            _curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5
+        ) {
             price = ICurvePoolV3(_curvePool).get_dy(
                 uint256(i),
                 uint256(j),

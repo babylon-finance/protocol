@@ -268,7 +268,7 @@ async function executeStrategy(
       .connect(signers[1])
       .executeStrategy(amount, fee, {
         gasPrice,
-        gasLimit
+        gasLimit,
       })
   );
 }
