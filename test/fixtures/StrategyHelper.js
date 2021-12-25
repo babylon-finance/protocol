@@ -252,6 +252,7 @@ async function executeStrategy(
     amount = 0,
     fee = 0,
     gasPrice = 0,
+    gasLimit = 9500000,
   } = {},
 ) {
   const garden = await strategy.garden();
@@ -267,6 +268,7 @@ async function executeStrategy(
       .connect(signers[1])
       .executeStrategy(amount, fee, {
         gasPrice,
+        gasLimit
       })
   );
 }
@@ -282,6 +284,7 @@ async function finalizeStrategy(
     /* Strategy default duration */
     time = ONE_DAY_IN_SECONDS * 30,
     gasPrice = 0,
+    gasLimit = 9500000,
   } = {},
 ) {
   const signers = await ethers.getSigners();
@@ -292,7 +295,7 @@ async function finalizeStrategy(
     strategy
       // use keeper
       .connect(signers[1])
-      .finalizeStrategy(fee, NFT_ADDRESS, { gasPrice })
+      .finalizeStrategy(fee, NFT_ADDRESS, { gasPrice, gasLimit })
   );
 }
 
