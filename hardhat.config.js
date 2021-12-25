@@ -27,6 +27,7 @@ require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/upgrade-multisig');
+require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
