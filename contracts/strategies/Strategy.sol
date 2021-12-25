@@ -120,7 +120,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
         }
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
-        _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
+        _require(
+            isIntegration ||
+                _address == 0xccE114848A694152Ba45a8caff440Fcb12f73862 ||
+                masterSwapper.isTradeIntegration(_address),
+            Errors.ONLY_INTEGRATION
+        );
     }
 
     function _onlyUnpaused() private view {
