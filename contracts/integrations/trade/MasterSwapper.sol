@@ -309,6 +309,22 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 error = _err;
             }
         }
+        // Try Univ3 through USDC
+        if (_sendToken != USDC && _receiveToken != USDC) {
+            uint256 sendBalance = _getTokenOrETHBalance(_strategy, USDC);
+            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, USDC, 1) {
+                sendBalance = _getTokenOrETHBalance(_strategy, USDC).sub(sendBalance);
+                try ITradeIntegration(univ3).trade(_strategy, USDC, sendBalance, _receiveToken, _minReceiveQuantity) {
+                    return;
+                } catch Error(string memory _err) {
+                    error = _err;
+                    // Revert trade
+                    ITradeIntegration(univ3).trade(_strategy, USDC, sendBalance, _sendToken, 1);
+                }
+            } catch Error(string memory _err) {
+                error = _err;
+            }
+        }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
