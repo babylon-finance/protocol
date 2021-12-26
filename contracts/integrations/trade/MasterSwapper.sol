@@ -149,14 +149,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     /**
-     * Executes a trade choosing the appropriate protocol for it
      * @dev
-     *
-     * @param _strategy             Address of the strategy
-     * @param _sendToken            Address of the token to be sent to the exchange
-     * @param _sendQuantity         Units of reserve asset token sent to the exchange
-     * @param _receiveToken         Address of the token that will be received from the exchange
-     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
+     *   Should be never called. Only implemented to satisfy ITradeIntegration
      */
     function trade(
         address _strategy,
@@ -166,7 +160,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity,
         address _hopToken
     ) public override nonReentrant {
-        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        revert('no impl');
     }
 
     /**
