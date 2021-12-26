@@ -337,7 +337,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _sendQuantity,
                     _receiveToken,
                     _minReceiveQuantity,
-                    DAI
+                    USDC
                 )
             {
                 return;
