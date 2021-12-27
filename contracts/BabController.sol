@@ -585,44 +585,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         return _state;
     }
 
-    /**
-     * Sends 5k BABL to Harvest ETH/BABL vault
-     * Sends 500 BABL to Harvest multisig a a reward
-     * Deposits 250 ETH and 7500 BABL to Hypervisor to provide liquidity on UniV3
-     * Sends the remainng funds to treasury
-     * total 250000000000000000000 ETH
-     * total 16000000000000000000000 BABL
-     */
-    function startLiquidity() external onlyOwner {
-        uint256 ethAmount = 250000000000000000000;
-        uint256 bablAmount = 7500000000000000000000;
-
-        address harvestVault = 0xF49440C1F012d041802b25A73e5B0B9166a75c02;
-        // transfer 5000 + 5000 BABL to Harvest for Vault and fee
-        BABL.safeTransfer(harvestVault, 5000e18 + 500e18);
-        require(BABL.balanceOf(harvestVault) == 5500e18);
-
-        // deposit ETH/BABL to Hypervisor to start UniV3 liquidity
-        // token0 WETH; token1 BABL
-        IHypervisor visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
-        IERC20(WETH).safeApprove(address(visor), ethAmount);
-        BABL.safeApprove(address(visor), bablAmount);
-        IWETH(WETH).deposit{value: ethAmount}();
-
-        uint256 shares = visor.deposit(ethAmount, bablAmount, treasury);
-        require(shares == visor.balanceOf(treasury) && visor.balanceOf(treasury) > 0, 'Not enough lp tokens');
-
-        // add BABL as reserve assets
-        require(!validReserveAsset[address(BABL)], 'Reserve asset already added');
-        validReserveAsset[address(BABL)] = true;
-        reserveAssets.push(address(BABL));
-        emit ReserveAssetAdded(address(BABL));
-
-        // send the rest of the funds back to treasury
-        Address.sendValue(payable(treasury), address(this).balance);
-        BABL.safeTransfer(treasury, BABL.balanceOf(address(this)));
-    }
-
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
