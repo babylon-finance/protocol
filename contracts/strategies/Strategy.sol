@@ -44,6 +44,8 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title Strategy
  * @author Babylon Finance
@@ -521,7 +523,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override {
         _onlyIntegration(msg.sender);
         _onlyUnpaused();
-        IERC20(_asset).approve(_spender, _quantity);
+        /**
+         * Have to set it to 0 first, because there are some terrible tokens
+         * like USDT which will revert on allowance increase
+         * https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7#code
+         */
+        IERC20(_asset).safeApprove(_spender, 0);
+        IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
     /**

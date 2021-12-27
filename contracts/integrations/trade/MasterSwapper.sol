@@ -155,12 +155,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      *   Should be never called. Only implemented to satisfy ITradeIntegration
      */
     function trade(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity,
-        address _hopToken
+        address,
+        address,
+        uint256,
+        address,
+        uint256,
+        address
     ) public override nonReentrant {
         revert('no impl');
     }
@@ -308,35 +308,35 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         // Try Univ3 through DAI
-            try
-                ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    DAI
-                )
-            {
-                return;
-            } catch Error(string memory _err) {
-                error = _err;
-            }
+        try
+            ITradeIntegration(univ3).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                DAI
+            )
+        {
+            return;
+        } catch Error(string memory _err) {
+            error = _err;
+        }
         // Try Univ3 through USDC
-            try
-                ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    USDC
-                )
-            {
-                return;
-            } catch Error(string memory _err) {
-                error = _err;
-            }
+        try
+            ITradeIntegration(univ3).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                USDC
+            )
+        {
+            return;
+        } catch Error(string memory _err) {
+            error = _err;
+        }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
