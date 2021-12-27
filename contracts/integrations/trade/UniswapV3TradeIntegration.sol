@@ -73,7 +73,8 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        address _hopToken
     )
         internal
         view
@@ -85,13 +86,13 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         )
     {
         bytes memory path;
-        if (_sendToken == WETH || _receiveToken == WETH) {
+        if (_hopToken == address(0) || _sendToken == _hopToken || _receiveToken == _hopToken) {
             (, uint24 fee) = _getUniswapPoolWithHighestLiquidity(_sendToken, _receiveToken);
             path = abi.encodePacked(_sendToken, fee, _receiveToken);
         } else {
-            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, WETH);
-            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_receiveToken, WETH);
-            path = abi.encodePacked(_sendToken, fee0, WETH, fee1, _receiveToken);
+            (, uint24 fee0) = _getUniswapPoolWithHighestLiquidity(_sendToken, _hopToken);
+            (, uint24 fee1) = _getUniswapPoolWithHighestLiquidity(_receiveToken, _hopToken);
+            path = abi.encodePacked(_sendToken, fee0, _hopToken, fee1, _receiveToken);
         }
         ISwapRouter.ExactInputParams memory params =
             ISwapRouter.ExactInputParams(
@@ -104,6 +105,32 @@ contract UniswapV3TradeIntegration is TradeIntegration {
 
         bytes memory callData = abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
         return (swapRouter, 0, callData);
+    }
+
+    /**
+     * Executes the trade through UniswapV3.
+     *
+     * @param _strategy             Address of the strategy
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
+     */
+    function _getTradeCallData(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return _getTradeCallData(_strategy, _sendToken, _sendQuantity, _receiveToken, WETH);
     }
 
     /**
