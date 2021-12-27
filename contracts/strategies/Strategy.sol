@@ -521,7 +521,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override {
         _onlyIntegration(msg.sender);
         _onlyUnpaused();
-        IERC20(_asset).safeApprove(_spender, _quantity);
+        IERC20(_asset).approve(_spender, _quantity);
     }
 
     /**
