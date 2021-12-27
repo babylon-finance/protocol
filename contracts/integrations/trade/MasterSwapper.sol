@@ -38,6 +38,8 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title MasterSwapper
  * @author Babylon Finance Protocol
@@ -306,7 +308,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         // Try Univ3 through DAI
-        if (_sendToken != DAI && _receiveToken != DAI) {
             try
                 ITradeIntegration(univ3).trade(
                     _strategy,
@@ -321,9 +322,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             } catch Error(string memory _err) {
                 error = _err;
             }
-        }
         // Try Univ3 through USDC
-        if (_sendToken != USDC && _receiveToken != USDC) {
             try
                 ITradeIntegration(univ3).trade(
                     _strategy,
@@ -338,7 +337,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             } catch Error(string memory _err) {
                 error = _err;
             }
-        }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {

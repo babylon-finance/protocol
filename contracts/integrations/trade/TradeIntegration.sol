@@ -30,6 +30,8 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title TradeIntegration
  * @author Babylon Finance Protocol
@@ -255,7 +257,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Strategy needs to have enough liquid tokens'
         );
-        require(_checkLiquidity(_tradeInfo, _sendQuantity), 'Not enough liquidity');
     }
 
     /**
@@ -334,18 +335,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             uint256,
             bytes memory
         );
-
-    /**
-     * Checks liquidity of the trade. Reverts if not enough
-     *
-     * hparam _tradeInfo               Trade Info
-     * hparam _sendQuantity            Amount of send tokens to exchange
-     *
-     */
-    function _checkLiquidity(
-        TradeInfo memory, /* _tradeInfo */
-        uint256 /*_sendQuantity */
-    ) internal view virtual returns (bool);
 
     /**
      * Return pre action calldata
