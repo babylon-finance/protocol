@@ -68,6 +68,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
+     * @param _hopToken             Address of the routing token for multi-hop, i.e., sendToken->hopToken->receiveToken
      */
     function _getTradeCallData(
         address _strategy,

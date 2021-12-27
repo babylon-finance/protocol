@@ -340,27 +340,20 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
-            // Try on univ2 (only direct trade) through WETH
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
-            bool tradedWETH;
-            if (_sendToken != WETH) {
-                try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
-                    sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-                    tradedWETH = true;
-                } catch Error(string memory _err) {
-                    error = _err;
-                }
-            }
-            if (_receiveToken != WETH) {
-                try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
-                    return;
-                } catch Error(string memory _err) {
-                    error = _err;
-                }
-            } else if (tradedWETH) {
-                // swap already done into WETH
-                // receiveToken == WETH
+            // Try on UniV2  through WETH
+            try
+                ITradeIntegration(univ2).trade(
+                    _strategy,
+                    _sendToken,
+                    _sendQuantity,
+                    _receiveToken,
+                    _minReceiveQuantity,
+                    WETH
+                )
+            {
                 return;
+            } catch Error(string memory _err) {
+                error = _err;
             }
         }
         revert(string(abi.encodePacked('Master swapper could not swap:', error)));
