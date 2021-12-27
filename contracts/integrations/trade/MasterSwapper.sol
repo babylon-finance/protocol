@@ -38,8 +38,6 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title MasterSwapper
  * @author Babylon Finance Protocol

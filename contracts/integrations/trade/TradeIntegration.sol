@@ -30,8 +30,6 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title TradeIntegration
  * @author Babylon Finance Protocol

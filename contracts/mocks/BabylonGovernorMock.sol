@@ -14,8 +14,6 @@
 
 pragma solidity ^0.8.2;
 
-import 'hardhat/console.sol';
-
 import 'contracts-next/governance/Governor.sol';
 import 'contracts-next/governance/extensions/GovernorProposalThreshold.sol';
 import 'contracts-next/governance/extensions/GovernorCountingSimple.sol';
