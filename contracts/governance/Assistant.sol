@@ -37,4 +37,8 @@ contract Assistant is OwnableUpgradeable {
 
     /* ============ External Getter Functions ============ */
     /* ============ Internal Only Function ============ */
+
+    // Can receive ETH
+    // solhint-disable-next-line
+    receive() external payable {}
 }
