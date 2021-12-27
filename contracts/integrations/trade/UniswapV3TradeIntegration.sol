@@ -19,8 +19,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
-
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -68,6 +66,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
+     * @param _hopToken             Address of the routing token for multi-hop, i.e., sendToken->hopToken->receiveToken
      */
     function _getTradeCallData(
         address _strategy,
@@ -144,65 +143,7 @@ contract UniswapV3TradeIntegration is TradeIntegration {
         return address(swapRouter);
     }
 
-    /**
-     * Checks liquidity of the trade
-     *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * hparam _sendQuantity         Units of token sent
-     */
-    function _checkLiquidity(
-        TradeInfo memory _tradeInfo,
-        uint256 /* _sendQuantity */
-    ) internal view override returns (bool) {
-        address reserveAsset = _tradeInfo.garden.reserveAsset();
-        uint256 liquidityInReserve = _getUniswapHighestLiquidity(_tradeInfo, reserveAsset);
-        uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
-        return liquidityInReserve >= minLiquidityReserveAsset;
-    }
-
     /* ============ Private Functions ============ */
-
-    function _getUniswapHighestLiquidity(TradeInfo memory _tradeInfo, address _reserveAsset)
-        private
-        view
-        returns (uint256)
-    {
-        address sendToken = _tradeInfo.sendToken;
-        address receiveToken = _tradeInfo.receiveToken;
-        // Exit if going to same asset
-        if (sendToken == receiveToken) {
-            return _tradeInfo.garden.minLiquidityAsset();
-        }
-        (IUniswapV3Pool pool, ) = _getUniswapPoolWithHighestLiquidity(sendToken, receiveToken);
-        if (address(pool) == address(0)) {
-            return 0;
-        }
-        uint256 poolLiquidity = uint256(pool.liquidity());
-        uint256 liquidityInReserve;
-        address denominator;
-
-        if (pool.token0() == DAI || pool.token0() == WETH || pool.token0() == USDC || pool.token0() == WBTC) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
-            denominator = pool.token0();
-        } else {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
-            denominator = pool.token1();
-        }
-        // Normalize to reserve asset
-        if (denominator != _reserveAsset) {
-            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(denominator, _reserveAsset);
-            // price is always in 18 decimals
-            // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
-            // normalization into reserveAsset decimals
-            liquidityInReserve = SafeDecimalMath.normalizeAmountTokens(
-                denominator,
-                _reserveAsset,
-                liquidityInReserve.preciseMul(price)
-            );
-        }
-        return liquidityInReserve;
-    }
 
     function _getUniswapPoolWithHighestLiquidity(address sendToken, address receiveToken)
         private
