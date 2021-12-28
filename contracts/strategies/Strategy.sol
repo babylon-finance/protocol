@@ -477,7 +477,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
 
-        _require(_params[0] < duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
         _setDuration(_params[0]);
         _setMaxGasFeePercentage(_params[1]);
