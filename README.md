@@ -84,8 +84,8 @@ yarn test:watch
 
 ## Deploy
 
-To deploy SCs you need to have `.env` filed configured for the selected network, e.g., mainnet.
-The file should have the following entries:
+To deploy SCs you need to have `.env` file configured for the selected network, e.g., `mainnet`.
+The file should have the following entries.
 
 ```bash
   ALCHEMY_KEY=XXXXXXXX
@@ -98,15 +98,15 @@ The file should have the following entries:
 ```
 
 For non-upgradeable contracts use named scripts from the `deployments/migrations/` folder, e.g., `040-univ2-trade.js`
-would deploy 'UniswapV2TradeIntegration'. To invoke the script use the following command:
+would deploy `UniswapV2TradeIntegration`. To invoke the script use the following command.
 
 ```bash
-  GAS_LIMIT=1600000000000 npx hardhat deploy --network mainnet --tags UniV2Trade
+  GAS_LIMIT=1000000000000 npx hardhat deploy --network mainnet --tags UniV2Trade
 ```
 
-`GAS_LIMIT` is in wei. `tags` value can be found inside deployment script.
+`GAS_LIMIT` is in wei. `tags` value can be found inside a deployment script.
 
-To deploy a new implementation for an upgradeable contract use `deploy-contract.js` script, e.g., to deploy new
+To deploy a new implementation for an upgradeable contract use `deploy-contract.js` script, e.g., to deploy a new
 implementation for the Strategy contract use the following command:
 
 ```bash
@@ -117,13 +117,15 @@ implementation for the Strategy contract use the following command:
 
 ## Upgrade
 
-To upgrade Babylon Protocol use `Upgrade-multisig.js` script. It will create a batch tx for Gnosis Multisig to upgrade
+To upgrade Babylon Protocol use `upgrade-multisig.js` script. It will create a batch tx for Gnosis Multisig to upgrade
 all the proxies in the protocol. The command bellow upgrades BabController, RewardsDistributor, Strategy, and Garden to
 the appropriate implementations. The implementations have to be deloyed beforehand using `deploy-contrat` script.
 
 ```bash
   npx hardhat upgrade-multisig --network mainnet --controller BabControllerV11 --distributor RewardsDistributorV11 --strategy StrategyV14 --garden GardenV15
 ```
+
+All the arguments are optional meaning only required proxies should be upgraded.
 
 This script will create a proposal at [Defender Admin](https://defender.openzeppelin.com/#/admin). It has to be signed
 and executed to upgrade the protocol.
