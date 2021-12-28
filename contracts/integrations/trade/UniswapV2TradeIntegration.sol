@@ -81,12 +81,13 @@ contract UniswapV2TradeIntegration is TradeIntegration {
         )
     {
         address[] memory path;
-        path[0] = _sendToken;
         if (_hopToken == address(0) || _sendToken == _hopToken || _receiveToken == _hopToken) {
             path = new address[](2);
+            path[0] = _sendToken;
             path[1] = _receiveToken;
         } else {
             path = new address[](3);
+            path[0] = _sendToken;
             path[1] = _hopToken;
             path[2] = _receiveToken;
         }
