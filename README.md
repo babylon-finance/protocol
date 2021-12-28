@@ -119,7 +119,7 @@ implementation for the Strategy contract use the following command:
 
 To upgrade Babylon Protocol use `upgrade-multisig.js` script. It will create a batch tx for Gnosis Multisig to upgrade
 all the proxies in the protocol. The command bellow upgrades BabController, RewardsDistributor, Strategy, and Garden to
-the appropriate implementations. The implementations have to be deloyed beforehand using `deploy-contrat` script.
+the appropriate implementations. The implementations have to be deployed beforehand using `deploy-contrat` script.
 
 ```bash
   npx hardhat upgrade-multisig --network mainnet --controller BabControllerV11 --distributor RewardsDistributorV11 --strategy StrategyV14 --garden GardenV15
