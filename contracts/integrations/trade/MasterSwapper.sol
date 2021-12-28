@@ -149,6 +149,21 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     /**
+     * @dev
+     *   Should be never called. Only implemented to satisfy ITradeIntegration
+     */
+    function trade(
+        address,
+        address,
+        uint256,
+        address,
+        uint256,
+        address
+    ) public override nonReentrant {
+        revert('no impl');
+    }
+
+    /**
      * Function to update the internal mappings of the swapper
      * @param _index                   Index to update
      * @param _newAddress              New address
@@ -257,8 +272,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 revert(string(abi.encodePacked('Failed midway in out synth', _err)));
             }
         }
-        // Go through UNIv3 first
-        try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
+        // Go through UNIv3 first via WETH
+        try
+            ITradeIntegration(univ3).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                WETH
+            )
+        {
             return;
         } catch Error(string memory _err) {
             error = _err;
@@ -278,61 +302,56 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return;
         }
         // Update balance in case we tried some curve paths but had to revert
+        // TODO: Fix this. All failed attempts should be properly reverted
         uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
-        // Try Univ3 through WETH
-        if (_sendToken != WETH && _receiveToken != WETH) {
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
-            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
-                sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-                try ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
-                    return;
-                } catch {
-                    // Revert trade
-                    ITradeIntegration(univ3).trade(_strategy, WETH, sendBalance, _sendToken, 1);
-                }
-            } catch {}
-        }
         // Try Univ3 through DAI
-        if (_sendToken != DAI && _receiveToken != DAI) {
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, DAI);
-            try ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
-                sendBalance = _getTokenOrETHBalance(_strategy, DAI).sub(sendBalance);
-                try ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _receiveToken, _minReceiveQuantity) {
-                    return;
-                } catch Error(string memory _err) {
-                    error = _err;
-                    // Revert trade
-                    ITradeIntegration(univ3).trade(_strategy, DAI, sendBalance, _sendToken, 1);
-                }
-            } catch Error(string memory _err) {
-                error = _err;
-            }
+        try
+            ITradeIntegration(univ3).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                DAI
+            )
+        {
+            return;
+        } catch Error(string memory _err) {
+            error = _err;
+        }
+        // Try Univ3 through USDC
+        try
+            ITradeIntegration(univ3).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                USDC
+            )
+        {
+            return;
+        } catch Error(string memory _err) {
+            error = _err;
         }
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
         if (_minReceiveQuantity > 1) {
-            // Try on univ2 (only direct trade) through WETH
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, WETH);
-            bool tradedWETH;
-            if (_sendToken != WETH) {
-                try ITradeIntegration(univ2).trade(_strategy, _sendToken, _sendQuantity, WETH, 2) {
-                    sendBalance = _getTokenOrETHBalance(_strategy, WETH).sub(sendBalance);
-                    tradedWETH = true;
-                } catch Error(string memory _err) {
-                    error = _err;
-                }
-            }
-            if (_receiveToken != WETH) {
-                try ITradeIntegration(univ2).trade(_strategy, WETH, sendBalance, _receiveToken, _minReceiveQuantity) {
-                    return;
-                } catch Error(string memory _err) {
-                    error = _err;
-                }
-            } else if (tradedWETH) {
-                // swap already done into WETH
-                // receiveToken == WETH
+            // Try on UniV2  through WETH
+            try
+                ITradeIntegration(univ2).trade(
+                    _strategy,
+                    _sendToken,
+                    _sendQuantity,
+                    _receiveToken,
+                    _minReceiveQuantity,
+                    WETH
+                )
+            {
                 return;
+            } catch Error(string memory _err) {
+                error = _err;
             }
         }
         revert(string(abi.encodePacked('Master swapper could not swap:', error)));

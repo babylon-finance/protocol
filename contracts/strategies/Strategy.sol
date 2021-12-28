@@ -120,7 +120,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             }
         }
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
-        _require(isIntegration || masterSwapper.isTradeIntegration(_address), Errors.ONLY_INTEGRATION);
+        _require(
+            isIntegration ||
+                _address == 0xccE114848A694152Ba45a8caff440Fcb12f73862 ||
+                masterSwapper.isTradeIntegration(_address),
+            Errors.ONLY_INTEGRATION
+        );
     }
 
     function _onlyUnpaused() private view {
@@ -472,7 +477,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
 
-        _require(_params[0] < duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
         _setDuration(_params[0]);
         _setMaxGasFeePercentage(_params[1]);
@@ -516,7 +521,18 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override {
         _onlyIntegration(msg.sender);
         _onlyUnpaused();
-        IERC20(_asset).safeApprove(_spender, 0);
+        /**
+          Have to set it to 0 first, because there are some terrible tokens
+          like USDT which will revert on allowance increase from non-zero value
+          https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7#code
+
+          On the other hand, tokens like hBTC doesn't allow to set value to 0 🤯
+          https://etherscan.io/address/0x0316EB71485b0Ab14103307bf65a021042c6d380#code
+
+          We need to perform a low level call here to ignore reverts returned by some tokens. If approve to 0 fails we
+          assume approve to _quantity will succeed or revert the whole function.
+        */
+        _asset.call(abi.encodeWithSelector(IERC20(_asset).approve.selector, _spender, 0));
         IERC20(_asset).safeApprove(_spender, _quantity);
     }
 
@@ -1024,4 +1040,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV14 is Strategy {}
+contract StrategyV16 is Strategy {}

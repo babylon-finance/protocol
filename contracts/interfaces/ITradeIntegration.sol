@@ -31,4 +31,13 @@ interface ITradeIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external;
+
+    function trade(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        address _hopToken
+    ) external;
 }
