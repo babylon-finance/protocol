@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('lib/constants');
+const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH, GARDENS } = require('lib/constants');
 const { fund } = require('lib/whale');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
@@ -30,12 +30,7 @@ describe('Treasury', function () {
   });
 
   describe('sendTreasuryFunds', async function () {
-    pick([
-      { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
-      { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },
-      { token: addresses.tokens.USDC, name: 'USDC', amount: from(2000 * 1e6) },
-      { token: addresses.tokens.WBTC, name: 'WBTC', amount: from(0.05 * 1e8) },
-    ]).forEach(({ token, name, amount }) => {
+    pick(GARDENS).forEach(({ token, name, amount }) => {
       it(`can send ${name}`, async function () {
         const erc20 = await getERC20(token);
         await expect(() =>
