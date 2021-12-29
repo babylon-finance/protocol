@@ -41,10 +41,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hardhat-
 
-      - name: Run tests
+      - name: Run full tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
+        if: github.ref == 'refs/heads/main'
         run: yarn test:ci
+
+      - name: Run fast tests
+        env:
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
+        if: !github.ref == 'refs/heads/main'
+        run: yarn test:ci:fast
 
   lint:
     name: Lint
