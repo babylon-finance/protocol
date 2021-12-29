@@ -9,7 +9,7 @@ const {
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH } = require('lib/constants');
+const { ADDRESS_ZERO } = require('lib/constants');
 
 describe.skip('BalancerIntegrationTest', function () {
   let balancerIntegration;
@@ -53,7 +53,7 @@ describe.skip('BalancerIntegrationTest', function () {
         [addresses.balancer.pools.wethdai, 0],
       );
       await executeStrategy(strategyContract);
-      expect(await strategyContract.capitalAllocated()).to.equal(ONE_ETH);
+      expect(await strategyContract.capitalAllocated()).to.equal(eth());
       expect(await daiWethPool.balanceOf(strategyContract.address)).to.be.gt(0);
 
       await finalizeStrategy(strategyContract, 0);

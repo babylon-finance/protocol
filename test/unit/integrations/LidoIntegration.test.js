@@ -4,7 +4,7 @@ const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/Str
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
+const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 const { getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 
 describe('LidoIntegrationTest', function () {
@@ -22,7 +22,7 @@ describe('LidoIntegrationTest', function () {
   describe('Lido Staking', function () {
     describe('getPricePerShare', function () {
       it('gets price per share', async function () {
-        const stPrice = await stETH.getPooledEthByShares(ONE_ETH);
+        const stPrice = await stETH.getPooledEthByShares(eth());
         expect(await lidoIntegration.getPricePerShare(stETH.address)).to.equal(stPrice);
         expect(await lidoIntegration.getPricePerShare(wstETH.address)).to.equal(await wstETH.getStETHByWstETH(stPrice));
       });
@@ -30,9 +30,9 @@ describe('LidoIntegrationTest', function () {
 
     describe('getExpectedShares', function () {
       it('get expected shares', async function () {
-        const stShares = await stETH.getSharesByPooledEth(ONE_ETH);
-        expect(await lidoIntegration.getExpectedShares(stETH.address, ONE_ETH)).to.equal(stShares);
-        expect(await lidoIntegration.getExpectedShares(wstETH.address, ONE_ETH)).to.equal(
+        const stShares = await stETH.getSharesByPooledEth(eth());
+        expect(await lidoIntegration.getExpectedShares(stETH.address, eth())).to.equal(stShares);
+        expect(await lidoIntegration.getExpectedShares(wstETH.address, eth())).to.equal(
           await wstETH.getWstETHByStETH(stShares),
         );
       });

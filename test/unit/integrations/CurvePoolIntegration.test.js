@@ -8,7 +8,6 @@ const {
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
-const { ONE_ETH } = require('lib/constants');
 const { getERC20, eth, pick } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {

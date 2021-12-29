@@ -5,7 +5,7 @@ const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = req
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { ONE_ETH, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
@@ -27,7 +27,7 @@ describe('YearnVaultIntegrationTest', function () {
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('983411435340371704');
+      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, eth())).to.equal('983411435340371704');
     });
   });
 
