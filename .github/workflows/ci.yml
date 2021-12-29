@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - '*'
 
 jobs:
-
   test:
     name: Test
     runs-on: ubuntu-latest
