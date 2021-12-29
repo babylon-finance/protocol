@@ -3,7 +3,16 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { fund } = require('lib/whale');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+  pick,
+} = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
 const { getStrategy } = require('fixtures/StrategyHelper');
@@ -78,12 +87,12 @@ describe('Keeper', function () {
     },
   ]) {
     describe(name, function () {
-      [
+      pick([
         { token: addresses.tokens.WETH, name: 'WETH', fee: eth() },
         { token: addresses.tokens.DAI, name: 'DAI', fee: eth(2000) },
         { token: addresses.tokens.USDC, name: 'USDC', fee: from(2000 * 1e6) },
         { token: addresses.tokens.WBTC, name: 'WBTC', fee: from(0.05 * 1e8) },
-      ].forEach(({ token, name, fee }) => {
+      ]).forEach(({ token, name, fee }) => {
         it(`gets paid max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
           const tokenContract = await getERC20(token);

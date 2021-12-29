@@ -2,6 +2,7 @@ const { expect } = require('chai');
 
 const addresses = require('lib/addresses');
 const { from, parse, eth } = require('lib/helpers');
+const { pick } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
@@ -228,14 +229,14 @@ describe('PriceOracle', function () {
   });
 
   describe('Price Oracle', function () {
-    tokens.forEach(({ name, tokenIn, tokenOut, value }) => {
+    pick(tokens).forEach(({ name, tokenIn, tokenOut, value }) => {
       it(`should get the price of ${name}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(tokenIn, tokenOut);
         expect(price).to.be.closeTo(value, value.div(50));
       });
     });
 
-    addresses.compound.ctokens.forEach(({ ctoken, token }) => {
+    pick(addresses.compound.ctokens).forEach(({ ctoken, token }) => {
       it(`should get the price of ctokens ${ctoken}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
         const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
@@ -261,7 +262,7 @@ describe('PriceOracle', function () {
       });
     });
 
-    addresses.aave.atokens.slice(0, 5).forEach(({ atoken, token }) => {
+    pick(addresses.aave.atokens).slice(0, 5).forEach(({ atoken, token }) => {
       it(`should get the price of atokens ${atoken}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
         const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
@@ -269,7 +270,7 @@ describe('PriceOracle', function () {
       });
     });
 
-    addresses.cream.crtokens.slice(0, 5).forEach(({ ctoken, token }) => {
+    pick(addresses.cream.crtokens).slice(0, 5).forEach(({ ctoken, token }) => {
       it(`should get the price of crtokens ${ctoken}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
         const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
@@ -283,7 +284,7 @@ describe('PriceOracle', function () {
       });
     });
 
-    addresses.synthetix.synths.slice(0, 5).forEach(({ synth, token }) => {
+    pick(addresses.synthetix.synths).slice(0, 5).forEach(({ synth, token }) => {
       // TODO: synths get price is broken due to updated block nuumber
       it.skip(`should get the price of synthetix ${synth}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(synth, addresses.tokens.DAI);

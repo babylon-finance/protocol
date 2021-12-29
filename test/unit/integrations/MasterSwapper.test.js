@@ -1,8 +1,8 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
+const { getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
@@ -22,12 +22,12 @@ describe('MasterSwapper', function () {
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
-  describe('swaps through master swapper', function () {
-    [
+  describe('swaps', function () {
+    pick([
       {
         token: addresses.tokens.WETH,
         name: 'WETH',
-        pairs: [
+        pairs: pick([
           { to: addresses.tokens.USDC, symbol: 'USDC' },
           // { to: addresses.tokens.sAAVE, symbol: 'sAAVE', synth: true }, // TODO Fix test
           { to: addresses.tokens.sUSD, symbol: 'sUSD' },
@@ -36,7 +36,7 @@ describe('MasterSwapper', function () {
           { to: addresses.tokens.sETH, symbol: 'sETH' },
           { to: addresses.tokens.stETH, symbol: 'stETH' },
           { to: addresses.tokens.renBTC, symbol: 'renBTC' },
-        ],
+        ]),
       },
       {
         token: addresses.tokens.DAI,
@@ -81,7 +81,7 @@ describe('MasterSwapper', function () {
           { to: addresses.tokens.renBTC, symbol: 'renBTC' },
         ],
       },
-    ].forEach(({ token, name, pairs }) => {
+    ]).forEach(({ token, name, pairs }) => {
       pairs.forEach(({ to, symbol, synth }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === to) return;

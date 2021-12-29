@@ -5,10 +5,11 @@ const {
   executeStrategy,
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
+  GARDENS,
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { pick, increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('AaveLendIntegrationTest', function () {

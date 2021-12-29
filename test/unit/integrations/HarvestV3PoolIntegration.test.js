@@ -9,9 +9,9 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
-const { normalizeDecimals, getERC20, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, eth, pick } = require('utils/test-helpers');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 // TODO: Fais due to old block number. Fix the block nubmer issue
 describe.skip('HarvestUniV3PoolIntegrationTest', function () {
@@ -123,12 +123,7 @@ describe.skip('HarvestUniV3PoolIntegrationTest', function () {
   });
 
   describe('Harvest Uni V3 vaults multi reserve asset garden and multi-pair', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
+    pick(GARDENS).forEach(({ token, name }) => {
       Object.keys(addresses.harvest.v3vaults).forEach((symbol) => {
         it(`can enter and exit the ${symbol} at Uniswap pool from a ${name} Garden`, async function () {
           const harvestVault = await ethers.getContractAt('IHarvestUniv3Pool', addresses.harvest.v3vaults[symbol]);

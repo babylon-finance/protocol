@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('fixtures/GardenFixture');
 const {
+  GARDENS,
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
   executeStrategy,

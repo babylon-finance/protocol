@@ -1,8 +1,8 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth, pick} = require('utils/test-helpers');
 
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy } = require('fixtures/StrategyHelper');
@@ -24,7 +24,7 @@ describe('SynthetixTradeIntegration', function () {
 
   describe('exchanges synthetic assets', function () {
     // Synthetix from WETH garden
-    [
+    pick([
       {
         token: addresses.tokens.DAI,
         name: 'DAI',
@@ -35,7 +35,7 @@ describe('SynthetixTradeIntegration', function () {
           // { asset: addresses.tokens.sAAVE, symbol: 'sAAVE' }, // TODO Fix test
         ],
       },
-    ].forEach(({ token, name, pairs }) => {
+    ]).forEach(({ token, name, pairs }) => {
       pairs.forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;

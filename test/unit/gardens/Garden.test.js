@@ -17,7 +17,16 @@ const {
   ADDRESS_ZERO,
   ONE_YEAR_IN_SECONDS,
 } = require('lib/constants.js');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  pick,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {

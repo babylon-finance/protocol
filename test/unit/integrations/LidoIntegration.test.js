@@ -4,8 +4,8 @@ const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/Str
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP } = require('lib/constants');
-const { getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { ADDRESS_ZERO, ONE_ETH, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
+const { getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 
 describe('LidoIntegrationTest', function () {
   let lidoIntegration;
@@ -46,12 +46,7 @@ describe('LidoIntegrationTest', function () {
     });
 
     describe('enter and exit operation with both assets', function () {
-      [
-        { token: addresses.tokens.WETH, name: 'WETH' },
-        { token: addresses.tokens.DAI, name: 'DAI' },
-        { token: addresses.tokens.USDC, name: 'USDC' },
-        { token: addresses.tokens.WBTC, name: 'WBTC' },
-      ].forEach(({ token, name }) => {
+      pick(GARDENS).forEach(({ token, name }) => {
         [
           { target: addresses.lido.steth, symbol: 'stETH' }, // stETH
           { target: addresses.lido.wsteth, symbol: 'wstETH' }, // wstETH

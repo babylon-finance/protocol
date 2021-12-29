@@ -107,7 +107,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe('RewardsDistributor', function () {
+(!!process.env.FAST ? describe.skip : describe)('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;

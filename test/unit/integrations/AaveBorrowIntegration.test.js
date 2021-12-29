@@ -6,11 +6,20 @@ const {
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper');
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  pick,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 
 describe('AaveBorrowIntegrationTest', function () {
   let aaveBorrowIntegration;
@@ -116,12 +125,7 @@ describe('AaveBorrowIntegrationTest', function () {
   });
 
   describe('Aave Borrow', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
+    pick(GARDENS).forEach(({ token, name }) => {
       it(`gets NAV of a borrow/lend strategy at ${name} garden`, async function () {
         const strategyContract = await supplyBorrowStrategyNAV(DAI, WETH, token);
         const nav = await strategyContract.getNAV();

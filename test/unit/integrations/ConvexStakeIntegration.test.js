@@ -4,7 +4,7 @@ const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, getERC20 } = require('utils/test-helpers');
+const { increaseTime, getERC20, pick } = require('utils/test-helpers');
 const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('ConvexStakeIntegrationTest', function () {
@@ -60,7 +60,7 @@ describe('ConvexStakeIntegrationTest', function () {
       // { token: addresses.tokens.USDC, name: 'USDC' },
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
-      addresses.convex.pools.forEach(({ crvpool, cvxpool, name }) => {
+      pick(addresses.convex.pools).forEach(({ crvpool, cvxpool, name }) => {
         it(`can enter ${name} CRV pool and stake into convex`, async function () {
           // TODO: bump the block number to fix these tests
           if (['y', 'tusd', 'busdv2'].includes(name)) {
