@@ -51,10 +51,6 @@ describe('AaveLendIntegrationTest', function () {
       expect(await aaveLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
     });
 
-    it('fails to supply to invalid address', async function () {
-      expect(await aaveLendIntegration.isInvestment(ADDRESS_ZERO)).to.equal(false);
-    });
-
     it('can supply and redeem tokens from Aave', async function () {
       const strategyContract = await createStrategy(
         'lend',

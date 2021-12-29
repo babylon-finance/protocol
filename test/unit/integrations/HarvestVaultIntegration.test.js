@@ -18,13 +18,6 @@ describe('HarvestVaultIntegrationTest', function () {
     daiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fDAI);
   });
 
-  describe('deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await harvestVaultIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-    });
-  });
-
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
       expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1074752893140707418');
