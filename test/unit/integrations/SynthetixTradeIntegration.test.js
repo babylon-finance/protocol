@@ -1,6 +1,15 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth, pick} = require('utils/test-helpers');
+const {
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+  pick,
+} = require('utils/test-helpers');
 
 const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
 const { fund } = require('lib/whale');

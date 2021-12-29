@@ -262,38 +262,44 @@ describe('PriceOracle', function () {
       });
     });
 
-    pick(addresses.aave.atokens).slice(0, 5).forEach(({ atoken, token }) => {
-      it(`should get the price of atokens ${atoken}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
-        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-        expect(price).to.be.equal(priceUnderlying);
-      });
-    });
-
-    pick(addresses.cream.crtokens).slice(0, 5).forEach(({ ctoken, token }) => {
-      it(`should get the price of crtokens ${ctoken}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
-        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-        const exchangeRate = await priceOracle.getCreamExchangeRate(ctoken);
-        expect(price).to.be.equal(
-          priceUnderlying
-            .mul(exchangeRate)
-            .div(10 ** 10)
-            .div(10 ** 8),
-        );
-      });
-    });
-
-    pick(addresses.synthetix.synths).slice(0, 5).forEach(({ synth, token }) => {
-      // TODO: synths get price is broken due to updated block nuumber
-      it.skip(`should get the price of synthetix ${synth}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(synth, addresses.tokens.DAI);
-        expect(price).to.be.gt(0);
-        if (token) {
+    pick(addresses.aave.atokens)
+      .slice(0, 5)
+      .forEach(({ atoken, token }) => {
+        it(`should get the price of atokens ${atoken}`, async function () {
+          const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
           const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-          expect(price).to.be.closeTo(priceUnderlying, eth('0.01'));
-        }
+          expect(price).to.be.equal(priceUnderlying);
+        });
       });
-    });
+
+    pick(addresses.cream.crtokens)
+      .slice(0, 5)
+      .forEach(({ ctoken, token }) => {
+        it(`should get the price of crtokens ${ctoken}`, async function () {
+          const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
+          const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+          const exchangeRate = await priceOracle.getCreamExchangeRate(ctoken);
+          expect(price).to.be.equal(
+            priceUnderlying
+              .mul(exchangeRate)
+              .div(10 ** 10)
+              .div(10 ** 8),
+          );
+        });
+      });
+
+    pick(addresses.synthetix.synths)
+      .slice(0, 5)
+      .forEach(({ synth, token }) => {
+        // TODO: synths get price is broken due to updated block nuumber
+        it.skip(`should get the price of synthetix ${synth}`, async function () {
+          const price = await priceOracle.connect(owner).getPrice(synth, addresses.tokens.DAI);
+          expect(price).to.be.gt(0);
+          if (token) {
+            const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+            expect(price).to.be.closeTo(priceUnderlying, eth('0.01'));
+          }
+        });
+      });
   });
 });
