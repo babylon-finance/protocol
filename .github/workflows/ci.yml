@@ -48,7 +48,7 @@ jobs:
       - name: Run fast tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
-        if: "!github.ref == 'refs/heads/main'"
+        if: !"github.ref == 'refs/heads/main'"
         run: yarn test:ci:fast
 
   lint:
