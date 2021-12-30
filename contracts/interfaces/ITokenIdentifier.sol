@@ -28,10 +28,15 @@ pragma solidity 0.7.6;
 interface ITokenIdentifier {
     /* ============ Functions ============ */
 
-    function identifyTokens(
-        address _tokenIn,
-        address _tokenOut
-    ) external view returns (uint8, uint8, address, address);
+    function identifyTokens(address _tokenIn, address _tokenOut)
+        external
+        view
+        returns (
+            uint8,
+            uint8,
+            address,
+            address
+        );
 
     function overrideYearnVault(address _vault, bool _value) external;
 

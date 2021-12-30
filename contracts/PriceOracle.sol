@@ -102,8 +102,8 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
     /* ============ External Functions ============ */
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public onlyOwner {
-      require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
-      tokenIdentifier = _tokenIdentifier;
+        require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
+        tokenIdentifier = _tokenIdentifier;
     }
 
     /**
@@ -147,7 +147,8 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
             return 10**18;
         }
         uint256 exchangeRate;
-        (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) = tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
+        (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
+            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
         // Comp assets
         if (tokenInType == 1) {
             exchangeRate = getCompoundExchangeRate(_tokenIn, _finalAssetIn);
@@ -199,36 +200,41 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
         // Curve LP tokens
         if (tokenInType == 5) {
-          if (_tokenIn != TRI_CURVE_POOL_2_LP) {
-              address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-              if (crvPool != address(0)) {
-                  address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                  return
-                      curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
-                          getPrice(denominator, _tokenOut)
-                      );
-              }
-          } else {
-              // TRI2
-              return
-                  IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(getPrice(DAI, _tokenOut));
-          }
+            if (_tokenIn != TRI_CURVE_POOL_2_LP) {
+                address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+                if (crvPool != address(0)) {
+                    address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                    return
+                        curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
+                            getPrice(denominator, _tokenOut)
+                        );
+                }
+            } else {
+                // TRI2
+                return
+                    IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(
+                        getPrice(DAI, _tokenOut)
+                    );
+            }
         }
         if (tokenOutType == 5) {
-          // Token out is a curve lp
-          if (_tokenOut != TRI_CURVE_POOL_2_LP) {
-              address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
-              if (crvPool != address(0)) {
-                  address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                  return
-                      getPrice(_tokenIn, denominator).preciseDiv(
-                          curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
-                      );
-              }
-          } else {
-              // TRI2
-              return getPrice(_tokenIn, DAI).preciseDiv(IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price());
-          }
+            // Token out is a curve lp
+            if (_tokenOut != TRI_CURVE_POOL_2_LP) {
+                address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+                if (crvPool != address(0)) {
+                    address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
+                    return
+                        getPrice(_tokenIn, denominator).preciseDiv(
+                            curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
+                        );
+                }
+            } else {
+                // TRI2
+                return
+                    getPrice(_tokenIn, DAI).preciseDiv(
+                        IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price()
+                    );
+            }
         }
 
         // Yearn vaults
