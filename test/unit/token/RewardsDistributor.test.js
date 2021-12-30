@@ -2,12 +2,7 @@ const { expect } = require('chai');
 const { deployments } = require('hardhat');
 const { deploy } = deployments;
 const { fund } = require('lib/whale');
-const {
-  ONE_DAY_IN_SECONDS,
-  GARDEN_PARAMS_STABLE,
-  USDC_GARDEN_PARAMS,
-  STRATEGY_EXECUTE_MAP,
-} = require('lib/constants');
+const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS_STABLE, USDC_GARDEN_PARAMS, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const {
   increaseBlock,
   increaseTime,
@@ -208,13 +203,7 @@ async function getStrategyState(strategy) {
       const timePercent = ethers.BigNumber.from(exitedAt.toNumber() - now)
         .mul(eth())
         .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
-      const bablTokensQ1 = powerRatio[0]
-        .mul(bablSupplyQ1)
-        .mul(timePercent)
-        .div(eth())
-        .mul(eth())
-        .div(eth())
-        .div(eth());
+      const bablTokensQ1 = powerRatio[0].mul(bablSupplyQ1).mul(timePercent).div(eth()).mul(eth()).div(eth()).div(eth());
       rewards = bablTokensQ1;
     }
     // Default params profitWeight = 65% and principalWeigth = 35%
@@ -1102,12 +1091,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [
-        eth(),
-        eth(),
-        eth(),
-        eth(),
-      ]);
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [eth(), eth(), eth(), eth()]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
 
