@@ -25,14 +25,21 @@ pragma solidity 0.7.6;
  *
  * Interface for interacting with PriceOracle
  */
-interface IPriceOracle {
+interface ITokenIdentifier {
     /* ============ Functions ============ */
 
-    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256);
+    function identifyTokens(
+        address _tokenIn,
+        address _tokenOut
+    ) external view returns (uint8, uint8, address, address);
 
-    function getPriceNAV(address _assetOne, address _assetTwo) external view returns (uint256);
+    function overrideYearnVault(address _vault, bool _value) external;
 
-    function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function overrideSynth(address _synth, bool _value) external;
 
-    function getCreamExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function overrideCreamPair(address _creamToken, address _underlying) external;
+
+    function overrideAavePair(address _aaveToken, address _underlying) external;
+
+    function overrideCompoundpair(address _cToken, address _underlying) external;
 }
