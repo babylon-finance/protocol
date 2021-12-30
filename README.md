@@ -26,18 +26,6 @@ Compile contracts
 yarn compile
 ```
 
-Generate mnemonic.txt file
-
-```bash
-yarn generate
-```
-
-Setup Git hooks
-
-```bash
-git config core.hooksPath git-hooks/
-```
-
 ## Development
 
 ⛽️ Gas Report
