@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ONE_DAY_IN_SECONDS, NOW } = require('lib/constants');
+const { ONE_DAY_IN_SECONDS, NOW } = require('lib/constants');
 const { impersonateAddress } = require('lib/rpc');
 const { from, eth, parse } = require('lib/helpers');
 const { increaseTime } = require('utils/test-helpers');
@@ -71,7 +71,7 @@ describe.skip('TimeLockRegistry', function () {
 
     it('should have 305k tokens after deployment', async function () {
       const ownerBalance = await bablToken.balanceOf(timeLockRegistry.address);
-      expect(ownerBalance).to.equal(ONE_ETH.mul(305000));
+      expect(ownerBalance).to.equal(eth().mul(305000));
     });
 
     it('should have all registrations', async function () {
@@ -147,13 +147,13 @@ describe.skip('TimeLockRegistry', function () {
   describe('register', function () {
     it('can NOT register if there are not enough tokens', async function () {
       await expect(
-        timeLockRegistry.connect(MULTISIG).register(signer1.address, ONE_ETH.mul(999999999999), true, 1614618000),
+        timeLockRegistry.connect(MULTISIG).register(signer1.address, eth().mul(999999999999), true, 1614618000),
       ).to.be.revertedWith('Not enough tokens');
     });
 
     it('totalTokens value is correct', async function () {
-      await timeLockRegistry.connect(MULTISIG).register(signer1.address, ONE_ETH, true, 1614618000, { gasPrice: 0 });
-      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.add(ONE_ETH));
+      await timeLockRegistry.connect(MULTISIG).register(signer1.address, eth(), true, 1614618000, { gasPrice: 0 });
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.add(eth()));
     });
 
     it('investors registered correctly', async function () {
@@ -177,7 +177,7 @@ describe.skip('TimeLockRegistry', function () {
     it('totalTokens value is correct after claim', async function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
       await bablToken.connect(teamSigner).claimMyTokens({ gasPrice: 0 });
-      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(eth().mul(17000)));
     });
   });
 
@@ -186,13 +186,13 @@ describe.skip('TimeLockRegistry', function () {
       const teamSigner = await impersonateAddress('0x908295e2be3a36021aadaaed0bbb124fd602cbf2');
 
       await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSigner.address);
-      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(eth().mul(17000)));
     });
     it('cancel a wrong address before claim and re-register the right address', async function () {
       const teamSignerOK = await impersonateAddress('0x232775eAD28F0C0c750A097bA77302E7d84efd3B');
 
       await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSignerOK.address);
-      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(eth().mul(17000)));
 
       const teamSignerWrong = await impersonateAddress('0x71763709Da2488F75bc2DB5d194769d801e97Fa8');
 
@@ -200,7 +200,7 @@ describe.skip('TimeLockRegistry', function () {
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);
 
       await timeLockRegistry.connect(MULTISIG).cancelRegistration(teamSignerWrong.address);
-      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(ONE_ETH.mul(17000)));
+      expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS.sub(eth().mul(17000)));
 
       await timeLockRegistry.connect(MULTISIG).register(teamSignerOK.address, eth(17000), true, 1614618000);
       expect(await timeLockRegistry.totalTokens()).to.be.eq(TOTAL_REGISTERED_TOKENS);

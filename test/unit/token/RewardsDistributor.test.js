@@ -2,13 +2,7 @@ const { expect } = require('chai');
 const { deployments } = require('hardhat');
 const { deploy } = deployments;
 const { fund } = require('lib/whale');
-const {
-  ONE_DAY_IN_SECONDS,
-  ONE_ETH,
-  GARDEN_PARAMS_STABLE,
-  USDC_GARDEN_PARAMS,
-  STRATEGY_EXECUTE_MAP,
-} = require('lib/constants');
+const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS_STABLE, USDC_GARDEN_PARAMS, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const {
   increaseBlock,
   increaseTime,
@@ -153,7 +147,7 @@ async function getStrategyState(strategy) {
     const returned = await strategy.capitalReturned();
     let supply;
 
-    const profit = ethers.BigNumber.from(returned).mul(ONE_ETH).div(ethers.BigNumber.from(allocated));
+    const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
     const [, , , , , exitedAt] = await strategy.getStrategyState();
     [supply] = await rewardsDistributor.checkMining(quarterStart, strategy.address);
     const bablSupplyQ1 = supply[9];
@@ -167,59 +161,53 @@ async function getStrategyState(strategy) {
         supplyPerQuarter[i] = supply[9];
         if (i === 0) {
           // First
-          timePercent = ONE_ETH;
+          timePercent = eth();
           bablTokenQi[i] = powerRatio[i]
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
-            .div(ONE_ETH)
-            .mul(ONE_ETH)
-            .div(ONE_ETH)
-            .div(ONE_ETH);
+            .div(eth())
+            .mul(eth())
+            .div(eth())
+            .div(eth());
           rewards = bablTokenQi[i];
         } else if (i > 0 && i <= quarterEnd - quarterStart - 1) {
           // intermediate quarters
-          timePercent = ONE_ETH;
+          timePercent = eth();
           bablTokenQi[i] = powerRatio[i]
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
-            .div(ONE_ETH)
-            .mul(ONE_ETH)
-            .div(ONE_ETH)
-            .div(ONE_ETH);
+            .div(eth())
+            .mul(eth())
+            .div(eth())
+            .div(eth());
           rewards = rewards.add(bablTokenQi[i]);
         } else if (i === quarterEnd - quarterStart) {
           // last quarter
           timePercent = ethers.BigNumber.from(
             exitedAt.toNumber() - (now + 90 * ONE_DAY_IN_SECONDS * (quarterStart + i - 1)),
           )
-            .mul(ONE_ETH)
+            .mul(eth())
             .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
           bablTokenQi[i] = powerRatio[i]
             .mul(supplyPerQuarter[i])
             .mul(timePercent)
-            .div(ONE_ETH)
-            .mul(ONE_ETH)
-            .div(ONE_ETH)
-            .div(ONE_ETH);
+            .div(eth())
+            .mul(eth())
+            .div(eth())
+            .div(eth());
           rewards = rewards.add(bablTokenQi[i]);
         }
       }
     } else if (quarterStart === quarterEnd) {
       // The same quarter
       const timePercent = ethers.BigNumber.from(exitedAt.toNumber() - now)
-        .mul(ONE_ETH)
+        .mul(eth())
         .div(ethers.BigNumber.from(90 * ONE_DAY_IN_SECONDS));
-      const bablTokensQ1 = powerRatio[0]
-        .mul(bablSupplyQ1)
-        .mul(timePercent)
-        .div(ONE_ETH)
-        .mul(ONE_ETH)
-        .div(ONE_ETH)
-        .div(ONE_ETH);
+      const bablTokensQ1 = powerRatio[0].mul(bablSupplyQ1).mul(timePercent).div(eth()).mul(eth()).div(eth()).div(eth());
       rewards = bablTokensQ1;
     }
     // Default params profitWeight = 65% and principalWeigth = 35%
-    rewards = from(rewards).mul(35).div(100).add(from(rewards).mul(65).div(100).mul(profit).div(ONE_ETH));
+    rewards = from(rewards).mul(35).div(100).add(from(rewards).mul(65).div(100).mul(profit).div(eth()));
     return rewards;
   }
 
@@ -344,7 +332,7 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long, ONE_ETH);
+      await executeStrategy(long, eth());
       const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       const estimatedBABL2 = await rewardsDistributor.estimateStrategyRewards(long.address);
@@ -361,11 +349,11 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards correctly in case of 2 strategies one starting after the first one', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
       const estimatedBABL1Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       const estimatedBABL2Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
-      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long2, eth());
       const estimatedBABL3Long1 = await rewardsDistributor.estimateStrategyRewards(long1.address);
       const estimatedBABL3Long2 = await rewardsDistributor.estimateStrategyRewards(long2.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
@@ -392,7 +380,7 @@ async function getStrategyState(strategy) {
     });
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      await executeStrategy(long, ONE_ETH);
+      await executeStrategy(long, eth());
       const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
       const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
 
@@ -435,8 +423,8 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long, ONE_ETH);
-      await injectFakeProfits(long, ONE_ETH.mul(222));
+      await executeStrategy(long, eth());
+      await injectFakeProfits(long, eth().mul(222));
       const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
       const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
@@ -486,8 +474,8 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards for a user along the time in case of 1 strategy with positive profit and total duration of 3 quarters', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long, ONE_ETH);
-      await injectFakeProfits(long, ONE_ETH.mul(222));
+      await executeStrategy(long, eth());
+      await injectFakeProfits(long, eth().mul(222));
       const estimatedSigner1BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer1.address);
       const estimatedSigner2BABL1 = await rewardsDistributor.estimateUserRewards(long.address, signer2.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 90);
@@ -541,10 +529,10 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await injectFakeProfits(long1, eth().mul(222));
 
       const estimatedSigner1BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
       const estimatedSigner2BABL1Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer2.address);
@@ -680,10 +668,10 @@ async function getStrategyState(strategy) {
     it('should estimate BABL rewards for a user along the time in case of 2 strategies (1 with positive profit) and total duration of 3 quarters but the second starts later', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(222));
       await increaseTime(ONE_DAY_IN_SECONDS * 90);
-      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long2, eth());
       const estimatedSigner1BABL2Long1 = await rewardsDistributor.estimateUserRewards(long1.address, signer1.address);
       const estimatedSigner1BABL2Long2 = await rewardsDistributor.estimateUserRewards(long2.address, signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 120);
@@ -722,12 +710,12 @@ async function getStrategyState(strategy) {
       const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
       const { updatedAt } = await getStrategyState(long1);
       // Check principal normalized to DAI
       const pricePerToken = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      const principalInDAI = pricePerToken.mul(ONE_ETH).div(ONE_ETH);
+      const principalInDAI = pricePerToken.mul(eth()).div(eth());
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
         principal: principalInDAI,
         quarter: 1,
@@ -742,7 +730,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth('1')]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -760,18 +748,18 @@ async function getStrategyState(strategy) {
       );
       expect(await weth.balanceOf(garden1.address)).to.be.gt(eth('2'));
 
-      await executeStrategy(strategyContract, { amount: ONE_ETH.mul(2) });
+      await executeStrategy(strategyContract, { amount: eth().mul(2) });
 
-      expect(await weth.balanceOf(garden1.address)).to.be.closeTo(ONE_ETH.mul(3), ONE_ETH.div(100));
+      expect(await weth.balanceOf(garden1.address)).to.be.closeTo(eth().mul(3), eth().div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(eth('2'));
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
-      await strategyContract.connect(owner).unwindStrategy(ONE_ETH, await strategyContract.getNAV());
+      await strategyContract.connect(owner).unwindStrategy(eth(), await strategyContract.getNAV());
 
-      expect(await strategyContract.capitalAllocated()).to.equal(eth('1'));
-      expect(await weth.balanceOf(garden1.address)).to.be.gt(eth('1'));
+      expect(await strategyContract.capitalAllocated()).to.equal(eth());
+      expect(await weth.balanceOf(garden1.address)).to.be.gt(eth());
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
       await finalizeStrategyAfter30Days(strategyContract);
-      const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth('1'), eth('1')]);
+      const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth(), eth()]);
       const rewards = await strategyContract.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -785,7 +773,7 @@ async function getStrategyState(strategy) {
       await increaseTime(ONE_DAY_IN_SECONDS * 70);
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
       await finalizeStrategyAfter30Days(long1);
 
@@ -796,7 +784,7 @@ async function getStrategyState(strategy) {
         quarter: 2,
         timeListPointer: 1,
       });
-      const value = await getStrategyRewards(long1, now, 1, 2, [eth('1'), eth('1')]);
+      const value = await getStrategyRewards(long1, now, 1, 2, [eth(), eth()]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -809,9 +797,9 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await injectFakeProfits(long1, eth().mul(222));
 
       await finalizeStrategyAfter30Days(long1);
 
@@ -823,7 +811,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth('1')]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -834,17 +822,17 @@ async function getStrategyState(strategy) {
       const now = block.timestamp;
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(222));
+      await injectFakeProfits(long1, eth().mul(222));
 
       // Here we inject malicious reserveAsset
       const whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
       const whaleSigner = await impersonateAddress(whaleAddress);
-      await weth.connect(whaleSigner).transfer(signer1.address, ONE_ETH.mul(100), {
+      await weth.connect(whaleSigner).transfer(signer1.address, eth().mul(100), {
         gasPrice: 0,
       });
-      await weth.connect(signer1).transfer(long1.address, ONE_ETH.mul(100));
+      await weth.connect(signer1).transfer(long1.address, eth().mul(100));
       await finalizeStrategyAfter30Days(long1);
 
       const { exitedAt } = await getStrategyState(long1);
@@ -855,7 +843,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth('1')]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -867,8 +855,8 @@ async function getStrategyState(strategy) {
       const now = block.timestamp;
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
       await finalizeStrategyAfter30Days(long1);
 
@@ -876,7 +864,7 @@ async function getStrategyState(strategy) {
 
       // Check principal normalized to DAI
       const pricePerToken = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      const principalInDAI = pricePerToken.mul(ONE_ETH).div(ONE_ETH);
+      const principalInDAI = pricePerToken.mul(eth()).div(eth());
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAt, {
         principal: principalInDAI,
         quarter: 1,
@@ -915,14 +903,14 @@ async function getStrategyState(strategy) {
         { garden: garden1 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
 
       const { updatedAt } = await getStrategyState(long3);
       // Check principal normalized to DAI
       const pricePerToken = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      const principalInDAI = pricePerToken.mul(ONE_ETH.mul(3)).div(ONE_ETH);
+      const principalInDAI = pricePerToken.mul(eth().mul(3)).div(eth());
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
         principal: principalInDAI,
         quarter: 1,
@@ -968,15 +956,15 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       const { updatedAt } = await getStrategyState(long5);
       const pricePerToken = await priceOracle.connect(owner).getPrice(addresses.tokens.WETH, addresses.tokens.DAI);
-      const principalInDAI = pricePerToken.mul(ONE_ETH.mul(5)).div(ONE_ETH);
+      const principalInDAI = pricePerToken.mul(eth().mul(5)).div(eth());
 
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, updatedAt, {
         principal: principalInDAI,
@@ -989,14 +977,14 @@ async function getStrategyState(strategy) {
       await finalizeStrategyImmediate(long1);
       const { exitedAt: exitedAtLong1 } = await getStrategyState(long1);
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAtLong1, {
-        principal: pricePerToken.mul(ONE_ETH.mul(4)).div(ONE_ETH),
+        principal: pricePerToken.mul(eth().mul(4)).div(eth()),
         quarter: 1,
         timeListPointer: 5,
       });
       await finalizeStrategyImmediate(long2);
       const { exitedAt: exitedAtLong2 } = await getStrategyState(long2);
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAtLong2, {
-        principal: pricePerToken.mul(ONE_ETH.mul(3)).div(ONE_ETH),
+        principal: pricePerToken.mul(eth().mul(3)).div(eth()),
         quarter: 1,
         timeListPointer: 6,
       });
@@ -1004,7 +992,7 @@ async function getStrategyState(strategy) {
       await finalizeStrategyImmediate(long3);
       const { exitedAt: exitedAtLong3 } = await getStrategyState(long3);
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAtLong3, {
-        principal: pricePerToken.mul(ONE_ETH.mul(2)).div(ONE_ETH),
+        principal: pricePerToken.mul(eth().mul(2)).div(eth()),
         quarter: 1,
         timeListPointer: 7,
       });
@@ -1012,7 +1000,7 @@ async function getStrategyState(strategy) {
       await finalizeStrategyImmediate(long4);
       const { exitedAt: exitedAtLong4 } = await getStrategyState(long4);
       await getAndValidateProtocolTimestampAndQuarter(rewardsDistributor, exitedAtLong4, {
-        principal: pricePerToken.mul(ONE_ETH.mul(1)).div(ONE_ETH),
+        principal: pricePerToken.mul(eth().mul(1)).div(eth()),
         quarter: 1,
         timeListPointer: 8,
       });
@@ -1050,11 +1038,11 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
       await finalizeStrategyAfter2Quarters(long1);
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [eth('1'), eth('1'), eth('1')]);
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [eth(), eth(), eth()]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -1070,7 +1058,7 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
       await finalizeStrategyAfter2Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
@@ -1081,7 +1069,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [eth('1'), eth('1'), eth('1')]);
+      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [eth(), eth(), eth()]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -1092,7 +1080,7 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
       await finalizeStrategyAfter3Quarters(long1);
       const { exitedAt } = await getStrategyState(long1);
@@ -1103,12 +1091,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [
-        eth('1'),
-        eth('1'),
-        eth('1'),
-        eth('1'),
-      ]);
+      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [eth(), eth(), eth(), eth()]);
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
 
@@ -1129,11 +1112,11 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
@@ -1175,9 +1158,9 @@ async function getStrategyState(strategy) {
         eth('0.4160182432'),
         eth('0.5'),
         eth('0.7114415557'),
-        eth('1'),
-        eth('1'),
-        eth('1'),
+        eth(),
+        eth(),
+        eth(),
       ];
 
       const valueLong1 = await getStrategyRewards(long1, now, 1, 2, powerLong1);
@@ -1215,11 +1198,11 @@ async function getStrategyState(strategy) {
 
       increaseTime(ONE_DAY_IN_SECONDS * 3650);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
@@ -1262,9 +1245,9 @@ async function getStrategyState(strategy) {
         eth('0.3379181444'),
         eth('0.5'),
         eth('0.5099042139'),
-        eth('1'),
-        eth('1'),
-        eth('1'),
+        eth(),
+        eth(),
+        eth(),
       ];
 
       const valueLong1 = await getStrategyRewards(long1, now, 41, 42, powerLong1);
@@ -1303,11 +1286,11 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
@@ -1361,26 +1344,26 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfter2Quarters(long2);
 
-      await injectFakeProfits(long3, ONE_ETH.mul(200));
+      await injectFakeProfits(long3, eth().mul(200));
       await finalizeStrategyAfter2Years(long3);
 
-      await injectFakeProfits(long4, ONE_ETH.mul(200));
+      await injectFakeProfits(long4, eth().mul(200));
       await finalizeStrategyAfter2Quarters(long4);
 
-      await injectFakeProfits(long5, ONE_ETH.mul(222));
+      await injectFakeProfits(long5, eth().mul(222));
       await finalizeStrategyAfter3Quarters(long5);
 
       const rewardsLong1 = await long1.strategyRewards();
@@ -1471,7 +1454,7 @@ async function getStrategyState(strategy) {
 
   describe('Claiming Reserve Asset Rewards and BABL Rewards', function () {
     it('can claimRewardsBySig ', async function () {
-      const amountIn = eth('1');
+      const amountIn = eth();
       const minAmountOut = eth('0.9');
 
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
@@ -1484,8 +1467,8 @@ async function getStrategyState(strategy) {
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       expect(rewardsSigner2[5]).to.be.gt(0); // BABL
@@ -1556,8 +1539,8 @@ async function getStrategyState(strategy) {
 
         const [long1] = await createStrategies([{ garden: newGarden }]);
 
-        await executeStrategy(long1, ONE_ETH);
-        await injectFakeProfits(long1, ONE_ETH.mul(200));
+        await executeStrategy(long1, eth());
+        await injectFakeProfits(long1, eth().mul(200));
         await finalizeStrategyAfterQuarter(long1);
         const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
         expect(rewardsSigner2[5]).to.be.gt(0); // BABL
@@ -1604,7 +1587,7 @@ async function getStrategyState(strategy) {
     });
 
     it('claimRewardsBySig rejects if not keeper', async function () {
-      const amountIn = eth('1');
+      const amountIn = eth();
       const minAmountOut = eth('0.9');
 
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
@@ -1617,8 +1600,8 @@ async function getStrategyState(strategy) {
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       expect(rewardsSigner2[5]).to.be.gt(0); // BABL
@@ -1639,7 +1622,7 @@ async function getStrategyState(strategy) {
     });
 
     it('rejects wrong nonce and updates it along the way', async function () {
-      const amountIn = eth('1');
+      const amountIn = eth();
       const minAmountOut = eth('0.9');
 
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
@@ -1652,7 +1635,7 @@ async function getStrategyState(strategy) {
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
       await finalizeStrategyAfterQuarter(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       let babl = rewardsSigner2[5];
@@ -1691,8 +1674,8 @@ async function getStrategyState(strategy) {
       const [long2] = await createStrategies([{ garden: newGarden }]);
       // nonce is 4 at this point as there is a hidden deposit for signer2 while creating long2 strategy
 
-      await executeStrategy(long2, ONE_ETH);
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth());
+      await injectFakeProfits(long2, eth().mul(200));
       await finalizeStrategyAfterQuarter(long2);
 
       const rewardsSigner22 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long2.address]);
@@ -1710,7 +1693,7 @@ async function getStrategyState(strategy) {
       ).not.to.be.reverted;
     });
     it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
-      const amountIn = eth('1');
+      const amountIn = eth();
       const minAmountOut = eth('0.9');
 
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
@@ -1723,8 +1706,8 @@ async function getStrategyState(strategy) {
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
 
@@ -1751,10 +1734,10 @@ async function getStrategyState(strategy) {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
@@ -1762,17 +1745,17 @@ async function getStrategyState(strategy) {
       // We claim our tokens and check that they are received properly
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(29000));
-      expect(await garden1.balanceOf(signer1.address)).to.gt(ONE_ETH.mul(2));
+      expect(await bablToken.balanceOf(signer1.address)).to.gt(eth().mul(29000));
+      expect(await garden1.balanceOf(signer1.address)).to.gt(eth().mul(2));
     });
     it('should NOT get BABL rewards in a claim if it is not a contributor', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       // It claim but it is reverted as it is not an user yet "only contributor"
@@ -1788,9 +1771,9 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
 
       await depositFunds(token, garden1);
 
@@ -1819,9 +1802,9 @@ async function getStrategyState(strategy) {
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
+      await executeStrategy(long1, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
 
       await finalizeStrategyAfterQuarter(long1);
       // still not contributor, becoming contributor
@@ -1850,11 +1833,11 @@ async function getStrategyState(strategy) {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
+      await injectFakeProfits(long2, eth().mul(200));
 
       await finalizeStrategyAfterQuarter(long1);
       await depositFunds(token, garden1);
@@ -2559,10 +2542,10 @@ async function getStrategyState(strategy) {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
@@ -2636,10 +2619,10 @@ async function getStrategyState(strategy) {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await injectFakeProfits(long1, eth().mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
@@ -2680,10 +2663,10 @@ async function getStrategyState(strategy) {
       // Mining program has to be enabled before the strategy starts its execution
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await injectFakeProfits(long1, eth().mul(240));
       await finalizeStrategyAfterQuarter(long1);
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2699,7 +2682,7 @@ async function getStrategyState(strategy) {
       const rewardsSetAside1 = await garden1.reserveAssetRewardsSetAside(); // All long1 rewards available
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
-      await injectFakeProfits(long2, ONE_ETH.mul(240));
+      await injectFakeProfits(long2, eth().mul(240));
       await finalizeStrategyAfterQuarter(long2);
       const rewardsSetAside3 = await garden1.reserveAssetRewardsSetAside(); // All long2 rewards available
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -2744,13 +2727,13 @@ async function getStrategyState(strategy) {
 
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
 
-      await injectFakeProfits(long1, ONE_ETH.mul(240));
+      await injectFakeProfits(long1, eth().mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
-      await injectFakeProfits(long2, ONE_ETH.mul(240));
+      await injectFakeProfits(long2, eth().mul(240));
       await finalizeStrategyAfterQuarter(long2);
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -2804,26 +2787,26 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await injectFakeProfits(long1, ONE_ETH.mul(120));
+      await injectFakeProfits(long1, eth().mul(120));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfter2Quarters(long2);
 
-      await injectFakeProfits(long3, ONE_ETH.mul(120));
+      await injectFakeProfits(long3, eth().mul(120));
       await finalizeStrategyAfter2Years(long3);
 
-      await injectFakeProfits(long4, ONE_ETH.mul(142));
+      await injectFakeProfits(long4, eth().mul(142));
       await finalizeStrategyAfter2Quarters(long4);
 
-      await injectFakeProfits(long5, ONE_ETH.mul(142));
+      await injectFakeProfits(long5, eth().mul(142));
       await finalizeStrategyAfter3Quarters(long5);
 
       // We claim our tokens and check that they are received properly
@@ -2887,26 +2870,26 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
 
-      await injectFakeProfits(long3, ONE_ETH.mul(200));
+      await injectFakeProfits(long3, eth().mul(200));
       await finalizeStrategyAfterQuarter(long3);
 
-      await injectFakeProfits(long4, ONE_ETH.mul(222));
+      await injectFakeProfits(long4, eth().mul(222));
       await finalizeStrategyAfterQuarter(long4);
 
-      await injectFakeProfits(long5, ONE_ETH.mul(222));
+      await injectFakeProfits(long5, eth().mul(222));
       await finalizeStrategyAfterQuarter(long5);
 
       // We try to hack the system bypassing claimedAt mistmaching different gardens with different strategies
@@ -2927,26 +2910,26 @@ async function getStrategyState(strategy) {
         { garden: garden2 },
       ]);
 
-      await executeStrategy(long1, ONE_ETH);
-      await executeStrategy(long2, ONE_ETH);
-      await executeStrategy(long3, ONE_ETH);
-      await executeStrategy(long4, ONE_ETH);
-      await executeStrategy(long5, ONE_ETH);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
 
-      await injectFakeProfits(long3, ONE_ETH.mul(200));
+      await injectFakeProfits(long3, eth().mul(200));
       await finalizeStrategyAfterQuarter(long3);
 
-      await injectFakeProfits(long4, ONE_ETH.mul(222));
+      await injectFakeProfits(long4, eth().mul(222));
       await finalizeStrategyAfterQuarter(long4);
 
-      await injectFakeProfits(long5, ONE_ETH.mul(222));
+      await injectFakeProfits(long5, eth().mul(222));
       await finalizeStrategyAfterQuarter(long5);
 
       // We try to hack the system bypassing claimedAt mistmaching different gardens with different strategies
@@ -2979,7 +2962,7 @@ async function getStrategyState(strategy) {
       expect(creator).to.eq(0);
       expect(ts).to.eq(0);
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
+      await executeStrategy(long1, eth().mul(2));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
       // Now we stake a prophet
@@ -2999,7 +2982,7 @@ async function getStrategyState(strategy) {
       expect(lp2).to.eq(eth(0.01));
       expect(creator2).to.eq(0);
       expect(ts2).to.eq(block.timestamp);
-      await executeStrategy(long2, ONE_ETH.mul(2));
+      await executeStrategy(long2, eth().mul(2));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
       const bonusLP = rewardsSigner2Long1[4].mul(lp2).div(eth(1));
@@ -3032,15 +3015,15 @@ async function getStrategyState(strategy) {
       expect(ts2).to.eq(block.timestamp);
       // We use 2 different gardens to run similar strategies in parallel
       const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth().mul(2));
+      await injectFakeProfits(long1, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
       const rewardsSigner1Long1 = await rewardsDistributor.getRewards(newGarden1.address, signer1.address, [
         long1.address,
       ]);
-      await executeStrategy(long2, ONE_ETH.mul(2));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth().mul(2));
+      await injectFakeProfits(long2, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
       const rewardsSigner1Long2 = await rewardsDistributor.getRewards(newGarden2.address, signer1.address, [
@@ -3074,8 +3057,8 @@ async function getStrategyState(strategy) {
       const newGarden2 = await createGarden({ reserveAsset: token });
       // We use 2 different gardens to run similar strategies in parallel
       const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth().mul(2));
+      await injectFakeProfits(long1, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
 
@@ -3086,8 +3069,8 @@ async function getStrategyState(strategy) {
         long1.address,
       ]);
 
-      await executeStrategy(long2, ONE_ETH.mul(2));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth().mul(2));
+      await injectFakeProfits(long2, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
 
@@ -3109,8 +3092,8 @@ async function getStrategyState(strategy) {
       const newGarden2 = await createGarden({ reserveAsset: token });
       // We use 2 different gardens to run similar strategies in parallel
       const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth().mul(2));
+      await injectFakeProfits(long1, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 15);
       // We stake the great prophet in newGarden1 after the strategy ends
       await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
@@ -3125,8 +3108,8 @@ async function getStrategyState(strategy) {
         long1.address,
       ]);
 
-      await executeStrategy(long2, ONE_ETH.mul(2));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth().mul(2));
+      await injectFakeProfits(long2, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
 
@@ -3164,8 +3147,8 @@ async function getStrategyState(strategy) {
       const newGarden2 = await createGarden({ reserveAsset: token });
       // We use 2 different gardens to run similar strategies in parallel
       const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth().mul(2));
+      await injectFakeProfits(long1, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       // We stake the great prophet in newGarden1 after the strategy ends
       await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
@@ -3180,8 +3163,8 @@ async function getStrategyState(strategy) {
         long1.address,
       ]);
 
-      await executeStrategy(long2, ONE_ETH.mul(2));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth().mul(2));
+      await injectFakeProfits(long2, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
 
@@ -3219,8 +3202,8 @@ async function getStrategyState(strategy) {
       const newGarden2 = await createGarden({ reserveAsset: token });
       // We use 2 different gardens to run similar strategies in parallel
       const [long1, long2] = await createStrategies([{ garden: newGarden1 }, { garden: newGarden2 }]);
-      await executeStrategy(long1, ONE_ETH.mul(2));
-      await injectFakeProfits(long1, ONE_ETH.mul(200));
+      await executeStrategy(long1, eth().mul(2));
+      await injectFakeProfits(long1, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       // We stake the great prophet in newGarden1 after the strategy ends
       await prophetsNFT.connect(signer1).stake(tokenId, newGarden1.address, { gasPrice: 0 }); // NFT staked
@@ -3235,8 +3218,8 @@ async function getStrategyState(strategy) {
         long1.address,
       ]);
 
-      await executeStrategy(long2, ONE_ETH.mul(2));
-      await injectFakeProfits(long2, ONE_ETH.mul(200));
+      await executeStrategy(long2, eth().mul(2));
+      await injectFakeProfits(long2, eth().mul(200));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long2);
 

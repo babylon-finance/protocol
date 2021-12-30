@@ -5,7 +5,7 @@ const { pick, normalizeDecimals, getERC20, getContract, parse, from, eth } = req
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { ONE_ETH, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('HarvestVaultIntegrationTest', function () {
   let harvestVaultIntegration;
@@ -18,13 +18,6 @@ describe('HarvestVaultIntegrationTest', function () {
     daiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fDAI);
   });
 
-  describe('deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await harvestVaultIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-    });
-  });
-
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
       expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1074752893140707418');
@@ -33,7 +26,7 @@ describe('HarvestVaultIntegrationTest', function () {
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('930446436927227033');
+      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, eth())).to.equal('930446436927227033');
     });
   });
   describe('getInvestmentAsset', function () {

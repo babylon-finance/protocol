@@ -1,6 +1,5 @@
 const fs = require('fs-extra');
-
-const { ONE_ETH } = require('../../lib/constants');
+const { sleep, from, eth, formatNumber } = require('lib/helpers');
 
 let MULTISIG = process.env.MULTISIG || '';
 
@@ -27,12 +26,12 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 
   console.log('Send 500k BABL tokens to RewardsDistributor');
   await (
-    await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, ONE_ETH.mul(500000), { gasPrice })
+    await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, eth().mul(500000), { gasPrice })
   ).wait();
 
   console.log('Send 305k BABL tokens to TimeLockRegistry');
   await (
-    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, ONE_ETH.mul('305000'), { gasPrice })
+    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, eth().mul('305000'), { gasPrice })
   ).wait();
 
   console.log('Register investor and team allocations');
@@ -61,7 +60,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   );
 
   console.log('Send 23k to MULTISIG');
-  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, ONE_ETH.mul(23000), { gasPrice })).wait();
+  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, eth().mul(23000), { gasPrice })).wait();
 
   const balance = await bablToken.balanceOf(deployerSigner.address);
   console.log(`Send ${ethers.utils.formatUnits(balance, 'ether')} to the Treasury`);

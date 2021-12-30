@@ -13,7 +13,6 @@ const {
 const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
-const { ONE_ETH } = require('lib/constants');
 
 describe('OneInchPoolIntegrationTest', function () {
   let oneInchPoolIntegration;
@@ -67,9 +66,9 @@ describe('OneInchPoolIntegrationTest', function () {
         : balanceToken1;
 
     const liquidityToken1 =
-      balanceToken0 > 0 ? amount0ToAdd.mul(poolTotalSupply).mul(ONE_ETH).div(balanceToken0).div(ONE_ETH) : 0;
+      balanceToken0 > 0 ? amount0ToAdd.mul(poolTotalSupply).mul(eth()).div(balanceToken0).div(eth()) : 0;
     const liquidityToken2 =
-      balanceToken1 > 0 ? amount1ToAdd.mul(poolTotalSupply).mul(ONE_ETH).div(balanceToken1).div(ONE_ETH) : 0;
+      balanceToken1 > 0 ? amount1ToAdd.mul(poolTotalSupply).mul(eth()).div(balanceToken1).div(eth()) : 0;
 
     return liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
   }

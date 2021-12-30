@@ -1,13 +1,13 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ONE_ETH, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { increaseTime, eth } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-const MULTISIG_BALANCE = ONE_ETH.mul(23000);
-const REGISTRY_BALANCE = ONE_ETH.mul(305000);
+const MULTISIG_BALANCE = eth().mul(23000);
+const REGISTRY_BALANCE = eth().mul(305000);
 
 describe.skip('BABLToken contract', function () {
   let owner;
@@ -45,7 +45,7 @@ describe.skip('BABLToken contract', function () {
 
     it('multisig should have 23k tokens after deployment', async function () {
       const multisigBalance = await bablToken.balanceOf(MULTISIG.address);
-      expect(multisigBalance).to.equal(ONE_ETH.mul(23000));
+      expect(multisigBalance).to.equal(eth().mul(23000));
     });
   });
 
@@ -487,7 +487,7 @@ describe.skip('BABLToken contract', function () {
       const totalSupply = await bablToken.totalSupply();
 
       // We define the the limit + 1 to overflow the mint beyond maxSupply
-      const value = maxSupply[0].sub(totalSupply).add(ONE_ETH);
+      const value = maxSupply[0].sub(totalSupply).add(eth());
 
       await expect(bablToken.connect(owner).mint(signer1.address, value)).to.be.revertedWith(
         'BABLToken::mint: max supply exceeded',
