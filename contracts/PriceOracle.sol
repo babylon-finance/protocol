@@ -101,6 +101,10 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
     /* ============ External Functions ============ */
 
+    function owner() public view override(OwnableUpgradeable) returns (address) {
+        return OwnableUpgradeable.owner();
+    }
+
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public onlyOwner {
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
         tokenIdentifier = _tokenIdentifier;

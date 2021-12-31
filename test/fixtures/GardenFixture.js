@@ -21,7 +21,7 @@ async function setUpFixture(
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const ishtarGate = await getContract('IshtarGate');
   const mardukGate = await getContract('MardukGate');
-  const priceOracle = await getContract('PriceOracle');
+  const priceOracle = await getContract('PriceOracle', 'PriceOracleProxy');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
   const gardenNFT = await getContract('GardenNFT');
