@@ -19,6 +19,8 @@
 */
 pragma solidity 0.7.6;
 
+import {ITokenIdentifier} from './ITokenIdentifier.sol';
+
 /**
  * @title IPriceOracle
  * @author Babylon Finance
@@ -32,7 +34,7 @@ interface IPriceOracle {
 
     function getPriceNAV(address _assetOne, address _assetTwo) external view returns (uint256);
 
-    function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function updateReserves() external;
 
-    function getCreamExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
 }

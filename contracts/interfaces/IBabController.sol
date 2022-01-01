@@ -126,6 +126,8 @@ interface IBabController {
 
     function getGardens() external view returns (address[] memory);
 
+    function getReserveAssets() external view returns (address[] memory);
+
     function getOperations() external view returns (address[20] memory);
 
     function isGarden(address _garden) external view returns (bool);
