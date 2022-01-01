@@ -290,7 +290,7 @@ describe('PriceOracle', function () {
     pick(addresses.aave.atokens)
       .slice(0, 5)
       .forEach(({ atoken, token }) => {
-        it.only(`should get the price of atokens ${atoken}`, async function () {
+        it(`should get the price of atokens ${atoken}`, async function () {
           const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
           const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
           expect(price).to.be.equal(priceUnderlying);
