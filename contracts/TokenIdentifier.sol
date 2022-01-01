@@ -418,23 +418,23 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ External Functions ============ */
 
-    function overrideYearnVault(address _vault, bool _value) external override {
+    function updateYearnVault(address _vault, bool _value) external override {
         vaults[_vault] = _value;
     }
 
-    function overrideSynth(address _synth, bool _value) external override {
+    function updateSynth(address _synth, bool _value) external override {
         synths[_synth] = _value;
     }
 
-    function overrideCreamPair(address _creamToken, address _underlying) external override {
+    function updateCreamPair(address _creamToken, address _underlying) external override {
         crTokenToAsset[_creamToken] = _underlying;
     }
 
-    function overrideAavePair(address _aaveToken, address _underlying) external override {
+    function updateAavePair(address _aaveToken, address _underlying) external override {
         aTokenToAsset[_aaveToken] = _underlying;
     }
 
-    function overrideCompoundpair(address _cToken, address _underlying) external override {
+    function updateCompoundPair(address _cToken, address _underlying) external override {
         cTokenToAsset[_cToken] = _underlying;
     }
 

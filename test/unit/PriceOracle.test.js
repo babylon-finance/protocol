@@ -103,12 +103,12 @@ const tokens = [
     tokenOut: addresses.tokens.renBTC,
     value: from('72842000078806588'),
   },
-  {
-    name: 'WETH->rETH',
-    tokenIn: addresses.tokens.WETH,
-    tokenOut: addresses.tokens.rETH,
-    value: from('1023303092541190555'),
-  },
+  // {
+  //   name: 'WETH->rETH',
+  //   tokenIn: addresses.tokens.WETH,
+  //   tokenOut: addresses.tokens.rETH,
+  //   value: from('1023303092541190555'),
+  // },
   {
     name: 'WETH->CRV',
     tokenIn: addresses.tokens.WETH,
