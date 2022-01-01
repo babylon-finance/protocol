@@ -472,9 +472,11 @@ contract TokenIdentifier is ITokenIdentifier {
         // aave tokens. 1 to 1 with underlying
         if (aTokenToAsset[_tokenIn] != address(0)) {
             tokenInType = AAVE_TOKEN;
+            finalAssetIn = aTokenToAsset[_tokenIn];
         }
         if (aTokenToAsset[_tokenOut] != address(0)) {
             tokenOutType = AAVE_TOKEN;
+            finalAssetOut = aTokenToAsset[_tokenOut];
         }
 
         // crTokens Cream prices 0xde19f5a7cF029275Be9cEC538E81Aa298E297266
