@@ -598,7 +598,7 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
         address[] memory reserveAssetsC = IBabController(controller).getReserveAssets();
         delete reserveAssets;
         for (uint256 i = 0; i < reserveAssetsC.length; i++) {
-            reserveAssets[i] = reserveAssetsC[i];
+            reserveAssets.push(reserveAssetsC[i]);
         }
     }
 }
