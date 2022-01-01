@@ -37,4 +37,8 @@ interface IPriceOracle {
     function updateReserves() external;
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
+
+    function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+
+    function getCreamExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
 }

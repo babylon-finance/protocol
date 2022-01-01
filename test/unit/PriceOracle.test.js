@@ -104,6 +104,12 @@ const tokens = [
     value: from('72842000078806588'),
   },
   {
+    name: 'WETH->rETH',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokens.rETH,
+    value: from('1023303092541190555'),
+  },
+  {
     name: 'WETH->CRV',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.CRV,
@@ -253,36 +259,38 @@ describe('PriceOracle', function () {
       });
     });
 
-    pick(addresses.compound.ctokens).forEach(({ ctoken, token }) => {
-      it(`should get the price of ctokens ${ctoken}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
-        const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-        const exchangeRate = await priceOracle.getCompoundExchangeRate(ctoken);
-        expect(price).to.be.equal(
-          priceUnderlying
-            .mul(exchangeRate)
-            .div(10 ** 10)
-            .div(10 ** 8),
-        );
-      });
+    pick(addresses.compound.ctokens)
+      .slice(0, 5)
+      .forEach(({ ctoken, token }) => {
+        it(`should get the price of ctokens ${ctoken}`, async function () {
+          const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
+          const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
+          const exchangeRate = await priceOracle.getCompoundExchangeRate(ctoken, token);
+          expect(price).to.be.equal(
+            priceUnderlying
+              .mul(exchangeRate)
+              .div(10 ** 10)
+              .div(10 ** 8),
+          );
+        });
 
-      it(`should get the price of inverse ctokens ${ctoken}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, ctoken);
-        const priceUnderlying = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, token);
-        const exchangeRate = await priceOracle.getCompoundExchangeRate(ctoken);
-        expect(price).to.be.equal(
-          priceUnderlying
-            .mul(10 ** 10)
-            .mul(10 ** 8)
-            .div(exchangeRate),
-        );
+        it(`should get the price of inverse ctokens ${ctoken}`, async function () {
+          const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, ctoken);
+          const priceUnderlying = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, token);
+          const exchangeRate = await priceOracle.getCompoundExchangeRate(ctoken, token);
+          expect(price).to.be.equal(
+            priceUnderlying
+              .mul(10 ** 10)
+              .mul(10 ** 8)
+              .div(exchangeRate),
+          );
+        });
       });
-    });
 
     pick(addresses.aave.atokens)
       .slice(0, 5)
       .forEach(({ atoken, token }) => {
-        it(`should get the price of atokens ${atoken}`, async function () {
+        it.only(`should get the price of atokens ${atoken}`, async function () {
           const price = await priceOracle.connect(owner).getPrice(atoken, addresses.tokens.DAI);
           const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
           expect(price).to.be.equal(priceUnderlying);
@@ -295,7 +303,7 @@ describe('PriceOracle', function () {
         it(`should get the price of crtokens ${ctoken}`, async function () {
           const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
           const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-          const exchangeRate = await priceOracle.getCreamExchangeRate(ctoken);
+          const exchangeRate = await priceOracle.getCreamExchangeRate(ctoken, token);
           expect(price).to.be.equal(
             priceUnderlying
               .mul(exchangeRate)
