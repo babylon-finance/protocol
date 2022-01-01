@@ -375,15 +375,19 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {
-        return _getUNIV3Price(_getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut), _tokenIn, _tokenOut);
+        IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
+        if (address(pool) == address(0)) {
+            return 0;
+        }
+        return _getUNIV3Price(pool, _tokenIn, _tokenOut);
     }
 
     function _getBestPriceUniV3(address _tokenIn, address _tokenOut) private view returns (uint256) {
         int24 tick;
         uint256 price = 1e18;
         uint256 priceAux;
-        address reservePathIn;
-        address reservePathOut;
+        address reservePathIn = _tokenIn;
+        address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
         if (!IBabController(controller).isValidReserveAsset(_tokenIn)) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
@@ -398,6 +402,10 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
             }
             // Multiply from out reserve path to out token
             return price.preciseMul(priceAux);
+        }
+        // If reserves are different
+        if (reservePathIn != reservePathOut) {
+            price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
         }
         return price;
     }

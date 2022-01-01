@@ -73,6 +73,18 @@ const tokens = [
     value: parse('0.000240620334480852'),
   },
   {
+    name: 'WETH->tricrypto2',
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: '0xc4ad29ba4b3c580e6d59105fff484999997675ff',
+    value: parse('4209.9'),
+  },
+  {
+    name: 'tricrypto2->WETH',
+    tokenIn: '0xc4ad29ba4b3c580e6d59105fff484999997675ff',
+    tokenOut: addresses.tokens.WETH,
+    value: parse('0.00023740'),
+  },
+  {
     name: 'WETH->renBTC',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.renBTC,
@@ -84,13 +96,6 @@ const tokens = [
     tokenOut: addresses.tokens.CRV,
     value: parse('950'),
   },
-  // TODO: Fix this test
-  /*   {  
-    name: 'WETH->rETH',
-    tokenIn: addresses.tokens.WETH,
-    tokenOut: addresses.tokens.rETH,
-    value: from('1023303092541190555'),
-  }, */
   {
     name: 'WETH->sAAVE',
     tokenIn: addresses.tokens.WETH,
@@ -145,13 +150,12 @@ const tokens = [
     tokenOut: addresses.tokens.DAI,
     value: from('58177225539404031721099'),
   },
-  // TODO: Fix this test
-  //{
-  //  name: 'COMP->USDC',
-  //  tokenIn: addresses.tokens.COMP,
-  //  tokenOut: addresses.tokens.USDC,
-  //  value: from('362566529993303469131'),
-  //},
+  {
+    name: 'COMP->USDC',
+    tokenIn: addresses.tokens.COMP,
+    tokenOut: addresses.tokens.USDC,
+    value: from('362566529993303469131'),
+  },
   {
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,
@@ -230,7 +234,7 @@ describe('PriceOracle', function () {
 
   describe('Price Oracle', function () {
     pick(tokens).forEach(({ name, tokenIn, tokenOut, value }) => {
-      it(`should get the price of ${name}`, async function () {
+      it.only(`should get the price of ${name}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(tokenIn, tokenOut);
         expect(price).to.be.closeTo(value, value.div(50));
       });
