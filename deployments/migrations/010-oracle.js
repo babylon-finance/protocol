@@ -21,7 +21,7 @@ module.exports = async ({
     'PriceOracleProxy',
     { from: deployer, log: true, gasPrice },
     {
-      initializer: { method: 'initialize', args: [ethers.constants.AddressZero, controller] },
+      initializer: { method: 'initialize', args: [ethers.constants.AddressZero, controller.address] },
     },
   );
 
