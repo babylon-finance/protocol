@@ -6,6 +6,19 @@ const { pick } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
+  // Needs later block number
+  // {
+  //   name: 'GF->DAI',
+  //   tokenIn: '0xaaef88cea01475125522e117bfe45cf32044e238',
+  //   tokenOut: addresses.tokens.DAI,
+  //   value: from('3006074239866975462'),
+  // },
+  {
+    name: 'FRAX->DAI',
+    tokenIn: addresses.tokens.FRAX,
+    tokenOut: addresses.tokens.DAI,
+    value: from('980447178825784409'),
+  },
   {
     name: 'WETH->wstETH',
     tokenIn: addresses.tokens.WETH,
@@ -154,7 +167,7 @@ const tokens = [
     name: 'COMP->USDC',
     tokenIn: addresses.tokens.COMP,
     tokenOut: addresses.tokens.USDC,
-    value: from('362566529993303469131'),
+    value: from('299566529993303469131'),
   },
   {
     name: 'YFI',
