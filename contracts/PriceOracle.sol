@@ -95,7 +95,8 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
     ITokenIdentifier public tokenIdentifier;
     IBabController public controller;
-    address[] public reserveAssets;
+    mapping(address => bool) public reserveAssets;
+    address[] public reserveAssetsList;
 
     /* ============ Constructor ============ */
 
@@ -300,8 +301,8 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
         uint256 uniPrice = 0;
         // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
-        for (uint256 i = 0; i < reserveAssets.length; i++) {
-            address reserve = reserveAssets[i];
+        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
+            address reserve = reserveAssetsList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
                 price = _checkPairThroughCurve(reserve, _tokenOut);
                 if (price != 0) {
@@ -409,12 +410,12 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!IBabController(controller).isValidReserveAsset(_tokenIn)) {
+        if (!reserveAssets[_tokenIn]) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!IBabController(controller).isValidReserveAsset(_tokenOut)) {
+        if (!reserveAssets[_tokenOut]) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -435,13 +436,13 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
         address reserveChosen;
         IUniswapV3Pool maxpool;
         uint256 maxLiquidityInDai;
-        for (uint256 i = 0; i < reserveAssets.length; i++) {
+        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             (address pool, uint256 liquidityInDai) =
-                _getUniswapHighestLiquidityInReserveAsset(_token, reserveAssets[i], DAI);
+                _getUniswapHighestLiquidityInReserveAsset(_token, reserveAssetsList[i], DAI);
             if (liquidityInDai > maxLiquidityInDai) {
                 maxpool = IUniswapV3Pool(pool);
                 maxLiquidityInDai = liquidityInDai;
-                reserveChosen = reserveAssets[i];
+                reserveChosen = reserveAssetsList[i];
             }
         }
         if (maxLiquidityInDai > 0) {
@@ -487,18 +488,19 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
         uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         address denominator;
+        address token0 = pool.token0();
+        address token1 = pool.token1();
 
-        if (pool.token0() == DAI || pool.token0() == WETH || pool.token0() == USDC || pool.token0() == WBTC) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
-            denominator = pool.token0();
+        if (token0 == DAI || token0 == WETH || token0 == USDC || token0 == WBTC) {
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
+            denominator = token0;
         } else {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
-            denominator = pool.token1();
+            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token0).balanceOf(address(pool)));
+            denominator = token1;
         }
         // Normalize to reserve asset
         if (denominator != _reserveAsset) {
-            IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-            uint256 price = oracle.getPrice(denominator, _reserveAsset);
+            uint256 price = getPrice(denominator, _reserveAsset);
             // price is always in 18 decimals
             // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
             // normalization into reserveAsset decimals
@@ -604,9 +606,10 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
     function _updateReserves() private {
         address[] memory reserveAssetsC = IBabController(controller).getReserveAssets();
-        delete reserveAssets;
+        delete reserveAssetsList;
         for (uint256 i = 0; i < reserveAssetsC.length; i++) {
-            reserveAssets.push(reserveAssetsC[i]);
+            reserveAssets[reserveAssetsC[i]] = true;
+            reserveAssetsList.push(reserveAssetsC[i]);
         }
     }
 }
