@@ -98,6 +98,19 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
     mapping(address => bool) public reserveAssets;
     address[] public reserveAssetsList;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyGovernanceOrEmergency {
+        require(
+            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
+            'Not enough privileges'
+        );
+        _;
+    }
+
     /* ============ Constructor ============ */
 
     function initialize(ITokenIdentifier _tokenIdentifier, IBabController _controller) public {
@@ -113,7 +126,7 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
         return OwnableUpgradeable.owner();
     }
 
-    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyOwner {
+    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyGovernanceOrEmergency {
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
         tokenIdentifier = _tokenIdentifier;
     }

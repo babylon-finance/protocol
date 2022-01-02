@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import {IBabController} from './interfaces/IBabController.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
@@ -55,6 +56,7 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ State Variables ============ */
 
+    IBabController public controller;
     // Mapping of cToken addresses
     mapping(address => address) public cTokenToAsset;
     // Mapping of interest bearing aave tokens
@@ -66,9 +68,24 @@ contract TokenIdentifier is ITokenIdentifier {
     // Mapping of yearn vaults
     mapping(address => bool) public vaults;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyGovernanceOrEmergency {
+        require(
+            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
+            'Not enough privileges'
+        );
+        _;
+    }
+
     /* ============ Constructor ============ */
 
-    constructor() {
+    constructor(IBabController _controller) {
+        controller = _controller;
+
         cTokenToAsset[0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI
         cTokenToAsset[0x35A18000230DA775CAc24873d00Ff85BccdeD550] = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984; // UNI
         cTokenToAsset[0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5] = WETH; // ETH
@@ -418,23 +435,23 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ External Functions ============ */
 
-    function updateYearnVault(address _vault, bool _value) external override {
+    function updateYearnVault(address _vault, bool _value) external override onlyGovernanceOrEmergency {
         vaults[_vault] = _value;
     }
 
-    function updateSynth(address _synth, bool _value) external override {
+    function updateSynth(address _synth, bool _value) external override onlyGovernanceOrEmergency {
         synths[_synth] = _value;
     }
 
-    function updateCreamPair(address _creamToken, address _underlying) external override {
+    function updateCreamPair(address _creamToken, address _underlying) external override onlyGovernanceOrEmergency {
         crTokenToAsset[_creamToken] = _underlying;
     }
 
-    function updateAavePair(address _aaveToken, address _underlying) external override {
+    function updateAavePair(address _aaveToken, address _underlying) external override onlyGovernanceOrEmergency {
         aTokenToAsset[_aaveToken] = _underlying;
     }
 
-    function updateCompoundPair(address _cToken, address _underlying) external override {
+    function updateCompoundPair(address _cToken, address _underlying) external override onlyGovernanceOrEmergency {
         cTokenToAsset[_cToken] = _underlying;
     }
 

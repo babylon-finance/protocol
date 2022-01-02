@@ -9,16 +9,18 @@ module.exports = async ({
   ethers,
   getGasPrice,
   getContract,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getGasPrice();
+  const controller = await getController();
 
   const contract = 'TokenIdentifier';
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [],
+    args: [controller.address],
     log: true,
     gasPrice,
   });
