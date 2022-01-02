@@ -321,24 +321,54 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ External Functions ============ */
 
-    function updateYearnVault(address _vault, bool _value) external override onlyGovernanceOrEmergency {
-        vaults[_vault] = _value;
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values)
+        external
+        override
+        onlyGovernanceOrEmergency
+    {
+        for (uint256 i = 0; i < _vaults.length; i++) {
+            vaults[_vaults[i]] = _values[i];
+        }
     }
 
-    function updateSynth(address _synth, bool _value) external override onlyGovernanceOrEmergency {
-        synths[_synth] = _value;
+    function updateSynth(address[] calldata _synths, bool[] calldata _values)
+        external
+        override
+        onlyGovernanceOrEmergency
+    {
+        for (uint256 i = 0; i < _synths.length; i++) {
+            synths[_synths[i]] = _values[i];
+        }
     }
 
-    function updateCreamPair(address _creamToken, address _underlying) external override onlyGovernanceOrEmergency {
-        crTokenToAsset[_creamToken] = _underlying;
+    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings)
+        external
+        override
+        onlyGovernanceOrEmergency
+    {
+        for (uint256 i = 0; i < _creamTokens.length; i++) {
+            crTokenToAsset[_creamTokens[i]] = _underlyings[i];
+        }
     }
 
-    function updateAavePair(address _aaveToken, address _underlying) external override onlyGovernanceOrEmergency {
-        aTokenToAsset[_aaveToken] = _underlying;
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings)
+        external
+        override
+        onlyGovernanceOrEmergency
+    {
+        for (uint256 i = 0; i < _aaveTokens.length; i++) {
+            aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
+        }
     }
 
-    function updateCompoundPair(address _cToken, address _underlying) external override onlyGovernanceOrEmergency {
-        cTokenToAsset[_cToken] = _underlying;
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings)
+        external
+        override
+        onlyGovernanceOrEmergency
+    {
+        for (uint256 i = 0; i < _cTokens.length; i++) {
+            cTokenToAsset[_cTokens[i]] = _underlyings[i];
+        }
     }
 
     /**

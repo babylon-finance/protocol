@@ -38,13 +38,13 @@ interface ITokenIdentifier {
             address
         );
 
-    function updateYearnVault(address _vault, bool _value) external;
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external;
 
-    function updateSynth(address _synth, bool _value) external;
+    function updateSynth(address[] calldata _synths, bool[] calldata _values) external;
 
-    function updateCreamPair(address _creamToken, address _underlying) external;
+    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings) external;
 
-    function updateAavePair(address _aaveToken, address _underlying) external;
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external;
 
-    function updateCompoundPair(address _cToken, address _underlying) external;
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external;
 }
