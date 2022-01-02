@@ -22,7 +22,6 @@ import {PriceOracle} from '../PriceOracle.sol';
 import {ITokenIdentifier} from '../interfaces/ITokenIdentifier.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
-
 /**
  * @title PriceOracle
  * @author Babylon Finance Protocol
@@ -30,8 +29,9 @@ import {IBabController} from '../interfaces/IBabController.sol';
  * Uses Uniswap V3 to get a price of a token pair
  */
 contract RevertOracle is PriceOracle {
-
-    constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) PriceOracle(_tokenIdentifier, _controller) {}
+    constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller)
+        PriceOracle(_tokenIdentifier, _controller)
+    {}
 
     function getPrice(
         address, /* _tokenIn */
