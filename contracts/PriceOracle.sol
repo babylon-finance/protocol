@@ -383,7 +383,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         address _tokenIn,
         address _tokenOut
     ) private view returns (uint256) {
-        bool found;
         int24 tick;
 
         (, tick, , , , , ) = pool.slot0();
@@ -411,7 +410,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getBestPriceUniV3(address _tokenIn, address _tokenOut) private view returns (uint256) {
-        int24 tick;
         uint256 price = 1e18;
         uint256 priceAux;
         address reservePathIn = _tokenIn;
