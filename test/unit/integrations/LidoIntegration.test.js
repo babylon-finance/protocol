@@ -72,7 +72,7 @@ describe('LidoIntegrationTest', function () {
             const amount = STRATEGY_EXECUTE_MAP[token];
             await executeStrategy(strategyContract, { amount });
             // Check NAV
-            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(20));
+            expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(15));
 
             const beforeBalance = await reserveContract.balanceOf(garden.address);
             expect(await targetContract.balanceOf(strategyContract.address)).to.be.gt(0);
