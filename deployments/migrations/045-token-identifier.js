@@ -25,7 +25,7 @@ module.exports = async ({
     gasPrice,
   });
 
-  const priceOracleContract = await getContract('PriceOracle', 'PriceOracleProxy', signer);
+  const priceOracleContract = await getContract('PriceOracle', '', signer);
 
   if (deployment.newlyDeployed) {
     console.log(`Setting token identifier on price oracle ${deployment.address}`);

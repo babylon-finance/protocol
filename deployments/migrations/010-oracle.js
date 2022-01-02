@@ -3,7 +3,7 @@ const { ethers } = require('ethers');
 
 module.exports = async ({
   network,
-  getTenderlyContracts,
+  getTenderlyContract,
   tenderly,
   getNamedAccounts,
   deployments,
@@ -11,19 +11,18 @@ module.exports = async ({
   getGasPrice,
   getController,
 }) => {
+  const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getGasPrice();
   const controller = await getController();
 
-  const deployment = await upgradesDeployer.deployAdminProxy(
-    'PriceOracle',
-    'PriceOracleProxy',
-    { from: deployer, log: true, gasPrice },
-    {
-      initializer: { method: 'initialize', args: [ethers.constants.AddressZero, controller.address] },
-    },
-  );
+  const deployment = await deploy('PriceOracle', {
+    from: deployer,
+    args: [ethers.constants.AddressZero, controller.address],
+    log: true,
+    gasPrice,
+  });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting price oracle on controller ${deployment.address}`);
@@ -31,7 +30,7 @@ module.exports = async ({
   }
 
   if (network.live && deployment.newlyDeployed) {
-    await tenderly.push(await getTenderlyContracts(['PriceOracle', 'PriceOracleProxy']));
+    await tenderly.push(await getTenderlyContract('PriceOracle'));
   }
 };
 

@@ -50,7 +50,7 @@ module.exports = async ({
 
   for (const entry of [
     ['BabController', 'BabControllerProxy'],
-    ['PriceOracle', 'PriceOracleProxy'],
+    ['PriceOracle', ''],
     ['BABLToken', ''],
     ['RewardsDistributor', 'RewardsDistributorProxy'],
     ['Treasury', ''],

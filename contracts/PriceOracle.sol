@@ -21,7 +21,6 @@ pragma solidity 0.7.6;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
@@ -55,7 +54,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
  *
  * Uses Uniswap V3 to get a price of a token pair
  */
-contract PriceOracle is OwnableUpgradeable, IPriceOracle {
+contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for int256;
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
@@ -113,18 +112,13 @@ contract PriceOracle is OwnableUpgradeable, IPriceOracle {
 
     /* ============ Constructor ============ */
 
-    function initialize(ITokenIdentifier _tokenIdentifier, IBabController _controller) public {
-        OwnableUpgradeable.__Ownable_init();
+    constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) {
         tokenIdentifier = _tokenIdentifier;
         controller = _controller;
         _updateReserves();
     }
 
     /* ============ External Functions ============ */
-
-    function owner() public view override(OwnableUpgradeable) returns (address) {
-        return OwnableUpgradeable.owner();
-    }
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyGovernanceOrEmergency {
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
