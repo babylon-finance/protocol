@@ -107,5 +107,14 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
+    function syncPower(
+        address _garden,
+        address _contributor,
+        uint256 _newGardenAvgBalance,
+        uint256 _powerDiff,
+        uint256 _newUserAvgBalance,
+        bool _addOrSubstract
+    ) external;
+
     function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }

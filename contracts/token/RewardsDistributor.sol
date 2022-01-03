@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -361,7 +362,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
-    /**
+    /** PRIVILEGE FUNCTION
      * Change default BABL shares % by the governance
      * @param _strategistShare      New % of BABL strategist share
      * @param _stewardsShare        New % of BABL stewards share
@@ -390,6 +391,42 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         gardenCreatorBonus = _creatorBonus;
         bablProfitWeight = _profitWeight;
         bablPrincipalWeight = _principalWeight;
+    }
+
+    /** PRIVILEGE FUNCTION
+     * Update garden and contributor power by the governance
+     * @param _garden                 Address of garden
+     * @param _contributor            Address of contributor
+     * @param _newGardenAvgBalance    New Garden Avg Balance
+     * @param _powerDiff              Power difference (balance x time in seconds)
+     * @param _newUserAvgBalance      New User Avg Balance
+     * @param _addOrSubstract         Bool to add (true) or substract (false)
+     */
+    function syncPower(
+        address _garden,
+        address _contributor,
+        uint256 _newGardenAvgBalance,
+        uint256 _powerDiff,
+        uint256 _newUserAvgBalance,
+        bool _addOrSubstract
+    ) external override onlyOwner {
+        _onlyUnpaused();
+        _require(ERC20(_garden).balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        TimestampContribution storage contributorDetail = contributor.tsContributions[0];
+        GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
+        contributorDetail.avgBalance = _newUserAvgBalance;
+        gardenPower.avgGardenBalance = _newGardenAvgBalance;
+        if (_addOrSubstract) {
+            // add
+            contributorDetail.power = contributorDetail.power.add(_powerDiff);
+            gardenPower.accGardenPower = gardenPower.accGardenPower.add(_powerDiff);
+        } else {
+            // substract
+            contributorDetail.power = contributorDetail.power.sub(_powerDiff);
+            gardenPower.accGardenPower = gardenPower.accGardenPower.sub(_powerDiff);
+        }
     }
 
     /* ========== View functions ========== */
@@ -717,6 +754,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     _contributor,
                     strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
                 );
+            console.log(
+                'contributorPower',
+                contributorPower,
+                IERC20(garden).balanceOf(_contributor).preciseDiv(IERC20(garden).totalSupply())
+            );
             rewards = _getRewardsPerRole(
                 garden,
                 _strategy,
@@ -1279,6 +1321,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
+            console.log(
+                'contributorPower',
+                contributorPower,
+                IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply())
+            );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
