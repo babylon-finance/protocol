@@ -44,7 +44,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13665320; // old 13171630 new 13665320
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13927045; // old 13171630 new 13665320 garden issue 13746150 / 13746166 burning tokens 13764712 recent 13927045
 
 const CHAIN_IDS = {
   hardhat: 31337,

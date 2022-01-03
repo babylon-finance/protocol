@@ -375,6 +375,7 @@ describe('migrate', function () {
       for (const user of users) {
         const rewards = await distributor.getRewards(affectedGarden, user, [...strategies]);
         console.log('BEFORE FIX', user, rewards.toString());
+        // console.log((await viewerContract.getContributionAndRewards(affectedGarden, user)).toString());
         BABL = BABL.add(from(rewards[5]));
       }
       console.log('Fixing rewards....', BABL.toString());
@@ -382,7 +383,7 @@ describe('migrate', function () {
 
       // await distributor.connect(gnosis).syncPower(affectedGarden, gardenMember2.address, eth(4305.068937746358846003), eth(93064648196.387100), await gardenContract.balanceOf(gardenMember2.address) , false);
       await distributor
-        .connect(owner)
+        .connect(gnosis)
         .syncPower(
           affectedGarden,
           gardenMember2.address,
@@ -397,6 +398,7 @@ describe('migrate', function () {
       for (const user of users) {
         const rewards = await distributor.getRewards(affectedGarden, user, [...strategies]);
         console.log('AFTER FIX', user, rewards.toString());
+        // console.log((await viewerContract.getContributionAndRewards(affectedGarden, user)).toString());
         fixBABL = fixBABL.add(from(rewards[5]));
       }
       console.log('Fixed rewards....', fixBABL.toString());

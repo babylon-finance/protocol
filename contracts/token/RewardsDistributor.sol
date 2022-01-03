@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -754,11 +753,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     _contributor,
                     strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
                 );
-            console.log(
-                'contributorPower',
-                contributorPower,
-                IERC20(garden).balanceOf(_contributor).preciseDiv(IERC20(garden).totalSupply())
-            );
             rewards = _getRewardsPerRole(
                 garden,
                 _strategy,
@@ -1321,11 +1315,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
             // Get the contributor power until the the strategy exit timestamp
             uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
-            console.log(
-                'contributorPower',
-                contributorPower,
-                IERC20(_garden).balanceOf(_contributor).preciseDiv(IERC20(_garden).totalSupply())
-            );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
