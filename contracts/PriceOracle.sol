@@ -96,6 +96,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     IBabController public controller;
     mapping(address => bool) public reserveAssets;
     address[] public reserveAssetsList;
+    mapping(address => bool) public blackListReserveForOracle;
 
     /* ============ Modifiers ============ */
 
@@ -128,6 +129,15 @@ contract PriceOracle is Ownable, IPriceOracle {
     function updateReserves() public override {
         require(address(controller) == msg.sender, 'Only controller can call this');
         _updateReserves();
+    }
+
+    function updateOracleReserveBlackList(address _reserveOracle, bool _value)
+        public
+        override
+        onlyGovernanceOrEmergency
+    {
+        require(reserveAssets[_reserveOracle], 'Must be a reserve asset');
+        blackListReserveForOracle[_reserveOracle] = _value;
     }
 
     /**
@@ -415,12 +425,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenIn]) {
+        if (!_isOracleReserve(_tokenIn)) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenOut]) {
+        if (!_isOracleReserve(_tokenOut)) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -496,7 +506,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token0 = pool.token0();
         address token1 = pool.token1();
 
-        if (token0 == DAI || token0 == WETH || token0 == USDC || token0 == WBTC) {
+        if (_isOracleReserve(token0)) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
             denominator = token0;
         } else {
@@ -624,5 +634,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             reserveAssets[reserveAssetsC[i]] = true;
             reserveAssetsList.push(reserveAssetsC[i]);
         }
+    }
+
+    function _isOracleReserve(address _reserve) private view returns (bool) {
+        return reserveAssets[_reserve] && !blackListReserveForOracle[_reserve];
     }
 }
