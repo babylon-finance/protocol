@@ -137,13 +137,13 @@ const tokens = [
     name: 'WETH->TUSD',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.TUSD,
-    value: parse('3875.980484438219025893'),
+    value: parse('3774.407804575983940687'),
   },
   {
     name: 'TUSD->WETH',
     tokenIn: addresses.tokens.TUSD,
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000257792876901473'),
+    value: parse('0.000264730313109126'),
   },
   {
     name: 'YFI->DAI',

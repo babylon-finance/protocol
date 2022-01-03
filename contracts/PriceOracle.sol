@@ -565,7 +565,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address _tokenOut
     ) private view returns (uint256) {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        (int128 i, int128 j, ) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
+        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
         if (
             _curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 ||
@@ -577,11 +577,20 @@ contract PriceOracle is Ownable, IPriceOracle {
                 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
             );
         } else {
-            price = ICurvePoolV3(_curvePool).get_dy(
+            if (underlying){
+              price = ICurvePoolV3(_curvePool).get_dy_underlying(
                 i,
                 j,
                 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-            );
+              );
+            }
+            else {
+              price = ICurvePoolV3(_curvePool).get_dy(
+                i,
+                j,
+                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+              );
+            }
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);

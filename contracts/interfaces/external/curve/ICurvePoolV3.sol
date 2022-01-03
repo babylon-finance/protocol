@@ -15,6 +15,12 @@ interface ICurvePoolV3 {
         uint256 amount
     ) external view returns (uint256);
 
+    function get_dy_underlying(
+        int128 i,
+        int128 j,
+        uint256 amount
+    ) external view returns (uint256);
+
     function get_dy(
         uint256 i,
         uint256 j,
