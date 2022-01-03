@@ -577,19 +577,18 @@ contract PriceOracle is Ownable, IPriceOracle {
                 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
             );
         } else {
-            if (underlying){
-              price = ICurvePoolV3(_curvePool).get_dy_underlying(
-                i,
-                j,
-                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-              );
-            }
-            else {
-              price = ICurvePoolV3(_curvePool).get_dy(
-                i,
-                j,
-                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-              );
+            if (underlying) {
+                price = ICurvePoolV3(_curvePool).get_dy_underlying(
+                    i,
+                    j,
+                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+                );
+            } else {
+                price = ICurvePoolV3(_curvePool).get_dy(
+                    i,
+                    j,
+                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
+                );
             }
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
