@@ -7,6 +7,30 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'BABL -> DAI',
+    tokenIn: addresses.tokens.BABL,
+    tokenOut: addresses.tokens.DAI,
+    value: from('130550766996046267519'),
+  },
+  {
+    name: 'BABL -> USDC',
+    tokenIn: addresses.tokens.BABL,
+    tokenOut: addresses.tokens.USDC,
+    value: from('130550766996046267519'),
+  },
+  {
+    name: 'BABL -> WETH',
+    tokenIn: addresses.tokens.BABL,
+    tokenOut: addresses.tokens.WETH,
+    value: from('34894284496824574'),
+  },
+  {
+    name: 'BABL -> WBTC',
+    tokenIn: addresses.tokens.BABL,
+    tokenOut: addresses.tokens.WBTC,
+    value: from('2780836349371757'),
+  },
+  {
     name: 'GF->DAI',
     tokenIn: '0xaaef88cea01475125522e117bfe45cf32044e238',
     tokenOut: addresses.tokens.DAI,
