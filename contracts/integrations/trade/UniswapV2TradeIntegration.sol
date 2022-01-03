@@ -56,7 +56,55 @@ contract UniswapV2TradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Executes the trade through UniswapV3.
+     * Executes the trade through UniswapV2.
+     *
+     * @param _strategy             Address of the strategy
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
+     * @param _hopToken             Address of the routing token for multi-hop, i.e., sendToken->hopToken->receiveToken
+     */
+    function _getTradeCallData(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        address _hopToken
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        address[] memory path;
+        if (_hopToken == address(0) || _sendToken == _hopToken || _receiveToken == _hopToken) {
+            path = new address[](2);
+            path[0] = _sendToken;
+            path[1] = _receiveToken;
+        } else {
+            path = new address[](3);
+            path[0] = _sendToken;
+            path[1] = _hopToken;
+            path[2] = _receiveToken;
+        }
+        bytes memory callData =
+            abi.encodeWithSignature(
+                'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
+                _sendQuantity,
+                1,
+                path,
+                _strategy,
+                block.timestamp
+            );
+        return (router, 0, callData);
+    }
+
+    /**
+     * Executes the trade through UniswapV2.
      *
      * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
@@ -78,19 +126,7 @@ contract UniswapV2TradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        address[] memory path = new address[](2);
-        path[0] = _sendToken;
-        path[1] = _receiveToken;
-        bytes memory callData =
-            abi.encodeWithSignature(
-                'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
-                _sendQuantity,
-                1,
-                path,
-                _strategy,
-                block.timestamp
-            );
-        return (router, 0, callData);
+        return _getTradeCallData(_strategy, _sendToken, _sendQuantity, _receiveToken, WETH);
     }
 
     /**
@@ -102,20 +138,6 @@ contract UniswapV2TradeIntegration is TradeIntegration {
         address /* _swapTarget */
     ) internal pure override returns (address) {
         return router;
-    }
-
-    /**
-     * Checks liquidity of the trade
-     *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
-     */
-    function _checkLiquidity(
-        TradeInfo memory _tradeInfo,
-        uint256 /* _sendQuantity */
-    ) internal pure override returns (bool) {
-        // Can only use V2 with ops that have minQuantity set
-        return _tradeInfo.totalMinReceiveQuantity > 1;
     }
 
     /* ============ Private Functions ============ */

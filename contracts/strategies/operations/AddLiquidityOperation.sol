@@ -25,11 +25,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
-import {INFTPositionManager} from '../../interfaces/external/uniswap-v3/INFTPositionManager.sol';
-import {IUniswapViewer} from '../../interfaces/external/uniswap-v3/IUniswapViewer.sol';
-import {IUniVaultStorage} from '../../interfaces/external/uniswap-v3/IUniVaultStorage.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
-import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
 import {Operation} from './Operation.sol';
 
 /**
@@ -43,10 +39,6 @@ contract AddLiquidityOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
-
-    INFTPositionManager private constant nftPositionManager =
-        INFTPositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    IUniswapViewer private constant uniswapViewer = IUniswapViewer(0x25c81e249F913C94F263923421622bA731E6555b);
 
     /* ============ Constructor ============ */
 
@@ -173,16 +165,18 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = _garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i])) {
+                if (_isETH(poolTokens[i]) && address(msg.sender).balance > 0) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    IStrategy(msg.sender).trade(
-                        poolTokens[i],
-                        IERC20(poolTokens[i]).balanceOf(msg.sender),
-                        reserveAsset
-                    );
+                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > 0) {
+                        IStrategy(msg.sender).trade(
+                            poolTokens[i],
+                            IERC20(poolTokens[i]).balanceOf(msg.sender),
+                            reserveAsset
+                        );
+                    }
                 }
             }
         }
@@ -223,16 +217,19 @@ contract AddLiquidityOperation is Operation {
             );
         }
         // Price lp token directly if possible
-        price = _getPrice(address(lpToken), _garden.reserveAsset());
-        if (price != 0) {
-            return (
-                SafeDecimalMath.normalizeAmountTokens(
-                    address(lpToken),
-                    _garden.reserveAsset(),
-                    lpToken.balanceOf(msg.sender).preciseMul(price)
-                ),
-                true
-            );
+        // not for tricrypto2
+        if (address(lpToken) != 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff) {
+            price = _getPrice(address(lpToken), _garden.reserveAsset());
+            if (price != 0) {
+                return (
+                    SafeDecimalMath.normalizeAmountTokens(
+                        address(lpToken),
+                        _garden.reserveAsset(),
+                        lpToken.balanceOf(msg.sender).preciseMul(price)
+                    ),
+                    true
+                );
+            }
         }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
@@ -309,7 +306,9 @@ contract AddLiquidityOperation is Operation {
     ) internal returns (uint256[] memory) {
         uint256[] memory maxAmountsIn = new uint256[](poolTokens.length);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+            if (_poolWeights[i] > 0) {
+                maxAmountsIn[i] = _getMaxAmountTokenPool(_asset, _capital, _garden, _poolWeights[i], poolTokens[i]);
+            }
         }
         return maxAmountsIn;
     }
@@ -335,41 +334,12 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0)) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
                     try
                         IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
                     {} catch {}
                 }
             }
         } catch {}
-    }
-
-    /**
-     * Calculates the value of a univ3 lp token held by a harvest vault
-     * @param _pool                      Address of the harvest vault
-     * @param _reserve                   Address of the reserve asset
-     */
-    function _getPriceUniV3LpToken(address _pool, address _reserve) internal view returns (uint256) {
-        uint256 priceToken0 = _getPrice(IHarvestUniv3Pool(_pool).token0(), _reserve);
-        uint256 priceToken1 = _getPrice(IHarvestUniv3Pool(_pool).token1(), _reserve);
-        uint256 uniswapPosId = IUniVaultStorage(IHarvestUniv3Pool(_pool).getStorage()).posId();
-        (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(uniswapPosId);
-        (, , , , , , , uint128 totalSupply, , , , ) = nftPositionManager.positions(uniswapPosId);
-        if (totalSupply == 0) {
-            return 0;
-        }
-        uint256 priceinReserveToken0 =
-            SafeDecimalMath.normalizeAmountTokens(
-                IHarvestUniv3Pool(_pool).token0(),
-                _reserve,
-                amount0.mul(priceToken0).div(totalSupply)
-            );
-        uint256 priceinReserveToken1 =
-            SafeDecimalMath.normalizeAmountTokens(
-                IHarvestUniv3Pool(_pool).token1(),
-                _reserve,
-                amount1.mul(priceToken1).div(totalSupply)
-            );
-        return priceinReserveToken0.add(priceinReserveToken1);
     }
 }

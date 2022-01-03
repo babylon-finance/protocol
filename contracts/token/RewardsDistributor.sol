@@ -1203,10 +1203,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _executedAt,
         uint256 _exitedAt
     ) internal view returns (uint256) {
-        if (_stakedAt <= _executedAt && _executedAt > 0) {
+        if (_stakedAt == 0) {
+            // un-staked
+            return 0;
+        } else if (_stakedAt <= _executedAt && _executedAt > 0) {
             // NFT staked before the strategy was executed
             // gets 100% of Prophet bonuses
             return 1e18;
+            // From this point stakeAt > executedAt
         } else if (_stakedAt < _exitedAt && _exitedAt > 0) {
             // NFT staked after the strategy was executed + strategy finished
             // gets proportional
@@ -1216,7 +1220,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // gets proportional
             return (block.timestamp.sub(_stakedAt)).preciseDiv(block.timestamp.sub(_executedAt));
         } else {
-            // Strategy finalized before staking the NFT
+            // Strategy finalized before or in the same block than staking the NFT
             // NFT is not eligible then for this strategy
             return 0;
         }

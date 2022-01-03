@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 
 const addresses = require('lib/addresses');
-const { from, parse } = require('lib/helpers');
+const { from, parse, eth } = require('lib/helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
@@ -290,7 +290,7 @@ describe('PriceOracle', function () {
         expect(price).to.be.gt(0);
         if (token) {
           const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-          expect(price).to.be.closeTo(priceUnderlying, ethers.utils.parseEther('0.01'));
+          expect(price).to.be.closeTo(priceUnderlying, eth('0.01'));
         }
       });
     });

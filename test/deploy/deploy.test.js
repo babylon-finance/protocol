@@ -222,7 +222,7 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it('can finalize all active strategies', async () => {
+    it.only('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
   });

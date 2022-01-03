@@ -211,22 +211,6 @@ contract SynthetixTradeIntegration is TradeIntegration {
         return _receiveToken;
     }
 
-    /**
-     * Checks liquidity of the trade
-     *
-     * hparam _tradeInfo            Struct containing trade information used in internal functions
-     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
-     */
-    function _checkLiquidity(
-        TradeInfo memory, /* _tradeInfo */
-        uint256 /* _sendQuantity */
-    ) internal pure override returns (bool) {
-        // address reserveAsset = _tradeInfo.garden.reserveAsset();
-        // uint256 minLiquidityReserveAsset = _tradeInfo.garden.minLiquidityAsset();
-        // TODO: Check
-        return true;
-    }
-
     /* ============ Private Functions ============ */
 
     function _getTokens(

@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
@@ -42,7 +41,7 @@ contract CurvePoolIntegration is PoolIntegration {
     using BytesLib for uint256;
 
     /* ============ Constant ============ */
-    address private constant TRICRYPTO = 0x331aF2E331bd619DefAa5DAc6c038f53FCF9F785; // Pool only takes ETH
+    address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
     address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
@@ -109,10 +108,6 @@ contract CurvePoolIntegration is PoolIntegration {
         for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
             result[i] = coins[i];
         }
-        // Override weth to ETH because it only accepts ETH
-        if (poolAddress == TRICRYPTO && !forNAV) {
-            result[2] = address(0);
-        }
         return result;
     }
 
@@ -120,13 +115,19 @@ contract CurvePoolIntegration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory poolTokens = getPoolTokens(_pool, false);
         uint256[] memory result = new uint256[](_getNCoins(poolAddress));
-        if (poolAddress == TRICRYPTO) {
+        if (poolAddress == TRICRYPTO2) {
             result[0] = 0;
             result[1] = 0;
             result[2] = uint256(1e18);
         }
-        for (uint8 i = 0; i < poolTokens.length; i++) {
-            result[i] = uint256(1e18).div(poolTokens.length);
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        // If it's a meta pool, deposit and withdraw from the stable one
+        if (curveRegistry.is_meta(poolAddress)) {
+            result[0] = uint256(1e18);
+        } else {
+            for (uint8 i = 0; i < poolTokens.length; i++) {
+                result[i] = uint256(1e18).div(poolTokens.length);
+            }
         }
         return result;
     }
@@ -213,10 +214,6 @@ contract CurvePoolIntegration is PoolIntegration {
         bytes memory methodData = _getAddLiquidityMethodData(poolAddress, poolCoins, _maxAmountsIn, _poolTokensOut);
 
         uint256 value = 0;
-        if (poolAddress == TRICRYPTO) {
-            // get the value of eth
-            value = _maxAmountsIn[2];
-        }
         // If any is eth, set as value
         for (uint256 i = 0; i < poolCoins; i++) {
             if (_tokensIn[i] == address(0) || _tokensIn[i] == ETH_ADD_CURVE) {
@@ -379,6 +376,17 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut,
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        // For meta remove everything in the stable coin
+        if (curveRegistry.is_meta(_poolAddress)) {
+            return
+                abi.encodeWithSignature(
+                    'remove_liquidity_one_coin(uint256,int128,uint256)',
+                    _poolTokensIn,
+                    int128(0),
+                    _minAmountsOut[0]
+                );
+        }
         if (ncoins == 2) {
             if (supportsUnderlyingParam[_poolAddress]) {
                 return

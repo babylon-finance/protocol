@@ -75,15 +75,6 @@ describe('UniswapPoolIntegrationTest', function () {
     DAI = await getERC20(addresses.tokens.DAI);
   });
 
-  describe('Deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await babController.deployed();
-      const deployedUni = await uniswapPoolIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-      expect(!!deployedUni).to.equal(true);
-    });
-  });
-
   describe('Liquidity Pools', function () {
     let daiWethPair;
 
