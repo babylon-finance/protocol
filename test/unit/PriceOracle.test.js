@@ -6,13 +6,12 @@ const { pick } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
-  // Needs later block number
-  // {
-  //   name: 'GF->DAI',
-  //   tokenIn: '0xaaef88cea01475125522e117bfe45cf32044e238',
-  //   tokenOut: addresses.tokens.DAI,
-  //   value: from('3006074239866975462'),
-  // },
+  {
+    name: 'GF->DAI',
+    tokenIn: '0xaaef88cea01475125522e117bfe45cf32044e238',
+    tokenOut: addresses.tokens.DAI,
+    value: from('2550766996046267519'),
+  },
   {
     name: 'FRAX->DAI',
     tokenIn: addresses.tokens.FRAX,
