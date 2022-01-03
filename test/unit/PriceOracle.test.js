@@ -16,7 +16,7 @@ const tokens = [
     name: 'FRAX->DAI',
     tokenIn: addresses.tokens.FRAX,
     tokenOut: addresses.tokens.DAI,
-    value: from('980447178825784409'),
+    value: from('999447178825784409'),
   },
   {
     name: 'WETH->wstETH',

@@ -118,9 +118,6 @@ describe('BabController', function () {
 
   describe('enableGardenTokensTransfers', function () {
     it('can enable token transfers after 2021', async function () {
-      // 1st Jan 2022
-      await ethers.provider.send('evm_setNextBlockTimestamp', [1641024001]);
-      await ethers.provider.send('evm_mine');
       await babController.connect(owner).enableGardenTokensTransfers();
       expect(await babController.gardenTokensTransfersEnabled()).to.equal(true);
     });
