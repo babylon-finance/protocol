@@ -1,5 +1,4 @@
 const addresses = require('../../lib/addresses');
-const { ethers } = require('ethers');
 
 module.exports = async ({
   network,
@@ -9,6 +8,7 @@ module.exports = async ({
   deployments,
   ethers,
   getGasPrice,
+  getContract,
   getController,
 }) => {
   const { deploy } = deployments;
@@ -17,21 +17,24 @@ module.exports = async ({
   const gasPrice = await getGasPrice();
   const controller = await getController();
 
-  const deployment = await deploy('PriceOracle', {
+  const contract = 'TokenIdentifier';
+  const deployment = await deploy(contract, {
     from: deployer,
-    args: [ethers.constants.AddressZero, controller.address],
+    args: [controller.address],
     log: true,
     gasPrice,
   });
 
+  const priceOracleContract = await getContract('PriceOracle', '', signer);
+
   if (deployment.newlyDeployed) {
-    console.log(`Setting price oracle on controller ${deployment.address}`);
-    await (await controller.editPriceOracle(deployment.address, { gasPrice })).wait();
+    console.log(`Setting token identifier on price oracle ${deployment.address}`);
+    await (await priceOracleContract.updateTokenIdentifier(deployment.address, { gasPrice })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
-    await tenderly.push(await getTenderlyContract('PriceOracle'));
+    await tenderly.push(await getTenderlyContract(contract));
   }
 };
 
-module.exports.tags = ['Oracle'];
+module.exports.tags = ['TokenIdentifier'];

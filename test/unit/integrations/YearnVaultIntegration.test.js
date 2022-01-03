@@ -21,13 +21,19 @@ describe('YearnVaultIntegrationTest', function () {
 
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
-      expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1016868386987880382');
+      expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
+        '1020368483170848269',
+        parse('1020368483170848269').div(10),
+      );
     });
   });
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, eth())).to.equal('983411435340371704');
+      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, eth())).to.be.closeTo(
+        '980038110244691069',
+        parse('980038110244691069').div(10),
+      );
     });
   });
 

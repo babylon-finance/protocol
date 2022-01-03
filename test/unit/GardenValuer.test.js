@@ -12,6 +12,8 @@ describe('GardenValuer', function () {
   let dai;
   let weth;
   let priceOracle;
+  let babController;
+  let tokenIdentifier;
   let gardenValuer;
   let garden1;
   let signer1;
@@ -24,7 +26,9 @@ describe('GardenValuer', function () {
       dai,
       weth,
       priceOracle,
+      babController,
       gardenValuer,
+      tokenIdentifier,
       garden1,
       signer1,
       signer2,
@@ -109,7 +113,7 @@ describe('GardenValuer', function () {
 
     it('gets correct value for the garden 0 price asset', async function () {
       const revertOracleFactory = await ethers.getContractFactory('RevertOracle');
-      const revertOracle = await revertOracleFactory.deploy();
+      const revertOracle = await revertOracleFactory.deploy(tokenIdentifier.address, babController.address);
 
       // add 4 ETH to the garden, trade them for a token, and finish strategy
       await createStrategy('buy', 'active', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1);
