@@ -19,26 +19,32 @@
 */
 pragma solidity 0.7.6;
 
-import {ITokenIdentifier} from './ITokenIdentifier.sol';
-
 /**
  * @title IPriceOracle
  * @author Babylon Finance
  *
  * Interface for interacting with PriceOracle
  */
-interface IPriceOracle {
+interface ITokenIdentifier {
     /* ============ Functions ============ */
 
-    function getPrice(address _assetOne, address _assetTwo) external view returns (uint256);
+    function identifyTokens(address _tokenIn, address _tokenOut)
+        external
+        view
+        returns (
+            uint8,
+            uint8,
+            address,
+            address
+        );
 
-    function getPriceNAV(address _assetOne, address _assetTwo) external view returns (uint256);
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external;
 
-    function updateReserves() external;
+    function updateSynth(address[] calldata _synths, bool[] calldata _values) external;
 
-    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
+    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings) external;
 
-    function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external;
 
-    function getCreamExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external;
 }

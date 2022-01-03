@@ -29,6 +29,7 @@ import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGardenFactory} from './interfaces/IGardenFactory.sol';
 import {IStrategy} from './interfaces/IStrategy.sol';
+import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {IIshtarGate} from './interfaces/IIshtarGate.sol';
 import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
@@ -342,6 +343,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
+        if (priceOracle != address(0)) {
+            IPriceOracle(priceOracle).updateReserves();
+        }
         emit ReserveAssetAdded(_reserveAsset);
     }
 
@@ -352,11 +356,11 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function removeReserveAsset(address _reserveAsset) external override onlyOwner {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
-
         reserveAssets = reserveAssets.remove(_reserveAsset);
-
         delete validReserveAsset[_reserveAsset];
-
+        if (priceOracle != address(0)) {
+            IPriceOracle(priceOracle).updateReserves();
+        }
         emit ReserveAssetRemoved(_reserveAsset);
     }
 
@@ -599,7 +603,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         return enabledOperations;
     }
 
-    function getReserveAssets() external view returns (address[] memory) {
+    function getReserveAssets() external view override returns (address[] memory) {
         return reserveAssets;
     }
 

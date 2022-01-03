@@ -1,11 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { ONE_ETH, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
@@ -21,13 +21,19 @@ describe('YearnVaultIntegrationTest', function () {
 
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
-      expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1016868386987880382');
+      expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
+        '1020368483170848269',
+        parse('1020368483170848269').div(10),
+      );
     });
   });
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('983411435340371704');
+      expect(await yearnVaultIntegration.getExpectedShares(daiVault.address, eth())).to.be.closeTo(
+        '980038110244691069',
+        parse('980038110244691069').div(10),
+      );
     });
   });
 
@@ -38,19 +44,14 @@ describe('YearnVaultIntegrationTest', function () {
   });
 
   describe('enter and exit calldata per Garden per Vault', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
-      [
+    pick(GARDENS).forEach(({ token, name }) => {
+      pick([
         { vault: '0xa258C4606Ca8206D8aA700cE2143D7db854D168c', symbol: 'yvWETH' }, // yvWETH vault // old 0xa9fE4601811213c340e850ea305481afF02f5b28
         { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
         { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
         { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
         { vault: '0xda816459f1ab5631232fe5e97a05bbbb94970c95', symbol: 'yvDAI' }, // yvDAI vault
-      ].forEach(({ vault, symbol }) => {
+      ]).forEach(({ vault, symbol }) => {
         it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
           const vaultContract = await ethers.getContractAt('IYearnVault', vault);
           await transferFunds(token);

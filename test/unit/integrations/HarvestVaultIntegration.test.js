@@ -1,11 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
-const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { pick, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { ONE_ETH, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('HarvestVaultIntegrationTest', function () {
   let harvestVaultIntegration;
@@ -18,22 +18,21 @@ describe('HarvestVaultIntegrationTest', function () {
     daiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fDAI);
   });
 
-  describe('deployment', function () {
-    it('should successfully deploy the contract', async function () {
-      const deployed = await harvestVaultIntegration.deployed();
-      expect(!!deployed).to.equal(true);
-    });
-  });
-
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
-      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.equal('1074752893140707418');
+      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
+        '1081140202465126861',
+        parse('1081140202465126861').div(20),
+      );
     });
   });
 
   describe('getExpectedShares', function () {
     it('get expected shares', async function () {
-      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, ONE_ETH)).to.equal('930446436927227033');
+      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, eth())).to.be.closeTo(
+        '924949417032020774',
+        parse('924949417032020774').div(20),
+      );
     });
   });
   describe('getInvestmentAsset', function () {
@@ -43,18 +42,13 @@ describe('HarvestVaultIntegrationTest', function () {
   });
   // TODO - get test back when they are not greylisted by Harvest
   describe.skip('enter and exit calldata per Garden per Vault', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
-      [
+    pick(GARDENS).forEach(({ token, name }) => {
+      pick([
         { vault: '0xFE09e53A81Fe2808bc493ea64319109B5bAa573e', symbol: 'vWETH' }, // vWETH vault
         { vault: '0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE', symbol: 'vUSDC' }, // vUSDC vault
         { vault: '0x5d9d25c7C457dD82fc8668FFC6B9746b674d4EcB', symbol: 'vWBTC' }, // vWBTC vault
         { vault: '0xab7FA2B2985BCcfC13c6D86b1D5A17486ab1e04C', symbol: 'vDAI' }, // vDAI vault
-      ].forEach(({ vault, symbol }) => {
+      ]).forEach(({ vault, symbol }) => {
         it(`can enter and exit the ${symbol} at Harvest Vault from a ${name} garden`, async function () {
           const vaultContract = await ethers.getContractAt('IHarvestVault', vault);
           await transferFunds(token);
