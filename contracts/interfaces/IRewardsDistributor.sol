@@ -80,6 +80,8 @@ interface IRewardsDistributor {
         uint256 _lpShare
     ) external;
 
+    function migrateGardenToCheckpoints(address _garden, bool _toMigrate) external;
+
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
     function updateGardenPowerAndContributor(

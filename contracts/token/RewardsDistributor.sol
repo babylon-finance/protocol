@@ -257,7 +257,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     // Only for beta gardens and users as they need migration into new gas-optimized data structure
     // Boolean check to control users and garden migration into to new mapping architecture without checkpoints
-    mapping(address => mapping(address => bool)) private betaUserMigrated; // DEPRECATED
+    mapping(address => mapping(address => bool)) private betaAddressMigrated;
     mapping(address => bool) private betaGardenMigrated; // DEPRECATED
 
     uint256 private bablProfitWeight;
@@ -349,6 +349,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyController();
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
+    }
+
+    /** PRIVILEGE FUNCTION
+     * Migrates by governance the whole garden into checkpoints deprecating c-power
+     * @param _garden               Address of the garden
+     * @param _toMigrate            Bool to migrate (true) or redo (false)
+     */
+    function migrateGardenToCheckpoints(address _garden, bool _toMigrate) external override onlyOwner {
+        betaAddressMigrated[_garden][_garden] = _toMigrate;
     }
 
     /* ========== View functions ========== */
@@ -1150,13 +1159,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[12]: startingGardenSupply
         // strategyDetails[13]: endingGardenSupply
         uint256 endTime = _strategyDetails[1] > 0 ? _strategyDetails[1] : block.timestamp;
+        uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
-            (numCheckpoints[_garden][_contributor] == 0 ||
-                (numCheckpoints[_garden][_contributor] > 0 &&
-                    gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
+            (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
-        if (betaUser && oldStrategy) {
+        if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
             // Backward compatibility for old strategies
             return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
         }
@@ -1172,10 +1180,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
         // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
-            // If the user balance fluctuated during the strategy duration, we take real average balance
-            uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
-            // Avoid specific malicious attacks
-            balanceEnd = avgBalance > balanceEnd ? balanceEnd : avgBalance;
+            if (cp > 0) {
+                // User has any checkpoint
+                // If the user balance fluctuated during the strategy duration, we take real average balance
+                uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
+                // Avoid specific malicious attacks
+                balanceEnd = avgBalance > balanceEnd ? balanceEnd : avgBalance;
+            } else {
+                // no checkpoints
+                // if deposited before endTime, take proportional
+                // if deposited after endTime, take nothing
+                balanceEnd = timestamp < endTime
+                    ? balanceEnd.mul(endTime.sub(timestamp)).div(endTime.sub(startTime))
+                    : 0;
+            }
         }
         return balanceEnd.preciseDiv(finalSupplyEnd);
     }
@@ -1653,8 +1671,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
-        // We apply a 0.15% rounding error margin at NAV
-        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(15e14));
         profitData[0] = strategyDetails[7] >= strategyDetails[6];
         profitData[1] = strategyDetails[7] >= strategyDetails[8];
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
