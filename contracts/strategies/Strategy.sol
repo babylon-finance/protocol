@@ -16,7 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -425,6 +425,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+        if (capitalAllocated > 0) {
+            // expected return update
+            console.log('UNWIND expectedReturn before', expectedReturn);
+            expectedReturn = expectedReturn.preciseMul(capitalAllocated.add(_amountToUnwind).preciseDiv(capitalAllocated));
+            console.log('UNWIND expectedReturn after', expectedReturn);
+        }
 
         rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
 
@@ -833,6 +839,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             executedAt = block.timestamp;
             // Checkpoint of garden supply at start
             startingGardenSupply = IERC20(address(garden)).totalSupply();
+        } else {
+            // expected return update
+            console.log('ALLOCATE NEW CAPITAL expectedReturn before', expectedReturn);
+            expectedReturn = expectedReturn.preciseMul(capitalAllocated.sub(_capital).preciseDiv(capitalAllocated));
+            console.log('ALLOCATE NEW CAPITAL expectedReturn after', expectedReturn);
         }
         rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
