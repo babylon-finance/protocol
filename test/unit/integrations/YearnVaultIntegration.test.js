@@ -16,7 +16,7 @@ describe('YearnVaultIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ priceOracle, babController, yearnVaultIntegration, owner } = await setupTests()());
-    daiVault = await ethers.getContractAt('IYearnVault', addresses.yearn.vaults.ydai);
+    daiVault = await ethers.getContractAt('IYearnVault', addresses.yearn.daiVault);
   });
 
   describe('getPricePerShare', function () {
