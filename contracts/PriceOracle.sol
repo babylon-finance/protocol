@@ -75,6 +75,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address internal constant BABL = 0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
@@ -87,8 +88,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private constant maxTwapDeviation = 5000;
     int24 private constant baseThreshold = 1000;
+    int24 private constant INITIAL_TWAP_DEVIATION = 300;
 
     /* ============ State Variables ============ */
 
@@ -96,6 +97,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     IBabController public controller;
     mapping(address => bool) public reserveAssets;
     address[] public reserveAssetsList;
+    mapping(address => bool) public blackListReserveForOracle;
+    int24 private maxTwapDeviation;
 
     /* ============ Modifiers ============ */
 
@@ -115,6 +118,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) {
         tokenIdentifier = _tokenIdentifier;
         controller = _controller;
+        maxTwapDeviation = INITIAL_TWAP_DEVIATION;
+        // Blacklist babl as an oracle reserve
+        blackListReserveForOracle[BABL] = true;
         _updateReserves();
     }
 
@@ -125,9 +131,23 @@ contract PriceOracle is Ownable, IPriceOracle {
         tokenIdentifier = _tokenIdentifier;
     }
 
+    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override onlyGovernanceOrEmergency {
+        require(_maxTwapDeviation < 1500, 'Max twap deviation must be within range');
+        maxTwapDeviation = _maxTwapDeviation;
+    }
+
     function updateReserves() public override {
         require(address(controller) == msg.sender, 'Only controller can call this');
         _updateReserves();
+    }
+
+    function updateOracleReserveBlackList(address _reserveOracle, bool _value)
+        public
+        override
+        onlyGovernanceOrEmergency
+    {
+        require(reserveAssets[_reserveOracle], 'Must be a reserve asset');
+        blackListReserveForOracle[_reserveOracle] = _value;
     }
 
     /**
@@ -415,12 +435,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenIn]) {
+        if (!_isOracleReserve(_tokenIn)) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenOut]) {
+        if (!_isOracleReserve(_tokenOut)) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -496,7 +516,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token0 = pool.token0();
         address token1 = pool.token1();
 
-        if (token0 == DAI || token0 == WETH || token0 == USDC || token0 == WBTC) {
+        if (_isOracleReserve(token0)) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
             denominator = token0;
         } else {
@@ -624,5 +644,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             reserveAssets[reserveAssetsC[i]] = true;
             reserveAssetsList.push(reserveAssetsC[i]);
         }
+    }
+
+    function _isOracleReserve(address _reserve) private view returns (bool) {
+        return reserveAssets[_reserve] && !blackListReserveForOracle[_reserve];
     }
 }
