@@ -6,7 +6,7 @@ const { GARDEN_PARAMS } = require('lib/constants');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy } = require('fixtures/StrategyHelper.js');
 
-describe('IshtarGate', function () {
+describe.skip('IshtarGate', function () {
   let signer1;
   let signer2;
   let signer3;

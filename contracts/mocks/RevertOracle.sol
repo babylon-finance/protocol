@@ -19,6 +19,8 @@
 pragma solidity 0.7.6;
 
 import {PriceOracle} from '../PriceOracle.sol';
+import {ITokenIdentifier} from '../interfaces/ITokenIdentifier.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 
 /**
  * @title PriceOracle
@@ -27,6 +29,10 @@ import {PriceOracle} from '../PriceOracle.sol';
  * Uses Uniswap V3 to get a price of a token pair
  */
 contract RevertOracle is PriceOracle {
+    constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller)
+        PriceOracle(_tokenIdentifier, _controller)
+    {}
+
     function getPrice(
         address, /* _tokenIn */
         address /* _tokenOut */

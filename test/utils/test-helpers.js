@@ -80,7 +80,13 @@ function enums(...options) {
   return Object.fromEntries(options.map((key, i) => [key, new ethers.BigNumber.from(i)]));
 }
 
+function pick(arr) {
+  let FAST = process.env.FAST;
+  return !!FAST ? arr.slice(0, 1) : arr;
+}
+
 module.exports = {
+  pick,
   getERC20,
   increaseTime,
   increaseTime,

@@ -1,4 +1,5 @@
 const addresses = require('../../lib/addresses');
+const { ethers } = require('ethers');
 
 module.exports = async ({
   network,
@@ -14,13 +15,11 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getGasPrice();
-
   const controller = await getController();
-  const contract = 'PriceOracle';
 
-  const deployment = await deploy(contract, {
+  const deployment = await deploy('PriceOracle', {
     from: deployer,
-    args: [],
+    args: [ethers.constants.AddressZero, controller.address],
     log: true,
     gasPrice,
   });
@@ -31,7 +30,7 @@ module.exports = async ({
   }
 
   if (network.live && deployment.newlyDeployed) {
-    await tenderly.push(await getTenderlyContract(contract));
+    await tenderly.push(await getTenderlyContract('PriceOracle'));
   }
 };
 

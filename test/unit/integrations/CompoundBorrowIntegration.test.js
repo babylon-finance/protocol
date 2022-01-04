@@ -9,8 +9,17 @@ const {
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { GARDENS, ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const {
+  pick,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 
 describe('CompoundBorrowIntegrationTest', function () {
   let compoundBorrowIntegration;
@@ -190,13 +199,9 @@ describe('CompoundBorrowIntegrationTest', function () {
       expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
     });
   });
+
   describe('Compound Borrow Multigarden multiasset', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
+    pick(GARDENS).forEach(({ token, name }) => {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
       });

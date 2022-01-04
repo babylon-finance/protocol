@@ -26,6 +26,8 @@ require('./lib/tasks/gate');
 require('./lib/tasks/increase-time');
 require('./lib/tasks/upgrade-admin');
 require('./lib/tasks/upgrade-beacon');
+require('./lib/tasks/upgrade-multisig');
+require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
@@ -42,7 +44,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13927045; // old 13171630 new 13665320 checkpoints PR blockNumber 13721164
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13927000; // old 13171630 new 13665320
 
 const CHAIN_IDS = {
   hardhat: 31337,

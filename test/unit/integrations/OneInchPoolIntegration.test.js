@@ -10,10 +10,9 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
-const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
-const { ONE_ETH } = require('lib/constants');
+const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('OneInchPoolIntegrationTest', function () {
   let oneInchPoolIntegration;
@@ -67,9 +66,9 @@ describe('OneInchPoolIntegrationTest', function () {
         : balanceToken1;
 
     const liquidityToken1 =
-      balanceToken0 > 0 ? amount0ToAdd.mul(poolTotalSupply).mul(ONE_ETH).div(balanceToken0).div(ONE_ETH) : 0;
+      balanceToken0 > 0 ? amount0ToAdd.mul(poolTotalSupply).mul(eth()).div(balanceToken0).div(eth()) : 0;
     const liquidityToken2 =
-      balanceToken1 > 0 ? amount1ToAdd.mul(poolTotalSupply).mul(ONE_ETH).div(balanceToken1).div(ONE_ETH) : 0;
+      balanceToken1 > 0 ? amount1ToAdd.mul(poolTotalSupply).mul(eth()).div(balanceToken1).div(eth()) : 0;
 
     return liquidityToken1 < liquidityToken2 ? liquidityToken1 : liquidityToken2;
   }
@@ -145,13 +144,8 @@ describe('OneInchPoolIntegrationTest', function () {
     });
   });
   describe('Liquidity Pools multi reserve asset garden and multi-pair', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
-      [
+    pick(GARDENS).forEach(({ token, name }) => {
+      pick([
         {
           pool: addresses.oneinch.pools.wethdai,
           symbol: 'WETH-DAI',
@@ -176,7 +170,7 @@ describe('OneInchPoolIntegrationTest', function () {
           token0: addresses.tokens.DAI,
           token1: addresses.tokens.USDC,
         }, // DAI-USDC pool
-      ].forEach(({ pool, symbol, token0, token1 }) => {
+      ]).forEach(({ pool, symbol, token0, token1 }) => {
         it(`can enter and exit the ${symbol} at One Inch pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IMooniswap', pool);
           await transferFunds(token);

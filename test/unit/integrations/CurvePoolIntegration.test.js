@@ -8,8 +8,7 @@ const {
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
-const { ONE_ETH } = require('lib/constants');
-const { getERC20, eth } = require('utils/test-helpers');
+const { getERC20, eth, pick } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
@@ -77,7 +76,7 @@ describe('CurvePoolIntegrationTest', function () {
       expect(await curvePoolIntegration.isPool(data)).to.equal(false);
     });
 
-    pools.forEach(({ name, pool }) => {
+    pick(pools).forEach(({ name, pool }) => {
       it(`can enter and exit the ${name} pool`, async function () {
         const slippage = ['compound', 'susd', 'y'].includes(name) ? eth().div(4) : eth().div(20);
         const reserveAsset = await getERC20(await garden1.reserveAsset());

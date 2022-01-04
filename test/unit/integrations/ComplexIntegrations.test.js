@@ -106,6 +106,7 @@ describe('ComplexIntegrationsTest', function () {
       // TODO Fix NAV calculations it returns 40% less value than capital allocated
       // expect(nav).to.be.closeTo(eth(1000), eth(20));
     });
+
     it(`DAI Garden (CompLend WETH->CompBorrow USDC->BuyOp DPI)`, async function () {
       await transferFunds(dai.address);
 

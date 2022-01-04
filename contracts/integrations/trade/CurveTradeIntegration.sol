@@ -132,20 +132,6 @@ contract CurveTradeIntegration is TradeIntegration {
     }
 
     /**
-     * Checks liquidity of the trade
-     *
-     * hparam _tradeInfo            Struct containing trade information used in internal functions
-     * hparam _sendQuantity         Units of token in SetToken sent to the exchange
-     */
-    function _checkLiquidity(
-        TradeInfo memory, /* _tradeInfo */
-        uint256 /* _sendQuantity */
-    ) internal pure override returns (bool) {
-        // No need to check liquidity in curve
-        return true;
-    }
-
-    /**
      * Return pre action calldata
      *
      * @param  _sendToken               Address of the asset to send

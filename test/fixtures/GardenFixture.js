@@ -22,6 +22,7 @@ async function setUpFixture(
   const ishtarGate = await getContract('IshtarGate');
   const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
+  const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
   const gardenNFT = await getContract('GardenNFT');
@@ -233,6 +234,7 @@ async function setUpFixture(
 
     gardenValuer,
     priceOracle,
+    tokenIdentifier,
     ishtarGate,
     mardukGate,
 

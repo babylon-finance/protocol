@@ -1,13 +1,13 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
 
 describe('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
@@ -23,19 +23,14 @@ describe('UniswapV3TradeIntegration', function () {
   });
 
   describe('exchange', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name, fee }) => {
-      [
+    pick(GARDENS).forEach(({ token, name, fee }) => {
+      pick([
         { asset: addresses.tokens.USDT, symbol: 'USDT' },
         { asset: addresses.tokens.WETH, symbol: 'WETH' },
         { asset: addresses.tokens.DAI, symbol: 'DAI' },
         { asset: addresses.tokens.USDC, symbol: 'USDC' },
         { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
-      ].forEach(({ asset, symbol }) => {
+      ]).forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 

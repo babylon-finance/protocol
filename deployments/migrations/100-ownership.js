@@ -14,7 +14,7 @@ module.exports = async ({
   const chainId = await getChainId();
   const gasPrice = await getGasPrice();
 
-  const { deployer } = await getNamedAccounts();
+  const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
 
   if (chainId === '31337') {
@@ -50,6 +50,7 @@ module.exports = async ({
 
   for (const entry of [
     ['BabController', 'BabControllerProxy'],
+    ['PriceOracle', ''],
     ['BABLToken', ''],
     ['RewardsDistributor', 'RewardsDistributorProxy'],
     ['Treasury', ''],

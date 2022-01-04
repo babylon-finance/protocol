@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';

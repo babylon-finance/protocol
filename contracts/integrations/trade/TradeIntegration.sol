@@ -58,16 +58,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
 
     /* ============ Events ============ */
 
-    event ComponentExchanged(
-        IGarden indexed _garden,
-        IStrategy indexed _strategy,
-        address indexed _sendToken,
-        address _receiveToken,
-        string _exchangeName,
-        uint256 _totalSendAmount,
-        uint256 _totalReceiveAmount
-    );
-
     /* ============ Constants ============ */
 
     uint24 internal constant FEE_LOW = 500;
@@ -102,8 +92,52 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
+        uint256 _minReceiveQuantity,
+        address _hopToken
+    ) public override nonReentrant onlySystemContract {
+        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
+    }
+
+    /**
+     * Executes a trade on a supported DEX.
+     * @dev
+     *
+     * @param _strategy             Address of the strategy
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
+     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
+     */
+    function trade(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract {
+        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, address(0));
+    }
+
+    /* ============ Internal Functions ============ */
+
+    /**
+     * Executes a trade on a supported DEX.
+     * @dev
+     *
+     * @param _strategy             Address of the strategy
+     * @param _sendToken            Address of the token to be sent to the exchange
+     * @param _sendQuantity         Units of reserve asset token sent to the exchange
+     * @param _receiveToken         Address of the token that will be received from the exchange
+     * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
+     */
+    function _trade(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        address _hopToken
+    ) internal {
         TradeInfo memory tradeInfo =
             _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
         _validatePreTradeData(tradeInfo, _sendQuantity);
@@ -123,7 +157,20 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         }
         // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
         (address targetExchange, uint256 callValue, bytes memory methodData) =
-            _getTradeCallData(_strategy, tradeInfo.sendToken, tradeInfo.totalSendQuantity, tradeInfo.receiveToken);
+            _hopToken != address(0)
+                ? _getTradeCallData(
+                    _strategy,
+                    tradeInfo.sendToken,
+                    tradeInfo.totalSendQuantity,
+                    tradeInfo.receiveToken,
+                    _hopToken
+                )
+                : _getTradeCallData(
+                    _strategy,
+                    tradeInfo.sendToken,
+                    tradeInfo.totalSendQuantity,
+                    tradeInfo.receiveToken
+                );
         if (targetExchange != address(0)) {
             // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
             tradeInfo.strategy.invokeApprove(
@@ -153,20 +200,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        uint256 exchangedQuantity = _validatePostTrade(tradeInfo);
-        uint256 newSendTokens = tradeInfo.preTradeSendTokenBalance.sub(tradeInfo.totalSendQuantity);
-        emit ComponentExchanged(
-            tradeInfo.garden,
-            tradeInfo.strategy,
-            _sendToken,
-            _receiveToken,
-            tradeInfo.exchangeName,
-            newSendTokens,
-            exchangedQuantity
-        );
+        _validatePostTrade(tradeInfo);
     }
-
-    /* ============ Internal Functions ============ */
 
     /**
      * Create and return TradeInfo struct
@@ -220,7 +255,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
             'Strategy needs to have enough liquid tokens'
         );
-        require(_checkLiquidity(_tradeInfo, _sendQuantity), 'Not enough liquidity');
     }
 
     /**
@@ -257,6 +291,37 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     function _getTradeCallData(
         address, /* _strategy */
         address, /* _sendToken */
+        uint256, /* _sendQuantity */
+        address, /* _receiveToken */
+        address /* _hopToken */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return exchange calldata which is already generated from the exchange API
+     *
+     * hparam _strategy             Address of the strategy
+     * hparam _sendToken            Address of the token to be sent to the exchange
+     * hparam _sendQuantity         Units of reserve asset token sent to the exchange
+     * hparam _receiveToken         Address of the token that will be received from the exchange
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getTradeCallData(
+        address, /* _strategy */
+        address, /* _sendToken */
         uint256, /*_sendQuantity */
         address /* _receiveToken */
     )
@@ -268,18 +333,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             uint256,
             bytes memory
         );
-
-    /**
-     * Checks liquidity of the trade. Reverts if not enough
-     *
-     * hparam _tradeInfo               Trade Info
-     * hparam _sendQuantity            Amount of send tokens to exchange
-     *
-     */
-    function _checkLiquidity(
-        TradeInfo memory, /* _tradeInfo */
-        uint256 /*_sendQuantity */
-    ) internal view virtual returns (bool);
 
     /**
      * Return pre action calldata
