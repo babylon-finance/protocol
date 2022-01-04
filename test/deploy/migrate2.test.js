@@ -97,7 +97,7 @@ describe('migrate', function () {
       // await increaseBlock(1);
     });
 
-    it.only('All garden fix at once', async () => {
+    it('All garden fix at once', async () => {
       await upgradeRD();
       const users = (await getUsers(affectedGarden)).map((u) => u.address);
       const strategies = await gardenContract.getFinalizedStrategies();
