@@ -36,6 +36,8 @@ interface IPriceOracle {
 
     function updateReserves() external;
 
+    function updateMaxTwapDeviation(int24 _maxTwapDeviation) external;
+
     function updateOracleReserveBlackList(address _reserveOracle, bool _value) external;
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;

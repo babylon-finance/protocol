@@ -87,8 +87,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-    int24 private constant maxTwapDeviation = 5000;
     int24 private constant baseThreshold = 1000;
+    int24 private constant INITIAL_TWAP_DEVIATION = 300;
 
     /* ============ State Variables ============ */
 
@@ -97,6 +97,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     mapping(address => bool) public reserveAssets;
     address[] public reserveAssetsList;
     mapping(address => bool) public blackListReserveForOracle;
+    int24 private maxTwapDeviation;
 
     /* ============ Modifiers ============ */
 
@@ -116,6 +117,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) {
         tokenIdentifier = _tokenIdentifier;
         controller = _controller;
+        maxTwapDeviation = INITIAL_TWAP_DEVIATION;
         _updateReserves();
     }
 
@@ -124,6 +126,11 @@ contract PriceOracle is Ownable, IPriceOracle {
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyGovernanceOrEmergency {
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
         tokenIdentifier = _tokenIdentifier;
+    }
+
+    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override onlyGovernanceOrEmergency {
+        require(_maxTwapDeviation < 1500, 'Max twap deviation must be within range');
+        maxTwapDeviation = _maxTwapDeviation;
     }
 
     function updateReserves() public override {
