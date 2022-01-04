@@ -1393,7 +1393,7 @@ async function getStrategyState(strategy) {
     });
   });
 
-  describe.only('Capital reallocation and unwinding per garden-reserveAsset', function () {
+  describe('Capital reallocation and unwinding per garden-reserveAsset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       //  { token: addresses.tokens.DAI, name: 'DAI' }, cannot trade the same asset DAI for DAI
@@ -1411,8 +1411,10 @@ async function getStrategyState(strategy) {
         const [strategyContract] = await createStrategies([{ garden: garden }]);
 
         const amount = STRATEGY_EXECUTE_MAP[token];
-
+        const strategyDetails1 = await strategyContract.getStrategyDetails();
         await executeStrategy(strategyContract, { amount });
+        const strategyDetails2 = await strategyContract.getStrategyDetails();
+
         // strategyData[6]: preAllocated
         // strategyData[7]: pricePerTokenUnit
         const [strategyData] = await rewardsDistributor.checkMining(1, strategyContract.address);
@@ -1424,7 +1426,9 @@ async function getStrategyState(strategy) {
         await increaseBlock(100);
 
         // We reallocate capital
+        const strategyDetails3 = await strategyContract.getStrategyDetails();
         await executeStrategy(strategyContract, { amount: amount });
+        const strategyDetails4 = await strategyContract.getStrategyDetails();
         const [strategyData1] = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData1[6]).to.be.equal(amount.mul(2));
         expect(strategyData1[7]).to.be.closeTo(strategyData[7], strategyData1[7].div(100));
@@ -1434,7 +1438,9 @@ async function getStrategyState(strategy) {
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(50);
         // We unwind capital
+        const strategyDetails5 = await strategyContract.getStrategyDetails();
         await strategyContract.connect(owner).unwindStrategy(amount, await strategyContract.getNAV());
+        const strategyDetails6 = await strategyContract.getStrategyDetails();
         const [strategyData2] = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData2[6]).to.be.closeTo(amount, strategyData2[6].div(100));
         expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
@@ -1442,12 +1448,25 @@ async function getStrategyState(strategy) {
 
         await increaseTime(ONE_DAY_IN_SECONDS * 70);
         await increaseBlock(10);
+        const strategyDetails7 = await strategyContract.getStrategyDetails();
+        await increaseTime(ONE_DAY_IN_SECONDS * 100);
         await finalizeStrategyAfter30Days(strategyContract);
+        const strategyDetails8 = await strategyContract.getStrategyDetails();
         const [strategyData3] = await rewardsDistributor.checkMining(1, strategyContract.address);
 
         expect(strategyData3[6]).to.be.equal(0);
         expect(strategyData3[7]).to.be.closeTo(strategyData[7], strategyData3[7].div(100));
         expect(await reserveAssetContract.balanceOf(garden.address)).to.be.gte(amount);
+
+        // expectedReturn update
+        expect(strategyDetails8[9])
+          .to.eq(strategyDetails7[9])
+          .to.eq(strategyDetails6[9])
+          .to.eq(strategyDetails3[9])
+          .to.eq(strategyDetails2[9])
+          .to.eq(strategyDetails1[9]);
+        expect(strategyDetails4[9]).to.eq(strategyDetails5[9]);
+        expect(strategyDetails4[9]).to.be.closeTo(strategyDetails1[9].div(2), 1000);
       });
     });
   });

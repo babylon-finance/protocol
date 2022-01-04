@@ -16,7 +16,6 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -425,12 +424,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
-        if (capitalAllocated > 0) {
-            // expected return update
-            console.log('UNWIND expectedReturn before', expectedReturn);
-            expectedReturn = expectedReturn.preciseMul(capitalAllocated.add(_amountToUnwind).preciseDiv(capitalAllocated));
-            console.log('UNWIND expectedReturn after', expectedReturn);
-        }
+        // expected return update
+        expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
 
         rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
 
@@ -661,7 +656,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     {
         uint256[] memory data = new uint256[](14);
         bool[] memory boolData = new bool[](2);
-
         data[0] = executedAt;
         data[1] = exitedAt;
         data[2] = updatedAt;
@@ -841,9 +835,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             startingGardenSupply = IERC20(address(garden)).totalSupply();
         } else {
             // expected return update
-            console.log('ALLOCATE NEW CAPITAL expectedReturn before', expectedReturn);
-            expectedReturn = expectedReturn.preciseMul(capitalAllocated.sub(_capital).preciseDiv(capitalAllocated));
-            console.log('ALLOCATE NEW CAPITAL expectedReturn after', expectedReturn);
+            expectedReturn = _updateExpectedReturn(capitalAllocated, _capital, true);
         }
         rewardsDistributor.updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
@@ -1030,6 +1022,28 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         } catch {
             return 0;
         }
+    }
+
+    function _updateExpectedReturn(
+        uint256 _newCapital,
+        uint256 _deltaAmount,
+        bool _addedCapital
+    ) private view returns (uint256) {
+        uint256 maxDuration = executedAt.add(duration) >= block.timestamp ? duration : block.timestamp.sub(executedAt);
+        uint256 capital = _addedCapital ? _newCapital : _newCapital.add(_deltaAmount);
+        uint256 cube = capital.mul(maxDuration);
+        uint256 ratio;
+        if (_addedCapital) {
+            // allocation of new capital
+            ratio = cube.sub(_deltaAmount.mul(block.timestamp.sub(executedAt))).preciseDiv(cube);
+        } else {
+            // Unwind
+            // We handle the case where the strategy is over and gets a partial unwind instead of finalization
+            ratio = maxDuration > duration
+                ? capitalAllocated.add(_deltaAmount).preciseDiv(capitalAllocated)
+                : cube.preciseDiv(cube.sub(_deltaAmount.mul(executedAt.add(maxDuration).sub(block.timestamp))));
+        }
+        return expectedReturn.preciseMul(ratio);
     }
 
     // backward compatibility with OpData in case of ongoing strategies with deprecated OpData
