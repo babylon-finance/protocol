@@ -23,6 +23,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IHypervisor} from '../interfaces/IHypervisor.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -37,6 +38,7 @@ contract Assistant is OwnableUpgradeable {
      * Throws if the sender is not the protocol
      */
     modifier onlyGovernanceOrEmergency {
+        IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
         require(
             msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
             'Not enough privileges'
