@@ -416,7 +416,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
-        if ((strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
+        if (strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
@@ -1687,7 +1687,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (uint256 numQuarters, uint256 startingQuarter) =
             _getRewardsWindow(
                 (
-                    (strategyDetails[0] > START_TIME && START_TIME != 0)
+                    (strategyDetails[0] > START_TIME)
                         ? strategyDetails[0]
                         : strategyPerQuarter[_strategy][1].betaInitializedAt
                 ),
