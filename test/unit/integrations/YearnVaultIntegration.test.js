@@ -43,17 +43,11 @@ describe('YearnVaultIntegrationTest', function () {
     });
   });
 
-  describe('enter and exit calldata per Garden per Vault', function () {
+  describe('enter and exits normal vaults (direct assets)', function () {
     pick(GARDENS).forEach(({ token, name }) => {
-      pick([
-        { vault: '0xa258C4606Ca8206D8aA700cE2143D7db854D168c', symbol: 'yvWETH' }, // yvWETH vault // old 0xa9fE4601811213c340e850ea305481afF02f5b28
-        { vault: '0x7Da96a3891Add058AdA2E826306D812C638D87a7', symbol: 'yvUSDT' }, // yvUSDT vault
-        { vault: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9', symbol: 'yvUSDC' }, // yvUSDC vault
-        { vault: '0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E', symbol: 'yvWBTC' }, // yvWBTC vault
-        { vault: '0xda816459f1ab5631232fe5e97a05bbbb94970c95', symbol: 'yvDAI' }, // yvDAI vault
-      ]).forEach(({ vault, symbol }) => {
-        it(`can enter and exit the ${symbol} at Yearn Vault from a ${name} garden`, async function () {
-          const vaultContract = await ethers.getContractAt('IYearnVault', vault);
+      pick(addresses.yearn.vaults.filter((y) => !y.curve)).forEach((yvault) => {
+        it(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
+          const vaultContract = await ethers.getContractAt('IYearnVault', yvault.vault);
           await transferFunds(token);
 
           const garden = await createGarden({ reserveAsset: token });
@@ -62,7 +56,7 @@ describe('YearnVaultIntegrationTest', function () {
             state: 'vote',
             integrations: yearnVaultIntegration.address,
             garden,
-            specificParams: [vault, 0],
+            specificParams: [yvault.vault, 0],
           });
 
           expect(await vaultContract.balanceOf(strategyContract.address)).to.equal(0);
@@ -72,7 +66,7 @@ describe('YearnVaultIntegrationTest', function () {
           // Check NAV
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(10));
 
-          const asset = await yearnVaultIntegration.getInvestmentAsset(vault); // USDC, DAI, USDT and etc...
+          const asset = await yearnVaultIntegration.getInvestmentAsset(yvault.vault); // USDC, DAI, USDT and etc...
           const assetContract = await getERC20(asset);
           const assetDecimals = await assetContract.decimals();
 
@@ -86,13 +80,13 @@ describe('YearnVaultIntegrationTest', function () {
           amount = await normalizeDecimals(tokenDecimals, assetDecimals, amount);
 
           const expectedShares = await yearnVaultIntegration.getExpectedShares(
-            vault,
+            yvault.vault,
             reservePriceInAsset.mul(amount).div(conversionRate),
           );
           const executionTokenBalance = await tokenContract.balanceOf(garden.address);
           expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
             expectedShares,
-            expectedShares.div(50), // 2% percision
+            expectedShares.div(33), // 3% precision
           );
 
           await finalizeStrategy(strategyContract, 0);
