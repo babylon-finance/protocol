@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -103,3 +102,5 @@ contract Assistant is OwnableUpgradeable {
     // solhint-disable-next-line
     receive() external payable {}
 }
+
+contract AssistantV2 is Assistant {}
