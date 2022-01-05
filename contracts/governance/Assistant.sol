@@ -32,6 +32,17 @@ contract Assistant is OwnableUpgradeable {
 
     /* ============ Events ============ */
     /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not the protocol
+     */
+    modifier onlyGovernanceOrEmergency {
+        require(
+            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
+            'Not enough privileges'
+        );
+        _;
+    }
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
 
@@ -42,7 +53,7 @@ contract Assistant is OwnableUpgradeable {
     }
 
     /* ============ External Functions ============ */
-    function setupFusePool() external onlyOwner {
+    function setupFusePool() external onlyGovernanceOrEmergency {
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
         address DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         address WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
