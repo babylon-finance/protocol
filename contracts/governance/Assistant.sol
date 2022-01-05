@@ -75,7 +75,7 @@ contract Assistant is OwnableUpgradeable {
                 tokenIn: DAI,
                 tokenOut: WETH9,
                 fee: 500, // 0.05%
-                recipient: msg.sender,
+                recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: daiAmount, //90k DAI
                 amountOutMinimum: 24e18, //24 ETH out min
