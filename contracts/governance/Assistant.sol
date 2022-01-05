@@ -45,6 +45,7 @@ contract Assistant is OwnableUpgradeable {
         );
         _;
     }
+
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
 
