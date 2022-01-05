@@ -934,15 +934,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
-        // We need previous supply before burning new tokens to get accurate rewards calculations
-        uint256 prevSupply = totalSupply();
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut.sub(_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
-        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, prevSupply, _amountIn);
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -1013,8 +1011,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
 
         uint256 previousBalance = balanceOf(_to);
-        uint256 previousSupply = totalSupply();
-
         uint256 normalizedAmountIn = _amountIn.preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals());
         uint256 sharesToMint = normalizedAmountIn.preciseDiv(_pricePerShare);
 
@@ -1024,7 +1020,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // mint shares
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
-        _updateContributorDepositInfo(_to, previousBalance, _amountIn, previousSupply, sharesToMint);
+        _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
 
         // Mint the garden NFT
         if (_mintNft) {
@@ -1045,10 +1041,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _profits
     ) internal {
         _onlyUnpaused();
-        _require(balanceOf(_contributor) > 0, Errors.ONLY_CONTRIBUTOR);
+        Contributor storage contributor = contributors[_contributor];
+        _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
-        Contributor storage contributor = contributors[_contributor];
+        // Avoid replay attack between rewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
@@ -1110,7 +1107,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _previousBalance,
         uint256 _reserveAssetQuantity,
-        uint256 _previousSupply,
         uint256 _newTokens
     ) private {
         Contributor storage contributor = contributors[_contributor];
@@ -1122,9 +1118,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // We make checkpoints around contributor deposits to give the right rewards afterwards
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
-        // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _previousSupply, _newTokens, true);
-        // nonce update is done at updateGardenPowerAndContributor
+        // RD checkpoint for accurate rewards
+        _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
+        // nonce update is done at _updateGardenPowerAndContributor
     }
 
     /**
@@ -1134,7 +1130,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _contributor,
         uint256 _amountOut,
         uint256 _previousBalance,
-        uint256 _previousSupply,
         uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
@@ -1148,27 +1143,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
-        // We need to update at Rewards Distributor SC for rewards accurate calculations
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _previousSupply, _tokensToBurn, false);
-        // nonce update is done at updateGardenPowerAndContributor
+        // RD checkpoint for accurate rewards
+        _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
+        // nonce update is done at _updateGardenPowerAndContributor
     }
 
     /**
-     * We need to update at Rewards Distributor SC for rewards for rewards accurate calculations
+     * Rewards Distributor checkpoint updater at deposits / withdrawals
      */
     function _updateGardenPowerAndContributor(
         address _contributor,
         uint256 _prevBalance,
-        uint256 _prevSupply,
         uint256 _tokens,
         bool _depositOrWithdraw
     ) internal {
-        // We need to update at Rewards Distributor SC for rewards accurate calculations
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
             _prevBalance,
-            _prevSupply,
             _tokens,
             _depositOrWithdraw // true = deposit , false = withdraw
         );
