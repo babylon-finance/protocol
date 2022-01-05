@@ -78,12 +78,12 @@ contract Assistant is OwnableUpgradeable {
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: daiAmount, //90k DAI
-                amountOutMinimum: 24e18, //24 ETH out min
+                amountOutMinimum: 22e18, //24 ETH out min
                 sqrtPriceLimitX96: 0
             });
         // 2. The call to `exactInputSingle` executes the swap.
         uint256 amountOut = swapRouter.exactInputSingle(params);
-        require(amountOut >= 24e18);
+        require(amountOut >= 22e18);
         uint256 ethAmount = 655e17; // 65.5 ETH
         //3. Fund new hypervisor on visor
         IHypervisor visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
