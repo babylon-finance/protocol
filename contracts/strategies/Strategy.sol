@@ -1038,7 +1038,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             ratio = cube.sub(_deltaAmount.mul(block.timestamp.sub(executedAt))).preciseDiv(cube);
         } else {
             // Unwind
-            // We handle the case where the strategy is over and gets a partial unwind instead of finalization
             ratio = cube.preciseDiv(cube.sub(_deltaAmount.mul(executedAt.add(duration).sub(block.timestamp))));
         }
         return expectedReturn.preciseMul(ratio);
