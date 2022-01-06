@@ -1393,7 +1393,7 @@ async function getStrategyState(strategy) {
     });
   });
 
-  describe('Capital reallocation and unwinding per garden-reserveAsset', function () {
+  describe.only('Capital reallocation and unwinding per garden-reserveAsset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       //  { token: addresses.tokens.DAI, name: 'DAI' }, cannot trade the same asset DAI for DAI
@@ -1422,7 +1422,7 @@ async function getStrategyState(strategy) {
         expect(strategyData[6]).to.be.equal(amount);
         const reserveAssetContract = await getERC20(token);
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
-        await increaseTime(ONE_DAY_IN_SECONDS * 70);
+        await increaseTime(ONE_DAY_IN_SECONDS * 15);
         await increaseBlock(100);
 
         // We reallocate capital
@@ -1435,8 +1435,7 @@ async function getStrategyState(strategy) {
 
         expect(await strategyContract.capitalAllocated()).to.equal(amount.mul(2));
 
-        await increaseTime(ONE_DAY_IN_SECONDS * 70);
-        await increaseBlock(50);
+        await increaseTime(ONE_DAY_IN_SECONDS * 10);
         // We unwind capital
         const strategyDetails5 = await strategyContract.getStrategyDetails();
         await strategyContract.connect(owner).unwindStrategy(amount, await strategyContract.getNAV());
@@ -1446,27 +1445,30 @@ async function getStrategyState(strategy) {
         expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
 
-        await increaseTime(ONE_DAY_IN_SECONDS * 70);
+        await increaseTime(ONE_DAY_IN_SECONDS * 5);
         await increaseBlock(10);
         const strategyDetails7 = await strategyContract.getStrategyDetails();
-        await increaseTime(ONE_DAY_IN_SECONDS * 100);
-        await finalizeStrategyAfter30Days(strategyContract);
+        await increaseTime(ONE_DAY_IN_SECONDS * 15);
+        await finalizeStrategyImmediate(strategyContract);
         const strategyDetails8 = await strategyContract.getStrategyDetails();
         const [strategyData3] = await rewardsDistributor.checkMining(1, strategyContract.address);
 
         expect(strategyData3[6]).to.be.equal(0);
         expect(strategyData3[7]).to.be.closeTo(strategyData[7], strategyData3[7].div(100));
         expect(await reserveAssetContract.balanceOf(garden.address)).to.be.gte(amount);
-
         // expectedReturn update
-        expect(strategyDetails8[9])
-          .to.eq(strategyDetails7[9])
-          .to.eq(strategyDetails6[9])
-          .to.eq(strategyDetails3[9])
-          .to.eq(strategyDetails2[9])
-          .to.eq(strategyDetails1[9]);
+        expect(strategyDetails8[9]).to.eq(strategyDetails7[9]).to.eq(strategyDetails6[9]);
+        expect(strategyDetails3[9]).to.eq(strategyDetails2[9]).to.eq(strategyDetails1[9]);
         expect(strategyDetails4[9]).to.eq(strategyDetails5[9]);
-        expect(strategyDetails4[9]).to.be.closeTo(strategyDetails1[9].div(2), 1000);
+        expect(strategyDetails4[9]).to.be.lt(strategyDetails1[9]);
+        expect(strategyDetails8[9]).to.be.gt(strategyDetails4[9]).to.be.lt(strategyDetails1[9]);
+        // Double amount at mid strategy duration is aprox 75% of previous expected
+        expect(strategyDetails4[9]).to.be.closeTo(strategyDetails1[9].mul(73).div(100), strategyDetails1[9].div(100)); // 1%
+        // Reducing half amount close to the end, increases it back just a bit
+        // TODO: Note that a very big unwind just before the strategy duration ends, might produce a real advantage
+        // as it will just increase a bit the expected % over a very reduced capital.
+        // Higher % over a much lower capital, means that lower profits will likely be above expected
+        expect(strategyDetails8[9]).to.be.closeTo(strategyDetails1[9].mul(78).div(100), strategyDetails1[9].div(100)); // 1%
       });
     });
   });

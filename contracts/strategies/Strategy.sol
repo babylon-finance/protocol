@@ -419,6 +419,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
+        _require(block.timestamp < executedAt.add(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
         // An unwind should not allow users to remove all capital from a strategy
         _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
@@ -1029,9 +1030,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _deltaAmount,
         bool _addedCapital
     ) private view returns (uint256) {
-        uint256 maxDuration = executedAt.add(duration) >= block.timestamp ? duration : block.timestamp.sub(executedAt);
         uint256 capital = _addedCapital ? _newCapital : _newCapital.add(_deltaAmount);
-        uint256 cube = capital.mul(maxDuration);
+        uint256 cube = capital.mul(duration);
         uint256 ratio;
         if (_addedCapital) {
             // allocation of new capital
@@ -1039,9 +1039,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         } else {
             // Unwind
             // We handle the case where the strategy is over and gets a partial unwind instead of finalization
-            ratio = maxDuration > duration
-                ? capitalAllocated.add(_deltaAmount).preciseDiv(capitalAllocated)
-                : cube.preciseDiv(cube.sub(_deltaAmount.mul(executedAt.add(maxDuration).sub(block.timestamp))));
+            ratio = cube.preciseDiv(cube.sub(_deltaAmount.mul(executedAt.add(duration).sub(block.timestamp))));
         }
         return expectedReturn.preciseMul(ratio);
     }
