@@ -678,16 +678,16 @@ async function getStrategyState(strategy) {
 
       expect(await weth.balanceOf(garden1.address)).to.be.closeTo(eth().mul(3), eth().div(100));
       expect(await strategyContract.capitalAllocated()).to.equal(eth('2'));
-      await increaseTime(ONE_DAY_IN_SECONDS * 70);
+      await increaseTime(ONE_DAY_IN_SECONDS * 25);
       await strategyContract.connect(owner).unwindStrategy(eth(), await strategyContract.getNAV());
 
       expect(await strategyContract.capitalAllocated()).to.equal(eth());
       expect(await weth.balanceOf(garden1.address)).to.be.gt(eth());
-      await increaseTime(ONE_DAY_IN_SECONDS * 70);
+      await increaseTime(ONE_DAY_IN_SECONDS * 25);
       await finalizeStrategyAfter30Days(strategyContract);
       const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth(), eth()]);
       const rewards = await strategyContract.strategyRewards();
-      expect(rewards).to.be.closeTo(value, eth('50'));
+      expect(rewards).to.be.closeTo(value, value.div(50)); // 2%
     });
     it('should calculate correct BABL in case of 1 strategy with negative profit and total duration of 1 quarter but crossing edges (2 quarters)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
