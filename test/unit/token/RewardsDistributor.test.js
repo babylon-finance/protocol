@@ -1306,7 +1306,7 @@ async function getStrategyState(strategy) {
     });
   });
 
-  describe.only('Capital reallocation and unwinding per garden-reserveAsset', function () {
+  describe('Capital reallocation and unwinding per garden-reserveAsset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },
       //  { token: addresses.tokens.DAI, name: 'DAI' }, cannot trade the same asset DAI for DAI
