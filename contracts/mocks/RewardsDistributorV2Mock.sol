@@ -16,13 +16,13 @@
 */
 
 pragma solidity 0.7.6;
-import {TimeLockedToken} from './TimeLockedToken.sol';
+
+import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/proxy/ProxyAdmin.sol';
 
@@ -42,18 +42,15 @@ import {IProphets} from '../interfaces/IProphets.sol';
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
  * @author Babylon Finance
- * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards
- * of the BABL Mining Program along the time reserved for executed strategies. It implements a supply curve
- * to distribute 500K BABL along the time.
+ * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
+ * along the time reserved for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
  * The supply curve is designed to optimize the long-term sustainability of the protocol.
  * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
- * For that, it houses the state of the protocol power along the time as each strategy power is compared
- * to the whole protocol usage as well as profits of each strategy counts.
- * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses
- * to specific profiles, which are actively contributing to the protocol growth and their communities
- * (Garden creators, Strategists and Stewards).
+ * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
+ * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
+ * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
  */
-contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
+contract RewardsDistributorV2Mock is OwnableUpgradeable {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -70,44 +67,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ========== Events ========== */
 
     /* ============ Modifiers ============ */
-    /**
-     * Throws if the call is not from a valid strategy
-     */
-    function _onlyStrategy(address _strategy) private view {
-        address garden = address(IStrategy(_strategy).garden());
-        _require(IBabController(controller).isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
-    }
-
-    /**
-     * Throws if the sender is not the controller
-     */
-    function _onlyController() private view {
-        _require(IBabController(controller).isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
-        _require(address(controller) == msg.sender, Errors.ONLY_CONTROLLER);
-    }
-
-    /**
-     * Throws if Rewards Distributor is paused
-     */
-    function _onlyUnpaused() private view {
-        // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
-    }
-
-    /**
-     * Throws if a malicious reentrant call is detected
-     */
-    modifier nonReentrant() {
-        // On the first call to nonReentrant, _notEntered will be true
-        _require(status != ENTERED, Errors.REENTRANT_CALL);
-        // Any calls to nonReentrant after this point will fail
-        status = ENTERED;
-        _;
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        status = NOT_ENTERED;
-    }
 
     /* ============ Constants ============ */
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
@@ -301,7 +260,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /* ============ External Functions ============ */
 
-    function newMethod() public view returns (string memory) {
+    function newMethod() public pure returns (string memory) {
         return 'foobar';
     }
 }
