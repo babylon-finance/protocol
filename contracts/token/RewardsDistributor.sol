@@ -360,6 +360,37 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         betaAddressMigrated[_garden][_garden] = _toMigrate;
     }
 
+    /** PRIVILEGE FUNCTION
+     * Change default BABL shares % by the governance
+     * @param _strategistShare      New % of BABL strategist share
+     * @param _stewardsShare        New % of BABL stewards share
+     * @param _lpShare              New % of BABL lp share
+     * @param _creatorBonus         New % of creator bonus
+     * @param _profitWeight         New % of profit weigth for strategy rewards
+     * @param _principalWeight      New % of principal weigth for strategy rewards
+     */
+    function setBABLMiningParameters(
+        uint256 _strategistShare,
+        uint256 _stewardsShare,
+        uint256 _lpShare,
+        uint256 _creatorBonus,
+        uint256 _profitWeight,
+        uint256 _principalWeight
+    ) external override onlyOwner {
+        _require(
+            _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
+                _creatorBonus <= 1e18 &&
+                _profitWeight.add(_principalWeight) == 1e18,
+            Errors.INVALID_MINING_VALUES
+        );
+        strategistBABLPercentage = _strategistShare;
+        stewardsBABLPercentage = _stewardsShare;
+        lpsBABLPercentage = _lpShare;
+        gardenCreatorBonus = _creatorBonus;
+        bablProfitWeight = _profitWeight;
+        bablPrincipalWeight = _principalWeight;
+    }
+
     /* ========== View functions ========== */
 
     /**
@@ -477,14 +508,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategy        Address of strategy
      */
 
-    function checkMining(uint256 _quarterNum, address _strategy)
-        external
-        view
-        override
-        returns (uint256[] memory, bool[] memory)
-    {
-        uint256[] memory miningData = new uint256[](10);
-        bool[] memory miningBool = new bool[](2);
+    function checkMining(uint256 _quarterNum, address _strategy) external view override returns (uint256[] memory) {
+        uint256[] memory miningData = new uint256[](12);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -495,9 +520,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
         miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
-        miningBool[0] = isProtocolPerQuarter[_quarterNum];
-        miningBool[1] = strategyPerQuarter[_strategy][_quarterNum].initialized;
-        return (miningData, miningBool);
+        miningData[10] = bablProfitWeight;
+        miningData[11] = bablPrincipalWeight;
+        return (miningData);
     }
 
     /**
@@ -511,35 +536,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         } else {
             return [strategistProfitPercentage, stewardsProfitPercentage, lpsProfitPercentage];
         }
-    }
-
-    /**
-     * Returns the percentages of BABL Mining program
-     *
-     * @return   Strategist, Stewards, Lps, creator bonus, bablProfit weight, babl principal weigth
-     *
-     */
-    function getBABLMiningParameters()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            strategistBABLPercentage,
-            stewardsBABLPercentage,
-            lpsBABLPercentage,
-            gardenCreatorBonus,
-            bablProfitWeight,
-            bablPrincipalWeight
-        );
     }
 
     /**
@@ -1806,4 +1802,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV11 is RewardsDistributor {}
+contract RewardsDistributorV12 is RewardsDistributor {}
