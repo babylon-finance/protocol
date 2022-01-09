@@ -27,7 +27,7 @@ pragma solidity 0.7.6;
 interface IRewardsDistributor {
     /* ========== View functions ========== */
 
-    function getStrategyRewards(address _strategy) external view returns (uint96);
+    function getStrategyRewards(address _strategy) external view returns (uint256);
 
     function getRewards(
         address _garden,
@@ -37,7 +37,7 @@ interface IRewardsDistributor {
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
-    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[] memory);
+    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[15] memory);
 
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
@@ -67,14 +67,7 @@ interface IRewardsDistributor {
 
     function migrateAddressToCheckpoints(address[] memory _garden, bool _toMigrate) external;
 
-    function setBABLMiningParameters(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare,
-        uint256 _creatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external;
+    function setBABLMiningParameters(uint256[9] memory _newMiningParams) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 

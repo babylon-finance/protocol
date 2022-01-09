@@ -279,6 +279,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // The number of checkpoints for each address of each garden
     // garden -> address -> number of checkpoints
     mapping(address => mapping(address => uint256)) private numCheckpoints;
+    // Benchmark thresholds to segment cool strategies from bad strategies
+    // benchmark[0]: (always negative value) No receiving profit related BABL <- low threshold -> receiving profit related BABL but with quadratic penalty
+    // benchmark[1]: (always positive value) Receiving profit related BABL but with quadratic penalty <- medium threshold -> receiving boosted BABL by its profit return %
+    uint256[3] private benchmark;
 
     /* ============ Constructor ============ */
 
@@ -305,6 +309,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         status = NOT_ENTERED;
         // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
+        // Benchmark conditions to apply to BABL rewards
+        benchmark[0] = 90e16; // profit of -10 %
+        benchmark[1] = 103e16; // profit of +3 %
+        benchmark[2] = 2e18; // 1/2 = 50% = half penalty
     }
 
     /* ============ External Functions ============ */
@@ -375,34 +383,36 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /** PRIVILEGE FUNCTION
      * Change default BABL shares % by the governance
-     * @param _strategistShare      New % of BABL strategist share
-     * @param _stewardsShare        New % of BABL stewards share
-     * @param _lpShare              New % of BABL lp share
-     * @param _creatorBonus         New % of creator bonus
-     * @param _profitWeight         New % of profit weigth for strategy rewards
-     * @param _principalWeight      New % of principal weigth for strategy rewards
+     * @param _newMiningParams      Array of new mining params to be set by government
      */
-    function setBABLMiningParameters(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare,
-        uint256 _creatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external override {
+    function setBABLMiningParameters(uint256[9] memory _newMiningParams) external override {
+        // _newMiningParams[0]: _strategistShare
+        // _newMiningParams[1]: _stewardsShare
+        // _newMiningParams[2]: _lpShare
+        // _newMiningParams[3]: _creatorBonus
+        // _newMiningParams[4]: _profitWeight
+        // _newMiningParams[5]: _principalWeight
+        // _newMiningParams[6]: _minThreshold (between really bad strategies and not cool enough strategies):
+        // It divides segment 1 and segment 2
+        // _newMiningParams[7]: _maxThreshold (between really cool strategies and not cool enough strategies):
+        // It divides segment 2 and segment 3
+        // _newMiningParams[8]: _quadratic penalty to be applied to not cool strategies in segment 2
         _onlyGovernanceOrEmergency();
         _require(
-            _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
-                _creatorBonus <= 1e18 &&
-                _profitWeight.add(_principalWeight) == 1e18,
+            _newMiningParams[0].add(_newMiningParams[1]).add(_newMiningParams[2]) == 1e18 &&
+                _newMiningParams[3] <= 1e18 &&
+                _newMiningParams[4].add(_newMiningParams[5]) == 1e18,
             Errors.INVALID_MINING_VALUES
         );
-        strategistBABLPercentage = _strategistShare;
-        stewardsBABLPercentage = _stewardsShare;
-        lpsBABLPercentage = _lpShare;
-        gardenCreatorBonus = _creatorBonus;
-        bablProfitWeight = _profitWeight;
-        bablPrincipalWeight = _principalWeight;
+        strategistBABLPercentage = _newMiningParams[0];
+        stewardsBABLPercentage = _newMiningParams[1];
+        lpsBABLPercentage = _newMiningParams[2];
+        gardenCreatorBonus = _newMiningParams[3];
+        bablProfitWeight = _newMiningParams[4];
+        bablPrincipalWeight = _newMiningParams[5];
+        benchmark[0] = _newMiningParams[6];
+        benchmark[1] = _newMiningParams[7]; // Threshold
+        benchmark[2] = _newMiningParams[8]; // Quadratic penalty for segment 2
     }
 
     /* ========== View functions ========== */
@@ -455,7 +465,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Gets the baseline amount of BABL rewards for a given strategy
      * @param _strategy     Strategy to check
      */
-    function getStrategyRewards(address _strategy) external view override returns (uint96) {
+    function getStrategyRewards(address _strategy) external view override returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         uint256[] memory ts = new uint256[](3);
@@ -465,7 +475,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
-                return Safe3296.safe96(rewards, 'overflow 96 bits');
+                return rewards;
             }
             // str[0]: capitalAllocated, str[1]: capitalReturned
             uint256[] memory str = new uint256[](2);
@@ -473,7 +483,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
-
             for (uint256 i = 0; i < numQuarters; i++) {
                 // Initialization timestamp at the end of the first slot where the strategy starts its execution
                 uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
@@ -495,22 +504,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                         .preciseMul(percentage);
                 rewards = rewards.add(rewardsPerQuarter);
             }
-            // Governance has decided to have different weights for principal and profit
-            // Profit weight must be higher than principal
-            // profitWeight + principalWeight must always sum 1e18 (100%)
-            // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
-            uint256 percentageProfit = str[1].preciseDiv(str[0]);
-            // Set the max cap bonus x2
-            uint256 maxRewards = rewards.preciseMul(2e18);
-            // Apply rewards weight related to principal and profit
-            rewards = rewards.preciseMul(bablPrincipalWeight).add(
-                rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit)
-            );
-            // Check max cap
-            if (rewards >= maxRewards) {
-                rewards = maxRewards;
-            }
-            return Safe3296.safe96(rewards, 'overflow 96 bits');
+            // Apply rewards weight related to principal and profit and related to benchmark
+            return _getBenchmarkRewards(str[1].preciseDiv(str[0]), rewards);
         } else {
             return 0;
         }
@@ -521,9 +516,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _quarterNum      Number of quarter
      * @param _strategy        Address of strategy
      */
-
-    function checkMining(uint256 _quarterNum, address _strategy) external view override returns (uint256[] memory) {
-        uint256[] memory miningData = new uint256[](10);
+    function checkMining(uint256 _quarterNum, address _strategy)
+        external
+        view
+        override
+        returns (uint256[15] memory miningData)
+    {
+        // uint256[] memory miningData = new uint256[](9);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -534,9 +533,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
         miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
-        /* miningData[10] = bablProfitWeight;
-        miningData[11] = bablPrincipalWeight; */
-        return (miningData);
+        miningData[10] = bablProfitWeight;
+        miningData[11] = bablPrincipalWeight;
+        miningData[12] = benchmark[0];
+        miningData[13] = benchmark[1];
+        miningData[14] = benchmark[2];
     }
 
     /**
@@ -1171,9 +1172,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 endTime = _strategyDetails[1] > 0 ? _strategyDetails[1] : block.timestamp;
         uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
-            (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
-                contributorPerGarden[_garden][_contributor].initialDepositAt > 0 &&
-                !betaAddressMigrated[_contributor][_contributor];
+            !betaAddressMigrated[_contributor][_contributor] &&
+                (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
+                contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
             // Backward compatibility for old strategies
@@ -1763,17 +1764,33 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     .preciseMul(percentage);
             strategyRewards = strategyRewards.add(rewardsPerQuarter);
         }
-        // Set the max cap bonus x2
-        uint256 maxRewards = strategyRewards.preciseMul(2e18);
-        // Apply rewards weight related to principal and profit
-        strategyRewards = strategyRewards.preciseMul(bablPrincipalWeight).add(
-            strategyRewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
-        );
-        // Check max cap
-        if (strategyRewards >= maxRewards) {
-            strategyRewards = maxRewards;
+        return _getBenchmarkRewards(_percentageProfit, strategyRewards);
+    }
+
+    function _getBenchmarkRewards(uint256 _percentageProfit, uint256 _rewards) internal view returns (uint256) {
+        if (_percentageProfit < benchmark[0]) {
+            // Segment 1:
+            // Bad strategy, get no rewards based on profits, only based on principal
+            return _rewards.preciseMul(bablPrincipalWeight);
+        } else if (_percentageProfit <= benchmark[1]) {
+            // Segment 2:
+            // Not a cool strategy, get quadratic penalty
+            // benchmark[2] should always be bigger than 1e18 to apply penalty - avoid division by zero
+            return
+                _rewards.preciseMul(bablPrincipalWeight).add(
+                    _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit).preciseDiv(
+                        benchmark[2] > 1e18 ? benchmark[2] : 1e18
+                    )
+                );
+        } else {
+            // Segment 3:
+            // Cool strategies
+            // No (max cap) limit, the more profit it gets the more BABL it gets
+            return
+                _rewards.preciseMul(bablPrincipalWeight).add(
+                    _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
+                );
         }
-        return strategyRewards;
     }
 
     function _updatePendingPower(
