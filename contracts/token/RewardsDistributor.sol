@@ -279,9 +279,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // The number of checkpoints for each address of each garden
     // garden -> address -> number of checkpoints
     mapping(address => mapping(address => uint256)) private numCheckpoints;
-    // Benchmark thresholds to segment cool strategies from bad strategies
-    // benchmark[0]: (always negative value) No receiving profit related BABL <- low threshold -> receiving profit related BABL but with quadratic penalty
-    // benchmark[1]: (always positive value) Receiving profit related BABL but with quadratic penalty <- medium threshold -> receiving boosted BABL by its profit return %
+    // Benchmark creates up to 3 segments to differentiate between cool strategies and bad strategies
+    // First 2 values 0 and 1 represents strategy profit % (return vs. allocated)
+    // benchmark[0] value: Used to define the threshold between really bad strategies and not yet so cool strategies
+    // It separates segment 1 (bad strategies) and segment 2 (not so cool strategies)
+    // benchmark[1] value: Used to define the threshold between really not yet so cool strategies and really good strategies
+    // It separates segment 2 (not so cool strategies) and segment 3 (cool strategies)
+    // becnhmark[2] value: Used to set a quadratic penalty for not so cool strategies (segment 2)
     uint256[3] private benchmark;
 
     /* ============ Constructor ============ */
@@ -310,9 +314,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
         // Benchmark conditions to apply to BABL rewards
-        benchmark[0] = 90e16; // profit of -10 %
-        benchmark[1] = 103e16; // profit of +3 %
-        benchmark[2] = 2e18; // 1/2 = 50% = half penalty
+        benchmark[0] = 0; // default 0 (e.g. 90e16 represents profit of -10 %)
+        benchmark[1] = 0; // default 0 (e.g. 103e16 represents profit of +3 %)
+        benchmark[2] = 0; // default 0 (e.g. 2e18 represents 1/2 = 50% = half rewards penalty)
     }
 
     /* ============ External Functions ============ */
@@ -328,6 +332,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _updateProtocolPrincipal(msg.sender, _capital, _addOrSubstract);
     }
 
+    /**
+     * Function used by each garden to signal each deposit and withdrawal in checkpoints to be used for rewards
+     * @param _garden                Address of the garden
+     * @param _contributor           Address of the contributor
+     * @param _previousBalance       Previous balance of the contributor
+     * @param _tokenDiff             Amount difference in this deposit/withdraw
+     * @param _addOrSubstract        Whether the contributor is adding (true) or withdrawing capital (false)
+     */
     function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
@@ -337,7 +349,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external override nonReentrant {
         _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
-        // User checkpoint
+        // Creates a new user checkpoint
         _writeCheckpoint(_garden, _contributor, newBalance, _previousBalance);
     }
 
@@ -392,16 +404,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // _newMiningParams[3]: _creatorBonus
         // _newMiningParams[4]: _profitWeight
         // _newMiningParams[5]: _principalWeight
-        // _newMiningParams[6]: _minThreshold (between really bad strategies and not cool enough strategies):
-        // It divides segment 1 and segment 2
-        // _newMiningParams[7]: _maxThreshold (between really cool strategies and not cool enough strategies):
-        // It divides segment 2 and segment 3
-        // _newMiningParams[8]: _quadratic penalty to be applied to not cool strategies in segment 2
+        // _newMiningParams[6]: _minThreshold (% strategy profit threshold to differentiate between really bad strategies and not cool enough strategies)
+        // _newMiningParams[7]: _maxThreshold ((% strategy profit threshold to differentiate between not cool enough strategies and really cool strategies)
+        // _newMiningParams[8]: _quadratic penalty to be applied to not cool strategies in benchmark segment 2
         _onlyGovernanceOrEmergency();
         _require(
             _newMiningParams[0].add(_newMiningParams[1]).add(_newMiningParams[2]) == 1e18 &&
                 _newMiningParams[3] <= 1e18 &&
-                _newMiningParams[4].add(_newMiningParams[5]) == 1e18,
+                _newMiningParams[4].add(_newMiningParams[5]) == 1e18 &&
+                _newMiningParams[6] <= _newMiningParams[7],
             Errors.INVALID_MINING_VALUES
         );
         strategistBABLPercentage = _newMiningParams[0];
@@ -410,9 +421,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         gardenCreatorBonus = _newMiningParams[3];
         bablProfitWeight = _newMiningParams[4];
         bablPrincipalWeight = _newMiningParams[5];
-        benchmark[0] = _newMiningParams[6];
-        benchmark[1] = _newMiningParams[7]; // Threshold
-        benchmark[2] = _newMiningParams[8]; // Quadratic penalty for segment 2
+        benchmark[0] = _newMiningParams[6]; // minThreshold dividing segment 1 and 2 (if any)
+        benchmark[1] = _newMiningParams[7]; // maxThreshold dividing segment 2 and 3 (if any)
+        benchmark[2] = _newMiningParams[8]; // quadratic penalty for segment 2
     }
 
     /* ========== View functions ========== */
