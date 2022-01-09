@@ -149,7 +149,7 @@ async function getStrategyState(strategy) {
 
     const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
     const [, , , , , exitedAt] = await strategy.getStrategyState();
-    [supply] = await rewardsDistributor.checkMining(quarterStart, strategy.address);
+    supply = await rewardsDistributor.checkMining(quarterStart, strategy.address);
     const bablSupplyQ1 = supply[9];
 
     if (quarterStart !== quarterEnd) {
@@ -157,7 +157,7 @@ async function getStrategyState(strategy) {
       const bablTokenQi = [];
       const supplyPerQuarter = [];
       for (let i = 0; i <= quarterEnd - quarterStart; i++) {
-        [supply] = await rewardsDistributor.checkMining(quarterStart + i, strategy.address);
+        supply = await rewardsDistributor.checkMining(quarterStart + i, strategy.address);
         supplyPerQuarter[i] = supply[9];
         if (i === 0) {
           // First
@@ -242,18 +242,18 @@ async function getStrategyState(strategy) {
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
     it('should protect from overflow returning 0 supply in totalSupplyPerQuarter >= 513 (128 years)', async function () {
-      let [supply] = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
+      let supply = await rewardsDistributor.checkMining(455, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(2);
-      [supply] = await rewardsDistributor.checkMining(462, ADDRESS_ZERO);
+      supply = await rewardsDistributor.checkMining(462, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(1);
-      [supply] = await rewardsDistributor.checkMining(463, ADDRESS_ZERO);
+      supply = await rewardsDistributor.checkMining(463, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
-      [supply] = await rewardsDistributor.checkMining(512, ADDRESS_ZERO);
+      supply = await rewardsDistributor.checkMining(512, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
       // At 513 quarter the formula had an overflow, now it is fixed and still provides 0 tokens (it really provides 0 tokens since epoch 463 ahead but we avoid the overflow at 513).
-      [supply] = await rewardsDistributor.checkMining(513, ADDRESS_ZERO);
+      supply = await rewardsDistributor.checkMining(513, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
-      [supply] = await rewardsDistributor.checkMining(700, ADDRESS_ZERO);
+      supply = await rewardsDistributor.checkMining(700, ADDRESS_ZERO);
       await expect(supply[9]).to.be.equal(0);
     });
     it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
@@ -959,7 +959,7 @@ async function getStrategyState(strategy) {
     });
 
     it('should calculate correct BABL in case of 1 strategy with total duration of 2 quarters', async function () {
-      const [miningData] = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
+      const miningData = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
       const now = miningData[0];
       const [long1] = await createStrategies([{ garden: garden1 }]);
 
@@ -1000,7 +1000,7 @@ async function getStrategyState(strategy) {
     });
 
     it('should calculate correct BABL rewards in case of 1 strategy with total duration of 3 quarters', async function () {
-      const [miningData] = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
+      const miningData = await rewardsDistributor.checkMining(1, ADDRESS_ZERO);
       const now = miningData[0];
 
       const [long1] = await createStrategies([{ garden: garden1 }]);
@@ -1330,7 +1330,7 @@ async function getStrategyState(strategy) {
 
         // strategyData[6]: preAllocated
         // strategyData[7]: pricePerTokenUnit
-        const [strategyData] = await rewardsDistributor.checkMining(1, strategyContract.address);
+        const strategyData = await rewardsDistributor.checkMining(1, strategyContract.address);
 
         expect(strategyData[6]).to.be.equal(amount);
         const reserveAssetContract = await getERC20(token);
@@ -1342,7 +1342,7 @@ async function getStrategyState(strategy) {
         const strategyDetails3 = await strategyContract.getStrategyDetails();
         await executeStrategy(strategyContract, { amount: amount });
         const strategyDetails4 = await strategyContract.getStrategyDetails();
-        const [strategyData1] = await rewardsDistributor.checkMining(1, strategyContract.address);
+        const strategyData1 = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData1[6]).to.be.equal(amount.mul(2));
         expect(strategyData1[7]).to.be.closeTo(strategyData[7], strategyData1[7].div(100));
 
@@ -1353,7 +1353,7 @@ async function getStrategyState(strategy) {
         const strategyDetails5 = await strategyContract.getStrategyDetails();
         await strategyContract.connect(owner).unwindStrategy(amount, await strategyContract.getNAV());
         const strategyDetails6 = await strategyContract.getStrategyDetails();
-        const [strategyData2] = await rewardsDistributor.checkMining(1, strategyContract.address);
+        const strategyData2 = await rewardsDistributor.checkMining(1, strategyContract.address);
         expect(strategyData2[6]).to.be.closeTo(amount, strategyData2[6].div(100));
         expect(strategyData2[7]).to.be.closeTo(strategyData[7], strategyData2[7].div(100));
         expect(await strategyContract.capitalAllocated()).to.equal(amount);
@@ -1364,7 +1364,7 @@ async function getStrategyState(strategy) {
         await increaseTime(ONE_DAY_IN_SECONDS * 15);
         await finalizeStrategyImmediate(strategyContract);
         const strategyDetails8 = await strategyContract.getStrategyDetails();
-        const [strategyData3] = await rewardsDistributor.checkMining(1, strategyContract.address);
+        const strategyData3 = await rewardsDistributor.checkMining(1, strategyContract.address);
 
         expect(strategyData3[6]).to.be.equal(0);
         expect(strategyData3[7]).to.be.closeTo(strategyData[7], strategyData3[7].div(100));

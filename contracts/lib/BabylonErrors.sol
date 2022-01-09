@@ -300,4 +300,6 @@ library Errors {
     uint256 internal constant ONLY_RD = 105;
     // Fee is too LOW
     uint256 internal constant FEE_TOO_LOW = 106;
+    // Only governance or emergency
+    uint256 internal constant ONLY_GOVERNANCE_OR_EMERGENCY = 107;
 }

@@ -81,9 +81,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Throws if the sender is not the controller
      */
-    function _onlyController() private view {
-        _require(IBabController(controller).isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
-        _require(address(controller) == msg.sender, Errors.ONLY_CONTROLLER);
+    function _onlyGovernanceOrEmergency() private view {
+        _require(
+            msg.sender == controller.owner() ||
+                msg.sender == owner() ||
+                msg.sender == controller.EMERGENCY_OWNER() ||
+                msg.sender == address(controller),
+            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
+        );
     }
 
     /**
@@ -255,10 +260,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private miningUpdatedAt; // Timestamp of last strategy capital update
     mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
 
-    // Only for beta gardens and users as they need migration into new gas-optimized data structure
-    // Boolean check to control users and garden migration into to new mapping architecture without checkpoints
+    // Mapping re-used to trigger governance migrations into checkpoints for an address
+    // Address can be garden or an individual user
+    // Usage:
+    // a) to migrate the whole garden => betaAddressMigrated[_garden][_garden] = true
+    // b) to migrate a user for all gardens at once => betaAddressMigrated[_contributor][_contributor] = true
+    // Note: do not re-use it in the following format => [_garden][_contributor] as it was previously used for another older migration to avoid issues.
     mapping(address => mapping(address => bool)) private betaAddressMigrated;
-    mapping(address => bool) private betaGardenMigrated; // DEPRECATED
+    mapping(address => bool) private betaOldMigrations; // DEPRECATED
 
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
@@ -333,7 +342,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return _sendBABLToContributor(_to, _babl);
     }
 
-    /**
+    /** PRIVILEGE FUNCTION
      * Set customized profit shares for a specific garden by the gardener
      * @param _garden               Address of the garden
      * @param _strategistShare      New % of strategistShare
@@ -346,18 +355,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _stewardsShare,
         uint256 _lpShare
     ) external override {
-        _onlyController();
+        _onlyGovernanceOrEmergency();
         _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
     /** PRIVILEGE FUNCTION
-     * Migrates by governance the whole garden into checkpoints deprecating c-power
-     * @param _garden               Address of the garden
+     * Migrates by governance: (2 options)
+     * a) the whole garden or a user for all gardens into checkpoints deprecating c-power
+     * @param _address              Array of Address to migrate (garden or user)
      * @param _toMigrate            Bool to migrate (true) or redo (false)
      */
-    function migrateGardenToCheckpoints(address _garden, bool _toMigrate) external override onlyOwner {
-        betaAddressMigrated[_garden][_garden] = _toMigrate;
+    function migrateAddressToCheckpoints(address[] memory _address, bool _toMigrate) external override {
+        _onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _address.length; i++) {
+            betaAddressMigrated[_address[i]][_address[i]] = _toMigrate;
+        }
     }
 
     /** PRIVILEGE FUNCTION
@@ -376,7 +389,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _creatorBonus,
         uint256 _profitWeight,
         uint256 _principalWeight
-    ) external override onlyOwner {
+    ) external override {
+        _onlyGovernanceOrEmergency();
         _require(
             _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
                 _creatorBonus <= 1e18 &&
@@ -509,7 +523,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
 
     function checkMining(uint256 _quarterNum, address _strategy) external view override returns (uint256[] memory) {
-        uint256[] memory miningData = new uint256[](12);
+        uint256[] memory miningData = new uint256[](10);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -520,8 +534,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
         miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
-        miningData[10] = bablProfitWeight;
-        miningData[11] = bablPrincipalWeight;
+        /* miningData[10] = bablProfitWeight;
+        miningData[11] = bablPrincipalWeight; */
         return (miningData);
     }
 
@@ -1158,7 +1172,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
             (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
-                contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
+                contributorPerGarden[_garden][_contributor].initialDepositAt > 0 &&
+                !betaAddressMigrated[_contributor][_contributor];
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
             // Backward compatibility for old strategies
