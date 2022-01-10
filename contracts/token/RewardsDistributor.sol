@@ -280,13 +280,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // garden -> address -> number of checkpoints
     mapping(address => mapping(address => uint256)) private numCheckpoints;
     // Benchmark creates up to 3 segments to differentiate between cool strategies and bad strategies
-    // First 2 values 0 and 1 represents strategy profit % (return vs. allocated)
+    // First 2 values 0 and 1 represents strategy profit % thresholds (return vs. allocated)
     // benchmark[0] value: Used to define the threshold between really bad strategies and not yet so cool strategies
     // It separates segment 1 (bad strategies) and segment 2 (not so cool strategies)
     // benchmark[1] value: Used to define the threshold between really not yet so cool strategies and really good strategies
     // It separates segment 2 (not so cool strategies) and segment 3 (cool strategies)
     // becnhmark[2] value: Used to set a quadratic penalty for not so cool strategies (segment 2)
-    uint256[3] private benchmark;
+    uint256[5] private benchmark;
 
     /* ============ Constructor ============ */
 
@@ -314,9 +314,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
         // Benchmark conditions to apply to BABL rewards
-        benchmark[0] = 0; // default 0 (e.g. 90e16 represents profit of -10 %)
-        benchmark[1] = 0; // default 0 (e.g. 103e16 represents profit of +3 %)
-        benchmark[2] = 0; // default 0 (e.g. 2e18 represents 1/2 = 50% = half rewards penalty)
+        benchmark[0] = 0; // minThreshold default 0 (e.g. 90e16 represents profit of -10 %)
+        benchmark[1] = 0; // maxThreshold default 0 (e.g. 103e16 represents profit of +3 %)
+        benchmark[2] = 0; // Segment1 Penalty default 0 (e.g. 50e16 represents 1/2 = 50% = half rewards penalty)
+        benchmark[3] = 0; // Segment 2 Penalty/Boost default 0 (e.g. 1e18 represents 1 = 100% = no rewards penalty)
+        benchmark[4] = 0; // Segment 3 Boost default 0 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     }
 
     /* ============ External Functions ============ */
@@ -397,7 +399,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Change default BABL shares % by the governance
      * @param _newMiningParams      Array of new mining params to be set by government
      */
-    function setBABLMiningParameters(uint256[9] memory _newMiningParams) external override {
+    function setBABLMiningParameters(uint256[11] memory _newMiningParams) external override {
         // _newMiningParams[0]: _strategistShare
         // _newMiningParams[1]: _stewardsShare
         // _newMiningParams[2]: _lpShare
@@ -423,7 +425,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bablPrincipalWeight = _newMiningParams[5];
         benchmark[0] = _newMiningParams[6]; // minThreshold dividing segment 1 and 2 (if any)
         benchmark[1] = _newMiningParams[7]; // maxThreshold dividing segment 2 and 3 (if any)
-        benchmark[2] = _newMiningParams[8]; // quadratic penalty for segment 2
+        benchmark[2] = _newMiningParams[8]; // penalty for segment 1
+        benchmark[3] = _newMiningParams[9]; // penalty/boost for segment 2
+        benchmark[4] = _newMiningParams[10]; // boost for segment 3
     }
 
     /* ========== View functions ========== */
@@ -531,9 +535,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         external
         view
         override
-        returns (uint256[15] memory miningData)
+        returns (uint256[17] memory miningData)
     {
-        // uint256[] memory miningData = new uint256[](9);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -549,6 +552,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[12] = benchmark[0];
         miningData[13] = benchmark[1];
         miningData[14] = benchmark[2];
+        miningData[15] = benchmark[3];
+        miningData[16] = benchmark[4];
     }
 
     /**
@@ -1779,29 +1784,24 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     function _getBenchmarkRewards(uint256 _percentageProfit, uint256 _rewards) internal view returns (uint256) {
+        uint256 rewardsFactor;
         if (_percentageProfit < benchmark[0]) {
             // Segment 1:
-            // Bad strategy, get no rewards based on profits, only based on principal
-            return _rewards.preciseMul(bablPrincipalWeight);
+            // Bad strategy, usually gets penalty
+            rewardsFactor = benchmark[2] != 0 ? benchmark[2] : 1e18;
         } else if (_percentageProfit <= benchmark[1]) {
             // Segment 2:
-            // Not a cool strategy, get quadratic penalty
-            // benchmark[2] should always be bigger than 1e18 to apply penalty - avoid division by zero
-            return
-                _rewards.preciseMul(bablPrincipalWeight).add(
-                    _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit).preciseDiv(
-                        benchmark[2] > 1e18 ? benchmark[2] : 1e18
-                    )
-                );
+            // Not a cool strategy, gets penalty
+            rewardsFactor = benchmark[3] != 0 ? benchmark[3] : 1e18;
         } else {
             // Segment 3:
-            // Cool strategies
-            // No (max cap) limit, the more profit it gets the more BABL it gets
-            return
-                _rewards.preciseMul(bablPrincipalWeight).add(
-                    _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
-                );
+            // A real cool strategy, can gets boost
+            rewardsFactor = benchmark[4] != 0 ? benchmark[4] : 1e18;
         }
+        return
+            _rewards.preciseMul(bablPrincipalWeight).add(
+                _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit).preciseMul(rewardsFactor)
+            );
     }
 
     function _updatePendingPower(

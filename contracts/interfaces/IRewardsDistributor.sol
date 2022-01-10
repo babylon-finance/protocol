@@ -37,7 +37,7 @@ interface IRewardsDistributor {
 
     function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
 
-    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[15] memory);
+    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[17] memory);
 
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
@@ -67,7 +67,7 @@ interface IRewardsDistributor {
 
     function migrateAddressToCheckpoints(address[] memory _garden, bool _toMigrate) external;
 
-    function setBABLMiningParameters(uint256[9] memory _newMiningParams) external;
+    function setBABLMiningParameters(uint256[11] memory _newMiningParams) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 
