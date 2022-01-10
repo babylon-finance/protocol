@@ -34,6 +34,7 @@ async function setUpFixture(
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
+  const pickleJarIntegration = await getContract('PickleJarIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
@@ -194,6 +195,7 @@ async function setUpFixture(
     timeLockRegistry,
     treasury,
     rewardsDistributor,
+    pickleJarIntegration,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
     balancerIntegration,

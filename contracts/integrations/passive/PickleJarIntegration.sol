@@ -28,7 +28,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IHarvestV3Stake} from '../../interfaces/external/harvest/IHarvestV3Stake.sol';
+import {IJar} from '../../interfaces/external/pickle/IJar.sol';
 
 /**
  * @title PickleJarIntegration
@@ -50,35 +50,35 @@ contract PickleJarIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('harvest_stake_v3', _controller) {}
+    constructor(IBabController _controller) PassiveIntegration('pickle_jar', _controller) {}
 
     /* ============ Internal Functions ============ */
     function _getSpender(
-        address _stakingPool,
+        address _jar,
         uint8 /* _op */
     ) internal pure override returns (address) {
-        return _stakingPool;
+        return _jar;
     }
 
     function _getExpectedShares(
-        address, /* _asset */
+        address _jar,
         uint256 _amount
-    ) internal pure override returns (uint256) {
-        return _amount;
+    ) internal view override returns (uint256) {
+        return _amount.preciseDiv(IJar(_jar).getRatio());
     }
 
     function _getPricePerShare(
-        address /* _asset */
-    ) internal pure override returns (uint256) {
-        return 1e18;
+        address _jar
+    ) internal view override returns (uint256) {
+        return IJar(_jar).getRatio();
     }
 
-    function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
-        return IHarvestV3Stake(_asset).lpToken();
+    function _getInvestmentAsset(address _jar) internal view override returns (address lptoken) {
+        return IJar(_jar).token();
     }
 
-    function _getResultAsset(address _investment) internal view virtual override returns (address) {
-        return _investment;
+    function _getResultAsset(address _jar) internal view virtual override returns (address) {
+        return _jar;
     }
 
     /**
@@ -110,10 +110,10 @@ contract PickleJarIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        address lpToken = _getInvestmentAsset(_asset);
-        require(lpToken != address(0), 'Harvest V3 Stake pool does not exist');
+        address token = _getInvestmentAsset(_asset);
+        require(token != address(0), 'Pickle jar does not exist');
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('stake(uint256)', _maxAmountIn);
+        bytes memory methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
         return (_asset, 0, methodData);
     }
 
@@ -150,62 +150,5 @@ contract PickleJarIntegration is PassiveIntegration {
         bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
         // Go through the reward pool instead of the booster
         return (_asset, 0, methodData);
-    }
-
-    /**
-     * Return exit investment calldata to execute after exit if any
-     *
-     * @param  _pool                           Address of the reward pool
-     * hparam  _amount                         Amount of tokens
-     * @param  _passiveOp                      enter is 0, exit is 1
-     *
-     * @return address                         Target contract address
-     * @return uint256                         Call value
-     * @return bytes                           Trade calldata
-     */
-    function _getPostActionCallData(
-        address _pool,
-        uint256, /* _amount */
-        uint256 _passiveOp
-    )
-        internal
-        pure
-        override
-        returns (
-            address,
-            uint256,
-            bytes memory
-        )
-    {
-        // Don't do anything on enter
-        if (_passiveOp == 0) {
-            return (address(0), 0, bytes(''));
-        }
-        // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('getAllRewards()');
-        // Go through the reward pool instead of the booster
-        return (_pool, 0, methodData);
-    }
-
-    function _getRewards(address _strategy, address _asset)
-        internal
-        view
-        override
-        returns (address token, uint256 balance)
-    {
-        IHarvestV3Stake pool = IHarvestV3Stake(_asset);
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        address reserveAsset = IGarden(IStrategy(_strategy).garden()).reserveAsset();
-        uint256 rewardsLength = pool.rewardTokensLength();
-        uint256 totalAmount = 0;
-        if (rewardsLength > 0) {
-            for (uint256 i = 0; i < rewardsLength; i++) {
-                uint256 rewardAmount = pool.earned(i, _strategy);
-                totalAmount = totalAmount.add(
-                    oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
-                );
-            }
-        }
-        return (reserveAsset, totalAmount);
     }
 }
