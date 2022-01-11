@@ -900,8 +900,6 @@ async function getStrategyState(strategy) {
     });
 
     it('should calculate correct BABL in case of 5 strategies of 2 different Gardens with total duration of less than 1 quarter', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-
       const block = await ethers.provider.getBlock();
       const now = block.timestamp;
 
@@ -972,6 +970,7 @@ async function getStrategyState(strategy) {
 
       const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.214363301')], eth(0.35), eth(0.65));
       const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.2073570029')], eth(0.35), eth(0.65));
+      const valueLong3 = await getStrategyRewards(long3, now, 1, 1, [eth('0.2006124084')], eth(0.35), eth(0.65));
       const valueLong4 = await getStrategyRewards(long4, now, 1, 1, [eth('0.1941064651')], eth(0.35), eth(0.65));
       const valueLong5 = await getStrategyRewards(long5, now, 1, 1, [eth('0.1878178833')], eth(0.35), eth(0.65));
 
@@ -1352,6 +1351,104 @@ async function getStrategyState(strategy) {
     });
   });
   describe('Benchmark for Mining', function () {
+    it(`can set new benchmark params by governance`, async function () {
+      const strategistShare = eth(0.1);
+      const stewardsShare = eth(0.1);
+      const lpShare = eth(0.8);
+      const creatorBonus = eth(0.1);
+      const profitWeight = eth(0.95);
+      const principalWeight = eth(0.05);
+      const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+      await rewardsDistributor
+        .connect(owner)
+        .setBABLMiningParameters([
+          strategistShare,
+          stewardsShare,
+          lpShare,
+          creatorBonus,
+          profitWeight,
+          principalWeight,
+          benchmark[0],
+          benchmark[1],
+          benchmark[2],
+          benchmark[3],
+          benchmark[4],
+        ]);
+      const [long1] = await createStrategies([{ garden: garden1 }]);
+      const checkBenchmark = await rewardsDistributor.checkMining(1, long1.address);
+      expect(benchmark[0]).to.eq(checkBenchmark[12]);
+      expect(benchmark[1]).to.eq(checkBenchmark[13]);
+      expect(benchmark[2]).to.eq(checkBenchmark[14]);
+      expect(benchmark[3]).to.eq(checkBenchmark[15]);
+      expect(benchmark[4]).to.eq(checkBenchmark[16]);
+    });
+    it(`can NOT set new benchmark params by a normal user`, async function () {
+      const strategistShare = eth(0.1);
+      const stewardsShare = eth(0.1);
+      const lpShare = eth(0.8);
+      const creatorBonus = eth(0.1);
+      const profitWeight = eth(0.95);
+      const principalWeight = eth(0.05);
+      const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+      await expect(
+        rewardsDistributor
+          .connect(signer1)
+          .setBABLMiningParameters([
+            strategistShare,
+            stewardsShare,
+            lpShare,
+            creatorBonus,
+            profitWeight,
+            principalWeight,
+            benchmark[0],
+            benchmark[1],
+            benchmark[2],
+            benchmark[3],
+            benchmark[4],
+          ]),
+      ).to.be.revertedWith('BAB#107');
+    });
+    [
+      { benchmark: [eth(1.03), eth(0.8), eth(1), eth(1), eth(1)], name: ': Error wrong thresholds' },
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0.6), eth(0.5), eth(1)],
+        name: ': Error segment 1 penalty cannot be higher than segment 2',
+      },
+      {
+        benchmark: [eth(1), eth(1.03), eth(0), eth(1.2), eth(1)],
+        name: ': Error segment 2 cannot boost higher than segment 3',
+      },
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(0.8)],
+        name: ': Error segment 3 cannot be for penalty',
+      },
+    ].forEach(({ benchmark, name }) => {
+      it(`can NOT set new benchmark using wrong params ${name}`, async function () {
+        const strategistShare = eth(0.1);
+        const stewardsShare = eth(0.1);
+        const lpShare = eth(0.8);
+        const creatorBonus = eth(0.1);
+        const profitWeight = eth(0.95);
+        const principalWeight = eth(0.05);
+        await expect(
+          rewardsDistributor
+            .connect(owner)
+            .setBABLMiningParameters([
+              strategistShare,
+              stewardsShare,
+              lpShare,
+              creatorBonus,
+              profitWeight,
+              principalWeight,
+              benchmark[0],
+              benchmark[1],
+              benchmark[2],
+              benchmark[3],
+              benchmark[4],
+            ]),
+        ).to.be.revertedWith('BAB#101');
+      });
+    });
     [
       { benchmark: [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)], name: 'no penalty at all' },
       { benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(1)], name: 'half penalty to bad strategies' },
