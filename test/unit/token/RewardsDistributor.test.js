@@ -139,7 +139,15 @@ async function getStrategyState(strategy) {
     return retVal;
   }
 
-  async function getStrategyRewards(strategy, now, quarterStart, quarterEnd, powerRatio) {
+  async function getStrategyRewards(
+    strategy,
+    now,
+    quarterStart,
+    quarterEnd,
+    powerRatio,
+    principalWeigth,
+    profitWeight,
+  ) {
     let rewards = 0;
     let timePercent = 0;
     // We calculate the profit of the strategy
@@ -207,8 +215,31 @@ async function getStrategyState(strategy) {
       rewards = bablTokensQ1;
     }
     // Default params profitWeight = 65% and principalWeigth = 35%
-    rewards = from(rewards).mul(35).div(100).add(from(rewards).mul(65).div(100).mul(profit).div(eth()));
+    rewards = from(rewards)
+      .mul(principalWeigth)
+      .div(eth())
+      .add(from(rewards).mul(profitWeight).mul(profit).div(eth()).div(eth()));
     return rewards;
+  }
+
+  async function getRewardsRatio(strategy) {
+    const returned = await strategy.capitalReturned();
+    const allocated = await strategy.capitalAllocated();
+    let ratio;
+    const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
+    const benchmark = await rewardsDistributor.checkMining(1, strategy.address);
+
+    if (BigInt(profit) < BigInt(benchmark[12])) {
+      // Segment 1 : very bad strategies
+      ratio = from(benchmark[14]);
+    } else if (BigInt(profit) < BigInt(benchmark[13])) {
+      // Segment 2: not cool strategies
+      ratio = from(benchmark[15]);
+    } else {
+      // Segment 3: cool strategies
+      ratio = from(benchmark[16]);
+    }
+    return ratio;
   }
 
   beforeEach(async () => {
@@ -656,7 +687,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()], eth(0.35), eth(0.65));
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -685,7 +716,7 @@ async function getStrategyState(strategy) {
       expect(await weth.balanceOf(garden1.address)).to.be.gt(eth());
       await increaseTime(ONE_DAY_IN_SECONDS * 25);
       await finalizeStrategyAfter30Days(strategyContract);
-      const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth(), eth()]);
+      const value = await getStrategyRewards(strategyContract, now, 1, 2, [eth(), eth()], eth(0.35), eth(0.65));
       const rewards = await strategyContract.strategyRewards();
       expect(rewards).to.be.closeTo(value, value.div(50)); // 2%
     });
@@ -710,7 +741,7 @@ async function getStrategyState(strategy) {
         quarter: 2,
         timeListPointer: 1,
       });
-      const value = await getStrategyRewards(long1, now, 1, 2, [eth(), eth()]);
+      const value = await getStrategyRewards(long1, now, 1, 2, [eth(), eth()], eth(0.35), eth(0.65));
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -737,7 +768,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()], eth(0.35), eth(0.65));
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -769,7 +800,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const value = await getStrategyRewards(long1, now, 1, 1, [eth()]);
+      const value = await getStrategyRewards(long1, now, 1, 1, [eth()], eth(0.35), eth(0.65));
       const rewards = await long1.strategyRewards();
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
@@ -807,8 +838,8 @@ async function getStrategyState(strategy) {
         timeListPointer: 3,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.5094881121')]);
-      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.658179225')]);
+      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.5094881121')], eth(0.35), eth(0.65));
+      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.658179225')], eth(0.35), eth(0.65));
 
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
@@ -855,9 +886,9 @@ async function getStrategyState(strategy) {
         timeListPointer: 5,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.3457485554')]);
-      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.3339235916')]);
-      const valueLong3 = await getStrategyRewards(long3, now, 1, 1, [eth('0.322751593')]);
+      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.3457485554')], eth(0.35), eth(0.65));
+      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.3339235916')], eth(0.35), eth(0.65));
+      const valueLong3 = await getStrategyRewards(long3, now, 1, 1, [eth('0.322751593')], eth(0.35), eth(0.65));
 
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
@@ -939,11 +970,10 @@ async function getStrategyState(strategy) {
         timeListPointer: 9,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.214363301')]);
-      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.2073570029')]);
-      const valueLong3 = await getStrategyRewards(long3, now, 1, 1, [eth('0.2006124084')]);
-      const valueLong4 = await getStrategyRewards(long4, now, 1, 1, [eth('0.1941064651')]);
-      const valueLong5 = await getStrategyRewards(long5, now, 1, 1, [eth('0.1878178833')]);
+      const valueLong1 = await getStrategyRewards(long1, now, 1, 1, [eth('0.214363301')], eth(0.35), eth(0.65));
+      const valueLong2 = await getStrategyRewards(long2, now, 1, 1, [eth('0.2073570029')], eth(0.35), eth(0.65));
+      const valueLong4 = await getStrategyRewards(long4, now, 1, 1, [eth('0.1941064651')], eth(0.35), eth(0.65));
+      const valueLong5 = await getStrategyRewards(long5, now, 1, 1, [eth('0.1878178833')], eth(0.35), eth(0.65));
 
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
@@ -967,7 +997,15 @@ async function getStrategyState(strategy) {
 
       await finalizeStrategyAfter2Quarters(long1);
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 3, [eth(), eth(), eth()]);
+      const valueLong1 = await getStrategyRewards(
+        long1,
+        now.toNumber(),
+        1,
+        3,
+        [eth(), eth(), eth()],
+        eth(0.35),
+        eth(0.65),
+      );
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -994,7 +1032,7 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [eth(), eth(), eth()]);
+      const valueLong1 = await getStrategyRewards(long1, now, 41, 43, [eth(), eth(), eth()], eth(0.35), eth(0.65));
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
     });
@@ -1016,7 +1054,15 @@ async function getStrategyState(strategy) {
         timeListPointer: 1,
       });
 
-      const valueLong1 = await getStrategyRewards(long1, now.toNumber(), 1, 4, [eth(), eth(), eth(), eth()]);
+      const valueLong1 = await getStrategyRewards(
+        long1,
+        now.toNumber(),
+        1,
+        4,
+        [eth(), eth(), eth(), eth()],
+        eth(0.35),
+        eth(0.65),
+      );
       const rewardsLong1 = await long1.strategyRewards();
       expect(rewardsLong1).to.be.closeTo(valueLong1, eth('0.05'));
 
@@ -1088,11 +1134,11 @@ async function getStrategyState(strategy) {
         eth(),
       ];
 
-      const valueLong1 = await getStrategyRewards(long1, now, 1, 2, powerLong1);
-      const valueLong2 = await getStrategyRewards(long2, now, 1, 4, powerLong2);
-      const valueLong3 = await getStrategyRewards(long3, now, 1, 5, powerLong3);
-      const valueLong4 = await getStrategyRewards(long4, now, 1, 7, powerLong4);
-      const valueLong5 = await getStrategyRewards(long5, now, 1, 10, powerLong5);
+      const valueLong1 = await getStrategyRewards(long1, now, 1, 2, powerLong1, eth(0.35), eth(0.65));
+      const valueLong2 = await getStrategyRewards(long2, now, 1, 4, powerLong2, eth(0.35), eth(0.65));
+      const valueLong3 = await getStrategyRewards(long3, now, 1, 5, powerLong3, eth(0.35), eth(0.65));
+      const valueLong4 = await getStrategyRewards(long4, now, 1, 7, powerLong4, eth(0.35), eth(0.65));
+      const valueLong5 = await getStrategyRewards(long5, now, 1, 10, powerLong5, eth(0.35), eth(0.65));
 
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
@@ -1175,11 +1221,11 @@ async function getStrategyState(strategy) {
         eth(),
       ];
 
-      const valueLong1 = await getStrategyRewards(long1, now, 41, 42, powerLong1);
-      const valueLong2 = await getStrategyRewards(long2, now, 41, 44, powerLong2);
-      const valueLong3 = await getStrategyRewards(long3, now, 41, 45, powerLong3);
-      const valueLong4 = await getStrategyRewards(long4, now, 41, 47, powerLong4);
-      const valueLong5 = await getStrategyRewards(long5, now, 41, 50, powerLong5);
+      const valueLong1 = await getStrategyRewards(long1, now, 41, 42, powerLong1, eth(0.35), eth(0.65));
+      const valueLong2 = await getStrategyRewards(long2, now, 41, 44, powerLong2, eth(0.35), eth(0.65));
+      const valueLong3 = await getStrategyRewards(long3, now, 41, 45, powerLong3, eth(0.35), eth(0.65));
+      const valueLong4 = await getStrategyRewards(long4, now, 41, 47, powerLong4, eth(0.35), eth(0.65));
+      const valueLong5 = await getStrategyRewards(long5, now, 41, 50, powerLong5, eth(0.35), eth(0.65));
 
       const rewardsLong1 = await long1.strategyRewards();
       const rewardsLong2 = await long2.strategyRewards();
@@ -1305,7 +1351,57 @@ async function getStrategyState(strategy) {
       expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
     });
   });
+  describe('Benchmark for Mining', function () {
+    [
+      { benchmark: [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)], name: 'no penalty at all' },
+      { benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(1)], name: 'half penalty to bad strategies' },
+      { benchmark: [eth(1), eth(1.03), eth(0), eth(0.5), eth(1)], name: 'full penalty to bad strategies' },
+      { benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(2)], name: 'boost to cool strategies' },
+    ].forEach(({ benchmark, name }) => {
+      it(`should apply ${name} with new benchmark params in case of 1 strategy and total duration of 1 quarter`, async function () {
+        const strategistShare = eth(0.1);
+        const stewardsShare = eth(0.1);
+        const lpShare = eth(0.8);
+        const creatorBonus = eth(0.1);
+        const profitWeight = eth(0.95);
+        const principalWeight = eth(0.05);
 
+        await rewardsDistributor
+          .connect(owner)
+          .setBABLMiningParameters([
+            strategistShare,
+            stewardsShare,
+            lpShare,
+            creatorBonus,
+            profitWeight,
+            principalWeight,
+            benchmark[0],
+            benchmark[1],
+            benchmark[2],
+            benchmark[3],
+            benchmark[4],
+          ]);
+        const block = await ethers.provider.getBlock();
+        const now = block.timestamp;
+
+        const [long1] = await createStrategies([{ garden: garden1 }]);
+        await executeStrategy(long1, eth());
+
+        if (benchmark[4] > from(eth(1))) {
+          await injectFakeProfits(long1, eth(1000)); // We inject profits
+        }
+
+        await finalizeStrategyAfter30Days(long1);
+
+        const value = await getStrategyRewards(long1, now, 1, 1, [eth()], principalWeight, profitWeight);
+        const rewardsRatio = await getRewardsRatio(long1);
+        const principalValue = value.mul(principalWeight).div(eth());
+        const profitValue = value.mul(profitWeight).mul(rewardsRatio).div(eth()).div(eth());
+        const rewards = await long1.strategyRewards();
+        expect(rewards).to.be.closeTo(principalValue.add(profitValue), rewards.div(50));
+      });
+    });
+  });
   describe('Capital reallocation and unwinding per garden-reserveAsset', function () {
     [
       { token: addresses.tokens.WETH, name: 'WETH' },

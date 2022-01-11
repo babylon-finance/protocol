@@ -280,12 +280,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // garden -> address -> number of checkpoints
     mapping(address => mapping(address => uint256)) private numCheckpoints;
     // Benchmark creates up to 3 segments to differentiate between cool strategies and bad strategies
-    // First 2 values 0 and 1 represents strategy profit % thresholds (return vs. allocated)
-    // benchmark[0] value: Used to define the threshold between really bad strategies and not yet so cool strategies
-    // It separates segment 1 (bad strategies) and segment 2 (not so cool strategies)
-    // benchmark[1] value: Used to define the threshold between really not yet so cool strategies and really good strategies
-    // It separates segment 2 (not so cool strategies) and segment 3 (cool strategies)
-    // becnhmark[2] value: Used to set a quadratic penalty for not so cool strategies (segment 2)
+    // First 2 values benchmark[0] and benchmark[1] represent returned/allocated % min and max thresholds to create 3 segments
+    // benchmark[0] value: Used to define the threshold between very bad strategies and not cool strategies
+    // benchmark[0] = minThreshold default 0 (e.g. 90e16 represents profit of -10 %)
+    // It separates segment 1 (very bad strategies) and segment 2 (not cool strategies)
+    // benchmark[1] value: Used to define the threshold between not good/cool strategies and cool/good strategies
+    // benchmark[1] = maxThreshold default 0 (e.g. 103e16 represents profit of +3 %)
+    // It separates segment 2 (not cool strategies) and segment 3 (cool strategies)
+    // benchmark[2] value: Used to set a penalty (if any) for very bad strategies (segment 1)
+    // benchmark[2] = Segment1 Penalty default 0 (e.g. 50e16 represents 1/2 = 50% = half rewards penalty)
+    // benchmark[3] value: Used to set a penalty (if any) for not cool strategies (segment 2)
+    // benchmark[3] = Segment 2 Penalty/Boost default 0 (e.g. 1e18 represents 1 = 100% = no rewards penalty)
+    // becnhmark[4] value: Used to set a boost (if any) for cool strategies (segment 3)
+    // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
 
     /* ============ Constructor ============ */
@@ -307,18 +314,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         lpsBABLPercentage = 80e16; // 80%
         gardenCreatorBonus = 10e16; // 10%
 
-        bablProfitWeight = 65e16; // 65%
-        bablPrincipalWeight = 35e16; // 35%
+        bablProfitWeight = 65e16; // 65% (BIP-7 will change it into 95%)
+        bablPrincipalWeight = 35e16; // 35% (BIP-7 will change it into 5%)
 
         status = NOT_ENTERED;
         // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
-        // Benchmark conditions to apply to BABL rewards
-        benchmark[0] = 0; // minThreshold default 0 (e.g. 90e16 represents profit of -10 %)
-        benchmark[1] = 0; // maxThreshold default 0 (e.g. 103e16 represents profit of +3 %)
-        benchmark[2] = 0; // Segment1 Penalty default 0 (e.g. 50e16 represents 1/2 = 50% = half rewards penalty)
-        benchmark[3] = 0; // Segment 2 Penalty/Boost default 0 (e.g. 1e18 represents 1 = 100% = no rewards penalty)
-        benchmark[4] = 0; // Segment 3 Boost default 0 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
+        // Benchmark conditions to apply to BABL rewards are initialized as 0
+        // Backward compatibility manages benchmark[4] value that must be always >= 1e18
     }
 
     /* ============ External Functions ============ */
@@ -406,15 +409,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // _newMiningParams[3]: _creatorBonus
         // _newMiningParams[4]: _profitWeight
         // _newMiningParams[5]: _principalWeight
-        // _newMiningParams[6]: _minThreshold (% strategy profit threshold to differentiate between really bad strategies and not cool enough strategies)
-        // _newMiningParams[7]: _maxThreshold ((% strategy profit threshold to differentiate between not cool enough strategies and really cool strategies)
-        // _newMiningParams[8]: _quadratic penalty to be applied to not cool strategies in benchmark segment 2
+        // _newMiningParams[6]: _benchmark[0] to differentiate from very bad strategies and not cool strategies
+        // _newMiningParams[7]: _benchmark[1] to differentiate from not cool strategies and cool strategies
+        // _newMiningParams[8]: _benchmark[2] penalty to be applied to very bad strategies in benchmark segment 1
+        // _newMiningParams[9]: _benchmark[3] penalty to be applied to not cool strategies in benchmark segment 2
+        // _newMiningParams[10]: _benchmark[4] boost/bonus to be applied to cool strategies in benchmark segment 3
         _onlyGovernanceOrEmergency();
         _require(
             _newMiningParams[0].add(_newMiningParams[1]).add(_newMiningParams[2]) == 1e18 &&
                 _newMiningParams[3] <= 1e18 &&
                 _newMiningParams[4].add(_newMiningParams[5]) == 1e18 &&
-                _newMiningParams[6] <= _newMiningParams[7],
+                _newMiningParams[6] <= _newMiningParams[7] &&
+                _newMiningParams[8] <= _newMiningParams[9] &&
+                _newMiningParams[9] <= _newMiningParams[10] &&
+                _newMiningParams[10] >= 1e18,
             Errors.INVALID_MINING_VALUES
         );
         strategistBABLPercentage = _newMiningParams[0];
@@ -1788,15 +1796,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (_percentageProfit < benchmark[0]) {
             // Segment 1:
             // Bad strategy, usually gets penalty
-            rewardsFactor = benchmark[2] != 0 ? benchmark[2] : 1e18;
-        } else if (_percentageProfit <= benchmark[1]) {
+            rewardsFactor = benchmark[2];
+        } else if (_percentageProfit < benchmark[1]) {
             // Segment 2:
-            // Not a cool strategy, gets penalty
-            rewardsFactor = benchmark[3] != 0 ? benchmark[3] : 1e18;
+            // Not a cool strategy, can get penalty
+            rewardsFactor = benchmark[3];
         } else {
             // Segment 3:
-            // A real cool strategy, can gets boost
-            rewardsFactor = benchmark[4] != 0 ? benchmark[4] : 1e18;
+            // A real cool strategy, can get boost. Must be always >= 1e18
+            rewardsFactor = benchmark[4] > 1e18 ? benchmark[4] : 1e18;
         }
         return
             _rewards.preciseMul(bablPrincipalWeight).add(
