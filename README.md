@@ -103,6 +103,15 @@ implementation for the Strategy contract use the following command:
 
 `contract` is the name of the new implementation.
 
+To auto-deploy a contract use a simple bash script which will try until it succeeds.
+
+```bash
+  while ! GAS_LIMIT=100000000000 npx hardhat deploy-contract --contract StrategyV16 --network mainnet; do echo 'Trying to deploy
+  again 🤖'; done; echo 'Deployed 🚀';
+```
+
+where `GAS_LIMIT` has to be set to a maximum price deployer is willing to pay.
+
 ## Upgrade
 
 To upgrade Babylon Protocol use `upgrade-multisig.js` script. It will create a batch tx for Gnosis Multisig to upgrade
