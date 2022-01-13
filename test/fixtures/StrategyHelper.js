@@ -87,7 +87,7 @@ async function createStrategyWithVaultOperation(garden, signer, params, integrat
   const passedYieldParams = [[2], [integration]];
   const AbiCoder = ethers.utils.AbiCoder;
   const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.yearn.vaults.ydai, 0]);
+  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.yearn.daiVault, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
