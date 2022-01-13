@@ -1,0 +1,868 @@
+{
+	"compiler": {
+		"version": "0.7.6+commit.7338295f"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "previousOwner",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"name": "OwnershipTransferred",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_quarterNum",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "_strategy",
+						"type": "address"
+					}
+				],
+				"name": "checkMining",
+				"outputs": [
+					{
+						"internalType": "uint256[17]",
+						"name": "miningData",
+						"type": "uint256[17]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_strategy",
+						"type": "address"
+					}
+				],
+				"name": "estimateStrategyRewards",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_strategy",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_contributor",
+						"type": "address"
+					}
+				],
+				"name": "estimateUserRewards",
+				"outputs": [
+					{
+						"internalType": "uint256[]",
+						"name": "",
+						"type": "uint256[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					}
+				],
+				"name": "getGardenProfitsSharing",
+				"outputs": [
+					{
+						"internalType": "uint256[3]",
+						"name": "",
+						"type": "uint256[3]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_contributor",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_timestamp",
+						"type": "uint256"
+					}
+				],
+				"name": "getPriorBalance",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_contributor",
+						"type": "address"
+					},
+					{
+						"internalType": "address[]",
+						"name": "_finalizedStrategies",
+						"type": "address[]"
+					}
+				],
+				"name": "getRewards",
+				"outputs": [
+					{
+						"internalType": "uint256[]",
+						"name": "",
+						"type": "uint256[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_contributor",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_strategy",
+						"type": "address"
+					}
+				],
+				"name": "getSafeUserSharePerStrategy",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_strategy",
+						"type": "address"
+					}
+				],
+				"name": "getStrategyRewards",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "contract TimeLockedToken",
+						"name": "_bablToken",
+						"type": "address"
+					},
+					{
+						"internalType": "contract IBabController",
+						"name": "_controller",
+						"type": "address"
+					}
+				],
+				"name": "initialize",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address[]",
+						"name": "_address",
+						"type": "address[]"
+					},
+					{
+						"internalType": "bool",
+						"name": "_toMigrate",
+						"type": "bool"
+					}
+				],
+				"name": "migrateAddressToCheckpoints",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "renounceOwnership",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_to",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_babl",
+						"type": "uint256"
+					}
+				],
+				"name": "sendBABLToContributor",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256[11]",
+						"name": "_newMiningParams",
+						"type": "uint256[11]"
+					}
+				],
+				"name": "setBABLMiningParameters",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_strategistShare",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_stewardsShare",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_lpShare",
+						"type": "uint256"
+					}
+				],
+				"name": "setProfitRewards",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"name": "transferOwnership",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_garden",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_contributor",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_previousBalance",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_tokenDiff",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "_addOrSubstract",
+						"type": "bool"
+					}
+				],
+				"name": "updateGardenPowerAndContributor",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_capital",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "_addOrSubstract",
+						"type": "bool"
+					}
+				],
+				"name": "updateProtocolPrincipal",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"author": "Babylon Finance Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program along the time reserved for executed strategies. It implements a supply curve to distribute 500K BABL along the time. The supply curve is designed to optimize the long-term sustainability of the protocol. The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter. For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage as well as profits of each strategy counts. Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles, which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).",
+			"kind": "dev",
+			"methods": {
+				"checkMining(uint256,address)": {
+					"params": {
+						"_quarterNum": "Number of quarter",
+						"_strategy": "Address of strategy"
+					}
+				},
+				"estimateStrategyRewards(address)": {
+					"params": {
+						"_strategy": "Address of the strategy to estimate BABL rewards"
+					},
+					"returns": {
+						"_0": "the estimated BABL rewards"
+					}
+				},
+				"estimateUserRewards(address,address)": {
+					"params": {
+						"_contributor": "Address of the garden contributor",
+						"_strategy": "Address of the strategy to estimate BABL rewards"
+					},
+					"returns": {
+						"_0": "Array of size 8 with the following distribution: rewards[0]: Strategist BABL rewards[1]: Strategist Profit rewards[2]: Steward BABL rewards[3]: Steward Profit rewards[4]: LP BABL rewards[5]: total BABL rewards[6]: total Profits rewards[7]: Creator bonus"
+					}
+				},
+				"getGardenProfitsSharing(address)": {
+					"params": {
+						"_garden": "Address of the garden"
+					}
+				},
+				"getPriorBalance(address,address,uint256)": {
+					"params": {
+						"_contributor": "Address of the contributor",
+						"_garden": "Address of the garden",
+						"_timestamp": "Block timestamp to get token power at"
+					},
+					"returns": {
+						"_0": "Token power for an account at specific block"
+					}
+				},
+				"getRewards(address,address,address[])": {
+					"params": {
+						"_contributor": "Address of the contributor to check",
+						"_finalizedStrategies": "List of addresses of the finalized strategies to check",
+						"_garden": "Garden to which the strategies and the user must belong to"
+					},
+					"returns": {
+						"_0": "Array of size 7 with the following distribution: rewards[0]: Strategist BABL rewards[1]: Strategist Profit rewards[2]: Steward BABL rewards[3]: Steward Profit rewards[4]: LP BABL rewards[5]: total BABL rewards[6]: total Profits rewards[7]: Creator bonus"
+					}
+				},
+				"getSafeUserSharePerStrategy(address,address,address)": {
+					"params": {
+						"_contributor": "Address of the garden contributor",
+						"_garden": "Address of the garden",
+						"_strategy": "Address of the strategy"
+					},
+					"returns": {
+						"_0": "% deserved share per user"
+					}
+				},
+				"getStrategyRewards(address)": {
+					"params": {
+						"_strategy": "Strategy to check"
+					}
+				},
+				"migrateAddressToCheckpoints(address[],bool)": {
+					"params": {
+						"_address": "Array of Address to migrate (garden or user)",
+						"_toMigrate": "Bool to migrate (true) or redo (false)"
+					}
+				},
+				"owner()": {
+					"details": "Returns the address of the current owner."
+				},
+				"renounceOwnership()": {
+					"details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+				},
+				"setBABLMiningParameters(uint256[11])": {
+					"params": {
+						"_newMiningParams": "Array of new mining params to be set by government"
+					}
+				},
+				"setProfitRewards(address,uint256,uint256,uint256)": {
+					"params": {
+						"_garden": "Address of the garden",
+						"_lpShare": "New % of lpShare",
+						"_stewardsShare": "New % of stewardsShare",
+						"_strategistShare": "New % of strategistShare"
+					}
+				},
+				"transferOwnership(address)": {
+					"details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+				},
+				"updateGardenPowerAndContributor(address,address,uint256,uint256,bool)": {
+					"params": {
+						"_addOrSubstract": "Whether the contributor is adding (true) or withdrawing capital (false)",
+						"_contributor": "Address of the contributor",
+						"_garden": "Address of the garden",
+						"_previousBalance": "Previous balance of the contributor",
+						"_tokenDiff": "Amount difference in this deposit/withdraw"
+					}
+				},
+				"updateProtocolPrincipal(uint256,bool)": {
+					"params": {
+						"_addOrSubstract": "Whether we are adding or substracting capital",
+						"_capital": "Amount of capital in any type of asset to be normalized into DAI"
+					}
+				}
+			},
+			"title": "Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"checkMining(uint256,address)": {
+					"notice": "Check the mining program state for a specific quarter and strategy"
+				},
+				"estimateStrategyRewards(address)": {
+					"notice": "Get an estimation of strategy BABL rewards for active strategies in the mining program"
+				},
+				"estimateUserRewards(address,address)": {
+					"notice": "Get an estimation of user rewards for active strategies"
+				},
+				"getGardenProfitsSharing(address)": {
+					"notice": "Check the garden profit sharing % if different from default"
+				},
+				"getPriorBalance(address,address,uint256)": {
+					"notice": "Get token power at a specific block for an account"
+				},
+				"getRewards(address,address,address[])": {
+					"notice": "Calculates the profits and BABL that a contributor should receive from a series of finalized strategies"
+				},
+				"getSafeUserSharePerStrategy(address,address,address)": {
+					"notice": "Get a safe user share position within a strategy of a garden"
+				},
+				"getStrategyRewards(address)": {
+					"notice": "Gets the baseline amount of BABL rewards for a given strategy"
+				},
+				"migrateAddressToCheckpoints(address[],bool)": {
+					"notice": "PRIVILEGE FUNCTION Migrates by governance: (2 options) a) the whole garden or a user for all gardens into checkpoints deprecating c-power"
+				},
+				"sendBABLToContributor(address,uint256)": {
+					"notice": "Sending BABL as part of the claim process (either by sig or standard claim)"
+				},
+				"setBABLMiningParameters(uint256[11])": {
+					"notice": "PRIVILEGE FUNCTION Change default BABL shares % by the governance"
+				},
+				"setProfitRewards(address,uint256,uint256,uint256)": {
+					"notice": "PRIVILEGE FUNCTION Set customized profit shares for a specific garden by the gardener"
+				},
+				"updateGardenPowerAndContributor(address,address,uint256,uint256,bool)": {
+					"notice": "Function used by each garden to signal each deposit and withdrawal in checkpoints to be used for rewards"
+				},
+				"updateProtocolPrincipal(uint256,bool)": {
+					"notice": "Function that adds/substract the capital received to the total principal of the protocol per timestamp"
+				}
+			},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/token/RewardsDistributor.sol": "RewardsDistributor"
+		},
+		"evmVersion": "istanbul",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 600
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol": {
+			"keccak256": "0xb419e68addcb82ecda3ad3974b0d2db76435ce9b08435a04d5b119a0c5d45ea5",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a85355cc4f2554f4a8d334336d66b48d616abf1d90ec3d6b602e825c6fe63f0c",
+				"dweb:/ipfs/QmTJYtsKJjBy3ShAt4kEjvM6nfVS8ZAFQqE29fG16tUP8d"
+			]
+		},
+		"@openzeppelin/contracts-upgradeable/proxy/Initializable.sol": {
+			"keccak256": "0xd8e4eb08dcc1d1860fb347ba5ffd595242b9a1b66d49a47f2b4cb51c3f35017e",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://7dbc89479d30592e82442edc38053b380f611037a5e6ceafc7bf57a7aa1f0305",
+				"dweb:/ipfs/QmcdYtt56WmjeYvsFjK69FnahnAriw88VzY3XRZwXkQKKN"
+			]
+		},
+		"@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol": {
+			"keccak256": "0xfc5ea91fa9ceb1961023b2a6c978b902888c52b90847ac7813fe3b79524165f6",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a6b81dcc816857a9d981386f6d8de49198420ee41cdc0ecade366ab412174d03",
+				"dweb:/ipfs/QmV2vznMT6m9qo3pFMAWi3Nz3UDhwesgwFxeXe6Tod3v8A"
+			]
+		},
+		"@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol": {
+			"keccak256": "0xbbf8a21b9a66c48d45ff771b8563c6df19ba451d63dfb8380a865c1e1f29d1a0",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://062688aac76e27ab50157a9d645700cf92e3c0d51d3d860be1d2e1a0c04a87d0",
+				"dweb:/ipfs/QmfXxppWAiSTeH8YNn2EtMPDgzrLeJ5rjRq8knEbje88mX"
+			]
+		},
+		"@openzeppelin/contracts/access/Ownable.sol": {
+			"keccak256": "0x15e2d5bd4c28a88548074c54d220e8086f638a71ed07e6b3ba5a70066fcf458d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://90faf5851c02f9bd42c5bfb54d4f0421a2612f50ab80b2c4fa24fa3792071cc2",
+				"dweb:/ipfs/QmRGM4F2PcGVF85aTfaA9YBhCHHDqrMhRjyp6fGeBTtirb"
+			]
+		},
+		"@openzeppelin/contracts/introspection/IERC165.sol": {
+			"keccak256": "0xf70bc25d981e4ec9673a995ad2995d5d493ea188d3d8f388bba9c227ce09fb82",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://bd970f51e3a77790c2f02b5b1759827c3b897c3d98c407b3631e8af32e3dc93c",
+				"dweb:/ipfs/QmPF85Amgbqjk3SNZKsPCsqCw8JfwYEPMnnhvMJUyX58je"
+			]
+		},
+		"@openzeppelin/contracts/math/SafeMath.sol": {
+			"keccak256": "0xcc78a17dd88fa5a2edc60c8489e2f405c0913b377216a5b26b35656b2d0dab52",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://526dc85e1f9b9b45830e202568d267d93dde7a4fcccf4ad7798dadcd92304d3c",
+				"dweb:/ipfs/QmaoXMB972J3cSDLtBq3xBo4jLwqD2uzXTwujtSPqkYVhR"
+			]
+		},
+		"@openzeppelin/contracts/math/SignedSafeMath.sol": {
+			"keccak256": "0xd17ac7e1d8f83d20d80e652adfed83da122f3a3c7b69fefa2985d85aebf0a3e9",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://64e13936e5e7382737f9c12918f5365fd9e68bf96e83d66f3323f47b1d7162c7",
+				"dweb:/ipfs/Qmd2qkUCFdpAXJ6NNTkPxmkKaPzYYmeBhDey8N8XN39wqw"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+			"keccak256": "0xca0c2396dbeb3503b51abf4248ebf77a1461edad513c01529df51850a012bee3",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://991b44ff44e0496e8554a90f4c0512c28faed45104d40430019f3c67ea67740e",
+				"dweb:/ipfs/Qmc3nRapVbcctELoZS5qe17zLkFB3bETBfwzCTMF1CSuGE"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0x5f02220344881ce43204ae4a6281145a67bc52c2bb1290a791857df3d19d78f5",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://24427744bd3e6cb73c17010119af12a318289c0253a4d9acb8576c9fb3797b08",
+				"dweb:/ipfs/QmTLDqpKRBuxGxRAmjgXt9AkXyACW3MtKzi7PYjm5iMfGC"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/SafeERC20.sol": {
+			"keccak256": "0xf12dfbe97e6276980b83d2830bb0eb75e0cf4f3e626c2471137f82158ae6a0fc",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://b3a849c2d95e85463909e5b5c920b13e7a11216ca14127085e16d22b9379d52a",
+				"dweb:/ipfs/QmUg3CZDbCCcQdroEpexBy5ZFd5vD1UWijWQq9qHZjtJNQ"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC721/IERC721.sol": {
+			"keccak256": "0x2d99a0deb6648c34fbc66d6ac4a2d64798d7a5321b45624f6736fadc63da1962",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://2dcdce5ede1e5e650d174ec0b35be7d47b6a50f30bc895ef0d9e59fb75052e45",
+				"dweb:/ipfs/QmQ2XFsDLTYqfEdw7pYzHiGtFRY11yQm4b6ynYgKqDxeB8"
+			]
+		},
+		"@openzeppelin/contracts/utils/Address.sol": {
+			"keccak256": "0x28911e614500ae7c607a432a709d35da25f3bc5ddc8bd12b278b66358070c0ea",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://256c8c8af5eb072bc473226ab2b2187149b8fc04f5f4a4820db22527f5ce8e3c",
+				"dweb:/ipfs/QmRvi5BhnL7Rxf85KrJhwM6RRhukm4tzoctRdgQEheNyiN"
+			]
+		},
+		"@openzeppelin/contracts/utils/Context.sol": {
+			"keccak256": "0x8d3cb350f04ff49cfb10aef08d87f19dcbaecc8027b0bed12f3275cd12f38cf0",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ded47ec7c96750f9bd04bbbc84f659992d4ba901cb7b532a52cd468272cf378f",
+				"dweb:/ipfs/QmfBrGtQP7rZEqEg6Wz6jh2N2Kukpj1z5v3CGWmAqrzm96"
+			]
+		},
+		"@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+			"keccak256": "0x8bbbc2f5c10065ee272592ae0a7a6ceb23de2fbd81564ee0bb015ecf404d5f61",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://b95e56c1640d0ef789fc5c16269e141e992f6c8ac97cc6d377bd3825e9cab182",
+				"dweb:/ipfs/QmVzaxJZY51EhagrcNnkxoU6Uq17RhATe7aHvtkC6wUkgK"
+			]
+		},
+		"contracts/interfaces/IBabController.sol": {
+			"keccak256": "0xcac7e79839c00bcdc071e450961408468f085206db2ff2cca9f371e08599c6b0",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://17dd5fa99404770cfe962828892a3d74c85e2eb080a93c15477edb76351c3863",
+				"dweb:/ipfs/QmVTZxra1vy1Xt6iFUX3xLuxtmdACi9z7bj9yyS4sC52fP"
+			]
+		},
+		"contracts/interfaces/IGarden.sol": {
+			"keccak256": "0x4eb1ab36230c04a379beab49f1ac9f3729eaf22b8d608ff112498aa33a3ae391",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://11b0d0c47188bd9720634ef3fb4668732eab46c35594ce01ec3c05dd7832e907",
+				"dweb:/ipfs/QmXDncBDVRC1Xs4qqmiPHE7hccBQ1S9MbCeNV4XvwyB9Cn"
+			]
+		},
+		"contracts/interfaces/IPriceOracle.sol": {
+			"keccak256": "0xc6a5f0657693beec168b56796e25f16a73911a1c8503f13d3dbb2f560e382ac8",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://2efe82736fe2a60eebba3f0005e5146a07d23770e8fff1f36102aaa9f0adad18",
+				"dweb:/ipfs/QmdQ3KQhMhswUUvUfJYimHxbBBQucyMCSQbFd4KYjcDwfj"
+			]
+		},
+		"contracts/interfaces/IProphets.sol": {
+			"keccak256": "0x192f78b38e5b6b1e6f82cfd2e6681bad96d083a6d3bb93bcc6654b3ca35f8026",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://bcf644f14a9cc5c8b21f45261bbf6b3e0857ec1df4ed704e86e163a932f62b78",
+				"dweb:/ipfs/QmdrMhfDn56pR47T15RjA1SSFVskjPq2Dr731heU5yeY8x"
+			]
+		},
+		"contracts/interfaces/IRewardsDistributor.sol": {
+			"keccak256": "0xea36443ec374e34f538a2c97652240b90ba5abc1308f341da01f0eecfb72c2c8",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://ca9fa09fb7341ef84a203862e280fa49f634d0e095426b07af4ad9c22e3b5e1f",
+				"dweb:/ipfs/QmXHkwzN5wRQcQoD5qFkyK7JtNUDVhUNZEPNZg7ZpcYQ5h"
+			]
+		},
+		"contracts/interfaces/IStrategy.sol": {
+			"keccak256": "0xea7c8d298fa5dfacd3cab9babeac447acb8e0bd93febad1fb0f64f0e7f05e67f",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://41e370f0eaba08b88dace5e831c6994374c41e4696a9e10e04fc11de04d8d29f",
+				"dweb:/ipfs/QmfXU4AZVV9RWtwTXQaw8Kfsk9Tr4pJCvjKZs6wPfx13TK"
+			]
+		},
+		"contracts/interfaces/ITokenIdentifier.sol": {
+			"keccak256": "0xaf46879c709ab6a20aab95f7af2559881ac8b396f56b78686284c09325528edf",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://af960925dfc9ad2487f9c899a5bc71fca3fe5538698f27caf34c9c932e0b16ff",
+				"dweb:/ipfs/QmfJQCxLNMxcCfA8cSyQ4yptsZ7GCCw5opBKraHn2Qn23N"
+			]
+		},
+		"contracts/interfaces/IVoteToken.sol": {
+			"keccak256": "0xf4f3aa6bdcf6d3dc33e53b01aa6a2bf6543008b1910913e2504f229dab3b381d",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://5225bb39944ec0fafb773992b60cb1e4bfe58f17ada6f1c5931602a159725aab",
+				"dweb:/ipfs/QmTEJFSYNjXFJyYt9r38Ww3q71wt5BetqpxwPueeL1DC47"
+			]
+		},
+		"contracts/lib/AddressArrayUtils.sol": {
+			"keccak256": "0x409127cd8cadb573e5de48fd992efbd8b0f1e243d235abc3c5f2fa873195c16a",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://7e8a76d2a0837c88e48abb49e99c75f321778de96f00212e8035c780f2fa6dfe",
+				"dweb:/ipfs/QmR3aPnXXq3vNmXUrvGuiNXrj4gTBJcVUYMXEeSLytKbSv"
+			]
+		},
+		"contracts/lib/BabylonErrors.sol": {
+			"keccak256": "0x11b2d640daca3bab0c0f0f43c25afc86bedc4761ea62fa83a2ff5273490eb150",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://1d242e76890169c2058aa698d7f81e2fe382a1a55edd150f4c900d52964339bb",
+				"dweb:/ipfs/QmdpRt1hAU29nYL9Msz5JyTmAdPKuQy3LqkVQuFasEY5YA"
+			]
+		},
+		"contracts/lib/LowGasSafeMath.sol": {
+			"keccak256": "0xdb9b5f36675fd53dd12aa2b33f70305aa576bba377cb8d3ce680df6ee3f63635",
+			"license": "GPL-2.0-or-later",
+			"urls": [
+				"bzz-raw://516dc4c8e46c75085360b5cc6b7cf68e658aba1a64a29a53c07fb1cbf505279b",
+				"dweb:/ipfs/QmSyuJcvud2GWRdknEVWpG4sg5JdSSLmG8DHWNCThaXYXp"
+			]
+		},
+		"contracts/lib/Math.sol": {
+			"keccak256": "0x415a45bed683f6e896bcbf7fb66718c9df48018c6bd629772cbd3229c85085a7",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://4757ede5f647b35799914ebcfeca9e3775f64bb4eade48e14a5b3e36b7aee26c",
+				"dweb:/ipfs/QmdyKkCwdbL4PwQpv6sPijkeQtWMW2PaAVW3n7Fw25UVRj"
+			]
+		},
+		"contracts/lib/PreciseUnitMath.sol": {
+			"keccak256": "0x296db183159528f4b51a3f5f56b66938188b8f2d3c6976cb32a4f0bdb608c9d0",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://116a6ff3ea1d40eca239373562b96c1b6862ea392fc299ea4776522d9bb89edd",
+				"dweb:/ipfs/QmSbZuJWcBeHYZhhNZQnZ8pRwv8gCVcv8uBBY15KUcxXH3"
+			]
+		},
+		"contracts/lib/Safe3296.sol": {
+			"keccak256": "0x0e52292c64757673e397bd0999a08a73ed480cfe57ba361ed254edf0d90eab19",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://31c3d2abe4f167f8dda71621b53e33b4dab20b1ad4af47f6fd23a73e8cc43084",
+				"dweb:/ipfs/QmSwkPaUw4Cz9BFSXi9a2NQuTRAGTfhnDYS4Ufn6pgmvsH"
+			]
+		},
+		"contracts/lib/SafeDecimalMath.sol": {
+			"keccak256": "0x962373863c5ee11f3448970bfee73b0806ac9fe4e9e462a1f75a81f5959ef75f",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://fd7bd9025fd263589b927cc53bc1070ddfb7042cba223adb14d8d92822625580",
+				"dweb:/ipfs/QmSTf4xES8BXcRm1Kjdpaa7zomWk8GNKMYD2eCdvUbMC16"
+			]
+		},
+		"contracts/token/RewardsDistributor.sol": {
+			"keccak256": "0x76537dcdd396e3aa0d31d976df1439c87dae715f8c5543db0144f53297270d80",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://efe958f865a63c41f7a04f0641e254585fc3dbdf52c812880a4472b1f49d7abf",
+				"dweb:/ipfs/QmR3FwZgmhtobnUoGTu24VCvovShmLuUgZeHUbgTLFyCQE"
+			]
+		},
+		"contracts/token/TimeLockRegistry.sol": {
+			"keccak256": "0xd059503554dc556e20b8763b4e37e288273a048250b0761f1fb21884dc4c4af2",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://53d3f72736e4961cded9d1e339989d410291b65a863a4fecfcbb50fc2091cc93",
+				"dweb:/ipfs/QmeUqc4EfppeG8oEd9DK8bsJou8st5ttJXTPH75ejypxfR"
+			]
+		},
+		"contracts/token/TimeLockedToken.sol": {
+			"keccak256": "0x6a222a63fdf11d14e14073ecbe0cb90a4153e1cd92c6bdf595d3be441afecc94",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://4b425d01d03f1ab415ed0aa9f84bb41cfd9913b69ddfb8dd32c6068f58bb446c",
+				"dweb:/ipfs/QmdE24zsm3ZFnUPQ6cXg6ajLSMk18XmdRjiWviZU49MPjT"
+			]
+		},
+		"contracts/token/VoteToken.sol": {
+			"keccak256": "0x6c719ada457d527e6cd32ca7834b14125a0bab62e6364e55b870d60fed5d3da6",
+			"license": "Apache License",
+			"urls": [
+				"bzz-raw://91d1e712d83a34fab7fbbbdd61e34c1d7bba4f21992b1a9ce5b543d7582b33e5",
+				"dweb:/ipfs/QmZA2XHcoE7EwFwRPVXWoXR6swwifwL4bXi3ipZrL8usyo"
+			]
+		}
+	},
+	"version": 1
+}

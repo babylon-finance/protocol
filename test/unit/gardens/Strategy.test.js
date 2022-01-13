@@ -327,6 +327,21 @@ describe('Strategy', function () {
 
       await expect(strategyContract.connect(signer3).unwindStrategy(eth())).to.be.reverted;
     });
+    it('should not be able to unwind an active strategy if strategy is over', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+      await executeStrategy(strategyContract, { amount: eth().mul(2) });
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      await expect(
+        strategyContract.connect(owner).unwindStrategy(eth(), await strategyContract.getNAV()),
+      ).to.be.revertedWith('BAB#050');
+    });
 
     it('can execute strategy twice', async function () {
       const strategyContract = await createStrategy(
