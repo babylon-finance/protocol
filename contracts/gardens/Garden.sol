@@ -192,6 +192,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Addresses for extra creators
     address[MAX_EXTRA_CREATORS] public override extraCreators;
 
+    // last recorded price per share of the garden during deposit or withdrawal operation
+    uint256 public lastPricePerShare;
+
+    // last recorded time of the deposit or withdraw in seconds
+    uint256 public lastPricePerShareTS;
+
+    // Decay rate of the slippage for pricePerShare over time
+    uint256 public pricePerShareDecayRate;
+
+    // Base slippage for pricePerShare of the garden
+    uint256 public pricePerShareSlippage;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -904,6 +916,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _fee
     ) internal {
         _onlyUnpaused();
+        _checkLastPricePerShare(_pricePerShare);
+
         uint256 prevBalance = balanceOf(_to);
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
@@ -984,11 +998,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) private {
         _onlyUnpaused();
         _onlyNonZero(_to);
+        _checkLastPricePerShare(_pricePerShare);
+
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
 
         if (maxDepositLimit > 0) {
-            // This is wrong; but calculate principal would be gas expensive
+            // This is wrong; but calculating the principal would be too gas expensive
             _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
@@ -1195,6 +1211,42 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 extraCreators[2] == _creator ||
                 extraCreators[3] == _creator ||
                 _creator == creator);
+    }
+
+    /**
+      @notice
+        Validates that pricePerShare is within acceptable range; if not reverts
+      @dev
+        Allowed slippage between deposits and withdrawals in terms of the garden price per share is:
+
+        slippage = lastPricePerShare % (pricePerShareSlippage + timePast * pricePerShareDecayRate);
+
+        For example, if lastPricePerShare is 1e18 and slippage is 10% then deposits with pricePerShare between
+        9e17 and 11e17 allowed immediately. After one year (100% change in time) and with a decay rate 1x;
+        deposits between 5e17 and 2e18 are possible. Different gardens should have different settings for
+        slippage and decay rate due to various volatility of the strategies. For example, stable gardens
+        would have low slippage and decay rate while some moonshot garden may have both of them
+        as high as 100% and 10x.
+      @param _pricePerShare  Price of the graden share to validate against historical data
+    */
+    function _checkLastPricePerShare(uint256 _pricePerShare) private {
+        // if no previous record then just pass the check
+        if (lastPricePerShare != 0) {
+            uint256 slippage =
+                pricePerShareSlippage.add(
+                    block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(
+                        pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18
+                    )
+                );
+            _require(
+                _pricePerShare > lastPricePerShare
+                    ? _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage)
+                    : lastPricePerShare.sub(_pricePerShare) >= lastPricePerShare.preciseDiv(slippage.add(1e18)),
+                Errors.PRICE_PER_SHARE_WRONG
+            );
+        }
+        lastPricePerShare = _pricePerShare;
+        lastPricePerShareTS = block.timestamp;
     }
 
     // Assign extra creators

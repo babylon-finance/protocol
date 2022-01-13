@@ -302,4 +302,6 @@ library Errors {
     uint256 internal constant FEE_TOO_LOW = 106;
     // Only governance or emergency
     uint256 internal constant ONLY_GOVERNANCE_OR_EMERGENCY = 107;
+    // Price per share is wrong
+    uint256 internal constant PRICE_PER_SHARE_WRONG = 108;
 }
