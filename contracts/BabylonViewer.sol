@@ -91,7 +91,7 @@ contract BabylonViewer {
         principal = principal.add(garden.totalKeeperFees());
         int256 absoluteReturns = garden.absoluteReturns();
         if (absoluteReturns > 0) {
-            principal = principal > absoluteReturns ? principal.sub(uint256(absoluteReturns)) : 0;
+            principal = principal > uint256(absoluteReturns) ? principal.sub(uint256(absoluteReturns)) : 0;
         } else {
             principal = principal.add(uint256(-absoluteReturns));
         }
