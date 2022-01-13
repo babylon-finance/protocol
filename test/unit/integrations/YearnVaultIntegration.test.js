@@ -143,7 +143,7 @@ describe('YearnVaultIntegrationTest', function () {
 
   describe('enter and exits normal vaults (direct assets)', function () {
     pick(GARDENS).forEach(({ token, name }) => {
-      pick(addresses.yearn.vaults.filter((y) => !y.curve)).forEach((yvault) => {
+      pick(addresses.yearn.vaults.filter((y) => !y.curve && !y.skipTest)).forEach((yvault) => {
         it(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
           await testVault(yvault, token, name);
         });
@@ -152,9 +152,10 @@ describe('YearnVaultIntegrationTest', function () {
   });
   describe('enter and exits curve vaults', function () {
     pick(GARDENS).forEach(({ token, name }) => {
-      pick(addresses.yearn.vaults.filter((y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000')).forEach((yvault) => {
-        it.only(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
-          console.log('before test');
+      pick(
+        addresses.yearn.vaults.filter((y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000'),
+      ).forEach((yvault) => {
+        it(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
           await testVault(yvault, token, name, yvault.crvpool);
         });
       });
