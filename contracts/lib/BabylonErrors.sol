@@ -302,4 +302,6 @@ library Errors {
     uint256 internal constant FEE_TOO_LOW = 106;
     // Only governance or emergency
     uint256 internal constant ONLY_GOVERNANCE_OR_EMERGENCY = 107;
+    // Strategy invalid reserve asset amount
+    uint256 internal constant INVALID_RESERVE_AMOUNT = 108;
 }
