@@ -70,7 +70,11 @@ interface IStrategy {
             bytes memory
         );
 
-    function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
+    function finalizeStrategy(
+        uint256 fee,
+        string memory _tokenURI,
+        uint256 _finalizeStrategy
+    ) external;
 
     function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external;
 

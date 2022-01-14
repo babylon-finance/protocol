@@ -380,7 +380,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      * @param _tokenURI                URL with the JSON for the strategy
      */
-    function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
+    function finalizeStrategy(
+        uint256 _fee,
+        string memory _tokenURI,
+        uint256 _minReserveOut
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
@@ -397,6 +401,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
+        // MinReserveOut security check
+        _require(capitalReturned >= _minReserveOut, Errors.INVALID_RESERVE_AMOUNT);
         // Transfer rewards
         _transferStrategyPrincipal();
         // Send rest to garden if any
