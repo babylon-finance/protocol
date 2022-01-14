@@ -279,7 +279,7 @@ describe('governor', function () {
 
       if (i !== 8) {
         // AVT Strategy i=8 has a problem finalizing possibly due to the rug pull
-        await strategyContract.connect(keeper).finalizeStrategy(0, '');
+        await strategyContract.connect(keeper).finalizeStrategy(0, '', 0);
         expect(await strategyContract.strategyRewards()).to.be.gt(0);
       }
     }
@@ -327,7 +327,7 @@ describe('governor', function () {
       expect(miningUint2[3]).to.be.gt(0);
       expect(miningUint2[4]).to.be.gt(0);
       await increaseTime(ONE_DAY_IN_SECONDS * 60);
-      await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      await strategyContract.connect(keeper).finalizeStrategy(0, '', 0);
       expect(await strategyContract.strategyRewards()).to.be.gt(0);
     }
   });

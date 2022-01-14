@@ -142,7 +142,7 @@ describe('rewards', function () {
   async function finalize(strategies) {
     for (const strategy of strategies) {
       await injectFakeProfits(strategy, eth().mul(200));
-      await strategy.connect(keeper).finalizeStrategy(0, '', { gasPrice: 0 });
+      await strategy.connect(keeper).finalizeStrategy(0, '', 0, { gasPrice: 0 });
       await increaseTime(3600);
     }
   }

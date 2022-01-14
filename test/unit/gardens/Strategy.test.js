@@ -542,7 +542,41 @@ describe('Strategy', function () {
 
       await finalizeStrategy(strategyContract);
 
-      await expect(strategyContract.finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
+      await expect(strategyContract.connect(keeper).finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
+    });
+    it("can't finalize strategy if reserveAssetOut is below minReserveOut", async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'active',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      const minReserveOut = await strategyContract.capitalAllocated();
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      await expect(
+        strategyContract.connect(keeper).finalizeStrategy(42, 'http://', minReserveOut, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#108');
+    });
+    it('can finalize strategy if reserveAssetOut is above minReserveOut', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'active',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      const minReserveOut = await strategyContract.capitalAllocated();
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      await expect(
+        strategyContract.connect(keeper).finalizeStrategy(42, 'http://', minReserveOut.div(2), { gasPrice: 0 }),
+      ).to.be.not.reverted;
     });
   });
 

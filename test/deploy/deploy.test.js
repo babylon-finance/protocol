@@ -99,7 +99,6 @@ describe('deploy', function () {
   async function finalizeStrategy(strategyContract, name, reserveAsset) {
     const isExecuting = await strategyContract.isStrategyActive();
     const gardenContract = await ethers.getContractAt('Garden', await strategyContract.garden());
-
     if (!isExecuting) {
       console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
       return;
@@ -111,7 +110,7 @@ describe('deploy', function () {
         .connect(gov)
         .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
 
-      await strategyContract.connect(keeper).finalizeStrategy(1, '');
+      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0);
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
