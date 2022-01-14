@@ -542,7 +542,9 @@ describe('Strategy', function () {
 
       await finalizeStrategy(strategyContract);
 
-      await expect(strategyContract.connect(keeper).finalizeStrategy(42, 'http://', { gasPrice: 0 })).to.be.reverted;
+      await expect(
+        strategyContract.connect(keeper).finalizeStrategy(42, 'http://', 0, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#050');
     });
     it("can't finalize strategy if reserveAssetOut is below minReserveOut", async function () {
       const strategyContract = await createStrategy(

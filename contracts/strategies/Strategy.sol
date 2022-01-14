@@ -379,6 +379,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Updates the reserve asset position accordingly.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      * @param _tokenURI                URL with the JSON for the strategy
+     * @param _minReserveOut           Minimum reserve asset to get during strategy finalization
      */
     function finalizeStrategy(
         uint256 _fee,
