@@ -1230,18 +1230,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
       @param _pricePerShare  Price of the graden share to validate against historical data
     */
     function _checkLastPricePerShare(uint256 _pricePerShare) private {
+        uint256 slippage = pricePerShareSlippage > 0 ? pricePerShareSlippage : 1e18;
+        uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
-            uint256 slippage =
-                pricePerShareSlippage.add(
-                    block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(
-                        pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18
-                    )
-                );
+            slippage = slippage.add(
+                block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
             _require(
                 _pricePerShare > lastPricePerShare
                     ? _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage)
-                    : lastPricePerShare.sub(_pricePerShare) >= lastPricePerShare.preciseDiv(slippage.add(1e18)),
+                    : lastPricePerShare.sub(_pricePerShare) <=
+                        lastPricePerShare.sub(lastPricePerShare.preciseDiv(slippage.add(1e18))),
                 Errors.PRICE_PER_SHARE_WRONG
             );
         }
