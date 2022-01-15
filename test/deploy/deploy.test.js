@@ -19,9 +19,10 @@ const STUCK_EXECUTE = [
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
-  '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
+  // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
+  '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
 ];
 
 describe('deploy', function () {
@@ -133,6 +134,17 @@ describe('deploy', function () {
     }
   }
 
+  async function finalizeStuckStrategies() {
+    const strategies = STUCK_EXECUTE;
+    for (const strategy of strategies) {
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const reserveAsset = await gardenContract.reserveAsset();
+      const name = await strategyNft.getStrategyName(strategy);
+      await finalizeStrategy(strategyContract, name, reserveAsset);
+    }
+  }
+
   async function canUnwindAllActiveStrategies() {
     await iterateStrategiesFromGardens(unwindStrategy);
   }
@@ -215,8 +227,11 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
+    });
+    it.only('can finalize stuck strategies', async () => {
+      await finalizeStuckStrategies();
     });
   });
 });
