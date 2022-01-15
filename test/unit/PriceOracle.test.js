@@ -111,14 +111,14 @@ const tokens = [
   {
     name: 'WETH->tricrypto2',
     tokenIn: addresses.tokens.WETH,
-    tokenOut: '0xc4ad29ba4b3c580e6d59105fff484999997675ff',
-    value: parse('3747.695705022502467870'),
+    tokenOut: '0xc4AD29ba4B3c580e6D59105FFf484999997675Ff',
+    value: parse('2.252'),
   },
   {
     name: 'tricrypto2->WETH',
-    tokenIn: '0xc4ad29ba4b3c580e6d59105fff484999997675ff',
+    tokenIn: '0xc4AD29ba4B3c580e6D59105FFf484999997675Ff',
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000266670662553977'),
+    value: parse('0.449111011959615'),
   },
   {
     name: 'WETH->renBTC',
