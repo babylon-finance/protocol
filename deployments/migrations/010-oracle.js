@@ -16,10 +16,11 @@ module.exports = async ({
   const signer = await getSigner(deployer);
   const gasPrice = await getGasPrice();
   const controller = await getController();
+  const oracle = await deployments.get('TokenIdentifier');
 
   const deployment = await deploy('PriceOracle', {
     from: deployer,
-    args: [ethers.constants.AddressZero, controller.address],
+    args: [oracle.address, controller.address],
     log: true,
     gasPrice,
   });
