@@ -334,11 +334,11 @@ contract PriceOracle is Ownable, IPriceOracle {
                 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
                 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
                 if (tokenInPrice != 0 || tokenOutPrice != 0) {
-                    if(tokenInPrice == 0) {
-                       tokenInPrice = _getUniV3PriceNaive(_tokenIn, reserve);
+                    if (tokenInPrice == 0) {
+                        tokenInPrice = _getUniV3PriceNaive(_tokenIn, reserve);
                     }
-                    if(tokenOutPrice == 0) {
-                       tokenOutPrice = _getUniV3PriceNaive(_tokenIn, reserve);
+                    if (tokenOutPrice == 0) {
+                        tokenOutPrice = _getUniV3PriceNaive(_tokenIn, reserve);
                     }
                     return tokenInPrice.preciseMul(tokenOutPrice);
                 }
