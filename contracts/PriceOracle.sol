@@ -331,8 +331,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             address reserve = reserveAssetsList[i];
             if (!reserveAssets[_tokenIn] && !reserveAssets[_tokenOut]) {
-                tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
-                tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
+                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
+                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
                 if (tokenInPrice != 0 || tokenOutPrice != 0) {
                     if (tokenInPrice == 0) {
                         tokenInPrice = _getUniV3PriceNaive(_tokenIn, reserve);
