@@ -145,6 +145,21 @@ describe('deploy', function () {
     }
   }
 
+  async function checkNAVStrategies() {
+    const strategies = STUCK_EXECUTE;
+    for (const strategy of strategies) {
+      console.log('strategy', strategy);
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const reserveAsset = await gardenContract.reserveAsset();
+      console.log('reserve', reserveAsset);
+      const name = await strategyNft.getStrategyName(strategy);
+      console.log('name', name);
+      const nav = await strategyContract.getNAV();
+      console.log(name, reserveAsset, nav.toString());
+    }
+  }
+
   async function canUnwindAllActiveStrategies() {
     await iterateStrategiesFromGardens(unwindStrategy);
   }
@@ -217,6 +232,11 @@ describe('deploy', function () {
         // console.log('gardenNAV', gardenNAV.toString());
         // console.log('gardensNAV[garden]', gardensNAV[garden].toString());
       }
+    });
+
+    it.only('gets right NAV strategies', async () => {
+      console.log('here');
+      await checkNAVStrategies();
     });
 
     it('can execute stuck strategies', async () => {
