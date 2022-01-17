@@ -235,7 +235,6 @@ describe('deploy', function () {
     });
 
     it.only('gets right NAV strategies', async () => {
-      console.log('here');
       await checkNAVStrategies();
     });
 
