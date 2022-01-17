@@ -330,20 +330,17 @@ contract PriceOracle is Ownable, IPriceOracle {
         // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
         for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             address reserve = reserveAssetsList[i];
-            if (_tokenIn != reserve && _tokenOut != reserve) {
-                price = _checkPairThroughCurve(reserve, _tokenOut);
-                if (price != 0) {
-                    uniPrice = _getUniV3PriceNaive(_tokenIn, reserve);
-                    if (uniPrice != 0) {
-                        return uniPrice.preciseMul(price);
+            if (!reserveAssets[_tokenIn] && !reserveAssets[_tokenOut]) {
+                tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
+                tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
+                if (tokenInPrice != 0 || tokenOutPrice != 0) {
+                    if(tokenInPrice == 0) {
+                       tokenInPrice = _getUniV3PriceNaive(_tokenIn, reserve);
                     }
-                }
-                price = _checkPairThroughCurve(_tokenIn, reserve);
-                if (price != 0) {
-                    uniPrice = _getUniV3PriceNaive(reserve, _tokenOut);
-                    if (uniPrice != 0) {
-                        return price.preciseMul(uniPrice);
+                    if(tokenOutPrice == 0) {
+                       tokenOutPrice = _getUniV3PriceNaive(_tokenIn, reserve);
                     }
+                    return tokenInPrice.preciseMul(tokenOutPrice);
                 }
             }
         }
