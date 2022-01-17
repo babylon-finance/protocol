@@ -276,7 +276,8 @@ contract DepositVaultOperation is Operation {
             uint256 amount
         ) {
             if (rewardToken != address(0) && amount > 0) {
-                return _getPrice(rewardToken, _reserveAsset).preciseMul(amount);
+                uint256 normalizedBalance = SafeDecimalMath.normalizeAmountTokens(rewardToken, _reserveAsset, amount);
+                return _getPrice(rewardToken, _reserveAsset).preciseMul(normalizedBalance);
             }
             return 0;
         } catch {
