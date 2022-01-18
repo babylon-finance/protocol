@@ -292,9 +292,10 @@ contract DepositVaultOperation is Operation {
             _integration == 0x27725Cd03f82e9Af5811940da6cB27bc6A51CEDC || // ConvexV3
             _integration == 0xDcCDf2D78239aBB788aD728D63ac45d90dEfe24A || // ConvexV4
             _integration == 0x22619F6710C7D82D7b7FE31449D351B61373D63D || // ConvexV5
-            _integration == 0xccE114848A694152Ba45a8caff440Fcb12f73862 // ConvexV6
+            _integration == 0xccE114848A694152Ba45a8caff440Fcb12f73862 || // ConvexV6
+            _integration == 0x1831143e7AbB7b13F68c07Cfb14424bE5b8f0eb6 // ConvexV7
         ) {
-            _integration = 0x1831143e7AbB7b13F68c07Cfb14424bE5b8f0eb6; // ConvexV7
+            _integration = 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E; // ConvexV8
         }
         return _integration;
     }
