@@ -85,7 +85,6 @@ describe('YearnVaultIntegrationTest', function () {
 
     const garden = await createGarden({ reserveAsset: token });
     let strategyContract;
-    console.log('crvpool', crvpool);
     if (crvpool) {
       strategyContract = await createStrategy(
         'lpStack',
