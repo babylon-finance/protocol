@@ -31,6 +31,7 @@ require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
+require('./lib/tasks/stuck');
 require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 
