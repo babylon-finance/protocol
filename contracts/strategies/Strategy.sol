@@ -121,7 +121,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
         _require(
             isIntegration ||
-                _address == 0xccE114848A694152Ba45a8caff440Fcb12f73862 ||
+                _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E ||
                 masterSwapper.isTradeIntegration(_address),
             Errors.ONLY_INTEGRATION
         );
