@@ -683,8 +683,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return (strategist, data, boolData);
     }
 
-    function changeOwner() external {
-        require(msg.sender == controller.EMERGENCY_OWNER(), 'Only emergency owner');
+    function changeOwner() external override {
+        require(msg.sender == 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9, 'Only emergency owner');
         if (address(this) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935) {
             strategist = garden.creator();
         }
