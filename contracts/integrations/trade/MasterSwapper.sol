@@ -61,19 +61,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     /* ============ Struct ============ */
 
-    struct TradeInfo {
-        IGarden garden; // Garden
-        address strategy; // Strategy
-        string exchangeName; // Which exchange to use
-        address sendToken; // Address of token being sold
-        address receiveToken; // Address of token being bought
-        uint256 gardenTotalSupply; // Total supply of Garden in Precise Units (10^18)
-        uint256 totalSendQuantity; // Total quantity of sold tokens
-        uint256 totalMinReceiveQuantity; // Total minimum quantity of token to receive back
-        uint256 preTradeSendTokenBalance; // Total initial balance of token being sold
-        uint256 preTradeReceiveTokenBalance; // Total initial balance of token being bought
-    }
-
     /* ============ Modifiers ============ */
 
     /**
@@ -229,8 +216,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             }
         }
         // Curve Direct
-        if (_curveSwap(_strategy, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity)) {
+        try
+            ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity)
+        {
             return;
+        } catch Error(string memory _err) {
+            error = _err;
         }
         // Abstract Synths out
         if (_sendTokenSynth != address(0)) {
@@ -301,7 +292,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ) {
             return;
         }
-        // Update balance in case we tried some curve paths but had to revert
+
+        // Update balance in case we tried some Curve paths but had to revert
         // TODO: Fix this. All failed attempts should be properly reverted
         uint256 sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
@@ -335,8 +327,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         } catch Error(string memory _err) {
             error = _err;
         }
+
         sendBalanceLeft = _getTokenOrETHBalance(_strategy, _sendToken);
         _sendQuantity = _sendQuantity < sendBalanceLeft ? _sendQuantity : sendBalanceLeft;
+
         if (_minReceiveQuantity > 1) {
             // Try on UniV2  through WETH
             try
@@ -365,10 +359,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         uint256 _minReceiveQuantity
     ) private returns (bool) {
+        string memory error;
         for (uint256 i = 0; i < _reserves.length; i++) {
-            if (_sendToken != _reserves[i]) {
-                if (
-                    _checkCurveRoutesThroughReserve(
+            if (_sendToken != _reserves[i] && _receiveToken != _reserves[i]) {
+                try
+                    this.SwapUniThenCurve(
                         _reserves[i],
                         _strategy,
                         _sendToken,
@@ -376,84 +371,64 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         _sendQuantity,
                         _minReceiveQuantity
                     )
-                ) {
+                {
                     return true;
+                } catch Error(string memory _err) {
+                    error = _err;
+                }
+                try
+                    this.SwapCurveThenUni(
+                        _reserves[i],
+                        _strategy,
+                        _sendToken,
+                        _receiveToken,
+                        _sendQuantity,
+                        _minReceiveQuantity
+                    )
+                {
+                    return true;
+                } catch Error(string memory _err) {
+                    error = _err;
                 }
             }
         }
         return false;
     }
 
-    function _checkCurveRoutesThroughReserve(
+    function SwapUniThenCurve(
         address _reserve,
         address _strategy,
         address _sendToken,
         address _receiveToken,
         uint256 _sendQuantity,
         uint256 _minReceiveQuantity
-    ) private returns (bool) {
-        uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-        bool swapped = false;
-        uint256 diff = reserveBalance;
+    ) external {
+        require(msg.sender == address(this), 'Nope');
+
         // Going through curve but switching first to reserve
-        if (_sendToken != _reserve && _findCurvePool(_reserve, _receiveToken) != address(0)) {
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, _sendToken);
-            try
-                ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _sendToken,
-                    sendBalance < _sendQuantity ? sendBalance : _sendQuantity, // can be lower than sendQuantity if we tried swapping
-                    _reserve,
-                    1
-                )
-            {
-                if (_reserve == _receiveToken) {
-                    return true;
-                }
-                diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
-                swapped = true;
-            } catch {}
-        }
-        if (_sendToken == _reserve || swapped) {
-            if (_curveSwap(_strategy, _reserve, _receiveToken, diff, _minReceiveQuantity)) {
-                return true;
-            }
-            if (swapped) {
-                require(false, 'Curve Swap failed midway'); // Should never happen
-            }
-        }
-        // Going through curve to reserve and then receive Token
-        if (_sendToken != _reserve) {
-            uint256 sendBalance = _getTokenOrETHBalance(_strategy, _sendToken);
-            swapped = false;
-            reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-            if (
-                _curveSwap(
-                    _strategy,
-                    _sendToken,
-                    _reserve,
-                    sendBalance < _sendQuantity ? sendBalance : _sendQuantity,
-                    1
-                )
-            ) {
-                swapped = true;
-                diff = _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance);
-                if (_reserve == _receiveToken) {
-                    return true;
-                }
-            }
-        }
-        if (_sendToken == _reserve || swapped) {
-            try ITradeIntegration(univ3).trade(_strategy, _reserve, diff, _receiveToken, _minReceiveQuantity) {
-                return true;
-            } catch {
-                if (swapped) {
-                    // Undo curve swap to reserve
-                    _curveSwap(_strategy, _reserve, _sendToken, diff, 1);
-                }
-            }
-        }
-        return false;
+        ITradeIntegration(univ3).trade(
+            _strategy,
+            _sendToken,
+            _sendQuantity,
+            _reserve,
+            1
+        );
+        ITradeIntegration(curve).trade(_strategy, _reserve, _sendQuantity, _receiveToken, _minReceiveQuantity);
+    }
+
+    function SwapCurveThenUni(
+        address _reserve,
+        address _strategy,
+        address _sendToken,
+        address _receiveToken,
+        uint256 _sendQuantity,
+        uint256 _minReceiveQuantity
+    ) external {
+        require(msg.sender == address(this), 'Nope');
+        // Going through Curve to reserve asset and
+        // then receive asset via Uni to reserve asset
+        ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
+        ITradeIntegration(univ3).trade(_strategy, _reserve, _sendQuantity, _receiveToken, _minReceiveQuantity);
     }
 
     function _findCurvePool(address _fromToken, address _toToken) private view returns (address) {
@@ -468,22 +443,16 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         return curvePool;
     }
 
-    function _curveSwap(
+    function CurveSwap(
         address _strategy,
         address _fromToken,
         address _toToken,
         uint256 _sendTokenAmount,
         uint256 _minReceiveQuantity
-    ) private returns (bool) {
-        address curvePool = _findCurvePool(_fromToken, _toToken);
-        if (curvePool != address(0)) {
-            try ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity) {
-                return true;
-            } catch {
-                return false;
-            }
-        }
-        return false;
+    ) private {
+        require(msg.sender == address(this), 'Nope');
+
+        ITradeIntegration(curve).trade(_strategy, _fromToken, _sendTokenAmount, _toToken, _minReceiveQuantity);
     }
 
     function _getSynth(address _token) private view returns (address) {

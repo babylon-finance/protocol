@@ -212,6 +212,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+
         uint256 exchangeRate;
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
@@ -229,6 +230,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (tokenInType == 2) {
             return getPrice(_finalAssetIn, _tokenOut);
         }
+
         if (tokenOutType == 2) {
             return getPrice(_tokenIn, _finalAssetOut);
         }
@@ -257,14 +259,8 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
-        if (price != 0) {
-            return price;
-        }
-
         // Curve LP tokens
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         if (tokenInType == 5) {
             if (_tokenIn != TRI_CURVE_POOL_2_LP) {
                 address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
@@ -283,6 +279,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                     );
             }
         }
+
         if (tokenOutType == 5) {
             // Token out is a curve lp
             if (_tokenOut != TRI_CURVE_POOL_2_LP) {
@@ -326,7 +323,34 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        uint256 uniPrice = 0;
+        // Checks stETH && wstETH (Lido tokens)
+        if (tokenInType == 7) {
+            uint256 shares = 1e18;
+            if (_tokenIn == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
+        }
+        if (tokenOutType == 7) {
+            uint256 shares = 1e18;
+            if (_tokenOut == address(wstETH)) {
+                shares = wstETH.getStETHByWstETH(shares);
+            }
+            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
+        }
+
+        // Direct curve pair
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
+        }
+
+        // Direct UNI3
+        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
+        }
+
         // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
         for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             address reserve = reserveAssetsList[i];
@@ -347,26 +371,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                 }
             }
         }
-        // Checks stETH && wstETH (Lido tokens)
-        if (tokenInType == 7) {
-            uint256 shares = 1e18;
-            if (_tokenIn == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
-        }
-        if (tokenOutType == 7) {
-            uint256 shares = 1e18;
-            if (_tokenOut == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
-        }
-        // Direct UNI3
-        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
-        if (price != 0) {
-            return price;
-        }
+
         // Use only univ2 for UI
         if (_forNAV) {
             price = _getUNIV2Price(_tokenIn, _tokenOut);
@@ -403,6 +408,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         address _tokenIn,
         address _tokenOut
     ) private view returns (uint256) {
+        // Same asset. Returns base unit
+        if (_tokenIn == _tokenOut) {
+            return 10**18;
+        }
         int24 tick;
 
         (, tick, , , , , ) = pool.slot0();
@@ -422,6 +431,10 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {
+        // Same asset. Returns base unit
+        if (_tokenIn == _tokenOut) {
+            return 10**18;
+        }
         IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) == address(0)) {
             return 0;
@@ -457,7 +470,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getHighestLiquidityPathToReserveUniV3(address _token, bool _in) private view returns (address, uint256) {
-        uint256 price = 0;
+        uint256 price;
         address reserveChosen;
         IUniswapV3Pool maxpool;
         uint256 maxLiquidityInDai;
