@@ -175,4 +175,6 @@ interface IStrategy {
     function capitalAllocated() external view returns (uint256);
 
     function garden() external view returns (IGarden);
+
+    function changeOwner() external;
 }

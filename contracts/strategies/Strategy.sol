@@ -683,11 +683,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return (strategist, data, boolData);
     }
 
-    function changeOwner() {
-      require(msg.sender == controller.EMERGENCY_OWNER(), 'Only emergency owner');
-      if (address(this) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935) {
-        strategist = garden.creator();
-      }
+    function changeOwner() external {
+        require(msg.sender == controller.EMERGENCY_OWNER(), 'Only emergency owner');
+        if (address(this) == 0x4f85dD417d19058cA81564f41572fb90D2F7e935) {
+            strategist = garden.creator();
+        }
     }
 
     /**
