@@ -223,23 +223,20 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
 
         // Go through UNIv3 first via WETH
-        try
-            ITradeIntegration(univ3).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
-                WETH
-            )
-        {
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
+        (error, success) = _swap(
+            univ3,
+            _strategy,
+            _sendToken,
+            _sendQuantity,
+            _receiveToken,
+            _minReceiveQuantity,
+            WETH,
+            error
+        );
+        if (success) {
             console.log('UniV3 WETH');
+            console.log(string(abi.encodePacked('MasterSwapper:', error)));
             return;
-        } catch Error(string memory _err) {
-            error = string(
-                abi.encodePacked(error, 'UniV3:', [_sendToken, WETH, _receiveToken].toTradePathString(), ':', _err, ';')
-            );
         }
 
         // Try Curve through reserve assets
@@ -257,85 +254,55 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
 
         // Try Univ3 through DAI
-        try
-            ITradeIntegration(univ3).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
-                DAI
-            )
-        {
+        (error, success) = _swap(
+            univ3,
+            _strategy,
+            _sendToken,
+            _sendQuantity,
+            _receiveToken,
+            _minReceiveQuantity,
+            DAI,
+            error
+        );
+        if (success) {
             console.log('UniV3 DAI');
             console.log(string(abi.encodePacked('MasterSwapper:', error)));
             return;
-        } catch Error(string memory _err) {
-            error = string(
-                abi.encodePacked(error, 'UniV3:', [_sendToken, DAI, _receiveToken].toTradePathString(), ':', _err, ';')
-            );
         }
 
-        // (error, success) = _swapUniV3(
-        //         univ3,
-        //         _strategy,
-        //         _sendToken,
-        //         _sendQuantity,
-        //         _receiveToken,
-        //         _minReceiveQuantity,
-        //         USDC,
-        //         error
-        //     );
-        // if(success) {
-        //     return;
-        // }
-
         // Try Univ3 through USDC
-        try
-            ITradeIntegration(univ3).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
-                USDC
-            )
-        {
+        (error, success) = _swap(
+            univ3,
+            _strategy,
+            _sendToken,
+            _sendQuantity,
+            _receiveToken,
+            _minReceiveQuantity,
+            USDC,
+            error
+        );
+        if (success) {
             console.log('UniV3 USDC');
             console.log(string(abi.encodePacked('MasterSwapper:', error)));
             return;
-        } catch Error(string memory _err) {
-            error = string(
-                abi.encodePacked(error, 'UniV3:', [_sendToken, USDC, _receiveToken].toTradePathString(), ':', _err, ';')
-            );
         }
 
         if (_minReceiveQuantity > 1) {
             // Try on UniV2 through WETH
-            try
-                ITradeIntegration(univ2).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    WETH
-                )
-            {
-                console.log('UniV2');
+            (error, success) = _swap(
+                univ2,
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                WETH,
+                error
+            );
+            if (success) {
+                console.log('UniV3 USDC');
                 console.log(string(abi.encodePacked('MasterSwapper:', error)));
                 return;
-            } catch Error(string memory _err) {
-                error = string(
-                    abi.encodePacked(
-                        error,
-                        'UniV2:',
-                        [_sendToken, WETH, _receiveToken].toTradePathString(),
-                        ':',
-                        _err,
-                        ';'
-                    )
-                );
             }
         }
 
@@ -343,7 +310,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         revert(string(abi.encodePacked('MasterSwapper:', error)));
     }
 
-    function SwapUniThenCurve(
+    function SwapSwap(
+        ITradeIntegration _one,
+        ITradeIntegration _two,
         address _reserve,
         address _strategy,
         address _sendToken,
@@ -352,32 +321,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity
     ) external {
         require(msg.sender == address(this), 'Nope');
-        // Going through Curve but switching first to reserve
-        uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-        ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
-        ITradeIntegration(curve).trade(
-            _strategy,
-            _reserve,
-            _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance),
-            _receiveToken,
-            _minReceiveQuantity
-        );
-    }
 
-    function SwapCurveThenUni(
-        address _reserve,
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
-    ) external {
-        require(msg.sender == address(this), 'Nope');
-        // Going through Curve to reserve asset and
-        // then receive asset via Uni to reserve asset
         uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
-        ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
-        ITradeIntegration(univ3).trade(
+        ITradeIntegration(_one).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
+        ITradeIntegration(_two).trade(
             _strategy,
             _reserve,
             _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance),
@@ -469,8 +416,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address[3] memory reserves = [DAI, WETH, WBTC];
         for (uint256 i = 0; i < reserves.length; i++) {
             if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
+                // Going through Curve but switching first to reserve
                 try
-                    this.SwapUniThenCurve(
+                    this.SwapSwap(
+                        univ3,
+                        curve,
                         reserves[i],
                         _strategy,
                         _sendToken,
@@ -493,8 +443,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         )
                     );
                 }
+                // Going through Curve to reserve asset and
+                // then receive asset via Uni to reserve asset
                 try
-                    this.SwapCurveThenUni(
+                    this.SwapSwap(
+                        curve,
+                        univ3,
                         reserves[i],
                         _strategy,
                         _sendToken,
