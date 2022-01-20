@@ -930,7 +930,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes memory _data
     ) private returns (bytes memory _returnValue) {
-        _returnValue = _target.functionCallWithValue(_data, _value);
+        _returnValue = _target.functionCallWithValue(_data, _value, 'no err msg');
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
     }
