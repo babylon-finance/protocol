@@ -85,7 +85,7 @@ contract CurveTradeIntegration is TradeIntegration {
         ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (address curvePool, address realSendToken, address realReceiveToken) =
             _getPoolAndTokens(_sendToken, _receiveToken);
-        require(curvePool != address(0), 'No curve pool to trade the pair');
+        require(curvePool != address(0), 'No curve pool');
         (int128 i, int128 j, bool underlying) =
             curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
         bytes memory methodData =
