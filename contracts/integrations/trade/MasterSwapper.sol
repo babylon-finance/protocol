@@ -253,38 +253,23 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             return;
         }
 
-        // Try Univ3 through DAI
-        (error, success) = _swap(
-            univ3,
-            _strategy,
-            _sendToken,
-            _sendQuantity,
-            _receiveToken,
-            _minReceiveQuantity,
-            DAI,
-            error
-        );
-        if (success) {
-            console.log('UniV3 DAI');
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
-            return;
-        }
-
-        // Try Univ3 through USDC
-        (error, success) = _swap(
-            univ3,
-            _strategy,
-            _sendToken,
-            _sendQuantity,
-            _receiveToken,
-            _minReceiveQuantity,
-            USDC,
-            error
-        );
-        if (success) {
-            console.log('UniV3 USDC');
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
-            return;
+        // Try Univ3 through DAI, USDC
+        address[2] memory reserves = [DAI, USDC];
+        for (uint256 i = 0; i < reserves.length; i++) {
+            (error, success) = _swap(
+                univ3,
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                reserves[i],
+                error
+            );
+            if (success) {
+                console.log(string(abi.encodePacked('MasterSwapper:', error)));
+                return;
+            }
         }
 
         if (_minReceiveQuantity > 1) {
@@ -496,7 +481,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _hop
             )
         {
-            console.log(string(abi.encodePacked(_integration.name(), ERC20(_hop).symbol())));
+            console.log(string(abi.encodePacked(_integration.name(), ' ', ERC20(_hop).symbol())));
             return ('', true);
         } catch Error(string memory _err) {
             error = string(
