@@ -40,7 +40,7 @@ const {
 } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
-const { ADDRESS_ZERO } = require('../../../lib/constants');
+const { ADDRESS_ZERO, ONE_YEAR_IN_SECONDS } = require('../../../lib/constants');
 
 async function getAndValidateProtocolTimestamp(rewardsDistributor, timestamp, protocolPerTimestamp) {
   const [principal, time, quarterBelonging, timeListPointer, power] = await rewardsDistributor.checkProtocol(timestamp);
@@ -226,7 +226,30 @@ async function getStrategyState(strategy) {
     const returned = await strategy.capitalReturned();
     const allocated = await strategy.capitalAllocated();
     let ratio;
-    const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
+    // const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
+    const [, , , , executedAt, ,] = await strategy.getStrategyState();
+    const block = await ethers.provider.getBlock();
+    const now = block.timestamp;
+    const timeDiff = now - executedAt;
+    const timedAPY = ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 365).div(ethers.BigNumber.from(timeDiff));
+    let returnedAPY;
+    if (returned >= allocated) {
+      // profit
+      returnedAPY = ethers.BigNumber.from(allocated).add(
+        ethers.BigNumber.from(returned).sub(ethers.BigNumber.from(allocated)).mul(ethers.BigNumber.from(timedAPY)),
+      );
+    } else {
+      returnedAPY =
+        ethers.BigNumber.from(allocated).sub(ethers.BigNumber.from(returned)).mul(ethers.BigNumber.from(timedAPY)) <
+        ethers.BigNumber.from(allocated)
+          ? ethers.BigNumber.from(allocated).sub(
+              ethers.BigNumber.from(allocated)
+                .sub(ethers.BigNumber.from(returned))
+                .preciseMul(ethers.BigNumber.from(timedAPY)),
+            )
+          : 0;
+    }
+    const profit = ethers.BigNumber.from(returnedAPY).mul(eth()).div(ethers.BigNumber.from(allocated));
     const benchmark = await rewardsDistributor.checkMining(1, strategy.address);
 
     if (BigInt(profit) < BigInt(benchmark[12])) {
@@ -1450,12 +1473,29 @@ async function getStrategyState(strategy) {
       });
     });
     [
-      { benchmark: [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)], name: 'no penalty at all' },
-      { benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(1)], name: 'half penalty to bad strategies' },
-      { benchmark: [eth(1), eth(1.03), eth(0), eth(0.5), eth(1)], name: 'full penalty to bad strategies' },
-      { benchmark: [eth(0.8), eth(1.03), eth(0.5), eth(0.5), eth(2)], name: 'boost to cool strategies' },
-    ].forEach(({ benchmark, name }) => {
-      it(`should apply ${name} with new benchmark params in case of 1 strategy and total duration of 1 quarter`, async function () {
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+        action: 'full penalty to bad strategies',
+        profitLevel: 0,
+      },
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+        action: 'half penalty to regular strategies',
+        profitLevel: 1,
+      },
+      { benchmark: [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)], action: 'no penalty at all', profitLevel: 2 },
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+        action: 'boost a cool strategies',
+        profitLevel: 3,
+      },
+      {
+        benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+        action: 'boost a really big cool strategies',
+        profitLevel: 4,
+      },
+    ].forEach(({ benchmark, action, profitLevel }) => {
+      it(`should apply ${action} with new benchmark params in case of 1 strategy and total duration of 1 quarter`, async function () {
         const strategistShare = eth(0.1);
         const stewardsShare = eth(0.1);
         const lpShare = eth(0.8);
@@ -1484,7 +1524,14 @@ async function getStrategyState(strategy) {
         const [long1] = await createStrategies([{ garden: garden1 }]);
         await executeStrategy(long1, eth());
 
-        if (benchmark[4] > from(eth(1))) {
+        if (profitLevel === 0) {
+          // Very bad strategy
+          await substractFakeProfits(long1, eth(50)); // We substract profits
+        } else if (profitLevel === 3) {
+          // Cool strategy
+          await injectFakeProfits(long1, eth(100)); // We inject profits
+        } else if (profitLevel === 4) {
+          // Cool strategy
           await injectFakeProfits(long1, eth(1000)); // We inject profits
         }
 
