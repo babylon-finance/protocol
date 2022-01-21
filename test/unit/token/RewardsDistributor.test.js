@@ -229,7 +229,6 @@ async function getStrategyState(strategy) {
     const returned = await strategy.capitalReturned();
     const allocated = await strategy.capitalAllocated();
     let ratio;
-    // const profit = ethers.BigNumber.from(returned).mul(eth()).div(ethers.BigNumber.from(allocated));
     const [, , , , executedAt, ,] = await strategy.getStrategyState();
     const block = await ethers.provider.getBlock();
     const now = block.timestamp;
@@ -1562,11 +1561,8 @@ async function getStrategyState(strategy) {
           await finalizeStrategyAfter30Days(long1);
 
           const [, value] = await getStrategyRewards(long1, now, 1, 1, [eth()], principalWeight, profitWeight);
-          // console.log('Test::baseline rewards', value.toString());
           const [rewardsRatio, profit] = await getRewardsRatio(long1);
-          // console.log('Rewards ratio', rewardsRatio.toString());
           const principalValue = value.mul(principalWeight).div(eth());
-          // console.log('Test::principalValue', principalValue.toString());
           const profitValue = value.mul(profitWeight).mul(rewardsRatio).mul(profit).div(eth()).div(eth()).div(eth());
           const rewards = await long1.strategyRewards();
           expect(rewards).to.be.closeTo(principalValue.add(profitValue), rewards.div(50));
