@@ -14,7 +14,7 @@
 
 pragma solidity 0.7.6;
 
-library Strings {
+library String {
     function toString(address account) internal pure returns (string memory) {
         return toString(abi.encodePacked(account));
     }

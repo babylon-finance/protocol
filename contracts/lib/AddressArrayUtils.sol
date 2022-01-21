@@ -123,4 +123,19 @@ library AddressArrayUtils {
         }
         return newAddresses;
     }
+
+    function toDynamic(address[2] memory _arr) internal view returns (address[] memory) {
+        address[] memory arr = new address[](2);
+        arr[0] = _arr[0];
+        arr[1] = _arr[1];
+        return arr;
+    }
+
+    function toDynamic(address[3] memory _arr) internal view returns (address[] memory) {
+        address[] memory arr = new address[](3);
+        arr[0] = _arr[0];
+        arr[1] = _arr[1];
+        arr[2] = _arr[2];
+        return arr;
+    }
 }

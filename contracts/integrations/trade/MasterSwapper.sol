@@ -24,6 +24,8 @@ import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
+import {BaseIntegration} from '../BaseIntegration.sol';
+
 import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
@@ -33,10 +35,10 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
-import {BaseIntegration} from '../BaseIntegration.sol';
 
-import {Strings} from '../../lib/Strings.sol';
+import {String} from '../../lib/String.sol';
 import {DeFiUtils} from '../../lib/DeFiUtils.sol';
+import {AddressArrayUtils} from '../../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
@@ -55,17 +57,15 @@ import 'hardhat/console.sol';
 //     Support proxy or no proxy between synths
 //     - Only between pairs of synths. Great for bigger trades
 //
-// * Implement CurveTradeIntegration
-// * Implement SynthetixTradeIntegration
-// * Implemen  UniswapV2TradeIntegration
 contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using PreciseUnitMath for uint256;
-    using Strings for address;
-    using Strings for bytes;
-    using DeFiUtils for address[3];
-    using DeFiUtils for address[2];
+    using String for address;
+    using String for bytes;
+    using DeFiUtils for address[];
+    using AddressArrayUtils for address[2];
+    using AddressArrayUtils for address[3];
 
     /* ============ Struct ============ */
 
@@ -217,9 +217,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             console.log('Direct Curve');
             return;
         } catch Error(string memory _err) {
-            error = string(
-                abi.encodePacked(error, 'Curve:', [_sendToken, _receiveToken].toTradePathString(), ':', _err, ';')
-            );
+            error = _formatError(error, _err, 'Curve', _sendToken, _receiveToken);
         }
 
         // Go through UNIv3 first via WETH
@@ -343,10 +341,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return ('', true);
             } catch Error(string memory _err) {
-                return (
-                    string(abi.encodePacked('Synt:', [_sendToken, _receiveToken].toTradePathString(), ':', _err, ';')),
-                    false
-                );
+                return (_formatError('', _err, 'Synt', _sendToken, _receiveToken), false);
             }
         }
 
@@ -365,12 +360,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 );
                 return ('', true);
             } catch Error(string memory _err) {
-                return (
-                    string(
-                        abi.encodePacked('Synt:', [_sendToken, DAI, _receiveToken].toTradePathString(), ':', _err, ';')
-                    ),
-                    false
-                );
+                return (_formatError('', _err, 'Synt', _sendToken, DAI, _receiveToken), false);
             }
         }
         // Trade to DAI and then do DAI to synh
@@ -417,16 +407,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     console.log('Uni -> Curve');
                     return ('', true);
                 } catch Error(string memory _err) {
-                    error = string(
-                        abi.encodePacked(
-                            error,
-                            'Uni-Curve:',
-                            [_sendToken, reserves[i], _receiveToken].toTradePathString(),
-                            ':',
-                            _err,
-                            ';'
-                        )
-                    );
+                    error = _formatError(error, _err, 'Uni-Curve', _sendToken, reserves[i], _receiveToken);
                 }
                 // Going through Curve to reserve asset and
                 // then receive asset via Uni to reserve asset
@@ -445,16 +426,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     console.log('Curve -> Uni');
                     return ('', true);
                 } catch Error(string memory _err) {
-                    error = string(
-                        abi.encodePacked(
-                            error,
-                            'Curve-Uni:',
-                            [_sendToken, reserves[i], _receiveToken].toTradePathString(),
-                            ':',
-                            _err,
-                            ';'
-                        )
-                    );
+                    error = _formatError(error, _err, 'Curve-Uni', _sendToken, reserves[i], _receiveToken);
                 }
             }
         }
@@ -484,17 +456,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             console.log(string(abi.encodePacked(_integration.name(), ' ', ERC20(_hop).symbol())));
             return ('', true);
         } catch Error(string memory _err) {
-            error = string(
-                abi.encodePacked(
-                    error,
-                    _integration.name(),
-                    [_sendToken, _hop, _receiveToken].toTradePathString(),
-                    ':',
-                    _err,
-                    ';'
-                )
-            );
-            return (error, false);
+            return (_formatError(error, _err, _integration.name(), _sendToken, _hop, _receiveToken), false);
         }
     }
 
@@ -505,6 +467,38 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         } catch {
             return address(0);
         }
+    }
+
+    function _formatError(
+        string memory _blob,
+        string memory _err,
+        string memory _name,
+        address _send,
+        address _receive
+    ) internal returns (string memory) {
+        return _formatError(_blob, _err, _name, _send, address(0), _receive);
+    }
+
+    function _formatError(
+        string memory _blob,
+        string memory _err,
+        string memory _name,
+        address _send,
+        address _hop,
+        address _receive
+    ) internal returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    _blob,
+                    _name,
+                    (_hop == address(0) ? [_send, _receive].toDynamic() : [_send, _hop, _receive].toDynamic())
+                        .toTradePathString(),
+                    ':',
+                    _err,
+                    ';'
+                )
+            );
     }
 
     function stringToBytes32(string memory source) private pure returns (bytes32 result) {
