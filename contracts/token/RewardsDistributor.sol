@@ -1765,37 +1765,59 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return strategyRewards;
     }
 
+    /**
+     * Apply specific BABL mining weights to baseline BABL mining rewards based on mining benchmark params
+     * @param _returned           Strategy capital returned
+     * @param _allocated          Strategy capital allocated
+     * @param _rewards            Strategy baseline BABL rewards
+     * @param _executedAt         Strategy timestamp of initial execution
+     */
     function _getBenchmarkRewards(
         uint256 _returned,
         uint256 _allocated,
         uint256 _rewards,
         uint256 _executedAt
     ) private view returns (uint256) {
+        // We categorize the strategy APY profits into one of the 3 segments (very bad, regular and cool strategies)
+        // Bad and regular will be penalized from bigger penalization to lower
+        // Cool strategies will be boosted
+        // As we get real time profit (returned / allocated) we need to annualize the strategy profits (APY)
+        // Real time profit
         uint256 percentageProfit = _returned.preciseDiv(_allocated);
+        // Time weighted profit if > 1e18 duration less than 1 year, < 1e18 longer than 1 year
         uint256 timedAPY =
             uint256(365 days).preciseDiv(block.timestamp > _executedAt ? block.timestamp.sub(_executedAt) : 1);
-        uint256 returnedAPY;
+        uint256 returnedAPY; // initialization for absolute return APY (in reserve asset decimals)
         uint256 rewardsFactor;
         if (percentageProfit >= 1e18) {
-            // Profit
+            // Strategy is on positive profit
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY earnings will be higher
+            // else, APY earnings will be lower than today (we need to estimate annualized earnings)
             returnedAPY = _allocated.add(_returned.sub(_allocated).preciseMul(timedAPY));
         } else {
-            // Loss
+            // Strategy is in loss
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY loses will be higher
+            // else, APY loses will be lower than today (we need to estimate annualized loses)
             returnedAPY = _allocated.sub(_returned).preciseMul(timedAPY);
             returnedAPY = returnedAPY < _allocated ? _allocated.sub(returnedAPY) : 0;
         }
+        // Now we normalize into 18 decimals the estimated APY profit percentage using expected return APY
         uint256 profitAPY = returnedAPY.preciseDiv(_allocated);
+        // TODO: Replace _allocated by avgCapitalAllocated to handle adding or removing capital from strategy
+        // with lower impact along the time
         if (profitAPY < benchmark[0]) {
             // Segment 1:
-            // Bad strategy, usually gets penalty
+            // Bad strategy, usually gets penalty by benchmark[2] factor
             rewardsFactor = benchmark[2];
         } else if (profitAPY < benchmark[1]) {
             // Segment 2:
-            // Not a cool strategy, can get penalty
+            // Not a cool strategy, can get penalty by benchmark[3] factor
             rewardsFactor = benchmark[3];
         } else {
             // Segment 3:
-            // A real cool strategy, can get boost. Must be always >= 1e18
+            // A real cool strategy, can get boost by benchmark[4] factor. Must be always >= 1e18
             rewardsFactor = benchmark[4];
         }
         return
