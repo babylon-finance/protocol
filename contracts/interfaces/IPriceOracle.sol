@@ -34,11 +34,9 @@ interface IPriceOracle {
 
     function getPriceNAV(address _assetOne, address _assetTwo) external view returns (uint256);
 
-    function updateReserves() external;
+    function updateReserves(address[] memory list) external;
 
     function updateMaxTwapDeviation(int24 _maxTwapDeviation) external;
-
-    function updateOracleReserveBlackList(address _reserveOracle, bool _value) external;
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
 

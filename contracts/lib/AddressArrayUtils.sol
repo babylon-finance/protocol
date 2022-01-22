@@ -138,4 +138,13 @@ library AddressArrayUtils {
         arr[2] = _arr[2];
         return arr;
     }
+
+    function toDynamic(address _one, address _two, address _three, address _four) internal view returns (address[] memory) {
+        address[] memory arr = new address[](4);
+        arr[0] = _one;
+        arr[1] = _two;
+        arr[2] = _three;
+        arr[3] = _four;
+        return arr;
+    }
 }

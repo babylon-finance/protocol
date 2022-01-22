@@ -343,9 +343,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
-        if (priceOracle != address(0)) {
-            IPriceOracle(priceOracle).updateReserves();
-        }
         emit ReserveAssetAdded(_reserveAsset);
     }
 
@@ -358,9 +355,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
-        if (priceOracle != address(0)) {
-            IPriceOracle(priceOracle).updateReserves();
-        }
         emit ReserveAssetRemoved(_reserveAsset);
     }
 
