@@ -488,7 +488,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address _send,
         address _hop,
         address _receive
-    ) internal returns (string memory) {
+    ) internal view returns (string memory) {
         return
             string(
                 abi.encodePacked(

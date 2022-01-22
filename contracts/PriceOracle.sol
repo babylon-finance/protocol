@@ -120,7 +120,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         controller = _controller;
         maxTwapDeviation = INITIAL_TWAP_DEVIATION;
 
-        updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
+        _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
     }
 
     /* ============ External Functions ============ */
@@ -137,10 +137,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function updateReserves(address[] memory list) public override onlyGovernanceOrEmergency {
         require(address(controller) == msg.sender, 'Only controller can call this');
-        for (uint256 i = 0; i < list.length; i++) {
-            reserveAssets[list[i]] = true;
-            reserveAssetsList.push(list[i]);
-        }
+        _updateReserves(list);
     }
 
     /**
@@ -620,6 +617,13 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
         return 0;
+    }
+
+    function _updateReserves(address[] memory list) public onlyGovernanceOrEmergency {
+        for (uint256 i = 0; i < list.length; i++) {
+            reserveAssets[list[i]] = true;
+            reserveAssetsList.push(list[i]);
+        }
     }
 
     function _isOracleReserve(address _reserve) private view returns (bool) {

@@ -124,14 +124,18 @@ library AddressArrayUtils {
         return newAddresses;
     }
 
-    function toDynamic(address _one, address _two) internal view returns (address[] memory) {
+    /*
+      Unfortunately Solidity does not support convertion of the fixed array to dynamic array so these functions are
+      required. This functionality would be supported in the future so these methods can be removed.
+    */
+    function toDynamic(address _one, address _two) internal pure returns (address[] memory) {
         address[] memory arr = new address[](2);
         arr[0] = _one;
         arr[1] = _two;
         return arr;
     }
 
-    function toDynamic(address _one, address _two, address _three) internal view returns (address[] memory) {
+    function toDynamic(address _one, address _two, address _three) internal pure returns (address[] memory) {
         address[] memory arr = new address[](3);
         arr[0] = _one;
         arr[1] = _two;
@@ -139,7 +143,7 @@ library AddressArrayUtils {
         return arr;
     }
 
-    function toDynamic(address _one, address _two, address _three, address _four) internal view returns (address[] memory) {
+    function toDynamic(address _one, address _two, address _three, address _four) internal pure returns (address[] memory) {
         address[] memory arr = new address[](4);
         arr[0] = _one;
         arr[1] = _two;
