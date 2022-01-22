@@ -64,8 +64,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using String for address;
     using String for bytes;
     using DeFiUtils for address[];
-    using AddressArrayUtils for address[2];
-    using AddressArrayUtils for address[3];
 
     /* ============ Struct ============ */
 
@@ -496,7 +494,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 abi.encodePacked(
                     _blob,
                     _name,
-                    (_hop == address(0) ? [_send, _receive].toDynamic() : [_send, _hop, _receive].toDynamic())
+                    (_hop == address(0) ? AddressArrayUtils.toDynamic(_send, _receive) : AddressArrayUtils.toDynamic(_send, _hop, _receive))
                         .toTradePathString(),
                     ':',
                     _err,

@@ -124,18 +124,18 @@ library AddressArrayUtils {
         return newAddresses;
     }
 
-    function toDynamic(address[2] memory _arr) internal view returns (address[] memory) {
+    function toDynamic(address _one, address _two) internal view returns (address[] memory) {
         address[] memory arr = new address[](2);
-        arr[0] = _arr[0];
-        arr[1] = _arr[1];
+        arr[0] = _one;
+        arr[1] = _two;
         return arr;
     }
 
-    function toDynamic(address[3] memory _arr) internal view returns (address[] memory) {
+    function toDynamic(address _one, address _two, address _three) internal view returns (address[] memory) {
         address[] memory arr = new address[](3);
-        arr[0] = _arr[0];
-        arr[1] = _arr[1];
-        arr[2] = _arr[2];
+        arr[0] = _one;
+        arr[1] = _two;
+        arr[2] = _three;
         return arr;
     }
 
