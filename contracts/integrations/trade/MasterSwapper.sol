@@ -265,7 +265,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 console.log(string(abi.encodePacked('UniV3', ' ', ERC20(reserves[i]).symbol())));
                 console.log(string(abi.encodePacked('MasterSwapper:', error)));
-                return ;
+                return;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV3', _sendToken, reserves[i], _receiveToken);
             }
@@ -285,7 +285,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 console.log(string(abi.encodePacked('UniV3', ' ', ERC20(WETH).symbol())));
                 console.log(string(abi.encodePacked('MasterSwapper:', error)));
-                return ;
+                return;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV3', _sendToken, WETH, _receiveToken);
             }
@@ -494,7 +494,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 abi.encodePacked(
                     _blob,
                     _name,
-                    (_hop == address(0) ? AddressArrayUtils.toDynamic(_send, _receive) : AddressArrayUtils.toDynamic(_send, _hop, _receive))
+                    (
+                        _hop == address(0)
+                            ? AddressArrayUtils.toDynamic(_send, _receive)
+                            : AddressArrayUtils.toDynamic(_send, _hop, _receive)
+                    )
                         .toTradePathString(),
                     ':',
                     _err,

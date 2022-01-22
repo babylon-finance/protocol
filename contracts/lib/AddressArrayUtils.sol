@@ -135,7 +135,11 @@ library AddressArrayUtils {
         return arr;
     }
 
-    function toDynamic(address _one, address _two, address _three) internal pure returns (address[] memory) {
+    function toDynamic(
+        address _one,
+        address _two,
+        address _three
+    ) internal pure returns (address[] memory) {
         address[] memory arr = new address[](3);
         arr[0] = _one;
         arr[1] = _two;
@@ -143,7 +147,12 @@ library AddressArrayUtils {
         return arr;
     }
 
-    function toDynamic(address _one, address _two, address _three, address _four) internal pure returns (address[] memory) {
+    function toDynamic(
+        address _one,
+        address _two,
+        address _three,
+        address _four
+    ) internal pure returns (address[] memory) {
         address[] memory arr = new address[](4);
         arr[0] = _one;
         arr[1] = _two;
