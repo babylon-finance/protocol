@@ -260,7 +260,7 @@ const tokens = [
   },
 ];
 
-describe.only('PriceOracle', function () {
+describe('PriceOracle', function () {
   let priceOracle;
   let owner;
 
