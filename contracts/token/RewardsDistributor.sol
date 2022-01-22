@@ -74,7 +74,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyStrategy(address _strategy) private view {
         address garden = address(IStrategy(_strategy).garden());
-        _require(IBabController(controller).isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
         _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
     }
 
@@ -96,7 +96,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
     }
 
     /**
@@ -322,6 +322,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         START_TIME = block.timestamp;
         // Benchmark conditions to apply to BABL rewards are initialized as 0
         // Backward compatibility manages benchmark[4] value that must be always >= 1e18
+        benchmark[4] = 1e18; // default value
     }
 
     /* ============ External Functions ============ */
@@ -352,7 +353,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external override nonReentrant {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
         // Creates a new user checkpoint
         _writeCheckpoint(_garden, _contributor, newBalance, _previousBalance);
@@ -363,7 +364,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      *
      */
     function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         return _sendBABLToContributor(_to, _babl);
     }
 
@@ -381,7 +382,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _lpShare
     ) external override {
         _onlyGovernanceOrEmergency();
-        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
@@ -460,7 +461,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         address[] calldata _finalizedStrategies
     ) public view override returns (uint256[] memory) {
-        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
         uint256 claimedAt;
         (, , claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
@@ -523,15 +524,96 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 uint256 rewardsPerQuarter =
                     strategyPower
                         .preciseDiv(protocolPower)
-                        .preciseMul(uint256(_tokenSupplyPerQuarter(startingQuarter.add(i))))
+                        .preciseMul(_tokenSupplyPerQuarter(startingQuarter.add(i)))
                         .preciseMul(percentage);
                 rewards = rewards.add(rewardsPerQuarter);
             }
             // Apply rewards weight related to principal and profit and related to benchmark
-            return _getBenchmarkRewards(str[1].preciseDiv(str[0]), rewards);
+            return _getBenchmarkRewards(str[1], str[0], rewards, ts[0]);
         } else {
             return 0;
         }
+    }
+
+    /**
+     * Get token power at a specific block for an account
+     *
+     * @param _garden       Address of the garden
+     * @param _address      Address to get prior balance for
+     * @param _blockTime  Block timestamp to get token power at
+     * @return Token power for an account at specific block
+     */
+    function getPriorBalance(
+        address _garden,
+        address _address,
+        uint256 _blockTime
+    )
+        public
+        view
+        virtual
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        // We get the previous (prior) balance to _blockTime timestamp
+        // Actually it also acts as a flashloan protection along the time
+        _blockTime = _blockTime.sub(1);
+        uint256 nCheckpoints = numCheckpoints[_garden][_address];
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
+        // beta user if initializedAt > 0
+        uint256 initializedAt = contributor.initialDepositAt;
+        uint256 balance = ERC20(_garden).balanceOf(_address);
+        if (nCheckpoints == 0 && !(initializedAt > 0)) {
+            return (0, 0, 0);
+        } else if (nCheckpoints == 0 && initializedAt > 0) {
+            // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
+            // It also consider burning for bad strategist
+            return (initializedAt, balance, 0);
+        }
+        // There are at least one checkpoint from this point
+        // First check most recent balance
+        if (gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime <= _blockTime) {
+            // Burning security protection at userTokens
+            // It only limit the balance in case of burnt tokens and only if using last checkpoint
+            return (
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime,
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens > balance
+                    ? balance
+                    : gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens,
+                nCheckpoints - 1
+            );
+        }
+        // Next check implicit zero balance
+        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !(initializedAt > 0)) {
+            // backward compatible
+            return (0, 0, 0);
+        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && initializedAt > 0) {
+            // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
+            // First checkpoint stored its previous balance so we use it to guess the user past
+            return (initializedAt, gardenCheckpoints[_garden][_address][0].prevBalance, 0);
+        }
+        // It has more checkpoints but the time is between different checkpoints, we look for it
+        uint256 lower = 0;
+        uint256 upper = nCheckpoints - 1;
+        while (upper > lower) {
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            Checkpoints memory cp = gardenCheckpoints[_garden][_address][center];
+            if (cp.fromTime == _blockTime) {
+                return (cp.fromTime, cp.tokens, center);
+            } else if (cp.fromTime < _blockTime) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return (
+            gardenCheckpoints[_garden][_address][lower].fromTime,
+            gardenCheckpoints[_garden][_address][lower].tokens,
+            lower
+        );
     }
 
     /**
@@ -652,31 +734,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external view returns (uint256) {
         (, uint256[] memory strategyDetails, ) = IStrategy(_strategy).getStrategyRewardsContext();
         return _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
-    }
-
-    /**
-     * Get token power at a specific block for an account
-     *
-     * @param _garden       Address of the garden
-     * @param _contributor  Address of the contributor
-     * @param _timestamp    Block timestamp to get token power at
-     * @return Token power for an account at specific block
-     */
-    function getPriorBalance(
-        address _garden,
-        address _contributor,
-        uint256 _timestamp
-    )
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return _getPriorBalance(_garden, _contributor, _timestamp);
     }
 
     /**
@@ -971,7 +1028,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         bool _addOrSubstract
     ) private returns (uint256) {
         // Normalizing into DAI
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        IPriceOracle oracle = IPriceOracle(controller.priceOracle());
         uint256 pricePerTokenUnit = oracle.getPrice(_reserveAsset, DAI);
         StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
         if (strPpt.preallocated == 0) {
@@ -1056,86 +1113,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Get token power at a specific block for an account
-     *
-     * @param _garden       Address of the garden
-     * @param _address      Address to get prior balance for
-     * @param _blockTime  Block timestamp to get token power at
-     * @return Token power for an account at specific block
-     */
-    function _getPriorBalance(
-        address _garden,
-        address _address,
-        uint256 _blockTime
-    )
-        internal
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        // We get the previous (prior) balance to _blockTime timestamp
-        // Actually it also acts as a flashloan protection along the time
-        _blockTime = _blockTime.sub(1);
-        uint256 nCheckpoints = numCheckpoints[_garden][_address];
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
-        // beta user if initializedAt > 0
-        uint256 initializedAt = contributor.initialDepositAt;
-        uint256 balance = ERC20(_garden).balanceOf(_address);
-        if (nCheckpoints == 0 && !(initializedAt > 0)) {
-            return (0, 0, 0);
-        } else if (nCheckpoints == 0 && initializedAt > 0) {
-            // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
-            // It also consider burning for bad strategist
-            return (initializedAt, balance, 0);
-        }
-        // There are at least one checkpoint from this point
-        // First check most recent balance
-        if (gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime <= _blockTime) {
-            // Burning security protection at userTokens
-            // It only limit the balance in case of burnt tokens and only if using last checkpoint
-            return (
-                gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime,
-                gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens > balance
-                    ? balance
-                    : gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens,
-                nCheckpoints - 1
-            );
-        }
-        // Next check implicit zero balance
-        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !(initializedAt > 0)) {
-            // backward compatible
-            return (0, 0, 0);
-        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && initializedAt > 0) {
-            // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
-            // First checkpoint stored its previous balance so we use it to guess the user past
-            return (initializedAt, gardenCheckpoints[_garden][_address][0].prevBalance, 0);
-        }
-        // It has more checkpoints but the time is between different checkpoints, we look for it
-        uint256 lower = 0;
-        uint256 upper = nCheckpoints - 1;
-        while (upper > lower) {
-            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            Checkpoints memory cp = gardenCheckpoints[_garden][_address][center];
-            if (cp.fromTime == _blockTime) {
-                return (cp.fromTime, cp.tokens, center);
-            } else if (cp.fromTime < _blockTime) {
-                lower = center;
-            } else {
-                upper = center - 1;
-            }
-        }
-        return (
-            gardenCheckpoints[_garden][_address][lower].fromTime,
-            gardenCheckpoints[_garden][_address][lower].tokens,
-            lower
-        );
-    }
-
-    /**
      * Gets the contributor power from one timestamp to the other
      * @param _garden       Address of the garden where the contributor belongs to
      * @param _contributor  Address of the contributor
@@ -1153,7 +1130,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
             return 0;
         } else {
-            (, uint256 balance, ) = _getPriorBalance(_garden, _contributor, contributor.lastDepositAt);
+            (, uint256 balance, ) = getPriorBalance(_garden, _contributor, contributor.lastDepositAt);
             uint256 supply = _gardenSupply > 0 ? _gardenSupply : ERC20(_garden).totalSupply();
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower =
@@ -1205,7 +1182,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
         }
         // Take the closest position prior to _endTime
-        (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = _getPriorBalance(_garden, _contributor, endTime);
+        (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = getPriorBalance(_garden, _contributor, endTime);
         if (balanceEnd < 1e10) {
             // zero or dust balance
             // Avoid gas consuming
@@ -1251,7 +1228,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _cpEnd,
         uint256 _endTime
     ) internal view returns (uint256) {
-        (, uint256 prevBalance, uint256 cpStart) = _getPriorBalance(_garden, _address, _start);
+        (, uint256 prevBalance, uint256 cpStart) = getPriorBalance(_garden, _address, _start);
         if (_start == _endTime) {
             // Avoid underflow
             return prevBalance;
@@ -1592,14 +1569,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint256) {
         _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
         if (_quarter >= 513) {
             return 0; // Avoid math overflow
         } else {
             uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(_quarter.sub(1));
-            uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
-            return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
+            return Q1_REWARDS.divideDecimal(firstFactor);
         }
     }
 
@@ -1754,12 +1730,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             miningUpdatedAt,
             miningProtocolPrincipal
         );
-        strategyDetails[9] = _harvestStrategyRewards(
-            strategyPower,
-            protocolPower,
-            startingQuarter,
-            numQuarters,
-            strategyDetails[7].preciseDiv(strategyDetails[6])
+        strategyDetails[9] = _getBenchmarkRewards(
+            strategyDetails[7],
+            strategyDetails[6],
+            _harvestStrategyRewards(strategyPower, protocolPower, startingQuarter, numQuarters),
+            strategyDetails[0]
         );
     }
 
@@ -1767,8 +1742,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory _strategyPower,
         uint256[] memory _protocolPower,
         uint256 _startingQuarter,
-        uint256 _numQuarters,
-        uint256 _percentageProfit
+        uint256 _numQuarters
     ) internal view returns (uint256) {
         uint256 strategyRewards;
         uint256 percentage = 1e18;
@@ -1784,31 +1758,71 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 rewardsPerQuarter =
                 _strategyPower[i]
                     .preciseDiv(_protocolPower[i] == 0 ? 1 : _protocolPower[i])
-                    .preciseMul(uint256(_tokenSupplyPerQuarter(_startingQuarter.add(i))))
+                    .preciseMul(_tokenSupplyPerQuarter(_startingQuarter.add(i)))
                     .preciseMul(percentage);
             strategyRewards = strategyRewards.add(rewardsPerQuarter);
         }
-        return _getBenchmarkRewards(_percentageProfit, strategyRewards);
+        return strategyRewards;
     }
 
-    function _getBenchmarkRewards(uint256 _percentageProfit, uint256 _rewards) internal view returns (uint256) {
+    /**
+     * Apply specific BABL mining weights to baseline BABL mining rewards based on mining benchmark params
+     * @param _returned           Strategy capital returned
+     * @param _allocated          Strategy capital allocated
+     * @param _rewards            Strategy baseline BABL rewards
+     * @param _executedAt         Strategy timestamp of initial execution
+     */
+    function _getBenchmarkRewards(
+        uint256 _returned,
+        uint256 _allocated,
+        uint256 _rewards,
+        uint256 _executedAt
+    ) private view returns (uint256) {
+        // We categorize the strategy APY profits into one of the 3 segments (very bad, regular and cool strategies)
+        // Bad and regular will be penalized from bigger penalization to lower
+        // Cool strategies will be boosted
+        // As we get real time profit (returned / allocated) we need to annualize the strategy profits (APY)
+        // Real time profit
+        uint256 percentageProfit = _returned.preciseDiv(_allocated);
+        // Time weighted profit if > 1e18 duration less than 1 year, < 1e18 longer than 1 year
+        uint256 timedAPY =
+            uint256(365 days).preciseDiv(block.timestamp > _executedAt ? block.timestamp.sub(_executedAt) : 1);
+        uint256 returnedAPY; // initialization for absolute return APY (in reserve asset decimals)
         uint256 rewardsFactor;
-        if (_percentageProfit < benchmark[0]) {
+        if (percentageProfit >= 1e18) {
+            // Strategy is on positive profit
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY earnings will be higher
+            // else, APY earnings will be lower than today (we need to estimate annualized earnings)
+            returnedAPY = _allocated.add(_returned.sub(_allocated).preciseMul(timedAPY));
+        } else {
+            // Strategy is in loss
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY loses will be higher
+            // else, APY loses will be lower than today (we need to estimate annualized loses)
+            returnedAPY = _allocated.sub(_returned).preciseMul(timedAPY);
+            returnedAPY = returnedAPY < _allocated ? _allocated.sub(returnedAPY) : 0;
+        }
+        // Now we normalize into 18 decimals the estimated APY profit percentage using expected return APY
+        uint256 profitAPY = returnedAPY.preciseDiv(_allocated);
+        // TODO: Replace _allocated by avgCapitalAllocated to handle adding or removing capital from strategy
+        // with lower impact along the time
+        if (profitAPY < benchmark[0]) {
             // Segment 1:
-            // Bad strategy, usually gets penalty
+            // Bad strategy, usually gets penalty by benchmark[2] factor
             rewardsFactor = benchmark[2];
-        } else if (_percentageProfit < benchmark[1]) {
+        } else if (profitAPY < benchmark[1]) {
             // Segment 2:
-            // Not a cool strategy, can get penalty
+            // Not a cool strategy, can get penalty by benchmark[3] factor
             rewardsFactor = benchmark[3];
         } else {
             // Segment 3:
-            // A real cool strategy, can get boost. Must be always >= 1e18
-            rewardsFactor = benchmark[4] > 1e18 ? benchmark[4] : 1e18;
+            // A real cool strategy, can get boost by benchmark[4] factor. Must be always >= 1e18
+            rewardsFactor = benchmark[4];
         }
         return
             _rewards.preciseMul(bablPrincipalWeight).add(
-                _rewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit).preciseMul(rewardsFactor)
+                _rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit).preciseMul(rewardsFactor)
             );
     }
 
