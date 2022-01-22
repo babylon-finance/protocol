@@ -994,7 +994,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             if (protocolProfits > 0) {
                 // We avoid a transfer in case capitalReturned == capitalAllocated
-                IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+                uint256 heartProfits = protocolProfits.preciseMul(8e17);
+                // Send 80% to the heart
+                IERC20(reserveAsset).safeTransfer(IBabController(controller).heart(), heartProfits);
+                // Send 20% to the treasury
+                IERC20(reserveAsset).safeTransfer(
+                    IBabController(controller).treasury(),
+                    protocolProfits.sub(heartProfits)
+                );
             }
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {

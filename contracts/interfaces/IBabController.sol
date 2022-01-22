@@ -52,6 +52,8 @@ interface IBabController {
 
     function editTreasury(address _newTreasury) external;
 
+    function editHeart(address _newHeart) external;
+
     function editRewardsDistributor(address _rewardsDistributor) external;
 
     function editGardenFactory(address _newGardenFactory) external;
@@ -97,6 +99,8 @@ interface IBabController {
     function priceOracle() external view returns (address);
 
     function gardenValuer() external view returns (address);
+
+    function heart() external view returns (address);
 
     function gardenNFT() external view returns (address);
 
