@@ -477,7 +477,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         string memory _name,
         address _send,
         address _receive
-    ) internal returns (string memory) {
+    ) internal view returns (string memory) {
         return _formatError(_blob, _err, _name, _send, address(0), _receive);
     }
 

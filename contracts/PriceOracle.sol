@@ -326,7 +326,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
+        // Curve to UniV3 or UniV3 to Curve via DAI/WETH/WBTC/USDC
         for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             address reserve = reserveAssetsList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
@@ -417,12 +417,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!_isOracleReserve(_tokenIn)) {
+        if (!reserveAssets[_tokenIn]) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!_isOracleReserve(_tokenOut)) {
+        if (!reserveAssets[_tokenOut]) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -498,7 +498,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token0 = pool.token0();
         address token1 = pool.token1();
 
-        if (_isOracleReserve(token0)) {
+        if (reserveAssets[token0]) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
             denominator = token0;
         } else {
@@ -624,9 +624,5 @@ contract PriceOracle is Ownable, IPriceOracle {
             reserveAssets[list[i]] = true;
             reserveAssetsList.push(list[i]);
         }
-    }
-
-    function _isOracleReserve(address _reserve) private view returns (bool) {
-        return reserveAssets[_reserve];
     }
 }
