@@ -215,7 +215,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             console.log('Direct Curve');
             return;
         } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'Curve', _sendToken, _receiveToken);
+            error = _formatError(error, _err, 'Curve ', _sendToken, _receiveToken);
         }
 
         // Go through UNIv3 first via WETH
@@ -233,7 +233,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             console.log(string(abi.encodePacked('UniV3', ' ', ERC20(WETH).symbol())));
             return;
         } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'UniV3', _sendToken, WETH, _receiveToken);
+            error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
         }
 
         // Try Curve through reserve assets
@@ -267,7 +267,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 console.log(string(abi.encodePacked('MasterSwapper:', error)));
                 return;
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV3', _sendToken, reserves[i], _receiveToken);
+                error = _formatError(error, _err, 'UniV3 ', _sendToken, reserves[i], _receiveToken);
             }
         }
 
@@ -287,7 +287,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 console.log(string(abi.encodePacked('MasterSwapper:', error)));
                 return;
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV3', _sendToken, WETH, _receiveToken);
+                error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
             }
         }
 
@@ -343,7 +343,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return ('', true);
             } catch Error(string memory _err) {
-                return (_formatError('', _err, 'Synt', _sendToken, _receiveToken), false);
+                return (_formatError('', _err, 'Synt ', _sendToken, _receiveToken), false);
             }
         }
 
@@ -362,7 +362,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 );
                 return ('', true);
             } catch Error(string memory _err) {
-                return (_formatError('', _err, 'Synt', _sendToken, DAI, _receiveToken), false);
+                return (_formatError('', _err, 'Synt ', _sendToken, DAI, _receiveToken), false);
             }
         }
         // Trade to DAI and then do DAI to synh
@@ -409,7 +409,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     console.log('Uni -> Curve');
                     return ('', true);
                 } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Uni-Curve', _sendToken, reserves[i], _receiveToken);
+                    error = _formatError(error, _err, 'Uni-Curve ', _sendToken, reserves[i], _receiveToken);
                 }
                 // Going through Curve to reserve asset and
                 // then receive asset via Uni to reserve asset
@@ -428,7 +428,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     console.log('Curve -> Uni');
                     return ('', true);
                 } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Curve-Uni', _sendToken, reserves[i], _receiveToken);
+                    error = _formatError(error, _err, 'Curve-Uni ', _sendToken, reserves[i], _receiveToken);
                 }
             }
         }
