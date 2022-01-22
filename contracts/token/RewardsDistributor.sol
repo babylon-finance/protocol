@@ -1867,4 +1867,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV12 is RewardsDistributor {}
+contract RewardsDistributorV13 is RewardsDistributor {}
