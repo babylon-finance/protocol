@@ -1284,17 +1284,17 @@ async function getStrategyState(strategy) {
       const rewardsLong5 = await long5.strategyRewards();
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
-      const rewards1 = parse('14628.078723778628854017');
+      const rewards1 = parse('14631.326888606521974536');
       const rewards2 = parse('35984.374529449722930844');
       const rewards3 = parse('103709.478829861237058167');
       const rewards4 = parse('117055.137902354755690989');
       const rewards5 = parse('147023.034013766685035750');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth());
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth());
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth());
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth());
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth());
     });
 
     it('should calculate correct BABL in case of 5 (4 with positive profits) strategies of 2 different Gardens with different timings along 3 Years', async function () {
@@ -1337,17 +1337,17 @@ async function getStrategyState(strategy) {
       const rewardsLong5 = await long5.strategyRewards();
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
-      const rewards1 = parse('15132.292003172514470565');
+      const rewards1 = parse('15135.649691453618241902');
       const rewards2 = parse('35984.235798328877525979');
       const rewards3 = parse('107284.043615578231528173');
       const rewards4 = parse('121089.349077673022651046');
       const rewards5 = parse('152647.153380682629088938');
 
-      expect(rewardsLong1).to.be.closeTo(rewards1, eth('0.5'));
-      expect(rewardsLong2).to.be.closeTo(rewards2, eth('0.5'));
-      expect(rewardsLong3).to.be.closeTo(rewards3, eth('0.5'));
-      expect(rewardsLong4).to.be.closeTo(rewards4, eth('0.5'));
-      expect(rewardsLong5).to.be.closeTo(rewards5, eth('0.5'));
+      expect(rewardsLong1).to.be.closeTo(rewards1, eth());
+      expect(rewardsLong2).to.be.closeTo(rewards2, eth());
+      expect(rewardsLong3).to.be.closeTo(rewards3, eth());
+      expect(rewardsLong4).to.be.closeTo(rewards4, eth());
+      expect(rewardsLong5).to.be.closeTo(rewards5, eth());
     });
   });
   describe('Benchmark for Mining', function () {
