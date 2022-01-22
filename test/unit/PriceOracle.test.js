@@ -178,7 +178,7 @@ const tokens = [
     name: 'SNX->USDT',
     tokenIn: addresses.tokens.SNX,
     tokenOut: addresses.tokens.USDT,
-    value: from('9967509852298153273'),
+    value: from('6144834836057574944'),
   },
   {
     name: 'WBTC->DAI',
