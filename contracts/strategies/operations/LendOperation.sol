@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -204,10 +203,14 @@ contract LendOperation is Operation {
 
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
-            numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(200).div(100));
+            numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(140).div(100));
         }
-        uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
 
+        uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
+        // replace old aave
+        if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
+            _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
+        }
         ILendIntegration(_integration).redeemTokens(
             msg.sender,
             _assetToken,
