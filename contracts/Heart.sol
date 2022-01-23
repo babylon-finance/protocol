@@ -70,7 +70,7 @@ contract Heart is OwnableUpgradeable {
     IHypervisor visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
 
     // Fuse
-    uint8 private constant BABYLON_FUSE_POOL_ID = 144;
+    address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
 
     /* ============ State Variables ============ */
 

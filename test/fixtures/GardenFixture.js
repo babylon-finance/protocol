@@ -44,9 +44,11 @@ async function setUpFixture(
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
+  const fuseLendIntegration = await getContract('FuseLendIntegration');
   const aaveLendIntegration = await getContract('AaveLendIntegration');
   const aaveBorrowIntegration = await getContract('AaveBorrowIntegration');
   const compoundBorrowIntegration = await getContract('CompoundBorrowIntegration');
+  const fuseBorrowIntegration = await getContract('FuseBorrowIntegration');
   const lidoIntegration = await getContract('LidoStakeIntegration');
   const curveTradeIntegration = await getContract('CurveTradeIntegration');
   const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
@@ -212,6 +214,8 @@ async function setUpFixture(
     aaveBorrowIntegration,
     harvestV3VaultIntegration,
     harvestV3StakeIntegration,
+    fuseLendIntegration,
+    fuseBorrowIntegration,
     lidoIntegration,
     babViewer,
     timelockController,
