@@ -198,12 +198,8 @@ contract BorrowOperation is Operation {
     }
 
     function _tradeToDebtToken(address _asset, address _assetToken) private {
-      if (_asset != _assetToken) {
-        IStrategy(msg.sender).trade(
-            _asset,
-            IERC20(_asset).balanceOf(msg.sender),
-            _assetToken
-        );
-      }
+        if (_asset != _assetToken) {
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
+        }
     }
 }
