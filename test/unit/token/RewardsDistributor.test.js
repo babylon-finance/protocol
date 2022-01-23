@@ -1285,10 +1285,10 @@ async function getStrategyState(strategy) {
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
       const rewards1 = parse('14631.326888606521974536');
-      const rewards2 = parse('35984.374529449722930844');
-      const rewards3 = parse('103709.478829861237058167');
-      const rewards4 = parse('117055.137902354755690989');
-      const rewards5 = parse('147023.034013766685035750');
+      const rewards2 = parse('35989.374529449722930844');
+      const rewards3 = parse('103717.478829861237058167');
+      const rewards4 = parse('117053.137902354755690989');
+      const rewards5 = parse('147009.034013766685035750');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth());
       expect(rewardsLong2).to.be.closeTo(rewards2, eth());
@@ -1338,10 +1338,10 @@ async function getStrategyState(strategy) {
 
       // If we change blocknumber to 13665320 to test NFT prophet staking
       const rewards1 = parse('15135.649691453618241902');
-      const rewards2 = parse('35984.235798328877525979');
-      const rewards3 = parse('107284.043615578231528173');
-      const rewards4 = parse('121089.349077673022651046');
-      const rewards5 = parse('152647.153380682629088938');
+      const rewards2 = parse('35989.235798328877525979');
+      const rewards3 = parse('107292.043615578231528173');
+      const rewards4 = parse('121087.349077673022651046');
+      const rewards5 = parse('152632.153380682629088938');
 
       expect(rewardsLong1).to.be.closeTo(rewards1, eth());
       expect(rewardsLong2).to.be.closeTo(rewards2, eth());
