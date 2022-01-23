@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
@@ -137,7 +136,7 @@ contract BorrowOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
-        address, /* _asset */
+        address _asset,
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
@@ -157,6 +156,9 @@ contract BorrowOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
+        // if debt token is different than the token received
+        _tradeToDebtToken(_asset, assetToken);
+
         uint256 debtTokenBalance =
             address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender));
         uint256 amountToRepay =
@@ -193,5 +195,15 @@ contract BorrowOperation is Operation {
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
         return (NAV, false);
+    }
+
+    function _tradeToDebtToken(address _asset, address _assetToken) private {
+        uint256 debtTokenBalance =
+            address(0) == _assetToken
+                ? address(msg.sender).balance
+                : IERC20(_assetToken).balanceOf(address(msg.sender));
+        if (_asset != _assetToken && _assetToken != address(0) && debtTokenBalance == 0) {
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
+        }
     }
 }
