@@ -122,6 +122,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(
             isIntegration ||
                 _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E ||
+                _address == 0x72e27dA102a67767a7a3858D117159418f93617D ||
                 masterSwapper.isTradeIntegration(_address),
             Errors.ONLY_INTEGRATION
         );
@@ -1076,4 +1077,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV17 is Strategy {}
+contract StrategyV18 is Strategy {}
