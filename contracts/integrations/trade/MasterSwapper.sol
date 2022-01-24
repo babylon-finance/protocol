@@ -42,8 +42,6 @@ import {AddressArrayUtils} from '../../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title MasterSwapper
  * @author Babylon Finance Protocol
@@ -204,15 +202,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         // Synthetix Direct
         (error, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         if (success) {
-            console.log('Direct Synthetix');
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
             return;
         }
 
         // Curve Direct
         try ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
-            console.log('Direct Curve');
             return;
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'Curve ', _sendToken, _receiveToken);
@@ -229,8 +223,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 WETH
             )
         {
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
-            console.log(string(abi.encodePacked('UniV3', ' ', ERC20(WETH).symbol())));
             return;
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
@@ -246,7 +238,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             error
         );
         if (success) {
-            console.log(string(abi.encodePacked('MasterSwapper:', error)));
             return;
         }
 
@@ -263,8 +254,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     reserves[i]
                 )
             {
-                console.log(string(abi.encodePacked('UniV3', ' ', ERC20(reserves[i]).symbol())));
-                console.log(string(abi.encodePacked('MasterSwapper:', error)));
                 return;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV3 ', _sendToken, reserves[i], _receiveToken);
@@ -283,15 +272,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     WETH
                 )
             {
-                console.log(string(abi.encodePacked('UniV3', ' ', ERC20(WETH).symbol())));
-                console.log(string(abi.encodePacked('MasterSwapper:', error)));
                 return;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
             }
         }
 
-        console.log(string(abi.encodePacked('MasterSwapper:', error)));
         revert(string(abi.encodePacked('MasterSwapper:', error)));
     }
 
@@ -406,7 +392,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         _minReceiveQuantity
                     )
                 {
-                    console.log('Uni -> Curve');
                     return ('', true);
                 } catch Error(string memory _err) {
                     error = _formatError(error, _err, 'Uni-Curve ', _sendToken, reserves[i], _receiveToken);
@@ -425,7 +410,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         _minReceiveQuantity
                     )
                 {
-                    console.log('Curve -> Uni');
                     return ('', true);
                 } catch Error(string memory _err) {
                     error = _formatError(error, _err, 'Curve-Uni ', _sendToken, reserves[i], _receiveToken);
@@ -455,7 +439,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _hop
             )
         {
-            console.log(string(abi.encodePacked(_integration.name(), ' ', ERC20(_hop).symbol())));
             return ('', true);
         } catch Error(string memory _err) {
             return (_formatError(error, _err, _integration.name(), _sendToken, _hop, _receiveToken), false);
