@@ -136,7 +136,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function updateReserves(address[] memory list) public override onlyGovernanceOrEmergency {
-        require(address(controller) == msg.sender, 'Only controller can call this');
         _updateReserves(list);
     }
 
