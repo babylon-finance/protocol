@@ -96,8 +96,8 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     ITokenIdentifier public tokenIdentifier;
     IBabController public controller;
-    mapping(address => bool) public reserveAssets;
-    address[] public reserveAssetsList;
+    mapping(address => bool) public hopTokens;
+    address[] public hopTokensList;
     int24 private maxTwapDeviation;
 
     /* ============ Modifiers ============ */
@@ -326,8 +326,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Curve to UniV3 or UniV3 to Curve via DAI/WETH/WBTC/USDC
-        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
-            address reserve = reserveAssetsList[i];
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
+            address reserve = hopTokensList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
                 uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
                 if (tokenInPrice != 0) {
@@ -416,12 +416,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenIn]) {
+        if (!hopTokens[_tokenIn]) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!reserveAssets[_tokenOut]) {
+        if (!hopTokens[_tokenOut]) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -442,13 +442,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reserveChosen;
         IUniswapV3Pool maxpool;
         uint256 maxLiquidityInDai;
-        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
             (address pool, uint256 liquidityInDai) =
-                _getUniswapHighestLiquidityInReserveAsset(_token, reserveAssetsList[i], DAI);
+                _getUniswapHighestLiquidityInReserveAsset(_token, hopTokensList[i], DAI);
             if (liquidityInDai > maxLiquidityInDai) {
                 maxpool = IUniswapV3Pool(pool);
                 maxLiquidityInDai = liquidityInDai;
-                reserveChosen = reserveAssetsList[i];
+                reserveChosen = hopTokensList[i];
             }
         }
         if (maxLiquidityInDai > 0) {
@@ -497,7 +497,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token0 = pool.token0();
         address token1 = pool.token1();
 
-        if (reserveAssets[token0]) {
+        if (hopTokens[token0]) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
             denominator = token0;
         } else {
@@ -619,13 +619,13 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _updateReserves(address[] memory list) private {
-        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
-            reserveAssets[reserveAssetsList[i]] = false;
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
+            hopTokens[hopTokensList[i]] = false;
         }
-        delete reserveAssetsList;
+        delete hopTokensList;
         for (uint256 i = 0; i < list.length; i++) {
-            reserveAssets[list[i]] = true;
-            reserveAssetsList.push(list[i]);
+            hopTokens[list[i]] = true;
+            hopTokensList.push(list[i]);
         }
     }
 }
