@@ -620,6 +620,10 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _updateReserves(address[] memory list) private {
+        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
+            reserveAssets[reserveAssetsList[i]] = false;
+        }
+        delete reserveAssetsList;
         for (uint256 i = 0; i < list.length; i++) {
             reserveAssets[list[i]] = true;
             reserveAssetsList.push(list[i]);
