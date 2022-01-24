@@ -281,7 +281,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         revert(string(abi.encodePacked('MasterSwapper:', error)));
     }
 
-    function SwapSwap(
+    function swapSwap(
         ITradeIntegration _one,
         ITradeIntegration _two,
         address _reserve,
@@ -381,7 +381,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
                 // Going through Curve but switching first to reserve
                 try
-                    this.SwapSwap(
+                    this.swapSwap(
                         univ3,
                         curve,
                         reserves[i],
@@ -399,7 +399,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 // Going through Curve to reserve asset and
                 // then receive asset via Uni to reserve asset
                 try
-                    this.SwapSwap(
+                    this.swapSwap(
                         curve,
                         univ3,
                         reserves[i],
