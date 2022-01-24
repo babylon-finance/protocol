@@ -274,7 +274,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return;
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
+                error = _formatError(error, _err, 'UniV2 ', _sendToken, WETH, _receiveToken);
             }
         }
 
