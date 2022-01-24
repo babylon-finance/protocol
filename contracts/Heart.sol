@@ -23,8 +23,11 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import {IGovernor} from 'contracts-next/governance/IGovernor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IWETH} from './interfaces/external/weth/IWETH.sol';
+import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
@@ -33,7 +36,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 
 /**
- * @title HeartPump
+ * @title Heart
  * @author Babylon Finance
  *
  * Contract that assists The Heart of Babylon garden with BABL staking.
@@ -54,10 +57,23 @@ contract Heart is OwnableUpgradeable {
         _;
     }
 
+    /* ============ Events ============ */
+
+    event FeesCollected(uint256 _timestamp, uint256 _amount);
+    event LiquidityAdded(uint256 _timestamp, uint256 _wethBalance, uint256 _bablBalance);
+    event BablBuyback(uint256 _timestamp, uint256 _wethSpent, uint256 _bablBought);
+    event GardenSeedInvest(uint256 _timestamp, address indexed _garden, uint256 _wethInvested);
+    event FuseLentAsset(uint256 _timestamp, address indexed _asset, uint256 _assetAmount);
+    event BABLRewardSent(uint256 _timestamp, uint256 _bablSent);
+
+    event ProposalVote(uint256 _timestamp, uint256 _proposalId, bool _isApprove);
+    event UpdatedGardenWeights(uint256 _timestamp);
+
     /* ============ Constants ============ */
 
     // Babylon addresses
     address private constant TREASURY = 0xD7AAf4676F0F52993cb33aD36784BF970f0E1259;
+    address private constant GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
     uint256 private constant DEFAULT_TRADE_SLIPPAGE = 25e15; // 2.5%
 
     // Tokens
@@ -77,16 +93,40 @@ contract Heart is OwnableUpgradeable {
     // Instance of the Controller contract
     IBabController public controller;
 
-    /* Assets that are wanted by the heart pump */
-    address[] public wantedAssets;
-
+    // Variables to handle garden seed investments
     address[] public votedGardens;
     uint256[] public gardenWeights;
 
+    // Fuse pool Variables
+    // Mapping of asset addresses to cToken addresses in the fuse pool
+    mapping(address => address) public assetToCToken;
+    address public assetToLend;
+
     // Timestamp when the heart was last pumped
-    uint256 public _lastPump;
+    uint256 public lastPumpAt;
+
     // Timestamp when the votes were sent by the keeper last
-    uint256 public _lastVotes;
+    uint256 public lastVotesAt;
+
+    // Amount to gift to the Heart of Babylon Garden weekly
+    uint256 public weeklyRewardAmount;
+    uint256 public bablRewardLeft;
+
+    // Array with the weights to distribute to different heart activities
+    uint256[] public feeDistributionWeights;
+    // 0: Buybacks
+    // 1: Liquidity BABL-ETH
+    // 2: Garden Seed Investments
+    // 3: Fuse Pool
+
+    // Metric Totals
+    uint256[] public totalStats;
+
+    // 0: fees accumulated in weth
+    // 1: babl bought in babl
+    // 2: liquidity added in weth
+    // 3: amount invested in gardens in weth
+    // 4: amount lent on fuse in weth
 
     /* ============ Initializer ============ */
 
@@ -95,11 +135,13 @@ contract Heart is OwnableUpgradeable {
      *
      * @param _controller             Address of controller contract
      */
-    function initialize(IBabController _controller, address[] calldata _wantedAssets) public {
+    function initialize(IBabController _controller, uint256[] calldata _feeWeights) public {
         OwnableUpgradeable.__Ownable_init();
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         controller = _controller;
-        setWantedAssets(_wantedAssets);
+        updateFeeWeights(_feeWeights);
+        updateMarkets();
+        updateAssetToLend(DAI);
     }
 
     /* ============ External Functions ============ */
@@ -107,24 +149,39 @@ contract Heart is OwnableUpgradeable {
     /**
      * Function to pump blood to the heart
      *
-     * Note: Anyone can call this. Keeper in Defender will be set up to do it.
+     * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
-    function pump() public {
-        _require(block.timestamp.sub(_lastPump) > 1 weeks, Errors.HEART_ALREADY_PUMPED);
-        _require(block.timestamp.sub(_lastVotes) < 1 weeks, Errors.HEART_VOTES_MISSING);
+    function pump() external {
+        _require(block.timestamp.sub(_lastPumpAt) > 1 weeks, Errors.HEART_ALREADY_PUMPED);
+        _require(block.timestamp.sub(_lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
-        _require(wethBalance > 5e18, Errors.HEART_MINIMUM_FEES);
+        _require(wethBalance >= 5e18, Errors.HEART_MINIMUM_FEES);
         // 50% for buybacks
-        _buyback(wethBalance.preciseMul(5e17));
+        _buyback(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 20% to BABL-ETH pair
-        _addLiquidity(wethBalance.preciseMul(2e17));
+        _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[1]));
         // 20% to Garden Investments
-        _investInGardens(wethBalance.preciseMul(2e17));
+        _investInGardens(wethBalance.preciseMul(feeDistributionWeights[2]));
         // 10% lend in fuse pool
-        _lendFusePool(wethBalance.preciseMul(1e17));
-        _lastPump = block.timestamp;
+        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[3]));
+        // Add BABL reward to stakers if (any)
+        _sendWeeklyReward();
+        lastPumpAt = block.timestamp;
+    }
+
+    /**
+     * Function to vote for a proposal
+     *
+     * Note: Only keeper can call this. Votes need to have been resolved offchain.
+     */
+    function voteProposal(uint256 _proposalId, bool _isApprove) external {
+        _onlyKeeper();
+        _require(IGovernor(GOVERNOR).state(_proposalId) == 1, Errors.HEART_PROPOSAL_NOT_ACTIVE);
+        _require(!IGovernor(GOVERNOR).hasVoted(_proposalId, address(this)), Errors.HEART_ALREADY_VOTED);
+        IGovernor(GOVERNOR).castVote(_proposalId, _isApprove ? 1 : 0);
+        emit ProposalVote(block.timestamp, _proposalId, _isApprove);
     }
 
     /**
@@ -143,19 +200,57 @@ contract Heart is OwnableUpgradeable {
             votedGardens.push(_gardens[i]);
             gardenWeights.push(_weights[i]);
         }
-        _lastVotes = block.timestamp;
+        lastVotesAt = block.timestamp;
+        emit UpdatedGardenWeights(block.timestamp);
     }
 
     /**
-     * Set the assets wanted by the heart
+     * Updates fuse pool market information and enters the markets
      *
-     * @param _wantedAssets             List of addresses
      */
-    function setWantedAssets(address[] calldata _wantedAssets) public onlyGovernanceOrEmergency {
-        delete wantedAssets;
-        for (uint256 i = 0; i < _wantedAssets.length; i++) {
-            wantedAssets.push(_wantedAssets[i]);
+    function updateMarkets() public onlyGovernanceOrEmergency {
+        // Enter markets of the fuse pool for all these assets
+        address[] memory markets = IComptroller(BABYLON_FUSE_POOL_ADDRESS).getAllMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            address underlying = ICToken(markets[i]).underlying();
+            assetToCToken[underlying] = markets[i];
         }
+        IComptroller(BABYLON_FUSE_POOL_ADDRESS).enterMarkets(markets);
+    }
+
+    /**
+     * Set the weights to allocate to different heart initiatives
+     *
+     * @param _feeWeights             Array of % (up to 1e18) with the fee weights
+     */
+    function updateFeeWeights(uint256[] calldata _feeWeights) public onlyGovernanceOrEmergency {
+        delete feeDistributionWeights;
+        for (uint256 i = 0; i < _feeWeights.length; i++) {
+            feeDistributionWeights.push(_feeWeights[i]);
+        }
+    }
+
+    /**
+     * Set the weights to allocate to different heart initiatives
+     *
+     * @param _assetToLend             New asset to lend
+     */
+    function updateAssetToLend(address _assetToLend) public onlyGovernanceOrEmergency {
+        _require(assetToLend != _assetToLend);
+        assetToLend = _assetToLend;
+    }
+
+    /**
+     * Adds a BABL reward to be distributed weekly back to the heart garden
+     *
+     * @param _bablAmount             Total amount to distribute
+     * @param _weeklyRate             Weekly amount to distribute
+     */
+    function addReward(uint256 _bablAmount, uint256 _weeklyRate) public onlyGovernanceOrEmergency {
+        // Get the BABL reward
+        IERC20(BABL).transferFrom(msg.sender, address(this), _bablAmount);
+        bablRewardLeft += _bablAmount;
+        weeklyRewardAmount = _weeklyRate;
     }
 
     /* ============ Internal Functions ============ */
@@ -169,11 +264,27 @@ contract Heart is OwnableUpgradeable {
         for (uint256 i = 0; i < reserveAssets.length; i++) {
             address reserveAsset = reserveAssets[i];
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
+            // TODO: Check min per reserve
             if (reserveAssets[i] != address(BABL) && reserveAssets[i] != address(WETH) && balance > 0) {
                 _trade(reserveAssets[i], address(WETH), balance);
             }
         }
-        // EMIT event: Fees collected
+        totalStats[0] += IERC20(WETH).balanceOf(address(this));
+        emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
+    }
+
+    /**
+     * Buys back BABL through the uniswap V3 BABL-ETH pool
+     *
+     */
+    function _buyback(uint256 _amount) private {
+        uint256 bablBalance = IERC20(BABL).balanceOf(address(this));
+        _trade(address(WETH), address(BABL), _amount); // 50%
+        // Gift 100% BABL back to garden
+        uint256 bablBought = IERC20(BABL).balanceOf(address(this).sub(bablBalance));
+        IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), bablBought);
+        totalStats[1] += bablBought;
+        emit BablBuyback(block.timestamp, _amount, bablBought);
     }
 
     /**
@@ -189,16 +300,8 @@ contract Heart is OwnableUpgradeable {
         WETH.approve(address(visor), _wethBalance);
         uint256 shares = visor.deposit(_wethBalance, bablBalance, TREASURY);
         _require(shares == visor.balanceOf(TREASURY) && visor.balanceOf(TREASURY) > 0, Errors.HEART_LP_TOKENS);
-    }
-
-    /**
-     * Buys back BABL through the uniswap V3 BABL-ETH pool
-     *
-     */
-    function _buyback(uint256 _amount) private {
-        _trade(address(WETH), address(BABL), _amount); // 50%
-        // Gift 100% BABL back to garden
-        IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), IERC20(BABL).balanceOf(address(this)));
+        totalStats[2] += _wethBalance;
+        emit LiquidityAdded(block.timestamp, _wethBalance, bablBalance);
     }
 
     /**
@@ -211,13 +314,14 @@ contract Heart is OwnableUpgradeable {
             address reserveAsset = IGarden(votedGardens[i]).reserveAsset();
             _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
             // Gift it to garden
-            // EMIT event
             IERC20(reserveAsset).transferFrom(
                 address(this),
                 votedGardens[i],
                 IERC20(reserveAsset).balanceOf(address(this))
             );
+            emit GardenSeedInvest(block.timestamp, votedGardens[i], _wethAmount.preciseMul(gardenWeights[i]));
         }
+        totalStats[3] += _wethAmount;
     }
 
     /**
@@ -225,7 +329,33 @@ contract Heart is OwnableUpgradeable {
      *
      * @param _wethAmount             Total amount of weth to lend
      */
-    function _lendFusePool(uint256 _wethAmount) private {}
+    function _lendFusePool(uint256 _wethAmount) private {
+        address cToken = assetToCToken[assetToLend];
+        _require(cToken != address(0));
+        if (assetToLend == address(0)) {
+            // Convert WETH to ETH
+            IWETH(WETH).withdraw(_wethAmount);
+            ICToken(cToken).mint(){value: _wethAmount};
+        } else {
+            // Trade to asset to lend from WETH
+            uint256 assetToLendBalance = IERC20(assetToLend).balanceOf(address(this));
+            _trade(address(WETH), _assetToLend, _wethAmount);
+            ICToken(cToken).mint(IERC20(assetToLend).balanceOf(address(this)).sub(assetToLendBalance));
+        }
+        totalStats[4] += _wethAmount;
+        emit FuseLentAsset(block.timestamp, assetToLend, _wethAmount);
+    }
+
+    /**
+     * Sends the weekly BABL reward to the garden (if any)
+     */
+    function _sendWeeklyReward() private {
+        if (bablRewardLeft > 0) {
+            uint256 bablToSend = bablRewardLeft > weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
+            IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), bablToSend);
+            emit BABLRewardSent(block.timestamp, bablToSend);
+        }
+    }
 
     /**
      * Trades _tokenIn to _tokenOut using Uniswap V3

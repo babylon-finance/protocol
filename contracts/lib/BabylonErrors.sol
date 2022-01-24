@@ -314,4 +314,8 @@ library Errors {
     uint256 internal constant HEART_VOTES_LENGTH = 112;
     // Heart LP tokens not received
     uint256 internal constant HEART_LP_TOKENS = 113;
+    // Heart cannot vote
+    uint256 internal constant HEART_PROPOSAL_NOT_ACTIVE = 114;
+    // Heart already voted
+    uint256 internal constant HEART_ALREADY_VOTED = 115;
 }
