@@ -67,7 +67,6 @@ contract Heart is OwnableUpgradeable {
     event GardenSeedInvest(uint256 _timestamp, address indexed _garden, uint256 _wethInvested);
     event FuseLentAsset(uint256 _timestamp, address indexed _asset, uint256 _assetAmount);
     event BABLRewardSent(uint256 _timestamp, uint256 _bablSent);
-
     event ProposalVote(uint256 _timestamp, uint256 _proposalId, bool _isApprove);
     event UpdatedGardenWeights(uint256 _timestamp);
 
@@ -102,6 +101,7 @@ contract Heart is OwnableUpgradeable {
     // Fuse pool Variables
     // Mapping of asset addresses to cToken addresses in the fuse pool
     mapping(address => address) public assetToCToken;
+    // Which asset is going to receive the next batch of liquidity in fuse
     address public assetToLend;
 
     // Timestamp when the heart was last pumped
@@ -115,20 +115,19 @@ contract Heart is OwnableUpgradeable {
     uint256 public bablRewardLeft;
 
     // Array with the weights to distribute to different heart activities
-    uint256[] public feeDistributionWeights;
     // 0: Buybacks
     // 1: Liquidity BABL-ETH
     // 2: Garden Seed Investments
     // 3: Fuse Pool
+    uint256[] public feeDistributionWeights;
 
     // Metric Totals
-    uint256[] public totalStats;
-
     // 0: fees accumulated in weth
     // 1: babl bought in babl
     // 2: liquidity added in weth
     // 3: amount invested in gardens in weth
     // 4: amount lent on fuse in weth
+    uint256[] public totalStats;
 
     /* ============ Initializer ============ */
 
@@ -168,7 +167,7 @@ contract Heart is OwnableUpgradeable {
         _investInGardens(wethBalance.preciseMul(feeDistributionWeights[2]));
         // 10% lend in fuse pool
         _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[3]));
-        // Add BABL reward to stakers if (any)
+        // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
         lastPumpAt = block.timestamp;
     }
