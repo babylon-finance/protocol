@@ -21,6 +21,8 @@ pragma solidity 0.7.6;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGovernor} from 'contracts-next/governance/IGovernor.sol';
@@ -376,13 +378,20 @@ contract Heart is OwnableUpgradeable {
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(DEFAULT_TRADE_SLIPPAGE));
-        IMasterSwapper(controller.masterSwapper()).trade(
-            address(this),
-            _tokenIn,
-            _amount,
-            _tokenOut,
-            minAmountExpected
-        );
+        ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+        // Approve the router to spend token in.
+        TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
+        ISwapRouter.ExactInputSingleParams memory params =
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: _tokenIn,
+                tokenOut: _tokenOut,
+                fee: 500, // 0.05% // TODO: get fee for pair
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: _amount
+                amountOutMinimum: minAmountExpected,
+                sqrtPriceLimitX96: 0
+            });
         return minAmountExpected;
     }
 
