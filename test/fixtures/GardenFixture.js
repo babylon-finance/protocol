@@ -66,16 +66,34 @@ async function setUpFixture(
   const usdc = await getERC20(addresses.tokens.USDC);
   const weth = await getERC20(addresses.tokens.WETH);
   const wbtc = await getERC20(addresses.tokens.WBTC);
+  const babl = await getERC20(addresses.tokens.BABL);
 
   const owner = await impersonateAddress(timelockController.address);
-  await fund([owner.address], { tokens: [addresses.tokens.ETH] });
+  console.log('fund');
+  await fund([owner.address, signer1.address], {
+    tokens: [
+      addresses.tokens.USDC,
+      addresses.tokens.DAI,
+      addresses.tokens.WETH,
+      addresses.tokens.BABL,
+      addresses.tokens.WBTC,
+    ],
+  });
 
   const TOKEN_MAP = {
     [addresses.tokens.WETH]: weth,
     [addresses.tokens.DAI]: dai,
     [addresses.tokens.USDC]: usdc,
     [addresses.tokens.WBTC]: wbtc,
+    [addresses.tokens.BABL]: babl,
   };
+
+  console.log('creating gardens');
+  [dai, weth, wbtc, babl, usdc].forEach(async (erc20) => {
+    await erc20.connect(signer1).approve(babController.address, eth('20'), {
+      gasPrice: 0,
+    });
+  });
 
   // Gives signer1 creator permissions
   await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });

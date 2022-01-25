@@ -95,7 +95,11 @@ contract CompoundLendIntegration is LendIntegration {
     function overrideMappings(address _comptroller) public onlyGovernanceOrEmergency {
         address[] memory markets = IComptroller(_comptroller).getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            address underlying = ICToken(markets[i]).underlying();
+            address underlying = address(0);
+            // Skip cEther
+            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
+              underlying = ICToken(markets[i]).underlying();
+            }
             assetToCToken[underlying] = markets[i];
         }
     }
