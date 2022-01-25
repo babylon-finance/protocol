@@ -4,7 +4,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 const { GARDENS, ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
-const { pick, getERC20, eth } = require('utils/test-helpers');
+const { pick, getERC20, eth, increaseTime } = require('utils/test-helpers');
 
 describe('FuseBorrowIntegrationTest', function () {
   let fuseBorrowIntegration;
@@ -14,6 +14,7 @@ describe('FuseBorrowIntegrationTest', function () {
   let signer2;
   let signer3;
   let FRAX;
+  let WETH;
   let FEI;
   let DAI;
   let BABL;
@@ -84,6 +85,7 @@ describe('FuseBorrowIntegrationTest', function () {
   beforeEach(async () => {
     ({ fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3, owner } = await setupTests()());
     FRAX = await getERC20(addresses.tokens.FRAX);
+    WETH = await getERC20(addresses.tokens.WETH);
     FEI = await getERC20(addresses.tokens.FEI);
     DAI = await getERC20(addresses.tokens.DAI);
     BABL = await getERC20(addresses.tokens.BABL);
@@ -93,41 +95,44 @@ describe('FuseBorrowIntegrationTest', function () {
     cFRAX = await ethers.getContractAt('ICToken', '0xa54c548d11792b3d26ad74f5f899e12cdfd64fd6');
     cFEI = await ethers.getContractAt('ICToken', '0x3a2804ec0ff521374af654d8d0daa1d1ae1ee900');
 
+    // const comptroller = await ethers.getContractAt('IComptroller', '0xC7125E3A2925877C7371d579D29dAe4729Ac9033');
+
     // Add Liquidity to the markets
     await DAI.connect(owner).approve(cDAI.address, eth('100000'), { gasPrice: 0 });
     await cDAI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
     await BABL.connect(owner).approve(cBABL.address, eth('1000'), { gasPrice: 0 });
     await cBABL.connect(owner).mint(eth('1000'), { gasPrice: 0 });
     await cWETH.connect(signer3).mint({ value: eth('5'), gasPrice: 0 });
-    // These needs other whales
     await FRAX.connect(owner).approve(cFRAX.address, eth('100000'), { gasPrice: 0 });
     await cFRAX.connect(owner).mint(eth('100000'), { gasPrice: 0 });
     await FEI.connect(owner).approve(cFEI.address, eth('100000'), { gasPrice: 0 });
     await cFEI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
+    await increaseTime(86400 * 20);
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
-    pick(GARDENS.slice(0, 1)).forEach(({ token, name }) => {
-      it.only(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
+    // TODO: allow once the pool is up and running
+    pick(GARDENS).forEach(({ token, name }) => {
+      it.skip(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
-      it(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
+      it.skip(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(BABL, FEI, token);
       });
-      it(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
+      it.skip(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, BABL, token);
       });
-      it(`can supply DAI and borrow ETH at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(DAI, ADDRESS_ZERO, token);
+      it.skip(`can supply DAI and borrow ETH at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, WETH, token);
       });
-      it(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(ADDRESS_ZERO, DAI, token);
+      it.skip(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(WETH, DAI, token);
       });
       it(`should fail trying to supply DAI and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
       });
       it(`should fail trying to supply ETH and borrow ETH at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(ADDRESS_ZERO, ADDRESS_ZERO, token, 'There is no collateral locked');
+        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
       });
       it(`should fail trying to supply BABL and borrow BABL at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(BABL, BABL, token, 'There is no collateral locked');

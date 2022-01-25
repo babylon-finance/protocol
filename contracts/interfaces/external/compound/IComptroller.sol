@@ -18,6 +18,12 @@ interface IComptroller {
 
     function getAllMarkets() external view returns (address[] memory);
 
+    function _borrowGuardianPaused() external view returns (bool);
+
+    function borrowGuardianPaused(address _asset) external view returns (bool);
+
+    function borrowCaps(address _asset) external view returns (uint256);
+
     function compAccrued(address holder) external view returns (uint256);
 
     /*** Policy Hooks ***/
