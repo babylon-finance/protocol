@@ -120,7 +120,7 @@ contract CompoundLendIntegration is LendIntegration {
         return COMP;
     }
 
-    function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
+    function _getRewardsAccrued(address _strategy) internal view virtual override returns (uint256) {
         return IComptroller(comptroller).compAccrued(_strategy);
     }
 
@@ -176,6 +176,7 @@ contract CompoundLendIntegration is LendIntegration {
     function _claimRewardsCallData(address _strategy)
         internal
         view
+        virtual
         override
         returns (
             address,

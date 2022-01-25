@@ -16,22 +16,24 @@ describe('FuseLendIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let USDC;
+  let DAI;
   let WETH;
-  let CETH;
-  let CUSDC;
+  let BABL;
+  let cDAI;
+  let cWETH;
 
   beforeEach(async () => {
     ({ garden1, fuseLendIntegration, signer1, signer2, signer3 } = await setupTests()());
-    CETH = await getERC20(addresses.tokens.CETH);
-    USDC = await getERC20(addresses.tokens.USDC);
-    CUSDC = await getERC20(addresses.tokens.CUSDC);
+    DAI = await getERC20(addresses.tokens.DAI);
+    cDAI = await getERC20('0xa6c25548df506d84afd237225b5b34f2feb1aa07');
     WETH = await getERC20(addresses.tokens.WETH);
+    cWETH = await getERC20('0x7dbc3af9251756561ce755fcc11c754184af71f7');
+    BABL = await getERC20(addresses.tokens.BABL);
   });
 
   describe('Fuse Lend', function () {
     it('can supply to valid cToken', async function () {
-      expect(await fuseLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
+      expect(await fuseLendIntegration.isInvestment(addresses.tokens.DAI)).to.equal(true);
     });
 
     it('0x is a valid address (ETH)', async function () {
@@ -42,7 +44,7 @@ describe('FuseLendIntegrationTest', function () {
     });
 
     it('gets the reward token', async function () {
-      expect(await fuseLendIntegration.getRewardToken()).to.equal('0xc00e94Cb662C3520282E6f5717214004A7f26888');
+      expect(await fuseLendIntegration.getRewardToken()).to.equal(ADDRESS_ZERO);
     });
 
     it('can get the amount of rewards', async function () {
@@ -56,19 +58,19 @@ describe('FuseLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         fuseLendIntegration.address,
         garden1,
+        DEFAULT_STRATEGY_PARAMS,
+        [addresses.tokens.DAI, 0], // ETH
       );
 
       await executeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.gte(0);
-      const beforeCusdc = await CUSDC.balanceOf(strategyContract.address);
+      expect(await DAI.balanceOf(strategyContract.address)).to.be.equal(0);
+      expect(await cDAI.balanceOf(strategyContract.address)).to.be.gte(0);
+      const beforeCdai = await cDAI.balanceOf(strategyContract.address);
       await executeStrategy(strategyContract);
-      // Adds more capital
       await executeStrategy(strategyContract);
-
       await finalizeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await CUSDC.balanceOf(strategyContract.address)).to.be.lt(beforeCusdc.div(1000));
+      expect(await cDAI.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await cDAI.balanceOf(strategyContract.address)).to.be.lt(beforeCdai.div(1000));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
 
@@ -85,9 +87,9 @@ describe('FuseLendIntegrationTest', function () {
 
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await cWETH.balanceOf(strategyContract.address)).to.be.gt(0);
       await finalizeStrategy(strategyContract);
-      expect(await CETH.balanceOf(strategyContract.address)).to.be.closeTo(eth('0'), eth('0.01'));
+      expect(await cWETH.balanceOf(strategyContract.address)).to.be.closeTo(eth('0'), eth('0.01'));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await strategyContract.capitalReturned()).to.be.closeTo(eth('1'), eth('0.01'));
     });
@@ -104,7 +106,7 @@ describe('FuseLendIntegrationTest', function () {
       );
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
-      expect(await CETH.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await cWETH.balanceOf(strategyContract.address)).to.be.gt(0);
       increaseTime(ONE_DAY_IN_SECONDS);
       const NAV = await strategyContract.getNAV();
       const compAccrued = await fuseLendIntegration.getRewardsAccrued(strategyContract.address);
