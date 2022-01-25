@@ -395,6 +395,9 @@ contract Heart is OwnableUpgradeable {
         address _tokenOut,
         uint256 _amount
     ) private returns (uint256) {
+        if (_tokenIn == _tokenOut) {
+          return _amount;
+        }
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
