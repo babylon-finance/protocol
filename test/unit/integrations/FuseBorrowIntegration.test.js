@@ -1,10 +1,5 @@
 const { expect } = require('chai');
-const {
-  createStrategy,
-  executeStrategy,
-  finalizeStrategy,
-  DEFAULT_STRATEGY_PARAMS,
-} = require('fixtures/StrategyHelper');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
@@ -14,7 +9,7 @@ const { pick, getERC20, eth } = require('utils/test-helpers');
 describe('FuseBorrowIntegrationTest', function () {
   let fuseBorrowIntegration;
   let fuseLendIntegration;
-  let garden1;
+  let owner;
   let signer1;
   let signer2;
   let signer3;
@@ -22,6 +17,11 @@ describe('FuseBorrowIntegrationTest', function () {
   let FEI;
   let DAI;
   let BABL;
+  let cDAI;
+  let cWETH;
+  let cFRAX;
+  let cFEI;
+  let cBABL;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -82,20 +82,37 @@ describe('FuseBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ garden1, fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3, owner } = await setupTests()());
     FRAX = await getERC20(addresses.tokens.FRAX);
     FEI = await getERC20(addresses.tokens.FEI);
     DAI = await getERC20(addresses.tokens.DAI);
     BABL = await getERC20(addresses.tokens.BABL);
+    cDAI = await ethers.getContractAt('ICToken', '0xa6c25548df506d84afd237225b5b34f2feb1aa07');
+    cWETH = await ethers.getContractAt('ICEther', '0x7dbc3af9251756561ce755fcc11c754184af71f7');
+    cBABL = await ethers.getContractAt('ICToken', '0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
+    cFRAX = await ethers.getContractAt('ICToken', '0xa54c548d11792b3d26ad74f5f899e12cdfd64fd6');
+    cFEI = await ethers.getContractAt('ICToken', '0x3a2804ec0ff521374af654d8d0daa1d1ae1ee900');
+
+    // Add Liquidity to the markets
+    await DAI.connect(owner).approve(cDAI.address, eth('100000'), { gasPrice: 0 });
+    await cDAI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
+    await BABL.connect(owner).approve(cBABL.address, eth('1000'), { gasPrice: 0 });
+    await cBABL.connect(owner).mint(eth('1000'), { gasPrice: 0 });
+    await cWETH.connect(signer3).mint({ value: eth('5'), gasPrice: 0 });
+    // These needs other whales
+    await FRAX.connect(owner).approve(cFRAX.address, eth('100000'), { gasPrice: 0 });
+    await cFRAX.connect(owner).mint(eth('100000'), { gasPrice: 0 });
+    await FEI.connect(owner).approve(cFEI.address, eth('100000'), { gasPrice: 0 });
+    await cFEI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
-    pick(GARDENS).forEach(({ token, name }) => {
-      it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
+    pick(GARDENS.slice(0, 1)).forEach(({ token, name }) => {
+      it.only(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
-      it(`can supply FEI and borrow BABL at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(FEI, BABL, token);
+      it(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(BABL, FEI, token);
       });
       it(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, BABL, token);

@@ -25,10 +25,10 @@ describe('FuseLendIntegrationTest', function () {
   beforeEach(async () => {
     ({ garden1, fuseLendIntegration, signer1, signer2, signer3 } = await setupTests()());
     DAI = await getERC20(addresses.tokens.DAI);
-    cDAI = await getERC20('0xa6c25548df506d84afd237225b5b34f2feb1aa07');
     WETH = await getERC20(addresses.tokens.WETH);
-    cWETH = await getERC20('0x7dbc3af9251756561ce755fcc11c754184af71f7');
     BABL = await getERC20(addresses.tokens.BABL);
+    cDAI = await getERC20('0xa6c25548df506d84afd237225b5b34f2feb1aa07');
+    cWETH = await getERC20('0x7dbc3af9251756561ce755fcc11c754184af71f7');
   });
 
   describe('Fuse Lend', function () {

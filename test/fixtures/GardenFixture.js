@@ -77,6 +77,8 @@ async function setUpFixture(
       addresses.tokens.WETH,
       addresses.tokens.BABL,
       addresses.tokens.WBTC,
+      addresses.tokens.FEI,
+      addresses.tokens.FRAX,
     ],
   });
 
