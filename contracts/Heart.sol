@@ -21,8 +21,12 @@ pragma abicoder v2;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGovernor} from './interfaces/external/oz/IGovernor.sol';
@@ -73,6 +77,15 @@ contract Heart is OwnableUpgradeable {
 
     /* ============ Constants ============ */
 
+    // Address of Uniswap factory
+    IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    uint24 private constant FEE_LOW = 500;
+    uint24 private constant FEE_MEDIUM = 3000;
+    uint24 private constant FEE_HIGH = 10000;
+
+    // Min Amounts to trade
+    mapping(address => uint256) public minAmounts;
+
     // Babylon addresses
     address private constant TREASURY = 0xD7AAf4676F0F52993cb33aD36784BF970f0E1259;
     address private constant GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
@@ -82,6 +95,8 @@ contract Heart is OwnableUpgradeable {
     IWETH private constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 private constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
     IERC20 private constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     IGarden private constant HEART_GARDEN = IGarden(0x0);
 
     // Visor
@@ -144,6 +159,10 @@ contract Heart is OwnableUpgradeable {
         updateFeeWeights(_feeWeights);
         updateMarkets();
         updateAssetToLend(address(DAI));
+        minAmounts[address(DAI)] = 500e18;
+        minAmounts[address(USDC)] = 500e6;
+        minAmounts[address(WETH)] = 5e17;
+        minAmounts[address(WBTC)] = 3e6;
     }
 
     /* ============ External Functions ============ */
@@ -258,6 +277,16 @@ contract Heart is OwnableUpgradeable {
         weeklyRewardAmount = _weeklyRate;
     }
 
+    /**
+     * Updates the min amount to trade a specific asset
+     *
+     * @param _asset                Asset to edit the min amount
+     * @param _minAmount            New min amount
+     */
+    function setMinTradeAmount(address _asset, uint256 _minAmount) public onlyGovernanceOrEmergency {
+        minAmounts[_asset] = _minAmount;
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -269,9 +298,9 @@ contract Heart is OwnableUpgradeable {
         for (uint256 i = 0; i < reserveAssets.length; i++) {
             address reserveAsset = reserveAssets[i];
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
-            // TODO: Check min per reserve
-            if (reserveAssets[i] != address(BABL) && reserveAssets[i] != address(WETH) && balance > 0) {
-                totalStats[0] += _trade(reserveAssets[i], address(WETH), balance);
+            // Trade if it's above a min amount (otherwise wait until next pump)
+            if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
+                totalStats[0] += _trade(reserveAsset, address(WETH), balance);
             }
         }
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
@@ -380,7 +409,7 @@ contract Heart is OwnableUpgradeable {
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: _tokenIn,
                 tokenOut: _tokenOut,
-                fee: 500, // 0.05% // TODO: get fee for pair
+                fee: _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut),
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: _amount,
@@ -395,5 +424,31 @@ contract Heart is OwnableUpgradeable {
      */
     function _onlyKeeper() private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
+
+    /**
+     * Returns the FEE of the highest liquidity pool in univ3 for this pair
+     * @param sendToken               Token that is sold
+     * @param receiveToken            Token that is purchased
+     */
+    function _getUniswapPoolFeeWithHighestLiquidity(address sendToken, address receiveToken)
+        private
+        view
+        returns (uint24)
+    {
+        IUniswapV3Pool poolLow = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_LOW));
+        IUniswapV3Pool poolMedium = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_MEDIUM));
+        IUniswapV3Pool poolHigh = IUniswapV3Pool(factory.getPool(sendToken, receiveToken, FEE_HIGH));
+
+        uint128 liquidityLow = address(poolLow) != address(0) ? poolLow.liquidity() : 0;
+        uint128 liquidityMedium = address(poolMedium) != address(0) ? poolMedium.liquidity() : 0;
+        uint128 liquidityHigh = address(poolHigh) != address(0) ? poolHigh.liquidity() : 0;
+        if (liquidityLow >= liquidityMedium && liquidityLow >= liquidityHigh) {
+            return FEE_LOW;
+        }
+        if (liquidityMedium >= liquidityLow && liquidityMedium >= liquidityHigh) {
+            return FEE_MEDIUM;
+        }
+        return FEE_HIGH;
     }
 }

@@ -154,13 +154,12 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      *
      */
     function getRemainingLiquidity(address _strategy) public view override returns (uint256) {
-        IComptroller comptroller = IComptroller(comptroller);
         (
             ,
             /* error */
             uint256 liquidity, /* shortfall */
 
-        ) = comptroller.getAccountLiquidity(_strategy);
+        ) = IComptroller(comptroller).getAccountLiquidity(_strategy);
         return liquidity;
     }
 

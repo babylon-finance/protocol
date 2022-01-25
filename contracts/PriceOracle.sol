@@ -326,7 +326,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        uint256 uniPrice = 0;
         // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
         for (uint256 i = 0; i < reserveAssetsList.length; i++) {
             address reserve = reserveAssetsList[i];
