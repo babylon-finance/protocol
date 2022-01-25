@@ -18,10 +18,10 @@ describe('FuseBorrowIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let USDC;
+  let FRAX;
+  let FEI;
   let DAI;
-  let WETH;
-  let WBTC;
+  let BABL;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -83,133 +83,37 @@ describe('FuseBorrowIntegrationTest', function () {
 
   beforeEach(async () => {
     ({ garden1, fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
-    USDC = await getERC20(addresses.tokens.USDC);
+    FRAX = await getERC20(addresses.tokens.FRAX);
+    FEI = await getERC20(addresses.tokens.FEI);
     DAI = await getERC20(addresses.tokens.DAI);
-    WETH = await getERC20(addresses.tokens.WETH);
-    WBTC = await getERC20(addresses.tokens.WBTC);
-  });
-
-  describe('Fuse Borrow', function () {
-    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [fuseLendIntegration.address, fuseBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, 0, USDC.address, 0],
-      );
-
-      await executeStrategy(strategyContract);
-
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await fuseBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(eth('1931'));
-      expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-
-      await finalizeStrategy(strategyContract);
-
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply USDC and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [fuseLendIntegration.address, fuseBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [USDC.address, 0, DAI.address, 0],
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await fuseBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
-      expect(collateral).to.be.gt(2000 * 10 ** 6);
-      expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply WETH and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [fuseLendIntegration.address, fuseBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await fuseBorrowIntegration.getCollateralBalance(strategyContract.address, ADDRESS_ZERO);
-      expect(collateral).to.be.closeTo(eth('1'), eth('1').div(100));
-      expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(eth('578'));
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply DAI and borrow ETH in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [fuseLendIntegration.address, fuseBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, 0, ADDRESS_ZERO, 0],
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      const collateral = await fuseBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(eth('1930'));
-      expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
+    BABL = await getERC20(addresses.tokens.BABL);
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
     pick(GARDENS).forEach(({ token, name }) => {
-      it(`can supply DAI and borrow USDC at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(DAI, USDC, token);
+      it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, FRAX, token);
       });
-      it(`can supply WBTC and borrow DAI at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(WBTC, DAI, token);
+      it(`can supply FEI and borrow BABL at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(FEI, BABL, token);
       });
-      it(`can supply USDC and borrow DAI at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(USDC, DAI, token);
+      it(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, BABL, token);
       });
-      it(`can supply WETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(WETH, DAI, token);
+      it(`can supply DAI and borrow ETH at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, ADDRESS_ZERO, token);
+      });
+      it(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(ADDRESS_ZERO, DAI, token);
       });
       it(`should fail trying to supply DAI and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
       });
-      it(`should fail trying to supply WETH and borrow WETH at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
+      it(`should fail trying to supply ETH and borrow ETH at Fuse in a ${name} Garden`, async function () {
+        await trySupplyBorrowStrategy(ADDRESS_ZERO, ADDRESS_ZERO, token, 'There is no collateral locked');
       });
-      it(`should fail trying to supply USDC and borrow USDC at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
+      it(`should fail trying to supply BABL and borrow BABL at Fuse in a ${name} Garden`, async function () {
+        await trySupplyBorrowStrategy(BABL, BABL, token, 'There is no collateral locked');
       });
     });
   });
