@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-
+pragma abicoder v2;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -25,10 +25,11 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
-import {IGovernor} from 'contracts-next/governance/IGovernor.sol';
+import {IGovernor} from './interfaces/external/oz/IGovernor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IWETH} from './interfaces/external/weth/IWETH.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {ICEther} from './interfaces/external/compound/ICEther.sol';
 import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
@@ -142,7 +143,7 @@ contract Heart is OwnableUpgradeable {
         controller = _controller;
         updateFeeWeights(_feeWeights);
         updateMarkets();
-        updateAssetToLend(DAI);
+        updateAssetToLend(address(DAI));
     }
 
     /* ============ External Functions ============ */
@@ -153,12 +154,12 @@ contract Heart is OwnableUpgradeable {
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
     function pump() external {
-        _require(block.timestamp.sub(_lastPumpAt) > 1 weeks, Errors.HEART_ALREADY_PUMPED);
-        _require(block.timestamp.sub(_lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
+        _require(block.timestamp.sub(lastPumpAt) > 1 weeks, Errors.HEART_ALREADY_PUMPED);
+        _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
-        _require(wethBalance >= 5e18, Errors.HEART_MINIMUM_FEES);
+        _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // 50% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 20% to BABL-ETH pair
@@ -179,7 +180,10 @@ contract Heart is OwnableUpgradeable {
      */
     function voteProposal(uint256 _proposalId, bool _isApprove) external {
         _onlyKeeper();
-        _require(IGovernor(GOVERNOR).state(_proposalId) == 1, Errors.HEART_PROPOSAL_NOT_ACTIVE);
+        _require(
+            IGovernor(GOVERNOR).state(_proposalId) == IGovernor.ProposalState.Active,
+            Errors.HEART_PROPOSAL_NOT_ACTIVE
+        );
         _require(!IGovernor(GOVERNOR).hasVoted(_proposalId, address(this)), Errors.HEART_ALREADY_VOTED);
         IGovernor(GOVERNOR).castVote(_proposalId, _isApprove ? 1 : 0);
         emit ProposalVote(block.timestamp, _proposalId, _isApprove);
@@ -237,7 +241,7 @@ contract Heart is OwnableUpgradeable {
      * @param _assetToLend             New asset to lend
      */
     function updateAssetToLend(address _assetToLend) public onlyGovernanceOrEmergency {
-        _require(assetToLend != _assetToLend);
+        _require(assetToLend != _assetToLend, Errors.HEART_ASSET_LEND_SAME);
         assetToLend = _assetToLend;
     }
 
@@ -267,10 +271,9 @@ contract Heart is OwnableUpgradeable {
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
             // TODO: Check min per reserve
             if (reserveAssets[i] != address(BABL) && reserveAssets[i] != address(WETH) && balance > 0) {
-                _trade(reserveAssets[i], address(WETH), balance);
+                totalStats[0] += _trade(reserveAssets[i], address(WETH), balance);
             }
         }
-        totalStats[0] += IERC20(WETH).balanceOf(address(this));
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
     }
 
@@ -279,10 +282,8 @@ contract Heart is OwnableUpgradeable {
      *
      */
     function _buyback(uint256 _amount) private {
-        uint256 bablBalance = IERC20(BABL).balanceOf(address(this));
-        _trade(address(WETH), address(BABL), _amount); // 50%
         // Gift 100% BABL back to garden
-        uint256 bablBought = IERC20(BABL).balanceOf(address(this).sub(bablBalance));
+        uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
         IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), bablBought);
         totalStats[1] += bablBought;
         emit BablBuyback(block.timestamp, _amount, bablBought);
@@ -295,14 +296,14 @@ contract Heart is OwnableUpgradeable {
      */
     function _addLiquidity(uint256 _wethBalance) private {
         // Buy BABL again with half to add 50/50
-        _trade(address(WETH), address(BABL), _wethBalance.preciseMul(5e17)); // 50%
-        uint256 bablBalance = BABL.balanceOf(address(this));
-        BABL.approve(address(visor), bablBalance);
-        WETH.approve(address(visor), _wethBalance);
-        uint256 shares = visor.deposit(_wethBalance, bablBalance, TREASURY);
+        uint256 wethToDeposit = _wethBalance.preciseMul(5e17);
+        uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit); // 50%
+        BABL.approve(address(visor), bablTraded);
+        WETH.approve(address(visor), wethToDeposit);
+        uint256 shares = visor.deposit(wethToDeposit, bablTraded, TREASURY);
         _require(shares == visor.balanceOf(TREASURY) && visor.balanceOf(TREASURY) > 0, Errors.HEART_LP_TOKENS);
-        totalStats[2] += _wethBalance;
-        emit LiquidityAdded(block.timestamp, _wethBalance, bablBalance);
+        totalStats[2] += wethToDeposit;
+        emit LiquidityAdded(block.timestamp, wethToDeposit, bablTraded);
     }
 
     /**
@@ -313,13 +314,9 @@ contract Heart is OwnableUpgradeable {
     function _investInGardens(uint256 _wethAmount) private {
         for (uint256 i = 0; i < votedGardens.length; i++) {
             address reserveAsset = IGarden(votedGardens[i]).reserveAsset();
-            _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
+            uint256 amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
             // Gift it to garden
-            IERC20(reserveAsset).transferFrom(
-                address(this),
-                votedGardens[i],
-                IERC20(reserveAsset).balanceOf(address(this))
-            );
+            IERC20(reserveAsset).transferFrom(address(this), votedGardens[i], amountTraded);
             emit GardenSeedInvest(block.timestamp, votedGardens[i], _wethAmount.preciseMul(gardenWeights[i]));
         }
         totalStats[3] += _wethAmount;
@@ -332,16 +329,15 @@ contract Heart is OwnableUpgradeable {
      */
     function _lendFusePool(uint256 _wethAmount) private {
         address cToken = assetToCToken[assetToLend];
-        _require(cToken != address(0));
+        _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
         if (assetToLend == address(0)) {
             // Convert WETH to ETH
             IWETH(WETH).withdraw(_wethAmount);
-            ICToken(cToken).mint(){value: _wethAmount};
+            ICEther(cToken).mint{value: _wethAmount}();
         } else {
             // Trade to asset to lend from WETH
-            uint256 assetToLendBalance = IERC20(assetToLend).balanceOf(address(this));
-            _trade(address(WETH), _assetToLend, _wethAmount);
-            ICToken(cToken).mint(IERC20(assetToLend).balanceOf(address(this)).sub(assetToLendBalance));
+            uint256 assetToLendBalance = _trade(address(WETH), assetToLend, _wethAmount);
+            ICToken(cToken).mint(assetToLendBalance);
         }
         totalStats[4] += _wethAmount;
         emit FuseLentAsset(block.timestamp, assetToLend, _wethAmount);
@@ -387,11 +383,11 @@ contract Heart is OwnableUpgradeable {
                 fee: 500, // 0.05% // TODO: get fee for pair
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountIn: _amount
+                amountIn: _amount,
                 amountOutMinimum: minAmountExpected,
                 sqrtPriceLimitX96: 0
             });
-        return minAmountExpected;
+        return swapRouter.exactInputSingle(params);
     }
 
     /**

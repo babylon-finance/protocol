@@ -1,5 +1,5 @@
 const { deployments } = require('hardhat');
-const { GARDEN_PARAMS } = require('lib/constants.js');
+const { GARDEN_PARAMS, BABL_GARDEN_PARAMS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { fund } = require('lib/whale');
@@ -17,6 +17,7 @@ async function setUpFixture(
   await deployments.fixture();
 
   const babController = await getContract('BabController', 'BabControllerProxy');
+  const heart = await getContract('Heart', 'HeartProxy');
   const bablToken = await getContract('BABLToken');
   const timeLockRegistry = await getContract('TimeLockRegistry');
   const ishtarGate = await getContract('IshtarGate');
@@ -147,6 +148,21 @@ async function setUpFixture(
       },
     );
 
+  await babController
+    .connect(signer1)
+    .createGarden(
+      addresses.tokens.BABL,
+      'The Heart of Babylon',
+      'hBABL',
+      'http...',
+      5,
+      BABL_GARDEN_PARAMS,
+      eth('20'),
+      [false, false, false],
+      [0, 0, 0],
+      {},
+    );
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('Garden', gardens[0]);
@@ -156,6 +172,8 @@ async function setUpFixture(
   const garden3 = await ethers.getContractAt('Garden', gardens[2]);
 
   const garden4 = await ethers.getContractAt('Garden', gardens[3]);
+
+  const heartGarden = await ethers.getContractAt('Garden', gardens[4]);
 
   // Grants community access
   for (let i = 0; i < gardens.length; i += 1) {
@@ -195,6 +213,7 @@ async function setUpFixture(
     bablToken,
     timeLockRegistry,
     treasury,
+    heart,
     rewardsDistributor,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
@@ -226,6 +245,7 @@ async function setUpFixture(
     garden2,
     garden3,
     garden4,
+    heartGarden,
 
     strategy11,
     strategy21,

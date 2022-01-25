@@ -318,4 +318,8 @@ library Errors {
     uint256 internal constant HEART_PROPOSAL_NOT_ACTIVE = 114;
     // Heart already voted
     uint256 internal constant HEART_ALREADY_VOTED = 115;
+    // Heart asset to lend is the same
+    uint256 internal constant HEART_ASSET_LEND_SAME = 116;
+    // Heart invalid ctoken
+    uint256 internal constant HEART_INVALID_CTOKEN = 117;
 }
