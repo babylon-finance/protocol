@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.7.0 <0.9.0;
@@ -9,6 +10,8 @@ interface ICToken is IERC20 {
 
     function redeem(uint256 redeemTokens) external returns (uint256);
 
+    function accrueInterest() external returns (uint256);
+
     function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
 
     function borrow(uint256 borrowAmount) external returns (uint256);
@@ -16,6 +19,12 @@ interface ICToken is IERC20 {
     function repayBorrow(uint256 repayAmount) external returns (uint256);
 
     function exchangeRateStored() external view returns (uint256);
+
+    function getCash() external view returns (uint256);
+
+    function borrowRatePerBlock() external view returns (uint256);
+
+    function totalBorrowsCurrent() external view returns (uint256);
 
     function underlying() external view returns (address);
 
