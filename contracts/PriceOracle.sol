@@ -47,6 +47,7 @@ import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
+import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 
 /**
  * @title PriceOracle
@@ -95,9 +96,8 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     ITokenIdentifier public tokenIdentifier;
     IBabController public controller;
-    mapping(address => bool) public reserveAssets;
-    address[] public reserveAssetsList;
-    mapping(address => bool) public blackListReserveForOracle;
+    mapping(address => bool) public hopTokens;
+    address[] public hopTokensList;
     int24 private maxTwapDeviation;
 
     /* ============ Modifiers ============ */
@@ -119,9 +119,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         tokenIdentifier = _tokenIdentifier;
         controller = _controller;
         maxTwapDeviation = INITIAL_TWAP_DEVIATION;
-        // Blacklist babl as an oracle reserve
-        blackListReserveForOracle[BABL] = true;
-        _updateReserves();
+
+        _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
     }
 
     /* ============ External Functions ============ */
@@ -136,18 +135,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         maxTwapDeviation = _maxTwapDeviation;
     }
 
-    function updateReserves() public override {
-        require(address(controller) == msg.sender, 'Only controller can call this');
-        _updateReserves();
-    }
-
-    function updateOracleReserveBlackList(address _reserveOracle, bool _value)
-        public
-        override
-        onlyGovernanceOrEmergency
-    {
-        require(reserveAssets[_reserveOracle], 'Must be a reserve asset');
-        blackListReserveForOracle[_reserveOracle] = _value;
+    function updateReserves(address[] memory list) public override onlyGovernanceOrEmergency {
+        _updateReserves(list);
     }
 
     /**
@@ -212,9 +201,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
+
         uint256 exchangeRate;
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
+
         // Comp assets
         if (tokenInType == 1) {
             exchangeRate = getCompoundExchangeRate(_tokenIn, _finalAssetIn);
@@ -229,6 +220,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (tokenInType == 2) {
             return getPrice(_finalAssetIn, _tokenOut);
         }
+
         if (tokenOutType == 2) {
             return getPrice(_tokenIn, _finalAssetOut);
         }
@@ -244,7 +236,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, _finalAssetOut).preciseDiv(exchangeRate);
         }
 
-        // Checks synthetix
+        // Checks Synthetix
         if (tokenInType == 4) {
             address targetImpl = ISnxProxy(_tokenIn).target();
             exchangeRate = snxEchangeRates.rateForCurrency(ISnxSynth(targetImpl).currencyKey());
@@ -257,14 +249,8 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
-        if (price != 0) {
-            return price;
-        }
-
         // Curve LP tokens
+        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         if (tokenInType == 5) {
             if (_tokenIn != TRI_CURVE_POOL_2_LP) {
                 address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
@@ -283,6 +269,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                     );
             }
         }
+
         if (tokenOutType == 5) {
             // Token out is a curve lp
             if (_tokenOut != TRI_CURVE_POOL_2_LP) {
@@ -326,46 +313,33 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        // Curve pair through Curve Assets (DAI, WETH, USDC, WBTC)
-        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
-            address reserve = reserveAssetsList[i];
-            if (_tokenIn != reserve && _tokenOut != reserve) {
-                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
-                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
-                if (tokenInPrice != 0 || tokenOutPrice != 0) {
-                    if (tokenInPrice == 0) {
-                        tokenInPrice = _getUniV3PriceNaive(_tokenIn, reserve);
-                    }
-                    if (tokenOutPrice == 0) {
-                        tokenOutPrice = _getUniV3PriceNaive(reserve, _tokenOut);
-                    }
-                    price = tokenInPrice.preciseMul(tokenOutPrice);
-                    if (price != 0) {
-                        return price;
-                    }
-                }
-            }
+        // Direct curve pair
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        if (price != 0) {
+            return price;
         }
-        // Checks stETH && wstETH (Lido tokens)
-        if (tokenInType == 7) {
-            uint256 shares = 1e18;
-            if (_tokenIn == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(WETH, _tokenOut).preciseMul(stETH.getPooledEthByShares(shares));
-        }
-        if (tokenOutType == 7) {
-            uint256 shares = 1e18;
-            if (_tokenOut == address(wstETH)) {
-                shares = wstETH.getStETHByWstETH(shares);
-            }
-            return getPrice(_tokenIn, WETH).preciseDiv(stETH.getSharesByPooledEth(shares));
-        }
+
         // Direct UNI3
         price = _getBestPriceUniV3(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }
+
+        // Curve to UniV3 or UniV3 to Curve via DAI/WETH/WBTC/USDC
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
+            address reserve = hopTokensList[i];
+            if (_tokenIn != reserve && _tokenOut != reserve) {
+                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
+                if (tokenInPrice != 0) {
+                    return tokenInPrice.preciseMul(_getBestPriceUniV3(reserve, _tokenOut));
+                }
+                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
+                if (tokenOutPrice != 0) {
+                    return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, reserve));
+                }
+            }
+        }
+
         // Use only univ2 for UI
         if (_forNAV) {
             price = _getUNIV2Price(_tokenIn, _tokenOut);
@@ -402,6 +376,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         address _tokenIn,
         address _tokenOut
     ) private view returns (uint256) {
+        // Same asset. Returns base unit
+        if (_tokenIn == _tokenOut) {
+            return 10**18;
+        }
         int24 tick;
 
         (, tick, , , , , ) = pool.slot0();
@@ -421,6 +399,10 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {
+        // Same asset. Returns base unit
+        if (_tokenIn == _tokenOut) {
+            return 10**18;
+        }
         IUniswapV3Pool pool = _getUniswapPoolWithHighestLiquidity(_tokenIn, _tokenOut);
         if (address(pool) == address(0)) {
             return 0;
@@ -434,12 +416,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
-        if (!_isOracleReserve(_tokenIn)) {
+        if (!hopTokens[_tokenIn]) {
             (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
             price = priceAux;
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
-        if (!_isOracleReserve(_tokenOut)) {
+        if (!hopTokens[_tokenOut]) {
             (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             // If reserves are different
             if (reservePathIn != reservePathOut) {
@@ -456,17 +438,17 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getHighestLiquidityPathToReserveUniV3(address _token, bool _in) private view returns (address, uint256) {
-        uint256 price = 0;
+        uint256 price;
         address reserveChosen;
         IUniswapV3Pool maxpool;
         uint256 maxLiquidityInDai;
-        for (uint256 i = 0; i < reserveAssetsList.length; i++) {
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
             (address pool, uint256 liquidityInDai) =
-                _getUniswapHighestLiquidityInReserveAsset(_token, reserveAssetsList[i], DAI);
+                _getUniswapHighestLiquidityInReserveAsset(_token, hopTokensList[i], DAI);
             if (liquidityInDai > maxLiquidityInDai) {
                 maxpool = IUniswapV3Pool(pool);
                 maxLiquidityInDai = liquidityInDai;
-                reserveChosen = reserveAssetsList[i];
+                reserveChosen = hopTokensList[i];
             }
         }
         if (maxLiquidityInDai > 0) {
@@ -515,7 +497,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token0 = pool.token0();
         address token1 = pool.token1();
 
-        if (_isOracleReserve(token0)) {
+        if (hopTokens[token0]) {
             liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
             denominator = token0;
         } else {
@@ -636,16 +618,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         return 0;
     }
 
-    function _updateReserves() private {
-        address[] memory reserveAssetsC = IBabController(controller).getReserveAssets();
-        delete reserveAssetsList;
-        for (uint256 i = 0; i < reserveAssetsC.length; i++) {
-            reserveAssets[reserveAssetsC[i]] = true;
-            reserveAssetsList.push(reserveAssetsC[i]);
+    function _updateReserves(address[] memory list) private {
+        for (uint256 i = 0; i < hopTokensList.length; i++) {
+            hopTokens[hopTokensList[i]] = false;
         }
-    }
-
-    function _isOracleReserve(address _reserve) private view returns (bool) {
-        return reserveAssets[_reserve] && !blackListReserveForOracle[_reserve];
+        delete hopTokensList;
+        for (uint256 i = 0; i < list.length; i++) {
+            hopTokens[list[i]] = true;
+            hopTokensList.push(list[i]);
+        }
     }
 }
