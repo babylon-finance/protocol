@@ -66,5 +66,4 @@ contract FuseLendIntegration is CompoundLendIntegration {
     {
         return (address(0), 0, bytes(''));
     }
-
 }
