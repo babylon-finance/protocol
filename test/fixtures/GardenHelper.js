@@ -116,8 +116,8 @@ async function depositFunds(address, garden) {
       whaleSigner = await impersonateAddress(whaleAddress);
       const WBTC = await getERC20(addresses.tokens.WBTC);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await WBTC.connect(signer3).approve(garden.address, from(10e6), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(from(10e6), 1, signer3.getAddress(), false);
+      await WBTC.connect(signer3).approve(garden.address, from(1e8), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(from(1e8), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.BABL.toLowerCase():
       whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
