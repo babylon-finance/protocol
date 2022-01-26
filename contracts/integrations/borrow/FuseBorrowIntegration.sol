@@ -47,5 +47,4 @@ contract FuseBorrowIntegration is CompoundBorrowIntegration {
         uint256 _maxCollateralFactor,
         address _comptroller
     ) CompoundBorrowIntegration('fuseborrow', _controller, _maxCollateralFactor, _comptroller) {}
-
 }
