@@ -105,7 +105,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
+    function getBorrowBalance(address _strategy, address asset) public view virtual override returns (uint256) {
         address cToken = assetToCToken[asset];
         (
             ,

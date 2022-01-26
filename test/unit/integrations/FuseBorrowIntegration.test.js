@@ -43,21 +43,35 @@ describe('FuseBorrowIntegrationTest', function () {
       [asset1Address, 0, asset2Address, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token].mul(7);
-    console.log('amount strategy', ethers.utils.formatEther(amount), token);
     await executeStrategy(strategyContract, { amount });
     // Check NAV
-    console.log('after execute');
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+    if (asset1.address === WETH.address) {
+      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
+    } else {
+      expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
+    }
+    if (asset2.address === WETH.address) {
+      expect(await ethers.provider.getBalance(strategyContract.address)).to.be.gt(0);
+    } else {
+      expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
+    }
+    expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, asset2Address)).to.be.gt(0);
 
-    expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
-    expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
-
-    expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, asset2.address)).to.be.gt(0);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
 
-    expect(await asset2.balanceOf(strategyContract.address)).to.equal(0);
-    expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
+    if (asset2.address === WETH.address) {
+      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
+    } else {
+      expect(await asset2.balanceOf(strategyContract.address)).to.equal(0);
+    }
+
+    if (asset1.address === WETH.address) {
+      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
+    } else {
+      expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
+    }
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.gt(balanceBeforeExiting);
   }
@@ -118,11 +132,11 @@ describe('FuseBorrowIntegrationTest', function () {
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
-    pick(GARDENS.slice(0, 1)).forEach(({ token, name }) => {
+    pick(GARDENS).forEach(({ token, name }) => {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
-      it.only(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
+      it.skip(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(BABL, FEI, token);
       });
       it(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
@@ -131,7 +145,7 @@ describe('FuseBorrowIntegrationTest', function () {
       it(`can supply DAI and borrow ETH at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, WETH, token);
       });
-      it(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
+      it.skip(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
       it(`should fail trying to supply DAI and borrow DAI at Fuse in a ${name} Garden`, async function () {

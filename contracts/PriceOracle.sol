@@ -202,6 +202,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             return 10**18;
         }
 
+        _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
+        _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
+
         uint256 exchangeRate;
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);

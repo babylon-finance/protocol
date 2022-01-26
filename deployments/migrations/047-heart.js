@@ -24,7 +24,7 @@ module.exports = async ({
     {
       initializer: {
         method: 'initialize',
-        args: [controller.address, [eth('0.50'), eth('0.20'), eth('0.20'), eth('0.10')]],
+        args: [controller.address, [eth('0.10'), eth('0.50'), eth('0.15'), eth('0.15'), eth('0.10')]],
       },
     },
   );

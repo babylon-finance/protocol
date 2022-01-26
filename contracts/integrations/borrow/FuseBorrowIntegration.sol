@@ -19,6 +19,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
+import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {CompoundBorrowIntegration} from './CompoundBorrowIntegration.sol';
@@ -46,4 +47,5 @@ contract FuseBorrowIntegration is CompoundBorrowIntegration {
         uint256 _maxCollateralFactor,
         address _comptroller
     ) CompoundBorrowIntegration('fuseborrow', _controller, _maxCollateralFactor, _comptroller) {}
+
 }

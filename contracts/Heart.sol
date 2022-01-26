@@ -131,10 +131,11 @@ contract Heart is OwnableUpgradeable {
     uint256 public bablRewardLeft;
 
     // Array with the weights to distribute to different heart activities
-    // 0: Buybacks
-    // 1: Liquidity BABL-ETH
-    // 2: Garden Seed Investments
-    // 3: Fuse Pool
+    // 0: Treasury
+    // 1: Buybacks
+    // 2: Liquidity BABL-ETH
+    // 3: Garden Seed Investments
+    // 4: Fuse Pool
     uint256[] public feeDistributionWeights;
 
     // Metric Totals
@@ -179,14 +180,16 @@ contract Heart is OwnableUpgradeable {
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
+        // Send 10% to the treasury
+        IERC20(WETH).transferFrom(address(this), TREASURY, feeDistributionWeights[0]);
         // 50% for buybacks
-        _buyback(wethBalance.preciseMul(feeDistributionWeights[0]));
-        // 20% to BABL-ETH pair
-        _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[1]));
-        // 20% to Garden Investments
-        _investInGardens(wethBalance.preciseMul(feeDistributionWeights[2]));
+        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
+        // 15% to BABL-ETH pair
+        _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
+        // 15% to Garden Investments
+        _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]));
         // 10% lend in fuse pool
-        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[3]));
+        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[4]));
         // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
         lastPumpAt = block.timestamp;
