@@ -196,6 +196,7 @@ contract Heart is OwnableUpgradeable {
      * Function to vote for a proposal
      *
      * Note: Only keeper can call this. Votes need to have been resolved offchain.
+     * Warning: Gardens need to delegate to heart first.
      */
     function voteProposal(uint256 _proposalId, bool _isApprove) external {
         _onlyKeeper();
