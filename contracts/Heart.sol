@@ -298,7 +298,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of voted gardens
      */
-    function getVotedGardens() public view override onlyGovernanceOrEmergency returns (address[] memory) {
+    function getVotedGardens() public view override returns (address[] memory) {
         return votedGardens;
     }
 
@@ -307,7 +307,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of weights for voted gardens
      */
-    function getGardenWeights() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+    function getGardenWeights() public view override returns (uint256[] memory) {
         return gardenWeights;
     }
 
@@ -316,7 +316,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of weights for the fees
      */
-    function getFeeDistributionWeights() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+    function getFeeDistributionWeights() public view override returns (uint256[] memory) {
         return feeDistributionWeights;
     }
 
@@ -325,7 +325,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+    function getTotalStats() public view override returns (uint256[] memory) {
         return totalStats;
     }
 

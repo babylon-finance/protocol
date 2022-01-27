@@ -12,7 +12,7 @@ async function setUpFixture(
   { gardenParams = GARDEN_PARAMS },
 ) {
   const signers = await ethers.getSigners();
-  const [deployer, keeper, , signer1, signer2, signer3] = signers;
+  const [deployer, keeper, , signer1, signer2, signer3, signer4] = signers;
 
   await deployments.fixture();
 
@@ -69,7 +69,7 @@ async function setUpFixture(
   const babl = await getERC20(addresses.tokens.BABL);
 
   const owner = await impersonateAddress(timelockController.address);
-  console.log('fund');
+  await signer4.sendTransaction({ to: owner.address, value: ethers.utils.parseEther('5') });
   await fund([owner.address, signer1.address], {
     tokens: [
       addresses.tokens.USDC,
