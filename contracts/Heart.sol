@@ -31,6 +31,7 @@ import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IGovernor} from './interfaces/external/oz/IGovernor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
+import {IHeart} from './interfaces/IHeart.sol';
 import {IWETH} from './interfaces/external/weth/IWETH.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ICEther} from './interfaces/external/compound/ICEther.sol';
@@ -49,7 +50,7 @@ import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
  * Contract that assists The Heart of Babylon garden with BABL staking.
  *
  */
-contract Heart is OwnableUpgradeable {
+contract Heart is OwnableUpgradeable, IHeart {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
@@ -77,14 +78,14 @@ contract Heart is OwnableUpgradeable {
 
     /* ============ Constants ============ */
 
+    // Visor
+    IHypervisor private constant visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
+
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-
-    // Min Amounts to trade
-    mapping(address => uint256) public minAmounts;
 
     // Babylon addresses
     address private constant TREASURY = 0xD7AAf4676F0F52993cb33aD36784BF970f0E1259;
@@ -99,36 +100,36 @@ contract Heart is OwnableUpgradeable {
     IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     IGarden private constant HEART_GARDEN = IGarden(0x0);
 
-    // Visor
-    IHypervisor visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
-
     // Fuse
     address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
 
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController public controller;
+    IBabController private controller;
 
     // Variables to handle garden seed investments
-    address[] public votedGardens;
-    uint256[] public gardenWeights;
+    address[] public override votedGardens;
+    uint256[] public override gardenWeights;
+
+    // Min Amounts to trade
+    mapping(address => uint256) public override minAmounts;
 
     // Fuse pool Variables
     // Mapping of asset addresses to cToken addresses in the fuse pool
-    mapping(address => address) public assetToCToken;
+    mapping(address => address) public override assetToCToken;
     // Which asset is going to receive the next batch of liquidity in fuse
-    address public assetToLend;
+    address public override assetToLend;
 
     // Timestamp when the heart was last pumped
-    uint256 public lastPumpAt;
+    uint256 public override lastPumpAt;
 
     // Timestamp when the votes were sent by the keeper last
-    uint256 public lastVotesAt;
+    uint256 public override lastVotesAt;
 
     // Amount to gift to the Heart of Babylon Garden weekly
-    uint256 public weeklyRewardAmount;
-    uint256 public bablRewardLeft;
+    uint256 public override weeklyRewardAmount;
+    uint256 public override bablRewardLeft;
 
     // Array with the weights to distribute to different heart activities
     // 0: Treasury
@@ -136,7 +137,7 @@ contract Heart is OwnableUpgradeable {
     // 2: Liquidity BABL-ETH
     // 3: Garden Seed Investments
     // 4: Fuse Pool
-    uint256[] public feeDistributionWeights;
+    uint256[] public override feeDistributionWeights;
 
     // Metric Totals
     // 0: fees accumulated in weth
@@ -144,7 +145,7 @@ contract Heart is OwnableUpgradeable {
     // 2: liquidity added in weth
     // 3: amount invested in gardens in weth
     // 4: amount lent on fuse in weth
-    uint256[] public totalStats;
+    uint256[] public override totalStats;
 
     /* ============ Initializer ============ */
 
@@ -173,8 +174,8 @@ contract Heart is OwnableUpgradeable {
      *
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
-    function pump() external {
-        _require(block.timestamp.sub(lastPumpAt) > 1 weeks, Errors.HEART_ALREADY_PUMPED);
+    function pump() external override {
+        _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
         _consolidateFeesToWeth();
@@ -201,7 +202,7 @@ contract Heart is OwnableUpgradeable {
      * Note: Only keeper can call this. Votes need to have been resolved offchain.
      * Warning: Gardens need to delegate to heart first.
      */
-    function voteProposal(uint256 _proposalId, bool _isApprove) external {
+    function voteProposal(uint256 _proposalId, bool _isApprove) external override {
         _onlyKeeper();
         _require(
             IGovernor(GOVERNOR).state(_proposalId) == IGovernor.ProposalState.Active,
@@ -219,7 +220,7 @@ contract Heart is OwnableUpgradeable {
      * @param _gardens             Gardens that are going to receive investment
      * @param _weights             Weight for the investment in each garden
      */
-    function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) public {
+    function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) public override {
         _onlyKeeper();
         _require(_gardens.length == _weights.length, Errors.HEART_VOTES_LENGTH);
         delete votedGardens;
@@ -236,7 +237,7 @@ contract Heart is OwnableUpgradeable {
      * Updates fuse pool market information and enters the markets
      *
      */
-    function updateMarkets() public onlyGovernanceOrEmergency {
+    function updateMarkets() public override onlyGovernanceOrEmergency {
         // Enter markets of the fuse pool for all these assets
         address[] memory markets = IComptroller(BABYLON_FUSE_POOL_ADDRESS).getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
@@ -251,7 +252,7 @@ contract Heart is OwnableUpgradeable {
      *
      * @param _feeWeights             Array of % (up to 1e18) with the fee weights
      */
-    function updateFeeWeights(uint256[] calldata _feeWeights) public onlyGovernanceOrEmergency {
+    function updateFeeWeights(uint256[] calldata _feeWeights) public override onlyGovernanceOrEmergency {
         delete feeDistributionWeights;
         for (uint256 i = 0; i < _feeWeights.length; i++) {
             feeDistributionWeights.push(_feeWeights[i]);
@@ -263,8 +264,9 @@ contract Heart is OwnableUpgradeable {
      *
      * @param _assetToLend             New asset to lend
      */
-    function updateAssetToLend(address _assetToLend) public onlyGovernanceOrEmergency {
+    function updateAssetToLend(address _assetToLend) public override onlyGovernanceOrEmergency {
         _require(assetToLend != _assetToLend, Errors.HEART_ASSET_LEND_SAME);
+        _require(assetToCToken[_assetToLend] != address(0), Errors.HEART_ASSET_LEND_INVALID);
         assetToLend = _assetToLend;
     }
 
@@ -274,7 +276,7 @@ contract Heart is OwnableUpgradeable {
      * @param _bablAmount             Total amount to distribute
      * @param _weeklyRate             Weekly amount to distribute
      */
-    function addReward(uint256 _bablAmount, uint256 _weeklyRate) public onlyGovernanceOrEmergency {
+    function addReward(uint256 _bablAmount, uint256 _weeklyRate) public override onlyGovernanceOrEmergency {
         // Get the BABL reward
         IERC20(BABL).transferFrom(msg.sender, address(this), _bablAmount);
         bablRewardLeft += _bablAmount;
@@ -287,8 +289,44 @@ contract Heart is OwnableUpgradeable {
      * @param _asset                Asset to edit the min amount
      * @param _minAmount            New min amount
      */
-    function setMinTradeAmount(address _asset, uint256 _minAmount) public onlyGovernanceOrEmergency {
+    function setMinTradeAmount(address _asset, uint256 _minAmount) public override onlyGovernanceOrEmergency {
         minAmounts[_asset] = _minAmount;
+    }
+
+    /**
+     * Getter to get the whole array of voted gardens
+     *
+     * @return            The array of voted gardens
+     */
+    function getVotedGardens() public view override onlyGovernanceOrEmergency returns (address[] memory) {
+        return votedGardens;
+    }
+
+    /**
+     * Getter to get the whole array of garden weights
+     *
+     * @return            The array of weights for voted gardens
+     */
+    function getGardenWeights() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+        return gardenWeights;
+    }
+
+    /**
+     * Getter to get the whole array of fee weights
+     *
+     * @return            The array of weights for the fees
+     */
+    function getFeeDistributionWeights() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+        return feeDistributionWeights;
+    }
+
+    /**
+     * Getter to get the whole array of total stats
+     *
+     * @return            The array of stats for the fees
+     */
+    function getTotalStats() public view override onlyGovernanceOrEmergency returns (uint256[] memory) {
+        return totalStats;
     }
 
     /* ============ Internal Functions ============ */

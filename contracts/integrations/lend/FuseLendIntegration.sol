@@ -50,13 +50,17 @@ contract FuseLendIntegration is CompoundLendIntegration {
         return address(0);
     }
 
-    function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
+    function _getRewardsAccrued(
+        address /* _strategy */
+    ) internal pure override returns (uint256) {
         return 0;
     }
 
-    function _claimRewardsCallData(address _strategy)
+    function _claimRewardsCallData(
+        address /* _strategy */
+    )
         internal
-        view
+        pure
         override
         returns (
             address,

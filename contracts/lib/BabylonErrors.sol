@@ -322,4 +322,6 @@ library Errors {
     uint256 internal constant HEART_ASSET_LEND_SAME = 116;
     // Heart invalid ctoken
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
+    // Heart invalid asset to lend
+    uint256 internal constant HEART_ASSET_LEND_INVALID = 118;
 }
