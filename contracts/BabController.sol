@@ -112,7 +112,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override strategyFactory;
     address public override gardenNFT;
     address public override strategyNFT;
-    address public override heart;
 
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations; // DEPRECATED
@@ -176,6 +175,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
     address public override mardukGate;
+    address public override heart;
 
     /* ============ Constants ============ */
 
