@@ -78,6 +78,10 @@ contract Heart is OwnableUpgradeable, IHeart {
 
     /* ============ Constants ============ */
 
+    // Only for offline use by keeper/fauna
+    bytes32 private constant VOTE_PROPOSAL_TYPEHASH = keccak256('ProposalVote(uint256 _proposalId,uint256 _amount,bool _isApprove)');
+    bytes32 private constant VOTE_GARDEN_TYPEHASH = keccak256('GardenVote(address _garden,uint256 _amount)');
+
     // Visor
     IHypervisor private constant visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
 
