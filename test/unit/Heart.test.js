@@ -141,7 +141,12 @@ describe('Heart Unit Test', function () {
   });
 
   describe('pump', async function () {
+    it('will revert if garden address has not been set', async function () {
+      await expect(heart.connect(signer1).pump()).to.be.reverted;
+    });
+
     it('will revert if garden votes have not been set', async function () {
+      await heart.connect(owner).setHeartGardenAddress(heartGarden.address);
       await expect(heart.connect(signer1).pump()).to.be.reverted;
     });
 

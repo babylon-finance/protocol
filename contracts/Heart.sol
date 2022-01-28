@@ -86,10 +86,6 @@ contract Heart is OwnableUpgradeable, IHeart {
     uint24 private constant FEE_LOW = 500;
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
-
-    // Babylon addresses
-    address private constant TREASURY = 0xD7AAf4676F0F52993cb33aD36784BF970f0E1259;
-    address private constant GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
     uint256 private constant DEFAULT_TRADE_SLIPPAGE = 25e15; // 2.5%
 
     // Tokens
@@ -98,7 +94,6 @@ contract Heart is OwnableUpgradeable, IHeart {
     IERC20 private constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    IGarden private constant HEART_GARDEN = IGarden(0x0);
 
     // Fuse
     address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
@@ -107,6 +102,13 @@ contract Heart is OwnableUpgradeable, IHeart {
 
     // Instance of the Controller contract
     IBabController private controller;
+
+    // Babylon addresses
+    address private TREASURY;
+    address private GOVERNOR;
+
+    // Heart garden address
+    IGarden public heartGarden = IGarden(0x0);
 
     // Variables to handle garden seed investments
     address[] public override votedGardens;
@@ -141,11 +143,12 @@ contract Heart is OwnableUpgradeable, IHeart {
 
     // Metric Totals
     // 0: fees accumulated in weth
-    // 1: babl bought in babl
-    // 2: liquidity added in weth
-    // 3: amount invested in gardens in weth
-    // 4: amount lent on fuse in weth
-    uint256[5] public override totalStats;
+    // 1: Money sent to treasury
+    // 2: babl bought in babl
+    // 3: liquidity added in weth
+    // 4: amount invested in gardens in weth
+    // 5: amount lent on fuse in weth
+    uint256[6] public override totalStats;
 
     /* ============ Initializer ============ */
 
@@ -153,6 +156,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Set state variables and map asset pairs to their oracles
      *
      * @param _controller             Address of controller contract
+     * @param _feeWeights             Weights of the fee distribution
      */
     function initialize(IBabController _controller, uint256[] calldata _feeWeights) public {
         OwnableUpgradeable.__Ownable_init();
@@ -165,6 +169,8 @@ contract Heart is OwnableUpgradeable, IHeart {
         minAmounts[address(USDC)] = 500e6;
         minAmounts[address(WETH)] = 5e17;
         minAmounts[address(WBTC)] = 3e6;
+        TREASURY = _controller.treasury();
+        GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
     }
 
     /* ============ External Functions ============ */
@@ -175,6 +181,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
     function pump() external override {
+        _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
         _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
@@ -182,7 +189,8 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
-        IERC20(WETH).transferFrom(address(this), TREASURY, feeDistributionWeights[0]);
+        IERC20(WETH).transferFrom(address(this), TREASURY, wethBalance.preciseMul(feeDistributionWeights[0]));
+        totalStats[1] += wethBalance.preciseMul(feeDistributionWeights[0]);
         // 50% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
         // 15% to BABL-ETH pair
@@ -294,6 +302,17 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
+     * Updates the heart garden address
+     *
+     * @param _heartGarden                New heart garden address
+     */
+    function setHeartGardenAddress(address _heartGarden) public override onlyGovernanceOrEmergency {
+        heartGarden = IGarden(_heartGarden);
+    }
+
+    /* ============ External View Functions ============ */
+
+    /**
      * Getter to get the whole array of voted gardens
      *
      * @return            The array of voted gardens
@@ -325,7 +344,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() public view override returns (uint256[5] memory) {
+    function getTotalStats() public view override returns (uint256[6] memory) {
         return totalStats;
     }
 
@@ -344,6 +363,9 @@ contract Heart is OwnableUpgradeable, IHeart {
             if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
                 totalStats[0] += _trade(reserveAsset, address(WETH), balance);
             }
+            if (reserveAsset == address(WETH)) {
+                totalStats[0] += balance;
+            }
         }
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
     }
@@ -355,8 +377,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _buyback(uint256 _amount) private {
         // Gift 100% BABL back to garden
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
-        IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), bablBought);
-        totalStats[1] += bablBought;
+        IERC20(BABL).transfer(address(heartGarden), bablBought);
+        totalStats[2] += bablBought;
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
 
@@ -371,9 +393,13 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit); // 50%
         BABL.approve(address(visor), bablTraded);
         WETH.approve(address(visor), wethToDeposit);
+        uint256 oldTreasuryBalance = visor.balanceOf(TREASURY);
         uint256 shares = visor.deposit(wethToDeposit, bablTraded, TREASURY);
-        _require(shares == visor.balanceOf(TREASURY) && visor.balanceOf(TREASURY) > 0, Errors.HEART_LP_TOKENS);
-        totalStats[2] += wethToDeposit;
+        _require(
+            shares == visor.balanceOf(TREASURY).sub(oldTreasuryBalance) && visor.balanceOf(TREASURY) > 0,
+            Errors.HEART_LP_TOKENS
+        );
+        totalStats[3] += _wethBalance;
         emit LiquidityAdded(block.timestamp, wethToDeposit, bablTraded);
     }
 
@@ -390,7 +416,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             IERC20(reserveAsset).transferFrom(address(this), votedGardens[i], amountTraded);
             emit GardenSeedInvest(block.timestamp, votedGardens[i], _wethAmount.preciseMul(gardenWeights[i]));
         }
-        totalStats[3] += _wethAmount;
+        totalStats[4] += _wethAmount;
     }
 
     /**
@@ -408,9 +434,10 @@ contract Heart is OwnableUpgradeable, IHeart {
         } else {
             // Trade to asset to lend from WETH
             uint256 assetToLendBalance = _trade(address(WETH), assetToLend, _wethAmount);
+            IERC20(assetToLend).approve(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
-        totalStats[4] += _wethAmount;
+        totalStats[5] += _wethAmount;
         emit FuseLentAsset(block.timestamp, assetToLend, _wethAmount);
     }
 
@@ -420,7 +447,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _sendWeeklyReward() private {
         if (bablRewardLeft > 0) {
             uint256 bablToSend = bablRewardLeft > weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
-            IERC20(BABL).transferFrom(address(this), address(HEART_GARDEN), bablToSend);
+            IERC20(BABL).transferFrom(address(this), address(heartGarden), bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
         }
     }

@@ -324,4 +324,6 @@ library Errors {
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
     // Heart invalid asset to lend
     uint256 internal constant HEART_ASSET_LEND_INVALID = 118;
+    // Heart garden not set
+    uint256 internal constant HEART_GARDEN_NOT_SET = 119;
 }
