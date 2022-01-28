@@ -145,7 +145,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     // 2: liquidity added in weth
     // 3: amount invested in gardens in weth
     // 4: amount lent on fuse in weth
-    uint256[] public override totalStats;
+    uint256[5] public override totalStats;
 
     /* ============ Initializer ============ */
 
@@ -325,7 +325,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() public view override returns (uint256[] memory) {
+    function getTotalStats() public view override returns (uint256[5] memory) {
         return totalStats;
     }
 

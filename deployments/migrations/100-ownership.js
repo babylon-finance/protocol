@@ -57,6 +57,7 @@ module.exports = async ({
     ['TimeLockRegistry', ''],
     ['IshtarGate', ''],
     ['MardukGate', ''],
+    ['Heart', 'HeartProxy'],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);
     if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {

@@ -46,7 +46,7 @@ contract HeartViewer {
         view
         returns (
             address,
-            uint256[] memory,
+            uint256[5] memory,
             uint256[] memory,
             address[] memory,
             uint256[] memory,

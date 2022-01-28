@@ -46,7 +46,7 @@ interface IHeart {
 
     function getFeeDistributionWeights() external view returns (uint256[] memory);
 
-    function getTotalStats() external view returns (uint256[] memory);
+    function getTotalStats() external view returns (uint256[5] memory);
 
     function votedGardens(uint256 _index) external view returns (address);
 
