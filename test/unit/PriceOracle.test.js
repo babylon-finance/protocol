@@ -10,7 +10,7 @@ const tokens = [
     name: 'BABL -> DAI',
     tokenIn: addresses.tokens.BABL,
     tokenOut: addresses.tokens.DAI,
-    value: from('130550766996046267519'),
+    value: from('50638075222642794861'),
   },
   {
     name: 'BABL -> USDC',

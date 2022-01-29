@@ -298,6 +298,7 @@ describe('Garden', function () {
       expect(profitSharing[1]).to.equal(PROFIT_STEWARD_SHARE);
       expect(profitSharing[2]).to.equal(PROFIT_LP_SHARE);
     });
+
     it('should fail if trying to set garden profit sharing params by non-contract account', async function () {
       // TODO CHECK all require at modifier
       await expect(
