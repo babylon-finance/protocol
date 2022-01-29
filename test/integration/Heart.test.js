@@ -81,21 +81,27 @@ describe('Heart Integration Test', function () {
     await heart.connect(signer1).pump();
     const statsAfterPump = await heart.getTotalStats();
     // Check the total fees is 3 WETH
-    expect(statsAfterPump[0]).to.equal(amountInFees);
+    expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
     // Check that we sent exactly 0.3 WETH to treasury and stat is right
     expect((await WETH.balanceOf(treasury.address)).sub(wethTreasuryBalanceBeforePump)).to.be.closeTo(
       amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
       ethers.utils.parseEther('0.01'),
     );
-    expect(statsAfterPump[1]).to.equal(amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9));
+    expect(statsAfterPump[1]).to.be.closeTo(
+      amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
+      amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9).div(100),
+    );
     // Checks buybacks
     const bablBought = statsAfterPump[2];
     expect(await BABL.balanceOf(heartGarden.address)).to.be.gte(heartBABLBalanceBeforePump.add(bablBought));
     // Checks liquidity
-    expect(statsAfterPump[3]).to.equal(amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9));
+    expect(statsAfterPump[3]).to.be.closeTo(
+      amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9),
+      amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9).div(100),
+    );
     // Checks garden seed investments
     const totalPumpedGardens = amountInFees.mul(feeDistributionWeights[3]).div(1e9).div(1e9);
-    expect(statsAfterPump[4]).to.equal(totalPumpedGardens);
+    expect(statsAfterPump[4]).to.be.closeTo(totalPumpedGardens, totalPumpedGardens.div(100));
     expect(await WETH.balanceOf(garden1.address)).to.be.closeTo(
       balanceGarden1BeforePump.add(totalPumpedGardens.div(3)),
       ethers.utils.parseEther('0.01'),
@@ -110,10 +116,10 @@ describe('Heart Integration Test', function () {
     );
     // Checks fuse pool
     const amountLentToFuse = amountInFees.mul(feeDistributionWeights[4]).div(1e9).div(1e9);
-    expect(statsAfterPump[5]).to.equal(amountLentToFuse);
+    expect(statsAfterPump[5]).to.be.closeTo(amountLentToFuse, amountLentToFuse.div(100));
     expect(await cDAI.getCash()).to.be.closeTo(
       fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(1e9).div(1e9)),
-      ethers.utils.parseEther('3'), // 3 DAI
+      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(1e9).div(1e9)).div(100),
     );
     // Checks weekly rewards
     expect(await heart.bablRewardLeft()).to.equal(ethers.utils.parseEther('4700'));
@@ -129,7 +135,25 @@ describe('Heart Integration Test', function () {
       await pumpAmount(amountInFees);
     });
 
-    it('will pump correctly with 3 ETH, 1000 DAI', async function () {});
-    it('will pump correctly with 3 ETH, 1000 DAI, 1000 USDC', async function () {});
+    it('will pump correctly with 3 ETH, 1000 DAI', async function () {
+      const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
+      const amountInFees = ethers.utils
+        .parseEther('3')
+        .add(ethers.utils.parseEther('1000').mul(wethPerDai).div(1e9).div(1e9));
+      await WETH.connect(owner).transfer(heart.address, ethers.utils.parseEther('3'));
+      await DAI.connect(owner).transfer(heart.address, ethers.utils.parseEther('1000'));
+      await pumpAmount(amountInFees);
+    });
+
+    it('will pump correctly with 3 ETH, 1000 DAI, 1000 USDC', async function () {
+      const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
+      const amountInFees = ethers.utils
+        .parseEther('3')
+        .add(ethers.utils.parseEther('2000').mul(wethPerDai).div(1e9).div(1e9));
+      await WETH.connect(owner).transfer(heart.address, ethers.utils.parseEther('3'));
+      await DAI.connect(owner).transfer(heart.address, ethers.utils.parseEther('1000'));
+      await USDC.connect(owner).transfer(heart.address, 1000 * 1e6);
+      await pumpAmount(amountInFees);
+    });
   });
 });
