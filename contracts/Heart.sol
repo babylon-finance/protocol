@@ -428,9 +428,14 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _investInGardens(uint256 _wethAmount) private {
         for (uint256 i = 0; i < votedGardens.length; i++) {
             address reserveAsset = IGarden(votedGardens[i]).reserveAsset();
-            uint256 amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
+            uint256 amountTraded;
+            if (reserveAsset != address(WETH)) {
+                amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
+            } else {
+                amountTraded = _wethAmount.div(votedGardens.length);
+            }
             // Gift it to garden
-            IERC20(reserveAsset).safeTransferFrom(address(this), votedGardens[i], amountTraded);
+            IERC20(reserveAsset).safeTransfer(votedGardens[i], amountTraded);
             emit GardenSeedInvest(block.timestamp, votedGardens[i], _wethAmount.preciseMul(gardenWeights[i]));
         }
         totalStats[4] += _wethAmount;
@@ -463,8 +468,9 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function _sendWeeklyReward() private {
         if (bablRewardLeft > 0) {
-            uint256 bablToSend = bablRewardLeft > weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
-            IERC20(BABL).safeTransferFrom(address(this), address(heartGarden), bablToSend);
+            uint256 bablToSend = bablRewardLeft < weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
+            IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
+            bablRewardLeft = bablRewardLeft.sub(bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
         }
     }
