@@ -312,7 +312,7 @@ describe('Garden', function () {
     });
 
     async function testPublicSharing(shares) {
-      const newGarden = await createGarden({publicSharing : shares});
+      const newGarden = await createGarden({ publicSharing: shares });
       const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
 
       expect(profitSharing[0]).to.equal(shares[0]);
@@ -333,7 +333,7 @@ describe('Garden', function () {
     });
 
     it('only the protocol should be able to custom garden profit sharing (15% , 40%, 40%) while creation', async function () {
-      await testPublicSharing([eth(0.15), eth(0.40), eth(0.40)]);
+      await testPublicSharing([eth(0.15), eth(0.4), eth(0.4)]);
     });
 
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation', async function () {
