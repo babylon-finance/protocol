@@ -73,6 +73,7 @@ describe('Heart Integration Test', function () {
         [ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33')],
       );
     const wethTreasuryBalanceBeforePump = await WETH.balanceOf(treasury.address);
+    const bablTreasuryBalanceBeforePump = await BABL.balanceOf(treasury.address);
     const heartBABLBalanceBeforePump = await BABL.balanceOf(heartGarden.address);
     const balanceGarden1BeforePump = await WETH.balanceOf(garden1.address);
     const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
@@ -93,7 +94,8 @@ describe('Heart Integration Test', function () {
     );
     // Checks buybacks
     const bablBought = statsAfterPump[2];
-    expect(await BABL.balanceOf(heartGarden.address)).to.be.gte(heartBABLBalanceBeforePump.add(bablBought));
+    expect(await BABL.balanceOf(heartGarden.address)).to.be.gte(heartBABLBalanceBeforePump.add(bablBought.div(2)));
+    expect(await BABL.balanceOf(treasury.address)).to.be.gte(bablTreasuryBalanceBeforePump.add(bablBought.div(2)));
     // Checks liquidity
     expect(statsAfterPump[3]).to.be.closeTo(
       amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9),
@@ -124,7 +126,7 @@ describe('Heart Integration Test', function () {
     // Checks weekly rewards
     expect(await heart.bablRewardLeft()).to.equal(ethers.utils.parseEther('4700'));
     expect(await BABL.balanceOf(heartGarden.address)).to.be.equal(
-      heartBABLBalanceBeforePump.add(bablBought).add(await heart.weeklyRewardAmount()),
+      heartBABLBalanceBeforePump.add(bablBought.div(2)).add(await heart.weeklyRewardAmount()),
     );
   }
 
