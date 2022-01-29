@@ -1,7 +1,18 @@
 const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { getERC20 } = require('utils/test-helpers');
+const { getERC20, increaseBlock, increaseTime, proposalState } = require('utils/test-helpers');
+const {
+  getVoters,
+  getGovernorMock,
+  getProposal,
+  castVotes,
+  selfDelegation,
+  claimTokens,
+} = require('utils/gov-helpers');
+const { getContractFactory } = require('@nomiclabs/hardhat-ethers/types');
+const { impersonateAddress } = require('../../lib/rpc');
+const { ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
 
 describe('Heart Unit Test', function () {
   let heartGarden;
@@ -13,10 +24,21 @@ describe('Heart Unit Test', function () {
   let keeper;
   let owner;
   let BABL;
+  let deployer;
+  let voters;
+  let token;
+  let governor;
+  let heartGardenSigner;
 
   beforeEach(async () => {
-    ({ heartGarden, heart, signer1, garden1, garden2, garden3, owner, keeper } = await setupTests()());
+    ({ heartGarden, heart, signer1, garden1, garden2, garden3, owner, keeper, deployer } = await setupTests()());
     BABL = await getERC20(addresses.tokens.BABL);
+    token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
+    governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
+    voters = await getVoters();
+    heartGardenSigner = await impersonateAddress(heartGarden.address);
+    await selfDelegation(token, voters);
+    await claimTokens(token, voters);
   });
 
   describe('can call getter methods', async function () {
@@ -120,23 +142,94 @@ describe('Heart Unit Test', function () {
       expect(gardens[2]).to.equal(garden3.address);
     });
 
-    it.skip('can vote for proposal on behalf of the heart', async function () {
+    it('can vote for proposal on behalf of the heart', async function () {
       // needs governor mocks
-      // TODO: governor create proposal and move it to active
-      await heart.connect(keeper).voteProposal(1, true);
+      // Note: cannot use governor mocks as GOVERNOR address is hardcoded in Heart contract
+      // const mockGovernor = await getGovernorMock(token, deployer);
+      const { id, args } = await getProposal(governor);
+      const heartGardenBABLBalance = await token.balanceOf(heartGarden.address);
+      // Get delegation from Heart Garden
+      // TODO (IMPORTANT) we need to create a privilege function at Garden.sol level and upgrade
+      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
+      await increaseBlock(1);
+      // Propose
+      await governor.connect(voters[1])['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await increaseBlock(1);
+      // Vote
+      await heart.connect(keeper).voteProposal(id, true);
+      const [heartHasVoted, heartSupport, heartVotes] = await governor.getReceipt(id, heart.address);
+      expect(heartHasVoted).to.eq(true);
+      expect(heartSupport).to.eq(1);
+      expect(heartVotes).to.eq(heartGardenBABLBalance);
     });
-
     it.skip('cannot vote for proposal that is not active', async function () {
-      // needs governor mocks
-      // TODO: governor create proposal and move it to active
-      await heart.connect(keeper).voteProposal(1, true);
+      // It works, skipped due to it takes long time to increase blocks as it is using real governor
+      // TODO: needs mocks
+      const { id, args } = await getProposal(governor);
+      // Get delegation from Heart Garden
+      // TODO (IMPORTANT) we need to create a privilege function at Garden.sol level and upgrade to delegate into heart SC
+      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
+      await increaseBlock(1);
+      // Propose
+      await governor.connect(voters[1])['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await expect(heart.connect(keeper).voteProposal(id, true)).to.be.revertedWith(
+        'BABLToken::getPriorVotes: not yet determined',
+      );
+      await increaseBlock((await governor.votingPeriod()).add(1));
+      // Voting time passed
+      await expect(heart.connect(keeper).voteProposal(id, true)).to.be.revertedWith(
+        'Governor: vote not currently active',
+      );
+      // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
+      // 3: Defeated state
+      const state = await governor.state(id);
+      expect(state).to.eq(proposalState.Defeated);
     });
-
-    it.skip('can only vote for a proposal once', async function () {
-      // needs governor mocks
-      // TODO: governor create proposal and move it to active
-      await heart.connect(keeper).voteProposal(1, true);
-      expect(heart.connect(keeper).voteProposal(1, true)).to.be.reverted();
+    it('can only vote for a proposal once', async function () {
+      const { id, args } = await getProposal(governor);
+      // Get delegation from Heart Garden
+      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
+      await increaseBlock(1);
+      // Propose
+      await governor.connect(voters[1])['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await increaseBlock(1);
+      // Vote
+      await heart.connect(keeper).voteProposal(id, true);
+      await expect(heart.connect(keeper).voteProposal(id, false)).to.be.revertedWith(
+        'GovernorCompatibilityBravo: vote already cast',
+      );
+    });
+    it('heart does increase its voting power by each new BABL received as it self delegated in constructor', async function () {
+      const heartVotingPower1 = await token.getCurrentVotes(heart.address);
+      const heartSigner = await impersonateAddress(heart.address);
+      const heartGardenBalance = await token.balanceOf(heartGarden.address);
+      const voterBalance = await token.balanceOf(voters[0].address);
+      // get heart garden delegation
+      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
+      const heartVotingPower2 = await token.getCurrentVotes(heart.address);
+      // remove delegation
+      await token.connect(heartGardenSigner).delegate(heartGarden.address, { gasPrice: 0 });
+      const heartVotingPower3 = await token.getCurrentVotes(heart.address);
+      // get out of vesting
+      await increaseTime(ONE_YEAR_IN_SECONDS * 3);
+      // By a simple transfer its gets voting power as it self delegated during constructor
+      // If not self-delegated its own balance will never count unless heart self-delegates
+      await token.connect(voters[0]).transfer(heart.address, await token.balanceOf(voters[0].address), { gasPrice: 0 });
+      const heartVotingPower4 = await token.getCurrentVotes(heart.address);
+      // return BABL back
+      await token
+        .connect(heartSigner)
+        .transfer(voters[0].address, await token.balanceOf(heart.address), { gasPrice: 0 });
+      const heartVotingPower5 = await token.getCurrentVotes(heart.address);
+      // receive BABL from voter again
+      await token.connect(voters[0]).transfer(heart.address, await token.balanceOf(voters[0].address), { gasPrice: 0 });
+      const heartVotingPower6 = await token.getCurrentVotes(heart.address);
+      expect(heartVotingPower1).to.eq(0);
+      expect(heartVotingPower2).to.eq(heartGardenBalance);
+      expect(heartVotingPower3).to.eq(0);
+      expect(heartVotingPower4).to.eq(voterBalance);
+      expect(heartVotingPower5).to.eq(0);
+      expect(heartVotingPower6).to.eq(voterBalance);
     });
   });
 

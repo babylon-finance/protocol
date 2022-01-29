@@ -314,16 +314,12 @@ library Errors {
     uint256 internal constant HEART_VOTES_LENGTH = 112;
     // Heart LP tokens not received
     uint256 internal constant HEART_LP_TOKENS = 113;
-    // Heart cannot vote
-    uint256 internal constant HEART_PROPOSAL_NOT_ACTIVE = 114;
-    // Heart already voted
-    uint256 internal constant HEART_ALREADY_VOTED = 115;
+    // Heart invalid asset to lend
+    uint256 internal constant HEART_ASSET_LEND_INVALID = 114;
+    // Heart garden not set
+    uint256 internal constant HEART_GARDEN_NOT_SET = 115;
     // Heart asset to lend is the same
     uint256 internal constant HEART_ASSET_LEND_SAME = 116;
     // Heart invalid ctoken
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
-    // Heart invalid asset to lend
-    uint256 internal constant HEART_ASSET_LEND_INVALID = 118;
-    // Heart garden not set
-    uint256 internal constant HEART_GARDEN_NOT_SET = 119;
 }

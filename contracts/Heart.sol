@@ -22,6 +22,7 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {IVoteToken} from './interfaces/IVoteToken.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -185,6 +186,8 @@ contract Heart is OwnableUpgradeable, IHeart {
         minAmounts[address(WBTC)] = 3e6;
         TREASURY = _controller.treasury();
         GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
+        // Self-delegation to be able to use BABL balance as voting power
+        IVoteToken(address(BABL)).delegate(address(this));
     }
 
     /* ============ External Functions ============ */
@@ -226,11 +229,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function voteProposal(uint256 _proposalId, bool _isApprove) external override {
         _onlyKeeper();
-        _require(
-            IGovernor(GOVERNOR).state(_proposalId) == IGovernor.ProposalState.Active,
-            Errors.HEART_PROPOSAL_NOT_ACTIVE
-        );
-        _require(!IGovernor(GOVERNOR).hasVoted(_proposalId, address(this)), Errors.HEART_ALREADY_VOTED);
+        // Governor does revert if trying to cast a vote twice or if proposal is not active
         IGovernor(GOVERNOR).castVote(_proposalId, _isApprove ? 1 : 0);
         emit ProposalVote(block.timestamp, _proposalId, _isApprove);
     }
