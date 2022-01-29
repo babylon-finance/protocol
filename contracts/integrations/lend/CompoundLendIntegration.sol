@@ -120,6 +120,12 @@ contract CompoundLendIntegration is LendIntegration {
         return COMP;
     }
 
+    function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
+        ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
+        (, uint256 collateral, ) = IComptroller(comptroller).markets(address(ctoken));
+        return collateral;
+    }
+
     function _getRewardsAccrued(address _strategy) internal view virtual override returns (uint256) {
         return IComptroller(comptroller).compAccrued(_strategy);
     }

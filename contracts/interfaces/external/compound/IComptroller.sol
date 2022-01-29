@@ -10,6 +10,15 @@ interface IComptroller {
      */
     function isComptroller() external view returns (bool);
 
+    function markets(address _cToken)
+        external
+        view
+        returns (
+            bool,
+            uint256,
+            bool
+        );
+
     function getRewardsDistributors() external view returns (address[] memory);
 
     /*** Assets You Are In ***/

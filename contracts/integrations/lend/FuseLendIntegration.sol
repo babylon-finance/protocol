@@ -55,9 +55,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
         return address(0);
     }
 
-    function _getRewardsAccrued(
-        address _strategy
-    ) internal view override returns (uint256) {
+    function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
         address[] memory rewards = IComptroller(comptroller).getRewardsDistributors();
         if (rewards.length > 0) {
             return IRewardsDistributor(rewards[0]).compAccrued(_strategy);
