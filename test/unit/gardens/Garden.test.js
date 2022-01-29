@@ -309,102 +309,32 @@ describe('Garden', function () {
         ),
       ).to.be.reverted;
     });
+
+    async function testPublicSharing(shares) {
+      const newGarden = await createGarden({publicSharing : shares});
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+
+      expect(profitSharing[0]).to.equal(shares[0]);
+      expect(profitSharing[1]).to.equal(shares[1]);
+      expect(profitSharing[2]).to.equal(shares[2]);
+    }
+
     it('only the protocol should be able to custom garden profit sharing (95% to LP) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0'), eth('0'), eth('0.95')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0'));
-      expect(profitSharing[1]).to.equal(eth('0'));
-      expect(profitSharing[2]).to.equal(eth('0.95'));
+      await testPublicSharing([eth(0), eth(0), eth(0.95)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (95% to Stewards) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0'), eth('0.95'), eth('0')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0'));
-      expect(profitSharing[1]).to.equal(eth('0.95'));
-      expect(profitSharing[2]).to.equal(eth('0'));
+      await testPublicSharing([eth(0), eth(0.95), eth(0)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (95% to Strategist) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0.95'), eth('0'), eth('0')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0.95'));
-      expect(profitSharing[1]).to.equal(eth('0'));
-      expect(profitSharing[2]).to.equal(eth('0'));
+      await testPublicSharing([eth(0.95), eth(0), eth(0)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (15% , 40%, 40%) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0.15'), eth('0.40'), eth('0.40')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0.15'));
-      expect(profitSharing[1]).to.equal(eth('0.40'));
-      expect(profitSharing[2]).to.equal(eth('0.40'));
+      await testPublicSharing([eth(0.15), eth(0.40), eth(0.40)]);
     });
+
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation', async function () {
       await expect(
         babController
