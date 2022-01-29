@@ -1344,54 +1344,32 @@ describe('Garden', function () {
     });
 
     it('a contributor can make an initial deposit and withdraw with USDC', async function () {
-      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
-      const whaleSigner = await impersonateAddress(whaleAddress);
-      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
-      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
       });
-      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      const params = [...GARDEN_PARAMS_STABLE];
-      params[3] = thousandUSDC.div(10);
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.USDC,
-          'Absolute USDC Return [beta]',
-          'EYFA',
-          'http...',
-          0,
-          params,
-          thousandUSDC.div(10),
-          [false, false, false],
-          [0, 0, 0],
-          {},
-        );
-      const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
-      expect(await usdcGarden.totalContributors()).to.equal(1);
-      const gardenBalance = await usdc.balanceOf(usdcGarden.address);
-      const supplyBefore = await usdcGarden.totalSupply();
-      await mardukGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
-      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC, eth(1000), signer3.getAddress(), false);
-      const gardenBalanceAfter = await usdc.balanceOf(usdcGarden.address);
-      const supplyAfter = await usdcGarden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(eth('1000'), eth('0.1'));
-      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
-      expect(await usdcGarden.totalContributors()).to.equal(2);
-      ethers.provider.send('evm_increaseTime', [1]);
-      await usdcGarden
-        .connect(signer3)
-        .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
-      expect(await usdcGarden.totalContributors()).to.equal(1);
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
+
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
     });
 
     describe('mint NFT', async function () {
