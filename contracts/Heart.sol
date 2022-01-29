@@ -21,6 +21,7 @@ pragma abicoder v2;
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -51,6 +52,7 @@ import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
  *
  */
 contract Heart is OwnableUpgradeable, IHeart {
+    using SafeERC20 for IERC20;
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
@@ -120,7 +122,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     address private GOVERNOR;
 
     // Heart garden address
-    IGarden public heartGarden = IGarden(0x0);
+    IGarden public heartGarden;
 
     // Variables to handle garden seed investments
     address[] public override votedGardens;
@@ -201,7 +203,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
-        IERC20(WETH).transferFrom(address(this), TREASURY, wethBalance.preciseMul(feeDistributionWeights[0]));
+        IERC20(WETH).safeTransferFrom(address(this), TREASURY, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
@@ -298,7 +300,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) public override onlyGovernanceOrEmergency {
         // Get the BABL reward
-        IERC20(BABL).transferFrom(msg.sender, address(this), _bablAmount);
+        IERC20(BABL).safeTransferFrom(msg.sender, address(this), _bablAmount);
         bablRewardLeft = bablRewardLeft.add(_bablAmount);
         weeklyRewardAmount = _weeklyRate;
     }
@@ -392,7 +394,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _buyback(uint256 _amount) private {
         // Gift 100% BABL back to garden
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
-        IERC20(BABL).transfer(address(heartGarden), bablBought);
+        IERC20(BABL).safeTransfer(address(heartGarden), bablBought);
         totalStats[2] = totalStats[2].add(bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
@@ -428,7 +430,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             address reserveAsset = IGarden(votedGardens[i]).reserveAsset();
             uint256 amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
             // Gift it to garden
-            IERC20(reserveAsset).transferFrom(address(this), votedGardens[i], amountTraded);
+            IERC20(reserveAsset).safeTransferFrom(address(this), votedGardens[i], amountTraded);
             emit GardenSeedInvest(block.timestamp, votedGardens[i], _wethAmount.preciseMul(gardenWeights[i]));
         }
         totalStats[4] += _wethAmount;
@@ -462,7 +464,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _sendWeeklyReward() private {
         if (bablRewardLeft > 0) {
             uint256 bablToSend = bablRewardLeft > weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
-            IERC20(BABL).transferFrom(address(this), address(heartGarden), bablToSend);
+            IERC20(BABL).safeTransferFrom(address(this), address(heartGarden), bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
         }
     }

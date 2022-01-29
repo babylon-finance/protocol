@@ -404,7 +404,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newHeart      Address of the new heart
      */
-    function editHeart(address _newHeart) external override onlyOwner {
+    function editHeart(address _newHeart) external override onlyGovernanceOrEmergency {
         require(_newHeart != address(0), 'Address must not be 0');
 
         address oldHeart = heart;
