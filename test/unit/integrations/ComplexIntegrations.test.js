@@ -58,7 +58,7 @@ describe('ComplexIntegrationsTest', function () {
       await executeStrategy(strategyContract);
 
       const nav = await strategyContract.getNAV();
-      expect(nav).to.be.closeTo(eth(1100), eth(1000).div(10));
+      expect(nav).to.be.closeTo(eth(1100), eth(1100).div(10));
     });
 
     it(`DAI Garden (CompLend WETH->CompBorrow DAI->BuyOp DPI)`, async function () {
