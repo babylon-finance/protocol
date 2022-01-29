@@ -43,7 +43,6 @@ describe('FuseBorrowIntegrationTest', function () {
       [asset1Address, 0, asset2Address, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token].mul(7);
-    console.log('amount', ethers.utils.formatEther(amount));
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
