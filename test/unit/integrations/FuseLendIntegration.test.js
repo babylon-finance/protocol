@@ -44,7 +44,7 @@ describe('FuseLendIntegrationTest', function () {
     });
 
     it('gets the reward token', async function () {
-      expect(await fuseLendIntegration.getRewardToken()).to.equal(ADDRESS_ZERO);
+      expect(await fuseLendIntegration.getRewardToken()).to.equal(BABL.address);
     });
 
     it('can get the amount of rewards', async function () {

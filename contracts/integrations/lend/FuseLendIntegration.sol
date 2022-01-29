@@ -19,6 +19,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
+import {IRewardsDistributor} from '../../interfaces/external/compound/IRewardsDistributor.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {CompoundLendIntegration} from './CompoundLendIntegration.sol';
@@ -46,21 +47,29 @@ contract FuseLendIntegration is CompoundLendIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getRewardToken() internal pure override returns (address) {
+    function _getRewardToken() internal view override returns (address) {
+        address[] memory rewards = IComptroller(comptroller).getRewardsDistributors();
+        if (rewards.length > 0) {
+          return IRewardsDistributor(rewards[0]).rewardToken();
+        }
         return address(0);
     }
 
     function _getRewardsAccrued(
         address /* _strategy */
-    ) internal pure override returns (uint256) {
+    ) internal view override returns (uint256) {
+        address[] memory rewards = IComptroller(comptroller).getRewardsDistributors();
+        if (rewards.length > 0) {
+          return IRewardsDistributor(rewards[0]).compAccrued();
+        }
         return 0;
     }
 
     function _claimRewardsCallData(
-        address /* _strategy */
+        address _strategy
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -68,6 +77,10 @@ contract FuseLendIntegration is CompoundLendIntegration {
             bytes memory
         )
     {
+        address[] memory rewards = IComptroller(comptroller).getRewardsDistributors();
+        if (rewards.length > 0) {
+          return (rewards[0], 0, abi.encodeWithSignature('claimRewards(address)', _strategy));
+        }
         return (address(0), 0, bytes(''));
     }
 }

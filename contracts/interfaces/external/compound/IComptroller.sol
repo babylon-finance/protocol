@@ -10,6 +10,8 @@ interface IComptroller {
      */
     function isComptroller() external view returns (bool);
 
+    function getRewardsDistributors() external view returns (address[] memory);
+
     /*** Assets You Are In ***/
 
     function enterMarkets(address[] calldata cTokens) external returns (uint256[] memory);
