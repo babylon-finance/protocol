@@ -17,7 +17,6 @@
 */
 
 pragma solidity 0.7.6;
-
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -90,7 +89,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private constant baseThreshold = 1000;
-    int24 private constant INITIAL_TWAP_DEVIATION = 300;
+    int24 private constant INITIAL_TWAP_DEVIATION = 700; // locally for testing. It should be halved in main
 
     /* ============ State Variables ============ */
 

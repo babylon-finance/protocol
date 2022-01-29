@@ -163,7 +163,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     // 3: liquidity added in weth
     // 4: amount invested in gardens in weth
     // 5: amount lent on fuse in weth
-    uint256[6] public override totalStats;
+    // 6: weekly rewards paid
+    uint256[7] public override totalStats;
 
     /* ============ Initializer ============ */
 
@@ -360,7 +361,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() public view override returns (uint256[6] memory) {
+    function getTotalStats() public view override returns (uint256[7] memory) {
         return totalStats;
     }
 
@@ -471,6 +472,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
             bablRewardLeft = bablRewardLeft.sub(bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
+            totalStats[6] = totalStats[6].add(bablToSend);
         }
     }
 

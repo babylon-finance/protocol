@@ -45,7 +45,8 @@ describe('FuseBorrowIntegrationTest', function () {
     const amount = STRATEGY_EXECUTE_MAP[token].mul(7);
     await executeStrategy(strategyContract, { amount });
     // Check NAV
-    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+    console.log('calling NAV');
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
     if (asset1.address === WETH.address) {
       expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
     } else {
@@ -125,10 +126,6 @@ describe('FuseBorrowIntegrationTest', function () {
     await cFEI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
     await increaseTime(86400 * 20);
     await cFRAX.connect(owner).accrueInterest({ gasPrice: 0 });
-    // console.log('frax liquidity', ethers.utils.formatEther(await cFRAX.getCash()));
-    // console.log('frax supply', ethers.utils.formatEther(await cFRAX.totalSupply()));
-    // console.log('frax borrowRatePerBlock', ethers.utils.formatEther(await cFRAX.borrowRatePerBlock()));
-    // console.log('frax totalBorrowsCurrent', ethers.utils.formatEther(await cFRAX.totalBorrowsCurrent()));
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
@@ -136,14 +133,14 @@ describe('FuseBorrowIntegrationTest', function () {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
-      it.skip(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
+      it(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(BABL, FEI, token);
       });
-      it(`can supply DAI and borrow BABL at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(DAI, BABL, token);
+      it(`can supply FRAX and borrow DAI at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(FRAX, DAI, token);
       });
-      it(`can supply DAI and borrow ETH at Fuse in a ${name} Garden`, async function () {
-        await supplyBorrowStrategy(DAI, WETH, token);
+      it(`can supply FEI and borrow ETH at Fuse in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(FEI, WETH, token);
       });
       it.skip(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
