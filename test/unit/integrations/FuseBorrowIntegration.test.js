@@ -43,9 +43,9 @@ describe('FuseBorrowIntegrationTest', function () {
       [asset1Address, 0, asset2Address, 0],
     );
     const amount = STRATEGY_EXECUTE_MAP[token].mul(7);
+    console.log('amount', ethers.utils.formatEther(amount));
     await executeStrategy(strategyContract, { amount });
     // Check NAV
-    console.log('calling NAV');
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
     if (asset1.address === WETH.address) {
       expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
@@ -129,7 +129,7 @@ describe('FuseBorrowIntegrationTest', function () {
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
-    pick(GARDENS).forEach(({ token, name }) => {
+    pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
