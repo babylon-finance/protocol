@@ -57,6 +57,13 @@ contract Heart is OwnableUpgradeable, IHeart {
 
     /* ============ Modifiers ============ */
 
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+    function _onlyKeeper() private view {
+        _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+    }
+
     modifier onlyGovernanceOrEmergency {
         _require(
             msg.sender == owner() || msg.sender == controller.EMERGENCY_OWNER(),
@@ -79,7 +86,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     /* ============ Constants ============ */
 
     // Only for offline use by keeper/fauna
-    bytes32 private constant VOTE_PROPOSAL_TYPEHASH = keccak256('ProposalVote(uint256 _proposalId,uint256 _amount,bool _isApprove)');
+    bytes32 private constant VOTE_PROPOSAL_TYPEHASH =
+        keccak256('ProposalVote(uint256 _proposalId,uint256 _amount,bool _isApprove)');
     bytes32 private constant VOTE_GARDEN_TYPEHASH = keccak256('GardenVote(address _garden,uint256 _amount)');
 
     // Visor
@@ -194,14 +202,14 @@ contract Heart is OwnableUpgradeable, IHeart {
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).transferFrom(address(this), TREASURY, wethBalance.preciseMul(feeDistributionWeights[0]));
-        totalStats[1] += wethBalance.preciseMul(feeDistributionWeights[0]);
-        // 50% for buybacks
+        totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
+        // 30% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
-        // 15% to BABL-ETH pair
+        // 25% to BABL-ETH pair
         _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
         // 15% to Garden Investments
         _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]));
-        // 10% lend in fuse pool
+        // 20% lend in fuse pool
         _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[4]));
         // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
@@ -272,7 +280,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
-     * Set the weights to allocate to different heart initiatives
+     * Updates the next asset to lend on fuse pool
      *
      * @param _assetToLend             New asset to lend
      */
@@ -291,7 +299,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) public override onlyGovernanceOrEmergency {
         // Get the BABL reward
         IERC20(BABL).transferFrom(msg.sender, address(this), _bablAmount);
-        bablRewardLeft += _bablAmount;
+        bablRewardLeft = bablRewardLeft.add(_bablAmount);
         weeklyRewardAmount = _weeklyRate;
     }
 
@@ -313,6 +321,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     function setHeartGardenAddress(address _heartGarden) public override onlyGovernanceOrEmergency {
         heartGarden = IGarden(_heartGarden);
     }
+
+    // solhint-disable-next-line
+    receive() external payable {}
 
     /* ============ External View Functions ============ */
 
@@ -365,10 +376,10 @@ contract Heart is OwnableUpgradeable, IHeart {
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
             // Trade if it's above a min amount (otherwise wait until next pump)
             if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
-                totalStats[0] += _trade(reserveAsset, address(WETH), balance);
+                totalStats[0] = totalStats[0].add(_trade(reserveAsset, address(WETH), balance));
             }
             if (reserveAsset == address(WETH)) {
-                totalStats[0] += balance;
+                totalStats[0] = totalStats[0].add(balance);
             }
         }
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
@@ -382,7 +393,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Gift 100% BABL back to garden
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
         IERC20(BABL).transfer(address(heartGarden), bablBought);
-        totalStats[2] += bablBought;
+        totalStats[2] = totalStats[2].add(bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
 
@@ -441,7 +452,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             IERC20(assetToLend).approve(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
-        totalStats[5] += _wethAmount;
+        totalStats[5] = totalStats[5].add(_wethAmount);
         emit FuseLentAsset(block.timestamp, assetToLend, _wethAmount);
     }
 
@@ -493,13 +504,6 @@ contract Heart is OwnableUpgradeable, IHeart {
                 sqrtPriceLimitX96: 0
             });
         return swapRouter.exactInputSingle(params);
-    }
-
-    /**
-     * Throws if the sender is not a keeper in the protocol
-     */
-    function _onlyKeeper() private view {
-        _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
     /**
