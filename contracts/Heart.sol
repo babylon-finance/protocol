@@ -113,12 +113,15 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Fuse
     address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
 
+    /* ============ Immutables ============ */
+
+    IBabController private immutable controller;
+    IGovernor private immutable governor;
+    address private immutable treasury;
+
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
-    IBabController private controller;
-    IGovernor private governor;
-    address private treasury;
 
     // Heart garden address
     IGarden public heartGarden;
@@ -167,20 +170,32 @@ contract Heart is OwnableUpgradeable, IHeart {
     /* ============ Initializer ============ */
 
     /**
-     * Set state variables and map asset pairs to their oracles
+     * Set controller and governor addresses
      *
      * @param _controller             Address of controller contract
      * @param _governor               Address of governor contract
+     */
+    constructor(
+        IBabController _controller,
+        IGovernor _governor
+        ) initializer {
+        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_governor) != address(0), Errors.ADDRESS_IS_ZERO);
+
+        controller = _controller;
+        treasury = _controller.treasury();
+        governor = _governor;
+    }
+
+    /**
+     * Set state variables and map asset pairs to their oracles
+     *
      * @param _feeWeights             Weights of the fee distribution
      */
     function initialize(
-        IBabController _controller,
-        IGovernor _governor,
         uint256[] calldata _feeWeights
     ) public {
         OwnableUpgradeable.__Ownable_init();
-        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
-        controller = _controller;
         updateFeeWeights(_feeWeights);
         updateMarkets();
         updateAssetToLend(address(DAI));
@@ -188,8 +203,6 @@ contract Heart is OwnableUpgradeable, IHeart {
         minAmounts[address(USDC)] = 500e6;
         minAmounts[address(WETH)] = 5e17;
         minAmounts[address(WBTC)] = 3e6;
-        treasury = _controller.treasury();
-        governor = _governor;
         // Self-delegation to be able to use BABL balance as voting power
         IVoteToken(address(BABL)).delegate(address(this));
     }
