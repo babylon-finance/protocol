@@ -175,10 +175,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _controller             Address of controller contract
      * @param _governor               Address of governor contract
      */
-    constructor(
-        IBabController _controller,
-        IGovernor _governor
-        ) initializer {
+    constructor(IBabController _controller, IGovernor _governor) initializer {
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         _require(address(_governor) != address(0), Errors.ADDRESS_IS_ZERO);
 
@@ -192,9 +189,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _feeWeights             Weights of the fee distribution
      */
-    function initialize(
-        uint256[] calldata _feeWeights
-    ) public {
+    function initialize(uint256[] calldata _feeWeights) public {
         OwnableUpgradeable.__Ownable_init();
         updateFeeWeights(_feeWeights);
         updateMarkets();

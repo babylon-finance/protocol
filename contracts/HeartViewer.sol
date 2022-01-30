@@ -57,7 +57,11 @@ contract HeartViewer {
 
     /* ============ External function  ============ */
 
-    constructor(IBabController _controller, IGovernor _governor, IHeart _heart) {
+    constructor(
+        IBabController _controller,
+        IGovernor _governor,
+        IHeart _heart
+    ) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(address(_governor) != address(0), 'Governor must exist');
 
@@ -79,8 +83,7 @@ contract HeartViewer {
         external
         view
         returns (
-            address, // address of the heart garden
-            address, // asset to lend next
+            address[2] memory, // address of the heart garden
             uint256[7] memory, // total stats
             uint256[] memory, // fee weights
             address[] memory, // voted gardens
@@ -94,8 +97,7 @@ contract HeartViewer {
         (uint256 wethAmountF, uint256 bablAmountF) = visor_full.getTotalAmounts();
 
         return (
-            address(0),
-            address(0),
+            [address(heartGarden), heart.assetToLend()],
             heart.getTotalStats(),
             heart.getFeeDistributionWeights(),
             heart.getVotedGardens(),
