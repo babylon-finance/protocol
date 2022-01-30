@@ -59,6 +59,7 @@ contract HeartViewer {
     constructor(IBabController _controller, IGovernor _governor) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(address(_governor) != address(0), 'Governor must exist');
+
         controller = _controller;
         governor = _governor;
     }

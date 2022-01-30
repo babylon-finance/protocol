@@ -22,11 +22,16 @@ module.exports = async ({
   const heart = await upgradesDeployer.deployAdminProxy(
     'Heart',
     'HeartProxy',
-    { from: deployer, log: true, gasPrice },
+    {
+      from: deployer,
+      log: true,
+      gasPrice,
+      args: [controller.address, (await deployments.get('BabylonGovernor')).address],
+    },
     {
       initializer: {
         method: 'initialize',
-        args: [controller.address, governor.address, [eth('0.10'), eth('0.50'), eth('0.15'), eth('0.15'), eth('0.10')]],
+        args: [[eth(0.1), eth(0.5), eth(0.15), eth(0.15), eth(0.1)]],
       },
     },
   );
