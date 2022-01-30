@@ -11,8 +11,8 @@ const {
   claimTokens,
 } = require('utils/gov-helpers');
 const { getContractFactory } = require('@nomiclabs/hardhat-ethers/types');
-const { impersonateAddress } = require('../../lib/rpc');
-const { ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
+const { impersonateAddress } = require('lib/rpc');
+const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
 describe('Heart Unit Test', function () {
   let heartGarden;
@@ -74,6 +74,7 @@ describe('Heart Unit Test', function () {
 
   describe('can update attributes', async function () {
     it('can update the min trade amount ', async function () {
+      
       await heart.connect(owner).setMinTradeAmount(addresses.tokens.DAI, ethers.utils.parseEther('800'));
       expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(ethers.utils.parseEther('800'));
     });
@@ -162,6 +163,7 @@ describe('Heart Unit Test', function () {
       expect(heartSupport).to.eq(1);
       expect(heartVotes).to.eq(heartGardenBABLBalance);
     });
+
     it.skip('cannot vote for proposal that is not active', async function () {
       // It works, skipped due to it takes long time to increase blocks as it is using real governor
       // TODO: needs mocks
@@ -185,6 +187,7 @@ describe('Heart Unit Test', function () {
       const state = await governor.state(id);
       expect(state).to.eq(proposalState.Defeated);
     });
+
     it('can only vote for a proposal once', async function () {
       const { id, args } = await getProposal(governor);
       // Get delegation from Heart Garden
@@ -199,6 +202,7 @@ describe('Heart Unit Test', function () {
         'GovernorCompatibilityBravo: vote already cast',
       );
     });
+
     it('heart does increase its voting power by each new BABL received as it self delegated in constructor', async function () {
       const heartVotingPower1 = await token.getCurrentVotes(heart.address);
       const heartSigner = await impersonateAddress(heart.address);

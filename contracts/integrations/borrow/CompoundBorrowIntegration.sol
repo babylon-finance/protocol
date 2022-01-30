@@ -61,7 +61,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
 
     /* ============ State Variables ============ */
 
-    address internal immutable comptroller;
+    IComptroller internal immutable comptroller;
 
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCToken;
@@ -80,24 +80,17 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         string memory _name,
         IBabController _controller,
         uint256 _maxCollateralFactor,
-        address _comptroller
+        IComptroller _comptroller
     ) BorrowIntegration(_name, _controller, _maxCollateralFactor) {
         comptroller = _comptroller;
-        overrideMappings(_comptroller);
+        _overrideMappings(_comptroller);
     }
 
     /* ============ External Functions ============ */
 
     // Governance function
-    function overrideMappings(address _comptroller) public onlyGovernanceOrEmergency {
-        address[] memory markets = IComptroller(_comptroller).getAllMarkets();
-        for (uint256 i = 0; i < markets.length; i++) {
-            address underlying = address(0);
-            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
-                underlying = ICToken(markets[i]).underlying();
-            }
-            assetToCToken[underlying] = markets[i];
-        }
+    function overrideMappings() external onlyGovernanceOrEmergency {
+        _overrideMappings(comptroller);
     }
 
     /**
@@ -153,6 +146,19 @@ contract CompoundBorrowIntegration is BorrowIntegration {
 
     /* ============ Overriden Functions ============ */
 
+    function _overrideMappings(IComptroller _comptroller) private {
+        address[] memory markets = _comptroller.getAllMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            address underlying = address(0);
+            // Skip cEther
+            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
+                underlying = ICToken(markets[i]).underlying();
+            }
+            assetToCToken[underlying] = markets[i];
+        }
+    }
+
+
     /**
      * Return pre action calldata
      *
@@ -183,7 +189,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             address[] memory markets = new address[](1);
             markets[0] = assetToCToken[_asset];
             bytes memory methodData = abi.encodeWithSignature('enterMarkets(address[])', markets);
-            return (comptroller, 0, methodData);
+            return (address(comptroller), 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }

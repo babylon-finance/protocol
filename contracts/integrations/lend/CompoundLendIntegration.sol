@@ -18,21 +18,21 @@
 
 pragma solidity 0.7.6;
 
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import { ERC20 } from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import { SafeCast } from '@openzeppelin/contracts/utils/SafeCast.sol';
+import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import { ReentrancyGuard } from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
-import {ICToken} from '../../interfaces/external/compound/ICToken.sol';
-import {IComptroller} from '../../interfaces/external/compound/IComptroller.sol';
-import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {IBabController} from '../../interfaces/IBabController.sol';
+import { ICToken } from '../../interfaces/external/compound/ICToken.sol';
+import { IComptroller } from '../../interfaces/external/compound/IComptroller.sol';
+import { IGarden } from '../../interfaces/IGarden.sol';
+import { IStrategy } from '../../interfaces/IStrategy.sol';
+import { IBabController } from '../../interfaces/IBabController.sol';
 
-import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
-import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import { LowGasSafeMath } from '../../lib/LowGasSafeMath.sol';
+import { UniversalERC20 } from '../../lib/UniversalERC20.sol';
 
-import {LendIntegration} from './LendIntegration.sol';
+import { LendIntegration } from './LendIntegration.sol';
 
 /**
  * @title CompoundLendIntegration
@@ -60,7 +60,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     /* ============ Constant ============ */
 
-    address internal immutable comptroller;
+    IComptroller internal immutable comptroller;
 
     address private constant COMP = 0xc00e94Cb662C3520282E6f5717214004A7f26888;
 
@@ -83,25 +83,17 @@ contract CompoundLendIntegration is LendIntegration {
     constructor(
         string memory _name,
         IBabController _controller,
-        address _comptroller
+        IComptroller _comptroller
     ) LendIntegration(_name, _controller) {
         comptroller = _comptroller;
-        overrideMappings(_comptroller);
+        _overrideMappings(_comptroller);
     }
 
     /* ============ External Functions ============ */
 
     // Governance function
-    function overrideMappings(address _comptroller) public onlyGovernanceOrEmergency {
-        address[] memory markets = IComptroller(_comptroller).getAllMarkets();
-        for (uint256 i = 0; i < markets.length; i++) {
-            address underlying = address(0);
-            // Skip cEther
-            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
-                underlying = ICToken(markets[i]).underlying();
-            }
-            assetToCToken[underlying] = markets[i];
-        }
+    function overrideMappings() external onlyGovernanceOrEmergency {
+        _overrideMappings(comptroller);
     }
 
     // Governance function
@@ -115,6 +107,18 @@ contract CompoundLendIntegration is LendIntegration {
     }
 
     /* ============ Internal Functions ============ */
+
+    function _overrideMappings(IComptroller _comptroller) private {
+        address[] memory markets = _comptroller.getAllMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            address underlying = address(0);
+            // Skip cEther
+            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
+                underlying = ICToken(markets[i]).underlying();
+            }
+            assetToCToken[underlying] = markets[i];
+        }
+    }
 
     function _getRewardToken() internal view virtual override returns (address) {
         return COMP;
@@ -193,7 +197,7 @@ contract CompoundLendIntegration is LendIntegration {
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSignature('claimComp(address)', _strategy);
 
-        return (comptroller, 0, methodData);
+        return (address(comptroller), 0, methodData);
     }
 
     /**
@@ -258,7 +262,7 @@ contract CompoundLendIntegration is LendIntegration {
             address[] memory markets = new address[](1);
             markets[0] = assetToCToken[_asset];
             bytes memory methodData = abi.encodeWithSignature('enterMarkets(address[])', markets);
-            return (comptroller, 0, methodData);
+            return (address(comptroller), 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
