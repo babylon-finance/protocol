@@ -16,6 +16,7 @@ module.exports = async ({
 
   const controller = await deployments.get('BabControllerProxy');
   const governor = await getContract('BabylonGovernor');
+  const HEART_GARDEN_ADDRES = ''; // todo: put garden address once created
 
   const deployment = await deploy(contract, {
     from: deployer,
@@ -29,6 +30,9 @@ module.exports = async ({
   }
 
   if (network.live && deployment.newlyDeployed) {
+    if (HEART_GARDEN_ADDRES) {
+      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { gasPrice })).wait();
+    }
     await tenderly.push(await getTenderlyContract(contract));
   }
 };

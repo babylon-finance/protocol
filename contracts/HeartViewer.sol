@@ -22,6 +22,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IHeart} from './interfaces/IHeart.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
+import {IGarden} from './interfaces/IGarden.sol';
 import {IGovernor} from './interfaces/external/oz/IGovernor.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 
@@ -34,16 +35,36 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 contract HeartViewer {
     using SafeMath for uint256;
 
+    /* ============ Modifiers ============ */
+
+    /**
+     * Throws if the sender is not a keeper in the protocol
+     */
+
+    modifier onlyGovernanceOrEmergency {
+        require(msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(), 'Non valid');
+        _;
+    }
+
+    /* ============ Variables ============ */
+
     IBabController public immutable controller;
     IGovernor public immutable governor;
+    IGarden public heartGarden;
     IHypervisor public constant visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
     IHypervisor public constant visor_full = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
+
+    /* ============ External function  ============ */
 
     constructor(IBabController _controller, IGovernor _governor) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(address(_governor) != address(0), 'Governor must exist');
         controller = _controller;
         governor = _governor;
+    }
+
+    function setHeartGarden(IGarden _heartGarden) external onlyGovernanceOrEmergency {
+        heartGarden = _heartGarden;
     }
 
     /* ============ External Getter Functions ============ */
@@ -55,6 +76,7 @@ contract HeartViewer {
         external
         view
         returns (
+            address, // address of the heart garden
             address, // asset to lend next
             uint256[7] memory, // total stats
             uint256[] memory, // fee weights
@@ -69,6 +91,7 @@ contract HeartViewer {
         (uint256 wethAmount, uint256 bablAmount) = visor.getTotalAmounts();
         (uint256 wethAmountF, uint256 bablAmountF) = visor_full.getTotalAmounts();
         return (
+            address(heartGarden),
             heart.assetToLend(),
             heart.getTotalStats(),
             heart.getFeeDistributionWeights(),
