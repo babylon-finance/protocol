@@ -94,7 +94,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     bytes32 private constant VOTE_GARDEN_TYPEHASH = keccak256('GardenVote(address _garden,uint256 _amount)');
 
     // Visor
-    IHypervisor private constant visor = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
+    IHypervisor private constant visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
 
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
@@ -117,10 +117,8 @@ contract Heart is OwnableUpgradeable, IHeart {
 
     // Instance of the Controller contract
     IBabController private controller;
-
-    // Babylon addresses
-    address private TREASURY;
-    address private GOVERNOR;
+    IGovernor private governor;
+    address private treasury;
 
     // Heart garden address
     IGarden public heartGarden;
@@ -172,9 +170,14 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Set state variables and map asset pairs to their oracles
      *
      * @param _controller             Address of controller contract
+     * @param _governor               Address of governor contract
      * @param _feeWeights             Weights of the fee distribution
      */
-    function initialize(IBabController _controller, uint256[] calldata _feeWeights) public {
+    function initialize(
+        IBabController _controller,
+        IGovernor _governor,
+        uint256[] calldata _feeWeights
+    ) public {
         OwnableUpgradeable.__Ownable_init();
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         controller = _controller;
@@ -185,8 +188,8 @@ contract Heart is OwnableUpgradeable, IHeart {
         minAmounts[address(USDC)] = 500e6;
         minAmounts[address(WETH)] = 5e17;
         minAmounts[address(WBTC)] = 3e6;
-        TREASURY = _controller.treasury();
-        GOVERNOR = 0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24;
+        treasury = _controller.treasury();
+        governor = _governor;
         // Self-delegation to be able to use BABL balance as voting power
         IVoteToken(address(BABL)).delegate(address(this));
     }
@@ -207,7 +210,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
-        IERC20(WETH).safeTransferFrom(address(this), TREASURY, wethBalance.preciseMul(feeDistributionWeights[0]));
+        IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
@@ -231,7 +234,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     function voteProposal(uint256 _proposalId, bool _isApprove) external override {
         _onlyKeeper();
         // Governor does revert if trying to cast a vote twice or if proposal is not active
-        IGovernor(GOVERNOR).castVote(_proposalId, _isApprove ? 1 : 0);
+        IGovernor(governor).castVote(_proposalId, _isApprove ? 1 : 0);
         emit ProposalVote(block.timestamp, _proposalId, _isApprove);
     }
 
@@ -395,7 +398,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Gift 50% BABL back to garden and send 50% to the treasury
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
         IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
-        IERC20(BABL).safeTransfer(TREASURY, bablBought.div(2));
+        IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
         totalStats[2] = totalStats[2].add(bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
@@ -411,10 +414,10 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit); // 50%
         BABL.approve(address(visor), bablTraded);
         WETH.approve(address(visor), wethToDeposit);
-        uint256 oldTreasuryBalance = visor.balanceOf(TREASURY);
-        uint256 shares = visor.deposit(wethToDeposit, bablTraded, TREASURY);
+        uint256 oldTreasuryBalance = visor.balanceOf(treasury);
+        uint256 shares = visor.deposit(wethToDeposit, bablTraded, treasury);
         _require(
-            shares == visor.balanceOf(TREASURY).sub(oldTreasuryBalance) && visor.balanceOf(TREASURY) > 0,
+            shares == visor.balanceOf(treasury).sub(oldTreasuryBalance) && visor.balanceOf(treasury) > 0,
             Errors.HEART_LP_TOKENS
         );
         totalStats[3] += _wethBalance;

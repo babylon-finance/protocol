@@ -56,6 +56,23 @@ abstract contract IGovernor {
      */
     function version() public view virtual returns (string memory);
 
+    function proposals(uint256 _proposalId)
+        public
+        view
+        virtual
+        returns (
+            uint256,
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            bool
+        );
+
     /**
      * @notice module:voting
      * @dev A description of the possible `support` values for {castVote} and the way these votes are counted, meant to

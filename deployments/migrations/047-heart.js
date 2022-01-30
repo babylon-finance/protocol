@@ -8,6 +8,7 @@ module.exports = async ({
   deployments,
   ethers,
   getGasPrice,
+  getContract,
   getController,
 }) => {
   const { deploy } = deployments;
@@ -16,6 +17,7 @@ module.exports = async ({
   const gasPrice = await getGasPrice();
 
   const controller = await getController();
+  const governor = await getContract('BabylonGovernor');
 
   const heart = await upgradesDeployer.deployAdminProxy(
     'Heart',
@@ -24,7 +26,7 @@ module.exports = async ({
     {
       initializer: {
         method: 'initialize',
-        args: [controller.address, [eth('0.10'), eth('0.50'), eth('0.15'), eth('0.15'), eth('0.10')]],
+        args: [controller.address, governor.address, [eth('0.10'), eth('0.50'), eth('0.15'), eth('0.15'), eth('0.10')]],
       },
     },
   );

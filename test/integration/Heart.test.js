@@ -57,7 +57,7 @@ describe('Heart Integration Test', function () {
     feeDistributionWeights = await heart.connect(owner).getFeeDistributionWeights();
     // Impersonate visor and add heart to the whitelist
     const visorOwner = await impersonateAddress('0xc40ccde9c951ace468154d1d39917d8f8d11b38c');
-    const visor = await ethers.getContractAt('IHypervisor', '0x5e6c481dE496554b66657Dd1CA1F70C61cf11660');
+    const visor = await ethers.getContractAt('IHypervisor', '0xF19F91d7889668A533F14d076aDc187be781a458');
     await visor.connect(visorOwner).appendList([heart.address], { gasPrice: 0 });
     // Adds weekly rewards
     await BABL.connect(owner).approve(heart.address, ethers.utils.parseEther('5000'));
