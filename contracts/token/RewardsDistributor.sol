@@ -84,9 +84,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyGovernanceOrEmergency() private view {
         _require(
-            msg.sender == controller.owner() ||
+            msg.sender == IBabController(controller).owner() ||
                 msg.sender == owner() ||
-                msg.sender == controller.EMERGENCY_OWNER() ||
+                msg.sender == IBabController(controller).EMERGENCY_OWNER() ||
                 msg.sender == address(controller),
             Errors.ONLY_GOVERNANCE_OR_EMERGENCY
         );
@@ -135,7 +135,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ State Variables ============ */
 
     // solhint-disable-next-line
-    uint256 private START_TIME; // Starting time of the rewards distribution
+    uint256 public override START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
     uint256 private strategistBABLPercentage;
@@ -296,7 +296,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
     // Rewards Assistant for rewards calculations
-    address public override rewardsAssistant;
+    IRewardsAssistant public rewardsAssistant;
 
     /* ============ Constructor ============ */
 
@@ -446,13 +446,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Updates Rewards Assistant contract
      * @param _newRewardsAssistant      Array of new mining params to be set by government
      */
-    function setRewardsAssistant(address _newRewardsAssistant) external {
-        _onlyGovernanceOrEmergency();
+    function setRewardsAssistant(address _newRewardsAssistant) external override onlyOwner {
         _require(
-            _newRewardsAssistant != address(0) && _newRewardsAssistant != rewardsAssistant,
+            _newRewardsAssistant != address(0) && _newRewardsAssistant != address(rewardsAssistant),
             Errors.INVALID_ADDRESS
         );
-        rewardsAssistant = _newRewardsAssistant;
+        rewardsAssistant = IRewardsAssistant(_newRewardsAssistant);
     }
 
     /* ========== View functions ========== */

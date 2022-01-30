@@ -16,20 +16,14 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
-import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -37,11 +31,10 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IRewardsAssistant} from '../interfaces/IRewardsAssistant.sol';
-import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IProphets} from '../interfaces/IProphets.sol';
 
 /**
- * @title Rewards Viewer is an assistant contract for Rewards Distributor
+ * @title Rewards Assistant is an assistant contract for Rewards Distributor
  * @author Babylon Finance
  */
 contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
@@ -53,18 +46,12 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
     using SafeDecimalMath for int256;
     using Math for uint256;
     using Math for int256;
-    using Safe3296 for uint256;
-    using Safe3296 for int256;
-    using Safe3296 for uint96;
-    using Safe3296 for uint32;
 
     /* ========== Events ========== */
 
     /* ============ Modifiers ============ */
 
     /* ============ Constants ============ */
-    // Starting time of the rewards distribution
-    uint256 private constant START_TIME = 1634419058;
     // 500K BABL allocated to this BABL Mining Program, the first quarter is Q1_REWARDS
     // and the following quarters will follow the supply curve using a decay rate
     uint256 private constant Q1_REWARDS = 53_571_428_571_428_600e6; // First quarter (epoch) BABL rewards
@@ -75,41 +62,28 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
     uint256 private constant EPOCH_DURATION = 90 days;
     // DAI normalize asset
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
-
-    // Reentrancy guard countermeasure
-    uint256 private status;
 
     /* ============ State Variables ============ */
 
     // Instance of the Controller contract
     IBabController private controller;
 
-    // BABL Token contract
-    TimeLockedToken private babltoken;
-
     // Rewards Distributor
     IRewardsDistributor private rewardsDistributor;
 
+    // Starting time of the rewards distribution
+    uint256 private START_TIME;
+
     /* ============ Constructor ============ */
 
-    function initialize(
-        TimeLockedToken _bablToken,
-        IBabController _controller,
-        IRewardsDistributor _rewardsDistributor
-    ) public {
+    function initialize(IBabController _controller) public {
         OwnableUpgradeable.__Ownable_init();
-        _require(
-            address(_bablToken) != address(0) &&
-                address(_controller) != address(0) &&
-                address(_rewardsDistributor) != address(0),
-            Errors.ADDRESS_IS_ZERO
-        );
-        babltoken = _bablToken;
+        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         controller = _controller;
-        rewardsDistributor = _rewardsDistributor;
+        rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
+        START_TIME = IRewardsDistributor(rewardsDistributor).START_TIME();
     }
 
     /* ============ External Functions ============ */
@@ -622,7 +596,7 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
         uint256[] memory _strategyDetails,
         bool[] memory _profitData,
         uint256 _strategistBABLPercentage
-    ) private view returns (uint256) {
+    ) private pure returns (uint256) {
         // Assumptions:
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
@@ -652,7 +626,7 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
      */
     function _getStrategyStrategistProfits(uint256 _profitValue, uint256 _strategistProfitPercentage)
         private
-        view
+        pure
         returns (uint256)
     {
         // Assumptions:
@@ -671,7 +645,7 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
         uint256 _strategyRewards,
         uint256 _contributorShare,
         uint256 _lpsBABLPercentage
-    ) private view returns (uint256) {
+    ) private pure returns (uint256) {
         // All params must have 18 decimals precision
         return _strategyRewards.multiplyDecimal(_lpsBABLPercentage).preciseMul(_contributorShare);
     }
