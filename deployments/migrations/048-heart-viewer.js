@@ -16,11 +16,12 @@ module.exports = async ({
 
   const controller = await deployments.get('BabControllerProxy');
   const governor = await getContract('BabylonGovernor');
+  const heart = await deployments.get('HeartProxy');
   const HEART_GARDEN_ADDRES = ''; // todo: put garden address once created
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, governor.address],
+    args: [controller.address, governor.address, heart.address],
     log: true,
     gasPrice,
   });
