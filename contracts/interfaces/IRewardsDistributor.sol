@@ -25,7 +25,17 @@ pragma solidity 0.7.6;
  */
 
 interface IRewardsDistributor {
+    /* ========== State variables ========== */
+
+    function bablPrincipalWeight() external view returns (uint256);
+
+    function bablProfitWeight() external view returns (uint256);
+
+    function rewardsAssistant() external view returns (address);
+
     /* ========== View functions ========== */
+
+    function getBenchmark() external view returns (uint256[5] memory);
 
     function getStrategyRewards(address _strategy) external view returns (uint256);
 
@@ -35,13 +45,27 @@ interface IRewardsDistributor {
         address[] calldata _finalizedStrategies
     ) external view returns (uint256[] memory);
 
-    function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
-
-    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[17] memory);
-
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);
+
+    function getGardenProfitsSharing(address _garden) external view returns (uint256[3] memory);
+
+    function getSafeUserSharePerStrategy(
+        address _garden,
+        address _contributor,
+        address _strategy
+    ) external view returns (uint256);
+
+    function checkMining(uint256 _quarterNum, address _strategy) external view returns (uint256[18] memory);
+
+    function getInitialStrategyPower(
+        address _strategy,
+        uint256 _numQuarters,
+        uint256 _startingQuarter
+    ) external view returns (uint256[] memory, uint256[] memory);
+
+    function getRoleWeights(address _garden) external view returns (uint256[7] memory roleWeights);
 
     function getPriorBalance(
         address _garden,
