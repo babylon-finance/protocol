@@ -74,7 +74,6 @@ describe('Heart Unit Test', function () {
 
   describe('can update attributes', async function () {
     it('can update the min trade amount ', async function () {
-      
       await heart.connect(owner).setMinTradeAmount(addresses.tokens.DAI, ethers.utils.parseEther('800'));
       expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(ethers.utils.parseEther('800'));
     });

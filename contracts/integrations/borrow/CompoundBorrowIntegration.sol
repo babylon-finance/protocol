@@ -158,7 +158,6 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         }
     }
 
-
     /**
      * Return pre action calldata
      *
