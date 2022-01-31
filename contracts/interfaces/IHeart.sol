@@ -56,9 +56,9 @@ interface IHeart {
 
     function totalStats(uint256 _index) external view returns (uint256);
 
-    // Non-view
+    // Write functions
 
-    function pump() external;
+    function pump(uint256 _slippage) external;
 
     function voteProposal(uint256 _proposalId, bool _isApprove) external;
 

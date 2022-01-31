@@ -189,7 +189,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _feeWeights             Weights of the fee distribution
      */
-    function initialize(uint256[] calldata _feeWeights) public {
+    function initialize(uint256[] calldata _feeWeights) public initializer {
         OwnableUpgradeable.__Ownable_init();
         updateFeeWeights(_feeWeights);
         updateMarkets();
@@ -208,26 +208,28 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Function to pump blood to the heart
      *
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
+     *
+     * @param _slippage           Max allowed trade slippage
      */
-    function pump() external override {
+    function pump(uint256 _slippage) external override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
         _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
-        _consolidateFeesToWeth();
+        _consolidateFeesToWeth(_slippage);
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
-        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
+        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]), _slippage);
         // 25% to BABL-ETH pair
-        _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
+        _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]), _slippage);
         // 15% to Garden Investments
-        _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]));
+        _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]), _slippage);
         // 20% lend in fuse pool
-        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[4]));
+        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[4]), _slippage);
         // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
         lastPumpAt = block.timestamp;
@@ -381,15 +383,16 @@ contract Heart is OwnableUpgradeable, IHeart {
     /**
      * Consolidates all reserve asset fees to weth
      *
+     * @param _slippage           Max allowed trade slippage
      */
-    function _consolidateFeesToWeth() private {
+    function _consolidateFeesToWeth(uint256 _slippage) private {
         address[] memory reserveAssets = controller.getReserveAssets();
         for (uint256 i = 0; i < reserveAssets.length; i++) {
             address reserveAsset = reserveAssets[i];
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
             // Trade if it's above a min amount (otherwise wait until next pump)
             if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
-                totalStats[0] = totalStats[0].add(_trade(reserveAsset, address(WETH), balance));
+                totalStats[0] = totalStats[0].add(_trade(reserveAsset, address(WETH), balance, _slippage));
             }
             if (reserveAsset == address(WETH)) {
                 totalStats[0] = totalStats[0].add(balance);
@@ -401,10 +404,11 @@ contract Heart is OwnableUpgradeable, IHeart {
     /**
      * Buys back BABL through the uniswap V3 BABL-ETH pool
      *
+     * @param _slippage           Max allowed trade slippage
      */
-    function _buyback(uint256 _amount) private {
+    function _buyback(uint256 _amount, uint256 _slippage) private {
         // Gift 50% BABL back to garden and send 50% to the treasury
-        uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
+        uint256 bablBought = _trade(address(WETH), address(BABL), _amount, _slippage); // 50%
         IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
         IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
         totalStats[2] = totalStats[2].add(bablBought);
@@ -415,11 +419,13 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Adds liquidity to the BABL-ETH pair through the hypervisor
      *
      * Note: Address of the heart needs to be whitelisted by Visor.
+     *
+     * @param _slippage           Max allowed trade slippage
      */
-    function _addLiquidity(uint256 _wethBalance) private {
+    function _addLiquidity(uint256 _wethBalance, uint256 _slippage) private {
         // Buy BABL again with half to add 50/50
         uint256 wethToDeposit = _wethBalance.preciseMul(5e17);
-        uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit); // 50%
+        uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit, _slippage); // 50%
         BABL.approve(address(visor), bablTraded);
         WETH.approve(address(visor), wethToDeposit);
         uint256 oldTreasuryBalance = visor.balanceOf(treasury);
@@ -436,13 +442,15 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Invests in gardens using WETH converting it to garden reserve asset first
      *
      * @param _wethAmount             Total amount of weth to invest in all gardens
+     *
+     * @param _slippage           Max allowed trade slippage
      */
-    function _investInGardens(uint256 _wethAmount) private {
+    function _investInGardens(uint256 _wethAmount, uint256 _slippage) private {
         for (uint256 i = 0; i < votedGardens.length; i++) {
             address reserveAsset = IGarden(votedGardens[i]).reserveAsset();
             uint256 amountTraded;
             if (reserveAsset != address(WETH)) {
-                amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
+                amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]), _slippage);
             } else {
                 amountTraded = _wethAmount.preciseMul(gardenWeights[i]);
             }
@@ -457,8 +465,9 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Lends an amount of WETH converting it first to the pool asset that is the lowest (except BABL)
      *
      * @param _wethAmount             Total amount of weth to lend
+     * @param _slippage           Max allowed trade slippage
      */
-    function _lendFusePool(uint256 _wethAmount) private {
+    function _lendFusePool(uint256 _wethAmount, uint256 _slippage) private {
         address cToken = assetToCToken[assetToLend];
         _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
         if (assetToLend == address(0)) {
@@ -467,7 +476,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             ICEther(cToken).mint{value: _wethAmount}();
         } else {
             // Trade to asset to lend from WETH
-            uint256 assetToLendBalance = _trade(address(WETH), assetToLend, _wethAmount);
+            uint256 assetToLendBalance = _trade(address(WETH), assetToLend, _wethAmount, _slippage);
             IERC20(assetToLend).approve(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
@@ -496,22 +505,25 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _tokenIn             Token that is sold
      * @param _tokenOut            Token that is purchased
      * @param _amount              Amount of tokenin to sell
+     * @param _slippage           Max allowed trade slippage
      */
     function _trade(
         address _tokenIn,
         address _tokenOut,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _slippage
     ) private returns (uint256) {
         if (_tokenIn == _tokenOut) {
             return _amount;
         }
+        _slippage = _slippage > 0 ? _slippage : DEFAULT_TRADE_SLIPPAGE;
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(DEFAULT_TRADE_SLIPPAGE));
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(_slippage));
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
@@ -554,4 +566,8 @@ contract Heart is OwnableUpgradeable, IHeart {
         }
         return FEE_HIGH;
     }
+}
+
+contract HeartV1 is Heart {
+    constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }

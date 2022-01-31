@@ -45,6 +45,6 @@ contract FuseBorrowIntegration is CompoundBorrowIntegration {
     constructor(
         IBabController _controller,
         uint256 _maxCollateralFactor,
-        address _comptroller
+        IComptroller _comptroller
     ) CompoundBorrowIntegration('fuseborrow', _controller, _maxCollateralFactor, _comptroller) {}
 }

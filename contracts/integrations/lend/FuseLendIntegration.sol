@@ -41,7 +41,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
      * @param _controller             Address of the controller
      * @param _comptroller            Address of the fuse pool comptroller
      */
-    constructor(IBabController _controller, address _comptroller)
+    constructor(IBabController _controller, IComptroller _comptroller)
         CompoundLendIntegration('fuselend', _controller, _comptroller)
     {}
 

@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { pick, getERC20, eth, increaseTime } = require('utils/test-helpers');
+const { pick, getERC20, eth, from, increaseTime } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 describe('Heart Integration Test', function () {
@@ -52,6 +52,7 @@ describe('Heart Integration Test', function () {
     BABL = await getERC20(addresses.tokens.BABL);
     WBTC = await getERC20(addresses.tokens.WBTC);
     USDC = await getERC20(addresses.tokens.USDC);
+
     cDAI = await ethers.getContractAt('ICToken', '0xa6c25548df506d84afd237225b5b34f2feb1aa07');
     await heart.connect(owner).setHeartGardenAddress(heartGarden.address);
     feeDistributionWeights = await heart.connect(owner).getFeeDistributionWeights();
@@ -60,18 +61,16 @@ describe('Heart Integration Test', function () {
     const visor = await ethers.getContractAt('IHypervisor', '0xF19F91d7889668A533F14d076aDc187be781a458');
     await visor.connect(visorOwner).appendList([heart.address], { gasPrice: 0 });
     // Adds weekly rewards
-    await BABL.connect(owner).approve(heart.address, ethers.utils.parseEther('5000'));
-    await heart.connect(owner).addReward(ethers.utils.parseEther('5000'), ethers.utils.parseEther('300'));
+    await BABL.connect(owner).approve(heart.address, eth(5000));
+    await heart.connect(owner).addReward(eth(5000), eth(300));
   });
 
   async function pumpAmount(amountInFees) {
     const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
     await heart
       .connect(keeper)
-      .resolveGardenVotes(
-        [garden1.address, garden2.address, garden3.address],
-        [ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33')],
-      );
+      .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
+
     const wethTreasuryBalanceBeforePump = await WETH.balanceOf(treasury.address);
     const bablTreasuryBalanceBeforePump = await BABL.balanceOf(treasury.address);
     const heartBABLBalanceBeforePump = await BABL.balanceOf(heartGarden.address);
@@ -79,18 +78,20 @@ describe('Heart Integration Test', function () {
     const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
     const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
     const fuseBalanceDAIBeforePump = await cDAI.getCash();
-    await heart.connect(signer1).pump();
+
+    await heart.connect(signer1).pump(from(0));
+
     const statsAfterPump = await heart.getTotalStats();
     // Check the total fees is 3 WETH
     expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
     // Check that we sent exactly 0.3 WETH to treasury and stat is right
     expect((await WETH.balanceOf(treasury.address)).sub(wethTreasuryBalanceBeforePump)).to.be.closeTo(
-      amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
-      ethers.utils.parseEther('0.01'),
+      amountInFees.mul(feeDistributionWeights[0]).div(eth()),
+      eth(0.01),
     );
     expect(statsAfterPump[1]).to.be.closeTo(
-      amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
-      amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9).div(100),
+      amountInFees.mul(feeDistributionWeights[0]).div(eth()),
+      amountInFees.mul(feeDistributionWeights[0]).div(eth()).div(100),
     );
     // Checks buybacks
     const bablBought = statsAfterPump[2];
@@ -98,33 +99,33 @@ describe('Heart Integration Test', function () {
     expect(await BABL.balanceOf(treasury.address)).to.be.gte(bablTreasuryBalanceBeforePump.add(bablBought.div(2)));
     // Checks liquidity
     expect(statsAfterPump[3]).to.be.closeTo(
-      amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9),
-      amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9).div(100),
+      amountInFees.mul(feeDistributionWeights[2]).div(eth()),
+      amountInFees.mul(feeDistributionWeights[2]).div(eth()).div(100),
     );
     // Checks garden seed investments
-    const totalPumpedGardens = amountInFees.mul(feeDistributionWeights[3]).div(1e9).div(1e9);
+    const totalPumpedGardens = amountInFees.mul(feeDistributionWeights[3]).div(eth());
     expect(statsAfterPump[4]).to.be.closeTo(totalPumpedGardens, totalPumpedGardens.div(100));
     expect(await WETH.balanceOf(garden1.address)).to.be.closeTo(
       balanceGarden1BeforePump.add(totalPumpedGardens.div(3)),
-      ethers.utils.parseEther('0.01'),
+      eth(0.01),
     );
     expect(await WETH.balanceOf(garden2.address)).to.be.closeTo(
       balanceGarden2BeforePump.add(totalPumpedGardens.div(3)),
-      ethers.utils.parseEther('0.01'),
+      eth(0.01),
     );
     expect(await WETH.balanceOf(garden3.address)).to.be.closeTo(
       balanceGarden3BeforePump.add(totalPumpedGardens.div(3)),
-      ethers.utils.parseEther('0.01'),
+      eth(0.01),
     );
     // Checks fuse pool
-    const amountLentToFuse = amountInFees.mul(feeDistributionWeights[4]).div(1e9).div(1e9);
+    const amountLentToFuse = amountInFees.mul(feeDistributionWeights[4]).div(eth());
     expect(statsAfterPump[5]).to.be.closeTo(amountLentToFuse, amountLentToFuse.div(100));
     expect(await cDAI.getCash()).to.be.closeTo(
-      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(1e9).div(1e9)),
-      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(1e9).div(1e9)).div(100),
+      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth())),
+      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()).div(100)),
     );
     // Checks weekly rewards
-    expect(await heart.bablRewardLeft()).to.equal(ethers.utils.parseEther('4700'));
+    expect(await heart.bablRewardLeft()).to.equal(eth(4700));
     expect(await BABL.balanceOf(heartGarden.address)).to.be.equal(
       heartBABLBalanceBeforePump.add(bablBought.div(2)).add(await heart.weeklyRewardAmount()),
     );
@@ -132,28 +133,24 @@ describe('Heart Integration Test', function () {
 
   describe('pump', async function () {
     it('will pump correctly with 3 WETH', async function () {
-      const amountInFees = ethers.utils.parseEther('3');
+      const amountInFees = eth(3);
       await WETH.connect(owner).transfer(heart.address, amountInFees);
       await pumpAmount(amountInFees);
     });
 
     it('will pump correctly with 3 ETH, 1000 DAI', async function () {
       const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
-      const amountInFees = ethers.utils
-        .parseEther('3')
-        .add(ethers.utils.parseEther('1000').mul(wethPerDai).div(1e9).div(1e9));
-      await WETH.connect(owner).transfer(heart.address, ethers.utils.parseEther('3'));
-      await DAI.connect(owner).transfer(heart.address, ethers.utils.parseEther('1000'));
+      const amountInFees = eth(3).add(eth(1000).mul(wethPerDai).div(eth()));
+      await WETH.connect(owner).transfer(heart.address, eth(3));
+      await DAI.connect(owner).transfer(heart.address, eth(1000));
       await pumpAmount(amountInFees);
     });
 
     it('will pump correctly with 3 ETH, 1000 DAI, 1000 USDC', async function () {
       const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
-      const amountInFees = ethers.utils
-        .parseEther('3')
-        .add(ethers.utils.parseEther('2000').mul(wethPerDai).div(1e9).div(1e9));
-      await WETH.connect(owner).transfer(heart.address, ethers.utils.parseEther('3'));
-      await DAI.connect(owner).transfer(heart.address, ethers.utils.parseEther('1000'));
+      const amountInFees = eth(3).add(eth(2000).mul(wethPerDai).div(eth()));
+      await WETH.connect(owner).transfer(heart.address, eth(3));
+      await DAI.connect(owner).transfer(heart.address, eth(1000));
       await USDC.connect(owner).transfer(heart.address, 1000 * 1e6);
       await pumpAmount(amountInFees);
     });
