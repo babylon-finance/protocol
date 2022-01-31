@@ -891,7 +891,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetFinalized,
                 capitalPending,
                 assetStatus,
-                _percentage,
+                // should use the percentage only for the first operation because we do not want to take percentage of
+                // the percentage for the subsequent operations
+                i == opTypes.length ? _percentage : HUNDRED_PERCENT,
                 _getOpDecodedData(i - 1),
                 garden,
                 opIntegrations[i - 1]
