@@ -31,8 +31,6 @@ interface IRewardsDistributor {
 
     function bablProfitWeight() external view returns (uint256);
 
-    function START_TIME() external view returns (uint256);
-
     /* ========== View functions ========== */
 
     function getBenchmark() external view returns (uint256[5] memory);

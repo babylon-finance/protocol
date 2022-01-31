@@ -135,7 +135,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ============ State Variables ============ */
 
     // solhint-disable-next-line
-    uint256 public override START_TIME; // Starting time of the rewards distribution
+    uint256 private START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
     uint256 private strategistBABLPercentage;

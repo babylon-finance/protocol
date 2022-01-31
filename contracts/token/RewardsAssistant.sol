@@ -83,7 +83,9 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         controller = _controller;
         rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
-        START_TIME = IRewardsDistributor(rewardsDistributor).START_TIME();
+        // Update START_TIME (backward compatible)
+        uint256[18] memory miningData = IRewardsDistributor(rewardsDistributor).checkMining(1, address(0));
+        START_TIME = miningData[0];
     }
 
     /* ============ External Functions ============ */
