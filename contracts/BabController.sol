@@ -189,7 +189,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * Initializes the initial fee recipient on deployment.
      */
-    function initialize() public {
+    function initialize() public initializer {
         OwnableUpgradeable.__Ownable_init();
 
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
