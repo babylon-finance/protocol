@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { pick, getERC20, eth, increaseTime } = require('utils/test-helpers');
+const { pick, getERC20, eth, from, increaseTime } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 describe('Heart Integration Test', function () {
@@ -69,10 +69,7 @@ describe('Heart Integration Test', function () {
     const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
     await heart
       .connect(keeper)
-      .resolveGardenVotes(
-        [garden1.address, garden2.address, garden3.address],
-        [eth(0.33), eth(0.33), eth(0.33)],
-      );
+      .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
 
     const wethTreasuryBalanceBeforePump = await WETH.balanceOf(treasury.address);
     const bablTreasuryBalanceBeforePump = await BABL.balanceOf(treasury.address);
@@ -124,8 +121,8 @@ describe('Heart Integration Test', function () {
     const amountLentToFuse = amountInFees.mul(feeDistributionWeights[4]).div(eth());
     expect(statsAfterPump[5]).to.be.closeTo(amountLentToFuse, amountLentToFuse.div(100));
     expect(await cDAI.getCash()).to.be.closeTo(
-      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()),
-      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()).div(100),
+      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth())),
+      fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()).div(100)),
     );
     // Checks weekly rewards
     expect(await heart.bablRewardLeft()).to.equal(eth(4700));
@@ -143,7 +140,7 @@ describe('Heart Integration Test', function () {
 
     it('will pump correctly with 3 ETH, 1000 DAI', async function () {
       const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
-      const amountInFees = eth(3).add(eth(1000).mul(wethPerDai).div(eth());
+      const amountInFees = eth(3).add(eth(1000).mul(wethPerDai).div(eth()));
       await WETH.connect(owner).transfer(heart.address, eth(3));
       await DAI.connect(owner).transfer(heart.address, eth(1000));
       await pumpAmount(amountInFees);
