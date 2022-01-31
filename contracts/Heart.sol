@@ -164,7 +164,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     // 3: liquidity added in weth
     // 4: amount invested in gardens in weth
     // 5: amount lent on fuse in weth
-    // 6: weekly rewards paid
+    // 6: weekly rewards paid in babl
     uint256[7] public override totalStats;
 
     /* ============ Initializer ============ */
@@ -444,7 +444,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             if (reserveAsset != address(WETH)) {
                 amountTraded = _trade(address(WETH), reserveAsset, _wethAmount.preciseMul(gardenWeights[i]));
             } else {
-                amountTraded = _wethAmount.div(votedGardens.length);
+                amountTraded = _wethAmount.preciseMul(gardenWeights[i]);
             }
             // Gift it to garden
             IERC20(reserveAsset).safeTransfer(votedGardens[i], amountTraded);
@@ -481,6 +481,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _sendWeeklyReward() private {
         if (bablRewardLeft > 0) {
             uint256 bablToSend = bablRewardLeft < weeklyRewardAmount ? bablRewardLeft : weeklyRewardAmount;
+            uint256 currentBalance = IERC20(BABL).balanceOf(address(this));
+            bablToSend = currentBalance < bablToSend ? currentBalance : bablToSend;
             IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
             bablRewardLeft = bablRewardLeft.sub(bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
