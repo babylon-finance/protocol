@@ -189,7 +189,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _feeWeights             Weights of the fee distribution
      */
-    function initialize(uint256[] calldata _feeWeights) public {
+    function initialize(uint256[] calldata _feeWeights) public initializer {
         OwnableUpgradeable.__Ownable_init();
         updateFeeWeights(_feeWeights);
         updateMarkets();
@@ -565,3 +565,5 @@ contract Heart is OwnableUpgradeable, IHeart {
         return FEE_HIGH;
     }
 }
+
+contract HeartV1 is Heart {}
