@@ -142,7 +142,7 @@ describe('Heart Unit Test', function () {
       expect(gardens[2]).to.equal(garden3.address);
     });
 
-    it('can vote for proposal on behalf of the heart', async function () {
+    it.skip('can vote for proposal on behalf of the heart', async function () {
       // needs governor mocks
       // Note: cannot use governor mocks as GOVERNOR address is hardcoded in Heart contract
       // const mockGovernor = await getGovernorMock(token, deployer);
@@ -187,7 +187,7 @@ describe('Heart Unit Test', function () {
       expect(state).to.eq(proposalState.Defeated);
     });
 
-    it('can only vote for a proposal once', async function () {
+    it.skip('can only vote for a proposal once', async function () {
       const { id, args } = await getProposal(governor);
       // Get delegation from Heart Garden
       await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
