@@ -45,10 +45,10 @@ describe('Heart Unit Test', function () {
     it('calls all attributes ', async function () {
       expect((await heart.connect(owner).getVotedGardens()).length).to.equal(0);
       expect((await heart.connect(owner).getGardenWeights()).length).to.equal(0);
-      expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(ethers.utils.parseEther('500'));
-      expect(await heart.connect(owner).minAmounts(addresses.tokens.USDC)).to.equal(ethers.BigNumber.from(500 * 1e6));
-      expect(await heart.connect(owner).minAmounts(addresses.tokens.WETH)).to.equal(ethers.utils.parseEther('0.5'));
-      expect(await heart.connect(owner).minAmounts(addresses.tokens.WBTC)).to.equal(ethers.BigNumber.from(3 * 1e6));
+      expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(eth('500'));
+      expect(await heart.connect(owner).minAmounts(addresses.tokens.USDC)).to.equal(from(500 * 1e6));
+      expect(await heart.connect(owner).minAmounts(addresses.tokens.WETH)).to.equal(eth('0.5'));
+      expect(await heart.connect(owner).minAmounts(addresses.tokens.WBTC)).to.equal(from(3 * 1e6));
       expect(await heart.connect(owner).assetToCToken(addresses.tokens.DAI)).to.equal(
         '0xA6C25548dF506d84Afd237225B5B34F2Feb1aa07',
       );
@@ -58,11 +58,11 @@ describe('Heart Unit Test', function () {
       expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(0);
       expect(await heart.connect(owner).bablRewardLeft()).to.equal(0);
       const fees = await heart.connect(owner).getFeeDistributionWeights();
-      expect(fees[0]).to.equal(ethers.utils.parseEther('0.10'));
-      expect(fees[1]).to.equal(ethers.utils.parseEther('0.50'));
-      expect(fees[2]).to.equal(ethers.utils.parseEther('0.15'));
-      expect(fees[3]).to.equal(ethers.utils.parseEther('0.15'));
-      expect(fees[4]).to.equal(ethers.utils.parseEther('0.10'));
+      expect(fees[0]).to.equal(eth('0.10'));
+      expect(fees[1]).to.equal(eth('0.50'));
+      expect(fees[2]).to.equal(eth('0.15'));
+      expect(fees[3]).to.equal(eth('0.15'));
+      expect(fees[4]).to.equal(eth('0.10'));
       const stats = await heart.connect(owner).getTotalStats();
       expect(stats[0]).to.equal(0);
       expect(stats[1]).to.equal(0);
@@ -74,23 +74,23 @@ describe('Heart Unit Test', function () {
 
   describe('can update attributes', async function () {
     it('can update the min trade amount ', async function () {
-      await heart.connect(owner).setMinTradeAmount(addresses.tokens.DAI, ethers.utils.parseEther('800'));
-      expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(ethers.utils.parseEther('800'));
+      await heart.connect(owner).setMinTradeAmount(addresses.tokens.DAI, eth('800'));
+      expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(eth('800'));
     });
 
     it('can add a reward to distribute weekly', async function () {
-      await BABL.connect(owner).approve(heart.address, ethers.utils.parseEther('5000'));
-      await heart.connect(owner).addReward(ethers.utils.parseEther('5000'), ethers.utils.parseEther('400'));
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(ethers.utils.parseEther('5000'));
-      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(ethers.utils.parseEther('400'));
+      await BABL.connect(owner).approve(heart.address, eth('5000'));
+      await heart.connect(owner).addReward(eth('5000'), eth('400'));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth('5000'));
+      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth('400'));
     });
 
     it('can top up a reward', async function () {
-      await BABL.connect(owner).approve(heart.address, ethers.utils.parseEther('8000'));
-      await heart.connect(owner).addReward(ethers.utils.parseEther('5000'), ethers.utils.parseEther('400'));
-      await heart.connect(owner).addReward(ethers.utils.parseEther('3000'), ethers.utils.parseEther('100'));
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(ethers.utils.parseEther('8000'));
-      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(ethers.utils.parseEther('100'));
+      await BABL.connect(owner).approve(heart.address, eth('8000'));
+      await heart.connect(owner).addReward(eth('5000'), eth('400'));
+      await heart.connect(owner).addReward(eth('3000'), eth('100'));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth('8000'));
+      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth('100'));
     });
 
     it('cannot update the asset to lend to an invalid asset', async function () {
@@ -106,17 +106,17 @@ describe('Heart Unit Test', function () {
       await heart
         .connect(owner)
         .updateFeeWeights([
-          ethers.utils.parseEther('0.11'),
-          ethers.utils.parseEther('0.51'),
-          ethers.utils.parseEther('0.16'),
-          ethers.utils.parseEther('0.17'),
-          ethers.utils.parseEther('0.18'),
+          eth('0.11'),
+          eth('0.51'),
+          eth('0.16'),
+          eth('0.17'),
+          eth('0.18'),
         ]);
-      expect(await heart.connect(owner).feeDistributionWeights(0)).to.equal(ethers.utils.parseEther('0.11'));
-      expect(await heart.connect(owner).feeDistributionWeights(1)).to.equal(ethers.utils.parseEther('0.51'));
-      expect(await heart.connect(owner).feeDistributionWeights(2)).to.equal(ethers.utils.parseEther('0.16'));
-      expect(await heart.connect(owner).feeDistributionWeights(3)).to.equal(ethers.utils.parseEther('0.17'));
-      expect(await heart.connect(owner).feeDistributionWeights(4)).to.equal(ethers.utils.parseEther('0.18'));
+      expect(await heart.connect(owner).feeDistributionWeights(0)).to.equal(eth('0.11'));
+      expect(await heart.connect(owner).feeDistributionWeights(1)).to.equal(eth('0.51'));
+      expect(await heart.connect(owner).feeDistributionWeights(2)).to.equal(eth('0.16'));
+      expect(await heart.connect(owner).feeDistributionWeights(3)).to.equal(eth('0.17'));
+      expect(await heart.connect(owner).feeDistributionWeights(4)).to.equal(eth('0.18'));
     });
 
     it('can update the markets', async function () {
@@ -130,12 +130,12 @@ describe('Heart Unit Test', function () {
         .connect(keeper)
         .resolveGardenVotes(
           [garden1.address, garden2.address, garden3.address],
-          [ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33'), ethers.utils.parseEther('0.33')],
+          [eth('0.33'), eth('0.33'), eth('0.33')],
         );
       const weights = await heart.connect(owner).getGardenWeights();
-      expect(weights[0]).to.equal(ethers.utils.parseEther('0.33'));
-      expect(weights[1]).to.equal(ethers.utils.parseEther('0.33'));
-      expect(weights[2]).to.equal(ethers.utils.parseEther('0.33'));
+      expect(weights[0]).to.equal(eth('0.33'));
+      expect(weights[1]).to.equal(eth('0.33'));
+      expect(weights[2]).to.equal(eth('0.33'));
       const gardens = await heart.connect(owner).getVotedGardens();
       expect(gardens[0]).to.equal(garden1.address);
       expect(gardens[1]).to.equal(garden2.address);
