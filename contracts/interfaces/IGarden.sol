@@ -40,6 +40,8 @@ interface IGarden {
 
     function transferCreatorRights(address _newCreator, uint8 _index) external;
 
+    function delegateVoteIntoHeart(address _heart) external;
+
     function addExtraCreators(address[4] memory _newCreators) external;
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;

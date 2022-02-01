@@ -70,6 +70,7 @@ describe('Garden', function () {
   let gardenNFT;
   let gardenValuer;
   let babViewer;
+  let bablToken;
 
   let usdc;
   let weth;
@@ -119,6 +120,19 @@ describe('Garden', function () {
       expect(await garden1.minVotesQuorum()).to.equal(eth('0.10'));
       expect(await garden1.minStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 3);
       expect(await garden1.maxStrategyDuration()).to.equal(ONE_DAY_IN_SECONDS * 365);
+    });
+  });
+  describe('delegate votes into heart', async function () {
+    it('heart garden can delegate into heart', async function () {
+      const heartGarden = await ethers.getContractAt('Garden', garden1.address);
+      const heart = signer1;
+      const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74', owner);
+      const heartDelegatee1 = await token.delegates(heartGarden.address);
+      expect(heartDelegatee1).to.eq(ADDRESS_ZERO); // No delegation yet
+      const emergencyOwner = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
+      await heartGarden.connect(emergencyOwner).delegateVoteIntoHeart(heart.address);
+      const heartDelegatee2 = await token.delegates(heartGarden.address);
+      expect(heartDelegatee2).to.eq(signer1.address);
     });
   });
 

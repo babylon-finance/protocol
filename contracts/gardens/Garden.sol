@@ -40,6 +40,7 @@ import {IGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
+import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
 /**
  * @title BaseGarden
@@ -472,9 +473,24 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
     }
 
+    /* PRIVILEGE FUNCTION To delegate Heart Garden votes into Heart
+     * It should only be used in Heart Garden in principle
+     * TODO Once it is merged with Heart PR we will take heart address directly from BabController instead of being a param
+     * TODO As it should be only used and once in Heart garden maybe we can just use heart garden address once we have it
+     */
+    function delegateVoteIntoHeart(address _heart) external override {
+        _require(_heart != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(
+            msg.sender == IBabController(controller).EMERGENCY_OWNER() ||
+                msg.sender == IBabController(controller).owner(),
+            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
+        );
+        IVoteToken(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).delegate(_heart);
+    }
+
     /**
      * @notice
-     *  This method allows to Reewards Distributor to claim on users behalf
+     *  This method allows to Rewards Distributor to claim on users behalf
      *   their profits rewards (in reserveAsset) and make BABL sent by RD accounted.
      * @dev
      *   If fee > 0 and keeper != address(0) it is using signature tx instead of `claimRewards at RD`
