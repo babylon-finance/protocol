@@ -80,6 +80,20 @@ interface IRewardsDistributor {
 
     /* ============ External Functions ============ */
 
+    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
+
+    function claimRewardsBySig(
+        address _garden,
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _fee,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function setRewardsAssistant(address _newRewardsAssistant) external;
 
     function setProfitRewards(
@@ -102,6 +116,4 @@ interface IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external;
-
-    function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }

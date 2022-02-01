@@ -28,7 +28,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -62,10 +62,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using SafeDecimalMath for int256;
     using Math for uint256;
     using Math for int256;
-    using Safe3296 for uint256;
-    using Safe3296 for int256;
-    using Safe3296 for uint96;
-    using Safe3296 for uint32;
+    using ECDSA for bytes32;
 
     /* ========== Events ========== */
 
@@ -97,7 +94,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
     }
 
     /**
@@ -131,6 +128,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant ENTERED = 2;
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+
+    bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
+        keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
 
     /* ============ State Variables ============ */
 
@@ -363,12 +363,74 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Sending BABL as part of the claim process (either by sig or standard claim)
+     * @notice
+     *   This method allows users to claim their rewards either profits or BABL.
+     *   Rewards come from the strategies that his principal
+     *   was invested in.
+     * @dev
+     *   Users should preferably call `claimRewardsBySig` instead of this method to save gas due to
+     *   getRewards is caculated on-chain in this method.
      *
+     * @param _garden               Address of the garden.
+     * @param _finalizedStrategies  Array of finalized strategies to get rewards for.
      */
-    function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
-        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        return _sendBABLToContributor(_to, _babl);
+    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external override nonReentrant {
+        (uint256 lastDepositAt, , , , , , , , , ) = IGarden(_garden).getContributor(msg.sender);
+        uint256 depositHardLock = IGarden(_garden).depositHardlock();
+        // Flashloan protection
+        _require(block.timestamp.sub(lastDepositAt) >= depositHardLock, Errors.DEPOSIT_HARDLOCK);
+        uint256[] memory rewards = new uint256[](8);
+        rewards = getRewards(_garden, msg.sender, _finalizedStrategies);
+        // Send BABL
+        uint256 bablSent = _sendBABLToContributor(msg.sender, rewards[5]);
+        // Send profits but do not pay keeper fee
+        IGarden(_garden).sendRewardsToContributor(msg.sender, address(0), bablSent, rewards[6], 0);
+    }
+
+    /**
+     * @notice
+     *   This method allows users
+     *   to claim their rewards either profits or BABL.
+     * @dev
+     *   Should be called instead of the `claimRewards at RD` to save gas due to
+     *   getRewards caculated off-chain.
+     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
+     *
+     * @param _babl            BABL rewards from mining program.
+     * @param _profits         Profit rewards in reserve asset.
+     * @param _nonce           Current nonce to prevent replay attacks.
+     * @param _maxFee          Max fee user is willing to pay keeper. Fee is
+     *                         substracted from user wallet in reserveAsset. Fee is
+     *                         expressed in reserve asset.
+     * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     */
+    function claimRewardsBySig(
+        address _garden,
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _fee,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override nonReentrant {
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+        bytes32 hash =
+            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _nonce, _maxFee))
+                .toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        (, , , , , , , , , uint256 nonce) = IGarden(_garden).getContributor(signer);
+        // Used in by sig
+        _require(signer != address(0), Errors.INVALID_SIGNER);
+        // to prevent replay attacks
+        _require(nonce == _nonce, Errors.INVALID_NONCE);
+        _require(_fee > 0, Errors.FEE_TOO_LOW);
+        // Send BABL
+        uint256 bablSent = _sendBABLToContributor(signer, _babl);
+        // Pay keeper fee and send profits set aside
+        IGarden(_garden).sendRewardsToContributor(signer, msg.sender, bablSent, _profits, _fee);
     }
 
     /** PRIVILEGE FUNCTION
@@ -970,7 +1032,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
-        SafeERC20.safeTransfer(babltoken, _to, Safe3296.safe96(bablToSend, 'overflow 96 bits'));
+        SafeERC20.safeTransfer(babltoken, _to, bablToSend);
         return bablToSend;
     }
 

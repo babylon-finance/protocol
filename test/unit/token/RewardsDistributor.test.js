@@ -2341,9 +2341,9 @@ async function getStrategyState(strategy) {
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       // Signer 2 claim rewards by sig
-      await newGarden
+      await rewardsDistributor
         .connect(keeper)
-        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+        .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
       const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
@@ -2414,9 +2414,11 @@ async function getStrategyState(strategy) {
         // Should have enough remaining allowance (at least the fee) - we need to be sure before the tx
         await erc20.connect(signer2).approve(newGarden.address, fee, { gasPrice: 0 });
         // Signer 2 claim rewards by sig
-        await newGarden
+        await rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          });
         if (token === addresses.tokens.WETH) {
           signer2AssetBalanceAfter = await ethers.provider.getBalance(signer2.address);
         } else {
@@ -2469,9 +2471,11 @@ async function getStrategyState(strategy) {
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       // Signer 2 claim rewards by sig
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(signer2)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -2500,17 +2504,21 @@ async function getStrategyState(strategy) {
       let sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       // Signer 2 claim rewards by sig
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith('BAB#089');
       // nonce 3 also fails
       nonce = 3;
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith('BAB#089');
       // nonce 2 works
       nonce = 2;
@@ -2519,9 +2527,11 @@ async function getStrategyState(strategy) {
         gasPrice: 0,
       });
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).not.to.be.reverted;
       // Now we check that nonce is been updated with the claimRewardsBySig
       // nonce is 3 at this point
@@ -2541,9 +2551,11 @@ async function getStrategyState(strategy) {
         gasPrice: 0,
       });
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).not.to.be.reverted;
     });
     it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
@@ -2573,14 +2585,16 @@ async function getStrategyState(strategy) {
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       // Race condition
       // User claims its tokens by direct claim
-      await newGarden.connect(signer2).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer2).claimRewards(newGarden.address, [long1.address]);
       // It also claim its token rewards by sig so the accountant is in process with nonce = 2
       // Signer2 is trying a race condition between a normal and a by sig claim.
       // nonce avoids a race condition between a normal claimReturns and a claimRewardsBySig
       await expect(
-        newGarden
+        rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(newGarden.address, babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
       ).to.be.revertedWith('BAB#089');
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
@@ -2597,7 +2611,7 @@ async function getStrategyState(strategy) {
       await finalizeStrategyAfterQuarter(long2);
 
       // We claim our tokens and check that they are received properly
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
 
       expect(await bablToken.balanceOf(signer1.address)).to.gt(eth().mul(29000));
       expect(await garden1.balanceOf(signer1.address)).to.gt(eth().mul(2));
@@ -2613,7 +2627,9 @@ async function getStrategyState(strategy) {
       await finalizeStrategyAfterQuarter(long1);
 
       // It claim but it is reverted as it is not an user yet "only contributor"
-      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#015');
+      await expect(
+        rewardsDistributor.connect(signer3).claimRewards(garden1.address, [long1.address]),
+      ).to.be.revertedWith('BAB#015');
 
       expect(await bablToken.balanceOf(signer3.address)).to.equal(0);
     });
@@ -2638,8 +2654,8 @@ async function getStrategyState(strategy) {
       const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [long1.address]);
       const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
 
-      await garden1.connect(signer3).claimReturns([long1.address]);
-      await garden1.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer3).claimRewards(garden1.address, [long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address]);
       const balanceSigner1 = await bablToken.balanceOf(signer1.address);
       const balanceSigner3 = await bablToken.balanceOf(signer3.address);
       expect(balanceSigner1).to.be.gt(0);
@@ -2667,7 +2683,9 @@ async function getStrategyState(strategy) {
       // It is already a contributor but get no rewards as he joined after the strategy exited
       await expect(rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address])).to.be.not.reverted;
       const rewardsSigner3 = await rewardsDistributor.getRewards(garden1.address, signer3.address, [long1.address]);
-      await expect(garden1.connect(signer3).claimReturns([long1.address])).to.be.revertedWith('BAB#082');
+      await expect(
+        rewardsDistributor.connect(signer3).claimRewards(garden1.address, [long1.address]),
+      ).to.be.revertedWith('BAB#082');
       const balanceSigner3 = await bablToken.balanceOf(signer3.address);
 
       expect(balanceSigner3).to.equal(0);
@@ -2768,7 +2786,7 @@ async function getStrategyState(strategy) {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
       // We claim our tokens and check that they are received properly
-      await daiGarden.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(daiGarden.address, [long1.address]);
       // Check remaining rewards for users (if any)
       const signer1Rewards2 = await rewardsDistributor.getRewards(daiGarden.address, signer1.address, [long1.address]);
       const signer1BABL2 = signer1Rewards2[5];
@@ -2844,7 +2862,7 @@ async function getStrategyState(strategy) {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
       // We claim our tokens and check that they are received properly
-      await usdcGarden.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(usdcGarden.address, [long1.address]);
       // Check remaining rewards for users (if any)
       const signer1Rewards2 = await rewardsDistributor.getRewards(usdcGarden.address, signer1.address, [long1.address]);
       const signer1BABL2 = signer1Rewards2[5];
@@ -2981,10 +2999,10 @@ async function getStrategyState(strategy) {
       const signer1BABLDAI = signer1RewardsDAI[5];
 
       // We claim our tokens and check that they are received properly
-      await usdcGarden.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(usdcGarden.address, [long1.address]);
 
       // We claim our tokens and check that they are received properly
-      await daiGarden.connect(signer1).claimReturns([long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(daiGarden.address, [long2.address]);
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
       expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), signer1BalanceBABL.div(100));
@@ -3244,10 +3262,10 @@ async function getStrategyState(strategy) {
       const signer1BABLDAI = signer1RewardsDAI[5];
 
       // We claim our tokens and check that they are received properly
-      await usdcGarden.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(usdcGarden.address, [long1.address]);
 
       // We claim our tokens and check that they are received properly
-      await daiGarden.connect(signer1).claimReturns([long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(daiGarden.address, [long2.address]);
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
@@ -3382,10 +3400,10 @@ async function getStrategyState(strategy) {
       const signer1BABLDAI = signer1RewardsDAI[5];
 
       // We claim our tokens and check that they are received properly
-      await usdcGarden.connect(signer1).claimReturns([long1.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(usdcGarden.address, [long1.address]);
 
       // We claim our tokens and check that they are received properly
-      await daiGarden.connect(signer1).claimReturns([long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(daiGarden.address, [long2.address]);
 
       // Receive BABL token after claim
       const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
@@ -3423,20 +3441,24 @@ async function getStrategyState(strategy) {
       expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal('0');
 
       // Signer1 claims its tokens and check that they are received properly
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
       const contributor = await garden1.getContributor(signer1.address);
 
       // Try again to claims the same tokens but no more tokens are delivered
-      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.revertedWith('BAB#082');
+      await expect(
+        rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]),
+      ).to.be.revertedWith('BAB#082');
       const contributor2 = await garden1.getContributor(signer1.address);
 
       await expect(contributor2[4].toString()).to.be.closeTo(contributor[4], eth('0.00005'));
 
       // Signer2 claims his tokens and check that they are received properly
-      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer2).claimRewards(garden1.address, [long1.address, long2.address]);
       const contributor3 = await garden1.getContributor(signer2.address);
       // Try again to claims the same tokens but as there are no more tokens or rewards, it reverts
-      await expect(garden1.connect(signer2).claimReturns([long1.address, long2.address])).to.be.revertedWith('BAB#082');
+      await expect(
+        rewardsDistributor.connect(signer2).claimRewards(garden1.address, [long1.address, long2.address]),
+      ).to.be.revertedWith('BAB#082');
       const contributor4 = await garden1.getContributor(signer2.address);
 
       await expect(contributor4[4].toString()).to.be.closeTo(contributor3[4], eth('0.00005'));
@@ -3486,7 +3508,7 @@ async function getStrategyState(strategy) {
       const signer1BABL = signer1Rewards[5];
       const signer1Profit = signer1Rewards[6];
 
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.005'));
       expect(signer1Profit.toString()).to.be.closeTo('5983787580486307', eth('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -3507,7 +3529,7 @@ async function getStrategyState(strategy) {
       const signer1BABL3 = signer1Rewards3[5];
       const signer1Profit3 = signer1Rewards3[6];
 
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
       expect(signer1Profit3.toString()).to.be.equal('0'); // Negative profit means no profit at all
       expect(signer1BABL3.toString()).to.be.closeTo('38617799592465210173386', signer1BABL3.div(100));
     });
@@ -3533,8 +3555,8 @@ async function getStrategyState(strategy) {
       ]);
       const signer2Profit = signer2Rewards[6];
       const rewardsSetAside1 = await garden1.reserveAssetRewardsSetAside(); // All long1 rewards available
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
+      await rewardsDistributor.connect(signer2).claimRewards(garden1.address, [long1.address, long2.address]);
       await injectFakeProfits(long2, eth().mul(240));
       await finalizeStrategyAfterQuarter(long2);
       const rewardsSetAside3 = await garden1.reserveAssetRewardsSetAside(); // All long2 rewards available
@@ -3559,7 +3581,7 @@ async function getStrategyState(strategy) {
       const strategistLong2 = profitLong2.mul(10).div(100);
       const stewardLong1 = profitLong1.mul(5).div(100);
       const stewardLong2 = profitLong2.mul(5).div(100);
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
         signer1BABL.add(signer1BABL2),
         eth('0.02'),
@@ -3676,8 +3698,8 @@ async function getStrategyState(strategy) {
       const signer2BABL = signer2Rewards[5];
       const signer2Profit = signer2Rewards[6];
 
-      await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
-      await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address, long2.address]);
+      await rewardsDistributor.connect(signer2).claimRewards(garden1.address, [long1.address, long2.address]);
 
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.0005'));
       expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, eth('0.0005'));
@@ -3699,8 +3721,12 @@ async function getStrategyState(strategy) {
       const signer2BABL2 = signer2Rewards2[5];
       const signer2Profit2 = signer2Rewards2[6];
 
-      await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
-      await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
+      await rewardsDistributor
+        .connect(signer1)
+        .claimRewards(garden2.address, [long3.address, long4.address, long5.address]);
+      await rewardsDistributor
+        .connect(signer2)
+        .claimRewards(garden2.address, [long3.address, long4.address, long5.address]);
 
       expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL2.add(signer1BABL), eth('0.0005'));
       expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL2.add(signer2BABL), eth('0.0005'));
@@ -3747,9 +3773,9 @@ async function getStrategyState(strategy) {
 
       // We try to hack the system bypassing claimedAt mistmaching different gardens with different strategies
       await expect(
-        garden1
+        rewardsDistributor
           .connect(signer1)
-          .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
+          .claimRewards(garden1.address, [long1.address, long2.address, long3.address, long4.address, long5.address]),
       ).to.be.revertedWith('BAB#073');
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {

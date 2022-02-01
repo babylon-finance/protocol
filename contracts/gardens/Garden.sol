@@ -103,8 +103,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         keccak256(
             'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256,_nonce,uint256 _maxFee,uint256 _withPenalty)'
         );
-    bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
-        keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
 
     /* ============ Structs ============ */
 
@@ -475,57 +473,33 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /**
-     * User can claim the rewards from the strategies that his principal
-     * was invested in.
-     */
-    function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
-        // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
-        uint256[] memory rewards = new uint256[](8);
-        rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
-        _sendRewardsInternal(msg.sender, rewards[5], rewards[6]);
-    }
-
-    /**
      * @notice
-     *   This method allows users
-     *   to claim their rewards either profits or BABL.
+     *  This method allows to Reewards Distributor to claim on users behalf
+     *   their profits rewards (in reserveAsset) and make BABL sent by RD accounted.
      * @dev
-     *   Should be called instead of the `claimRewards at RD` to save gas due to
-     *   getRewards caculated off-chain.
+     *   If fee > 0 and keeper != address(0) it is using signature tx instead of `claimRewards at RD`
+     * to save gas due to getRewards is calulated off-chain.
      *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
      *
-     * @param _babl            BABL rewards from mining program.
-     * @param _profits         Profit rewards in reserve asset.
-     * @param _nonce           Current nonce to prevent replay attacks.
-     * @param _maxFee          Max fee user is willing to pay keeper. Fee is
-     *                         substracted from user wallet in reserveAsset. Fee is
-     *                         expressed in reserve asset.
-     * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _to             Address of user to send rewards to
+     * @param _keeper         Keeper address in case of fee to be paid (by sig tx)
+     * @param _bablSent       BABL already sent by Rewards Distributor to make accounting of
+     * @param _profits        Profits in reserve asset to be sent to contributor
+     * @param _fee            The fee in reserve asset to be paid to contributor
      */
-    function claimRewardsBySig(
-        uint256 _babl,
+    function sendRewardsToContributor(
+        address _to,
+        address _keeper,
+        uint256 _bablSent,
         uint256 _profits,
-        uint256 _nonce,
-        uint256 _maxFee,
-        uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint256 _fee
     ) external override nonReentrant {
-        _onlyKeeperAndFee(_fee, _maxFee);
-        bytes32 hash =
-            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        _onlyValidSigner(signer, _nonce);
-        _require(_fee > 0, Errors.FEE_TOO_LOW);
+        _require(msg.sender == address(rewardsDistributor), Errors.ONLY_RD);
         // pay to Keeper the fee to execute the tx on behalf
-        IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
-        _sendRewardsInternal(signer, _babl, _profits);
+        if (_fee > 0 && _keeper != address(0)) {
+            IERC20(reserveAsset).safeTransferFrom(_to, _keeper, _fee);
+        }
+        _sendRewardsInternal(_to, _bablSent, _profits);
     }
 
     /**
@@ -1056,9 +1030,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
-            uint256 bablSent = rewardsDistributor.sendBABLToContributor(_contributor, _babl);
-            contributor.claimedBABL = contributor.claimedBABL.add(bablSent); // BABL Rewards claimed properly
-            emit BABLRewardsForContributor(_contributor, bablSent);
+            // BABL sent already, makes accounting at garden level
+            contributor.claimedBABL = contributor.claimedBABL.add(_babl); // BABL Rewards claimed properly
+            emit BABLRewardsForContributor(_contributor, _babl);
         }
     }
 
