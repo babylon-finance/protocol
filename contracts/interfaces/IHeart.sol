@@ -40,6 +40,8 @@ interface IHeart {
 
     function lastVotesAt() external view returns (uint256);
 
+    function tradeSlippage() external view returns (uint256);
+
     function weeklyRewardAmount() external view returns (uint256);
 
     function bablRewardLeft() external view returns (uint256);
@@ -56,9 +58,9 @@ interface IHeart {
 
     function totalStats(uint256 _index) external view returns (uint256);
 
-    // Write functions
+    // Non-view
 
-    function pump(uint256 _slippage) external;
+    function pump() external;
 
     function voteProposal(uint256 _proposalId, bool _isApprove) external;
 
@@ -75,4 +77,6 @@ interface IHeart {
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) external;
 
     function setMinTradeAmount(address _asset, uint256 _minAmount) external;
+
+    function setTradeSlippage(uint256 _tradeSlippage) external;
 }
