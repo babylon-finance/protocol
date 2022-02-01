@@ -500,15 +500,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
      * Converts it to the reserve asset and sends it to the garden.
-     * @param _token             Address of the token to sweep
+     * @param _token                   Address of the token to sweep
+     * @param _newSlippage             New Slippage to override
      */
-    function sweep(address _token) external nonReentrant {
+    function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        _require(
-            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
-                IBabController(controller).isSystemContract(address(garden)),
-            Errors.ONLY_CONTRIBUTOR
-        );
+        _setMaxTradeSlippage(_newSlippage);
         _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
