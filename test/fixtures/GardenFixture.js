@@ -28,7 +28,7 @@ async function setUpFixture(
   const gardenNFT = await getContract('GardenNFT');
   const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
-  const rewardsAssistant = await getContract('RewardsAssistant', 'RewardsAssistantProxy');
+  const rewardsAssistant = await getContract('RewardsAssistant');
   const babViewer = await getContract('BabylonViewer');
   const timelockController = await getContract('TimelockController');
   const babGovernor = await getContract('BabylonGovernor');

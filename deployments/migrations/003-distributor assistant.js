@@ -17,14 +17,12 @@ module.exports = async ({
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const controller = await getController();
 
-  const rewardsAssistant = await upgradesDeployer.deployAdminProxy(
-    'RewardsAssistant',
-    'RewardsAssistantProxy',
-    { from: deployer, log: true, gasPrice },
-    {
-      initializer: { method: 'initialize', args: [controller.address] },
-    },
-  );
+  const rewardsAssistant = await deploy('RewardsAssistant', {
+    from: deployer,
+    args: [controller.address],
+    log: true,
+    gasPrice,
+  });
 
   if (rewardsAssistant.newlyDeployed) {
     console.log(`Setting rewards assistant on rewards distributor ${rewardsAssistant.address}`);
@@ -33,8 +31,8 @@ module.exports = async ({
 
   if (network.live && rewardsDistributor.newlyDeployed) {
     // fails, mostly likely because of the usage of libs
-    await tenderly.push(await getTenderlyContracts(['RewardsAssistant', 'RewardsAssistantProxy']));
+    await tenderly.push(await getTenderlyContracts(['RewardsAssistant']));
   }
 };
 
-module.exports.tags = ['DistributorAssistant'];
+module.exports.tags = ['RewardsAssistant'];

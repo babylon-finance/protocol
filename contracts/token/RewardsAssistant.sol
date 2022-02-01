@@ -17,7 +17,6 @@
 
 pragma solidity 0.7.6;
 
-import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 
@@ -37,7 +36,7 @@ import {IProphets} from '../interfaces/IProphets.sol';
  * @title Rewards Assistant is an assistant contract for Rewards Distributor
  * @author Babylon Finance
  */
-contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
+contract RewardsAssistant is IRewardsAssistant {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
@@ -78,10 +77,9 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
 
     /* ============ Constructor ============ */
 
-    function initialize(IBabController _controller) public {
-        OwnableUpgradeable.__Ownable_init();
+    constructor(IBabController _controller) {
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
-        controller = _controller;
+        controller = IBabController(_controller);
         rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
         // Update START_TIME (backward compatible)
         uint256[18] memory miningData = IRewardsDistributor(rewardsDistributor).checkMining(1, address(0));
@@ -887,5 +885,3 @@ contract RewardsAssistant is OwnableUpgradeable, IRewardsAssistant {
         return _powerToUpdate;
     }
 }
-
-contract RewardsAssistantV1 is RewardsAssistant {}
