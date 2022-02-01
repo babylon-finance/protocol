@@ -265,7 +265,7 @@ describe('deploy', function () {
         try {
           await strategyContract
             .connect(await impersonateAddress('0xde3bAAea1799338349C50E0F80d37a8BaE79CC54'))
-            .sweep('0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5');
+            .sweep('0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', eth().div(10));
         } catch (e) {
           console.log(`failed to finalize strategy ${e}`);
         }

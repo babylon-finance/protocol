@@ -47,6 +47,8 @@ interface IStrategy {
 
     function updateParams(uint256[4] calldata _params) external;
 
+    function sweep(address _token, uint256 _newSlippage) external;
+
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
