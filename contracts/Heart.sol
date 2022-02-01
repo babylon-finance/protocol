@@ -168,7 +168,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     uint256[7] public override totalStats;
 
     // Trade slippage to apply in trades
-    uint256 public override tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
+    uint256 public override tradeSlippage;
 
     /* ============ Initializer ============ */
 
@@ -203,6 +203,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         minAmounts[address(WBTC)] = 3e6;
         // Self-delegation to be able to use BABL balance as voting power
         IVoteToken(address(BABL)).delegate(address(this));
+        tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
     }
 
     /* ============ External Functions ============ */
