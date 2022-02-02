@@ -1035,8 +1035,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
-        // Avoid replay attack between rewardsBySig and claimRewards or even between 2 of each
-        contributor.nonce++;
+        // To avoid replay attack we use a global nonce at RD per user
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {

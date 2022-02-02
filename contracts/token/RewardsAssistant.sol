@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -155,14 +154,8 @@ contract RewardsAssistant is IRewardsAssistant {
         uint256[] memory _babl = new uint256[](_myGardens.length);
         uint256[] memory _profits = new uint256[](_myGardens.length);
         for (uint256 i = 0; i < _myGardens.length; i++) {
-            // console.log('check reset before rewards', rewards[5], rewards[6]);
-            // console.log('check reset before strategies', finalizedStrategies[0]);
             uint256[] memory rewards = new uint256[](8);
             address[] memory finalizedStrategies = IGarden(_myGardens[i]).getFinalizedStrategies();
-            console.log('check reset after', rewards[5], rewards[6]);
-            for (uint256 j = 0; j < finalizedStrategies.length; j++) {
-                console.log('check reset after strategies', finalizedStrategies[j]);
-            }
             // We override rewards per Garden
             // Gas expensive
             rewards = getRewards(_myGardens[i], _contributor, finalizedStrategies);
@@ -171,12 +164,6 @@ contract RewardsAssistant is IRewardsAssistant {
             _profits[i] = rewards[6];
             _totalBabl = _totalBabl.add(rewards[5]);
             _totalProfits = _totalProfits.add(rewards[6]);
-            // delete rewards;
-            // delete finalizedStrategies;
-            console.log('garden', _gardens[i]);
-            console.log('babl', _babl[i]);
-            console.log('profits', _profits[i]);
-            console.log('total acc babl', _totalBabl);
         }
         return (_gardens, _babl, _profits, _totalBabl, _totalProfits);
     }

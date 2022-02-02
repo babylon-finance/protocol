@@ -16,7 +16,6 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -435,19 +434,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      *   getRewards caculated off-chain.
      *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
      *
+     * @param _garden          Garden address.
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
-     * @param _nonce           Current nonce to prevent replay attacks.
+     * @param _rewardsUserNonce           Current nonce to prevent replay attacks.
      * @param _maxFee          Max fee user is willing to pay keeper. Fee is
      *                         substracted from user wallet in reserveAsset. Fee is
      *                         expressed in reserve asset.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     * @param v                 Signature v value
+     * @param r                 Signature r value
+     * @param s                 Signature s value
      */
     function claimRewardsBySig(
         address _garden,
         uint256 _babl,
         uint256 _profits,
-        uint256 _nonce,
+        uint256 _rewardsUserNonce,
         uint256 _maxFee,
         uint256 _fee,
         uint8 v,
@@ -457,14 +460,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
         bytes32 hash =
-            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _nonce, _maxFee))
+            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _rewardsUserNonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
-        (, , , , , , , , , uint256 nonce) = IGarden(_garden).getContributor(signer);
         // Used in by sig
         _require(signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay attacks
-        _require(nonce == _nonce, Errors.INVALID_NONCE);
+        // to prevent replay attacks we use nonce at RD level
+        _require(rewardsUserNonce[signer] == _rewardsUserNonce, Errors.INVALID_NONCE);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
         // Send BABL
         uint256 bablSent = _sendBABLToContributor(signer, _babl);
@@ -482,14 +484,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
      *   TODO Pending handling of all reserve assets at RD to remove rewardsSetAside from Gardens
      *
-     * @param _gardens         Array of gardens
-     * @param _babl            Array of BABL rewards from mining program per garden.
-     * @param _profits         Array of Profit rewards in reserve asset per garden.
-     * @param _nonces          Array of current nonces to prevent replay attacks per garden.
-     * @param _signatureData   Array of 5 values with totalBabl, totalProfits, rewardsDistributorNonce, maxFee and Fee.
-     * @param v                Signature v value
-     * @param r                Signature r value
-     * @param s                Signature s value
+     * @param _gardens          Array of gardens
+     * @param _babl             Array of BABL rewards from mining program per garden.
+     * @param _profits          Array of Profit rewards in reserve asset per garden.
+     * @param _signatureData    Array of 5 values with totalBabl, totalProfits, rewardsDistributorNonce, maxFee and Fee.
+     * @param v                 Signature v value
+     * @param r                 Signature r value
+     * @param s                 Signature s value
      *
      *
      * // signatureData[0]: totalBabl
@@ -502,7 +503,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address[] memory _gardens,
         uint256[] memory _babl,
         uint256[] memory _profits,
-        uint256[] memory _nonces,
         uint256[] memory _signatureData,
         uint8 v,
         bytes32 r,
@@ -528,13 +528,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address signer = ECDSA.recover(hash, v, r, s);
         // Used in by sig
         _require(signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay at rewards level
+        // To prevent replay attacks we use nonce at RD level
+        // We also save gas avoiding nonce check per garden
         _require(rewardsUserNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
         for (uint256 i = 0; i < _gardens.length; i++) {
             // We pay all the keeper fee using the first garden in the array to have only 1 tx
-            // To prevent replay attacks at garden level
-            (, , , , , , , , , uint256 nonce) = IGarden(_gardens[i]).getContributor(signer);
-            _require(nonce == _nonces[i], Errors.INVALID_NONCE);
             // Pay keeper fee only from the first garden and send profits set aside per each garden
             IGarden(_gardens[i]).sendRewardsToContributor(
                 signer,
@@ -923,6 +921,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return IRewardsAssistant(rewardsAssistant).estimateStrategyRewards(_strategy);
     }
 
+    /**
+     * Get an estimation of strategy BABL rewards for active strategies in the mining program
+     * @param _user        Address of the user
+     * @return the user rewards nonce
+     */
+    function getUserRewardsNonce(address _user) external view override returns (uint256) {
+        return rewardsUserNonce[_user];
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -957,6 +964,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             numCheckpoints[_garden][_address] = nCheckpoints + 1;
         }
+        // To avoid rewards replay attacks claim vs deposit/withdraw
+        rewardsUserNonce[_address]++;
     }
 
     /**
@@ -1150,7 +1159,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
-        // Avoid replay-attacks
+        // To avoid replay-attacks
         rewardsUserNonce[_to]++;
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;

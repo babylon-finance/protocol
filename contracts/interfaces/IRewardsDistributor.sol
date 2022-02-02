@@ -37,6 +37,8 @@ interface IRewardsDistributor {
 
     function getStrategyRewards(address _strategy) external view returns (uint256);
 
+    function getUserRewardsNonce(address _user) external view returns (uint256);
+
     function getRewards(
         address _garden,
         address _contributor,
@@ -88,7 +90,7 @@ interface IRewardsDistributor {
         address _garden,
         uint256 _babl,
         uint256 _profits,
-        uint256 _nonce,
+        uint256 _rewardsUserNonce,
         uint256 _maxFee,
         uint256 _fee,
         uint8 v,
@@ -100,7 +102,6 @@ interface IRewardsDistributor {
         address[] memory _gardens,
         uint256[] memory _babl,
         uint256[] memory _profits,
-        uint256[] memory _nonces,
         uint256[] memory _signatureData,
         uint8 v,
         bytes32 r,

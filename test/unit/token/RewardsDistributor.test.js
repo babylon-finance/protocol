@@ -2338,7 +2338,7 @@ async function getStrategyState(strategy) {
 
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
-      const nonce = 2; // nonce is 2 as it deposited twice before
+      const nonce = 4; // nonce is 4 as it deposited twice in 2 gardens before
       const maxFee = 1;
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
@@ -2411,7 +2411,7 @@ async function getStrategyState(strategy) {
         const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
         const babl = rewardsSigner2[5];
         const profits = rewardsSigner2[6];
-        const nonce = 2; // nonce is 2 as it deposited twice before
+        const nonce = 4; // nonce is 4 as it deposited twice before in 2 different gardens
         const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
         // Should have enough remaining allowance (at least the fee) - we need to be sure before the tx
         await erc20.connect(signer2).approve(newGarden.address, fee, { gasPrice: 0 });
@@ -2467,7 +2467,7 @@ async function getStrategyState(strategy) {
 
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
-      const nonce = 2; // nonce is 2 as it deposited twice before
+      const nonce = 4; // nonce is 4 as it deposited twice before in 2 different gardens
       const maxFee = 1;
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
@@ -2500,7 +2500,7 @@ async function getStrategyState(strategy) {
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       let babl = rewardsSigner2[5];
       let profits = rewardsSigner2[6];
-      let nonce = 1; // nonce is 2 as it deposited twice before, we use 1 instead
+      let nonce = 3; // nonce is 4 as it deposited twice before in 2 different gardens, we use 3 instead
       const maxFee = 1;
       const fee = 1;
       let sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
@@ -2512,8 +2512,8 @@ async function getStrategyState(strategy) {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('BAB#089');
-      // nonce 3 also fails
-      nonce = 3;
+      // nonce 5 also fails
+      nonce = 5;
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await expect(
         rewardsDistributor
@@ -2522,8 +2522,8 @@ async function getStrategyState(strategy) {
             gasPrice: 0,
           }),
       ).to.be.revertedWith('BAB#089');
-      // nonce 2 works
-      nonce = 2;
+      // nonce 4 works
+      nonce = 4;
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await weth.connect(signer2).approve(newGarden.address, fee, {
         gasPrice: 0,
@@ -2536,10 +2536,9 @@ async function getStrategyState(strategy) {
           }),
       ).not.to.be.reverted;
       // Now we check that nonce is been updated with the claimRewardsBySig
-      // nonce is 3 at this point
+      // nonce is 5 at this point
       const [long2] = await createStrategies([{ garden: newGarden }]);
-      // nonce is 4 at this point as there is a hidden deposit for signer2 while creating long2 strategy
-
+      // nonce is 6 at this point as there is a hidden deposit for signer2 while creating long2 strategy
       await executeStrategy(long2, eth());
       await injectFakeProfits(long2, eth().mul(200));
       await finalizeStrategyAfterQuarter(long2);
@@ -2547,7 +2546,7 @@ async function getStrategyState(strategy) {
       const rewardsSigner22 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long2.address]);
       babl = rewardsSigner22[5];
       profits = rewardsSigner22[6];
-      nonce = 4; // nonce is still 4 for signer2
+      nonce = 6; // nonce is still 6 for signer2
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await weth.connect(signer2).approve(newGarden.address, fee, {
         gasPrice: 0,
@@ -2581,14 +2580,14 @@ async function getStrategyState(strategy) {
 
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
-      const nonce = 2; // nonce is 2 as it deposited twice before
+      const nonce = 4; // nonce is 4 as it deposited twice before in 2 gardens
       const maxFee = 1;
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       // Race condition
       // User claims its tokens by direct claim
       await rewardsDistributor.connect(signer2).claimRewards(newGarden.address, [long1.address]);
-      // It also claim its token rewards by sig so the accountant is in process with nonce = 2
+      // It also claim its token rewards by sig so the accountant is in process with nonce = 4
       // Signer2 is trying a race condition between a normal and a by sig claim.
       // nonce avoids a race condition between a normal claimReturns and a claimRewardsBySig
       await expect(
