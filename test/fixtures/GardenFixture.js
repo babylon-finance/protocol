@@ -285,6 +285,7 @@ async function setUpFixture(
     tokenIdentifier,
     ishtarGate,
     mardukGate,
+    heartViewer,
 
     gardenNFT,
     strategyNFT,
