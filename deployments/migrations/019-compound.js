@@ -30,4 +30,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Compound'];
+module.exports.tags = ['CompoundLend'];

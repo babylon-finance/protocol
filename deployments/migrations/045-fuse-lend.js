@@ -30,4 +30,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Fuse-lend-gold-lender'];
+module.exports.tags = ['FuseLend'];

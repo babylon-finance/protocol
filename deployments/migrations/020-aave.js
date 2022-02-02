@@ -30,4 +30,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Aave'];
+module.exports.tags = ['AaveLend'];
