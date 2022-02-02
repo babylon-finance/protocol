@@ -124,6 +124,7 @@ async function getStrategyState(strategy) {
   let mardukGate;
   let keeper;
   let nft;
+  let rewardsAssistant;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -299,6 +300,7 @@ async function getStrategyState(strategy) {
       weth,
       keeper,
       nft,
+      rewardsAssistant,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
@@ -3779,8 +3781,6 @@ async function getStrategyState(strategy) {
       ).to.be.revertedWith('BAB#073');
     });
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
-      // Mining program has to be enabled before the strategy starts its execution
-
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -3822,6 +3822,60 @@ async function getStrategyState(strategy) {
           long5.address,
         ]),
       ).to.be.revertedWith('BAB#073');
+    });
+  });
+  describe('claimAllMyGardenRewards', function () {
+    it('can claim BABL rewards from two different Gardens in only 1 claim tx', async function () {
+      const [long1, long2, long3, long4, long5] = await createStrategies([
+        { garden: garden1 },
+        { garden: garden1 },
+        { garden: garden2 },
+        { garden: garden2 },
+        { garden: garden2 },
+      ]);
+
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await executeStrategy(long4, eth());
+      await executeStrategy(long5, eth());
+
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      await finalizeStrategyAfterQuarter(long2);
+
+      await injectFakeProfits(long3, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long3);
+
+      await injectFakeProfits(long4, eth().mul(222));
+      await finalizeStrategyAfterQuarter(long4);
+
+      await injectFakeProfits(long5, eth().mul(222));
+      await finalizeStrategyAfterQuarter(long5);
+
+      const balanceBefore = await bablToken.balanceOf(signer1.address);
+      const rewardsSigner1Garden1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      const rewardsSigner1Garden2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
+        long3.address,
+        long4.address,
+        long5.address,
+      ]);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer1.address, [garden2.address, garden1.address], {
+        gasPrice: 0,
+      });
+      await rewardsDistributor.connect(signer1).claimAllRewards([garden2.address, garden1.address], { gasPrice: 0 });
+      const balanceAfter = await bablToken.balanceOf(signer1.address);
+      expect(balanceBefore).to.eq(0);
+      expect(balanceAfter).to.be.gt(0);
+      expect(balanceAfter).to.eq(rewardsSigner1Garden1[5].add(rewardsSigner1Garden2[5]));
+      expect(rewardsAll[3]).to.eq(balanceAfter);
+      console.log(rewardsAll.toString());
     });
   });
   describe('NFT stake in Gardens to boost BABL rewards', function () {

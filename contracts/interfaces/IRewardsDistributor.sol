@@ -82,6 +82,8 @@ interface IRewardsDistributor {
 
     function claimRewards(address _garden, address[] calldata _finalizedStrategies) external;
 
+    function claimAllRewards(address[] memory _myGardens) external;
+
     function claimRewardsBySig(
         address _garden,
         uint256 _babl,
@@ -89,6 +91,17 @@ interface IRewardsDistributor {
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function claimAllRewardsBySig(
+        address[] memory _gardens,
+        uint256[] memory _babl,
+        uint256[] memory _profits,
+        uint256[] memory _nonces,
+        uint256[] memory _signatureData,
         uint8 v,
         bytes32 r,
         bytes32 s

@@ -35,6 +35,16 @@ interface IRewardsAssistant {
         address[] calldata _finalizedStrategies
     ) external view returns (uint256[] memory);
 
+    function getAllUserRewards(address _contributor, address[] memory _myGardens)
+        external
+        returns (
+            address[] memory _gardens,
+            uint256[] memory _babl,
+            uint256[] memory _profits,
+            uint256 totalBabl,
+            uint256 totalProfits
+        );
+
     function estimateUserRewards(address _strategy, address _contributor) external view returns (uint256[] memory);
 
     function estimateStrategyRewards(address _strategy) external view returns (uint256);

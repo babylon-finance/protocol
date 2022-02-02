@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -65,6 +66,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using ECDSA for bytes32;
 
     /* ========== Events ========== */
+
+    event SentGardenRewards(address _garden, address _user, uint256 _bablSent, uint256 _profitSent);
 
     /* ============ Modifiers ============ */
     /**
@@ -297,6 +300,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256[5] private benchmark;
     // Rewards Assistant for rewards calculations
     IRewardsAssistant public rewardsAssistant;
+    // User address => rewards nonce
+    mapping(address => uint256) private rewardsUserNonce;
 
     /* ============ Constructor ============ */
 
@@ -375,16 +380,50 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _finalizedStrategies  Array of finalized strategies to get rewards for.
      */
     function claimRewards(address _garden, address[] calldata _finalizedStrategies) external override nonReentrant {
-        (uint256 lastDepositAt, , , , , , , , , ) = IGarden(_garden).getContributor(msg.sender);
-        uint256 depositHardLock = IGarden(_garden).depositHardlock();
-        // Flashloan protection
-        _require(block.timestamp.sub(lastDepositAt) >= depositHardLock, Errors.DEPOSIT_HARDLOCK);
         uint256[] memory rewards = new uint256[](8);
         rewards = getRewards(_garden, msg.sender, _finalizedStrategies);
         // Send BABL
         uint256 bablSent = _sendBABLToContributor(msg.sender, rewards[5]);
         // Send profits but do not pay keeper fee
+        // The following check includes flashload security check (vs. depositHardlock)
         IGarden(_garden).sendRewardsToContributor(msg.sender, address(0), bablSent, rewards[6], 0);
+    }
+
+    /**
+     * @notice
+     *   This method allows users to claim all their rewards from an array of gardens in 1 user tx.
+     *   Rewards come from the strategies that his principal
+     *   was invested in in each of the gardens.
+     * @dev
+     *   Users should preferably call `claimAllMyGardenRewardsBySig` instead of this method to save gas due to
+     *   getRewards is caculated on-chain in this method.
+     *   TODO Pending handling of all reserve assets at RD to remove rewardsSetAside from Gardens
+     *
+     * @param _myGardens            Array of user gardens (portfolio)
+     */
+    function claimAllRewards(address[] memory _myGardens) external override nonReentrant {
+        (
+            address[] memory gardens,
+            uint256[] memory babl,
+            uint256[] memory profits,
+            uint256 totalBABL,
+            uint256 totalProfits
+        ) = IRewardsAssistant(rewardsAssistant).getAllUserRewards(msg.sender, _myGardens);
+        uint256 bablCount;
+        uint256 profitsCount;
+        for (uint256 i = 0; i < gardens.length; i++) {
+            // We do not pay keeper fee as it is a user tx
+            // The following check includes flashload security check (vs. depositHardlock)
+            IGarden(gardens[i]).sendRewardsToContributor(msg.sender, address(0), babl[i], profits[i], 0);
+            bablCount = bablCount.add(babl[i]);
+            // It will sum different reserveAsset with different decimals
+            // to be used only as a total profits lump sum security check
+            profitsCount = profitsCount.add(profits[i]);
+        }
+        // We send total BABL in only 1 aggregated tx (if any)
+        uint256 bablSent = _sendBABLToContributor(msg.sender, totalBABL);
+        _require(bablSent == totalBABL, Errors.NOT_ENOUGH_BABL);
+        _require(profitsCount == totalProfits, Errors.NOT_ENOUGH_PROFITS);
     }
 
     /**
@@ -431,6 +470,87 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 bablSent = _sendBABLToContributor(signer, _babl);
         // Pay keeper fee and send profits set aside
         IGarden(_garden).sendRewardsToContributor(signer, msg.sender, bablSent, _profits, _fee);
+    }
+
+    /**
+     * @notice
+     *   This method allows users
+     *   to claim All their pending rewards either profits or BABL by signature.
+     * @dev
+     *   Should be called instead of the `claimAllRewards at RD` to save gas due to
+     *   getAllUserRewards caculated off-chain.
+     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
+     *   TODO Pending handling of all reserve assets at RD to remove rewardsSetAside from Gardens
+     *
+     * @param _gardens         Array of gardens
+     * @param _babl            Array of BABL rewards from mining program per garden.
+     * @param _profits         Array of Profit rewards in reserve asset per garden.
+     * @param _nonces          Array of current nonces to prevent replay attacks per garden.
+     * @param _signatureData   Array of 5 values with totalBabl, totalProfits, rewardsDistributorNonce, maxFee and Fee.
+     * @param v                Signature v value
+     * @param r                Signature r value
+     * @param s                Signature s value
+     *
+     *
+     * // signatureData[0]: totalBabl
+     * // signatureData[1]: totalProfits
+     * // signatureData[2]: rewardsDistributorNonce
+     * // signatureData[3]: maxFee
+     * // signatureData[4]: fee
+     */
+    function claimAllRewardsBySig(
+        address[] memory _gardens,
+        uint256[] memory _babl,
+        uint256[] memory _profits,
+        uint256[] memory _nonces,
+        uint256[] memory _signatureData,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override nonReentrant {
+        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        uint256[] memory amountCounter = new uint256[](2); // Babl and Profit counter
+        // uint256 profitsCount;
+        _require(_signatureData[4] <= _signatureData[3], Errors.FEE_TOO_HIGH);
+        _require(_signatureData[4] > 0, Errors.FEE_TOO_LOW);
+        bytes32 hash =
+            keccak256(
+                abi.encode(
+                    REWARDS_BY_SIG_TYPEHASH,
+                    address(this),
+                    _signatureData[0],
+                    _signatureData[1],
+                    _signatureData[2],
+                    _signatureData[3]
+                )
+            )
+                .toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        // Used in by sig
+        _require(signer != address(0), Errors.INVALID_SIGNER);
+        // to prevent replay at rewards level
+        _require(rewardsUserNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
+        for (uint256 i = 0; i < _gardens.length; i++) {
+            // We pay all the keeper fee using the first garden in the array to have only 1 tx
+            // To prevent replay attacks at garden level
+            (, , , , , , , , , uint256 nonce) = IGarden(_gardens[i]).getContributor(signer);
+            _require(nonce == _nonces[i], Errors.INVALID_NONCE);
+            // Pay keeper fee only from the first garden and send profits set aside per each garden
+            IGarden(_gardens[i]).sendRewardsToContributor(
+                signer,
+                i == 0 ? msg.sender : address(0),
+                _babl[i],
+                _profits[i],
+                i == 0 ? _signatureData[4] : 0
+            );
+            amountCounter[0] = amountCounter[0].add(_babl[i]); // BABL counter
+            amountCounter[1] = amountCounter[1].add(_profits[i]); // Profits counter
+        }
+        _require(amountCounter[0] == _signatureData[0], Errors.NOT_ENOUGH_BABL);
+        // Send All BABL in only 1 tx
+        uint256 bablSent = _sendBABLToContributor(signer, _signatureData[0]);
+        _require(bablSent == _signatureData[0], Errors.NOT_ENOUGH_BABL);
+        _require(amountCounter[1] == _signatureData[1], Errors.NOT_ENOUGH_PROFITS);
     }
 
     /** PRIVILEGE FUNCTION
@@ -1030,9 +1150,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
+        // Avoid replay-attacks
+        rewardsUserNonce[_to]++;
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
-        SafeERC20.safeTransfer(babltoken, _to, bablToSend);
+        if (bablToSend > 0) {
+            SafeERC20.safeTransfer(babltoken, _to, bablToSend);
+        }
         return bablToSend;
     }
 

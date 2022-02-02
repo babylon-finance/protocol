@@ -16,6 +16,7 @@
 */
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
@@ -59,8 +60,6 @@ contract RewardsAssistant is IRewardsAssistant {
     uint256 private constant DECAY_RATE = 12e16;
     // Duration of its EPOCH in days  // BABL & profits split from the protocol
     uint256 private constant EPOCH_DURATION = 90 days;
-    // DAI normalize asset
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
@@ -108,7 +107,7 @@ contract RewardsAssistant is IRewardsAssistant {
     function getRewards(
         address _garden,
         address _contributor,
-        address[] calldata _finalizedStrategies
+        address[] memory _finalizedStrategies
     ) public view override returns (uint256[] memory) {
         _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
@@ -132,6 +131,54 @@ contract RewardsAssistant is IRewardsAssistant {
         }
 
         return totalRewards;
+    }
+
+    /**
+     * Calculates the profits and BABL that a contributor should receive from a series of finalized strategies
+     * in several gardens
+     * @param _contributor              Address of the contributor to check
+     * @param _myGardens                Garden array where contributor is a member
+     */
+    function getAllUserRewards(address _contributor, address[] memory _myGardens)
+        public
+        view
+        override
+        returns (
+            address[] memory,
+            uint256[] memory,
+            uint256[] memory,
+            uint256 _totalBabl,
+            uint256 _totalProfits
+        )
+    {
+        address[] memory _gardens = new address[](_myGardens.length);
+        uint256[] memory _babl = new uint256[](_myGardens.length);
+        uint256[] memory _profits = new uint256[](_myGardens.length);
+        for (uint256 i = 0; i < _myGardens.length; i++) {
+            // console.log('check reset before rewards', rewards[5], rewards[6]);
+            // console.log('check reset before strategies', finalizedStrategies[0]);
+            uint256[] memory rewards = new uint256[](8);
+            address[] memory finalizedStrategies = IGarden(_myGardens[i]).getFinalizedStrategies();
+            console.log('check reset after', rewards[5], rewards[6]);
+            for (uint256 j = 0; j < finalizedStrategies.length; j++) {
+                console.log('check reset after strategies', finalizedStrategies[j]);
+            }
+            // We override rewards per Garden
+            // Gas expensive
+            rewards = getRewards(_myGardens[i], _contributor, finalizedStrategies);
+            _gardens[i] = _myGardens[i];
+            _babl[i] = rewards[5];
+            _profits[i] = rewards[6];
+            _totalBabl = _totalBabl.add(rewards[5]);
+            _totalProfits = _totalProfits.add(rewards[6]);
+            // delete rewards;
+            // delete finalizedStrategies;
+            console.log('garden', _gardens[i]);
+            console.log('babl', _babl[i]);
+            console.log('profits', _profits[i]);
+            console.log('total acc babl', _totalBabl);
+        }
+        return (_gardens, _babl, _profits, _totalBabl, _totalProfits);
     }
 
     /**

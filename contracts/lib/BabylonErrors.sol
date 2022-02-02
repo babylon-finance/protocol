@@ -304,4 +304,8 @@ library Errors {
     uint256 internal constant ONLY_GOVERNANCE_OR_EMERGENCY = 107;
     // Strategy invalid reserve asset amount
     uint256 internal constant INVALID_RESERVE_AMOUNT = 108;
+    // Not enough BABL reserves
+    uint256 internal constant NOT_ENOUGH_BABL = 109;
+    // Not enough Profits reserves
+    uint256 internal constant NOT_ENOUGH_PROFITS = 110;
 }

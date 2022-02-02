@@ -129,8 +129,8 @@ describe('Garden', function () {
       const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74', owner);
       const heartDelegatee1 = await token.delegates(heartGarden.address);
       expect(heartDelegatee1).to.eq(ADDRESS_ZERO); // No delegation yet
-      const emergencyOwner = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
-      await heartGarden.connect(emergencyOwner).delegateVoteIntoHeart(heart.address);
+      const creator = await impersonateAddress(await heartGarden.creator());
+      await heartGarden.connect(creator).delegateGardenVote(token.address, heart.address);
       const heartDelegatee2 = await token.delegates(heartGarden.address);
       expect(heartDelegatee2).to.eq(signer1.address);
     });

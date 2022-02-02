@@ -473,19 +473,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         );
     }
 
-    /* PRIVILEGE FUNCTION To delegate Heart Garden votes into Heart
-     * It should only be used in Heart Garden in principle
-     * TODO Once it is merged with Heart PR we will take heart address directly from BabController instead of being a param
-     * TODO As it should be only used and once in Heart garden maybe we can just use heart garden address once we have it
+    /**
+     * PRIVILEGE FUNCTION to delegate Garden voting power itself into a delegatee
+     * To be used by Garden Creator only.
+     * Compatible with BABL and COMP and few others ERC20Comp related tokens
+     * @param _token         Address of BABL or any other ERC20Comp related governance token
+     * @param _delegatee     Address to delegate token voting power into
      */
-    function delegateVoteIntoHeart(address _heart) external override {
-        _require(_heart != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(
-            msg.sender == IBabController(controller).EMERGENCY_OWNER() ||
-                msg.sender == IBabController(controller).owner(),
-            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
-        );
-        IVoteToken(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).delegate(_heart);
+    function delegateGardenVote(address _token, address _delegatee) external override {
+        _onlyCreator(msg.sender);
+        _require(_token != address(0) && _delegatee != address(0), Errors.ADDRESS_IS_ZERO);
+        IVoteToken(_token).delegate(_delegatee);
     }
 
     /**
@@ -1033,6 +1031,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         Contributor storage contributor = contributors[_contributor];
         _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
+        // Flashloan protection
+        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
         // Avoid replay attack between rewardsBySig and claimRewards or even between 2 of each
