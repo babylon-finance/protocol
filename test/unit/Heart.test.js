@@ -59,10 +59,10 @@ describe('Heart Unit Test', function () {
       expect(await heart.connect(owner).bablRewardLeft()).to.equal(0);
       const fees = await heart.connect(owner).getFeeDistributionWeights();
       expect(fees[0]).to.equal(eth(0.1));
-      expect(fees[1]).to.equal(eth(0.5));
-      expect(fees[2]).to.equal(eth(0.15));
+      expect(fees[1]).to.equal(eth(0.3));
+      expect(fees[2]).to.equal(eth(0.25));
       expect(fees[3]).to.equal(eth(0.15));
-      expect(fees[4]).to.equal(eth(0.1));
+      expect(fees[4]).to.equal(eth(0.2));
       const stats = await heart.connect(owner).getTotalStats();
       expect(stats[0]).to.equal(0);
       expect(stats[1]).to.equal(0);
