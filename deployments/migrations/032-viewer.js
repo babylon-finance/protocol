@@ -31,4 +31,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Viewer'];
+module.exports.tags = ['BabViewer'];

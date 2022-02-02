@@ -15,7 +15,7 @@ module.exports = async ({
   const contract = 'HeartViewer';
 
   const controller = await deployments.get('BabControllerProxy');
-  const governor = await getContract('BabylonGovernor');
+  const governor = await deployments.get('BabylonGovernor');
   const heart = await deployments.get('HeartProxy');
   const HEART_GARDEN_ADDRES = ''; // todo: put garden address once created
 
@@ -38,4 +38,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Viewer'];
+module.exports.tags = ['HeartViewer'];
