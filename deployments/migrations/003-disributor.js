@@ -11,7 +11,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const bablToken = await deployments.get('BABLToken');
   const controller = await getController();
@@ -19,7 +19,7 @@ module.exports = async ({
   const rewardsDistributor = await upgradesDeployer.deployAdminProxy(
     'RewardsDistributor',
     'RewardsDistributorProxy',
-    { from: deployer, log: true, gasPrice },
+    { from: deployer, log: true, maxPriorityFeePerGas },
     {
       initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
     },
@@ -29,10 +29,10 @@ module.exports = async ({
     const bablTokenContract = await ethers.getContractAt('BABLToken', bablToken.address);
 
     console.log('Setting RewardsDistributor on BABLToken');
-    await (await bablTokenContract.setRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
+    await (await bablTokenContract.setRewardsDistributor(rewardsDistributor.address, { maxPriorityFeePerGas })).wait();
 
     console.log(`Setting rewards distributor on controller ${rewardsDistributor.address}`);
-    await (await controller.editRewardsDistributor(rewardsDistributor.address, { gasPrice })).wait();
+    await (await controller.editRewardsDistributor(rewardsDistributor.address, { maxPriorityFeePerGas })).wait();
   }
 
   if (network.live && rewardsDistributor.newlyDeployed) {

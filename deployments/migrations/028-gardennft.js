@@ -11,7 +11,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'GardenNFT';
 
   const controller = await getController();
@@ -20,12 +20,12 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, 'Babylon Garden NFT', 'GARDEN_NFT'],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting garden NFT on controller ${deployment.address}`);
-    await (await controller.editGardenNFT(deployment.address, { gasPrice })).wait();
+    await (await controller.editGardenNFT(deployment.address, { maxPriorityFeePerGas })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

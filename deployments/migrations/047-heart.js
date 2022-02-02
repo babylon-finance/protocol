@@ -14,7 +14,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const controller = await getController();
   const governor = await getContract('BabylonGovernor');
@@ -25,7 +25,7 @@ module.exports = async ({
     {
       from: deployer,
       log: true,
-      gasPrice,
+      maxPriorityFeePerGas,
       args: [controller.address, (await deployments.get('BabylonGovernor')).address],
     },
     {
@@ -38,7 +38,7 @@ module.exports = async ({
 
   if (heart.newlyDeployed) {
     console.log(`Setting heart on controller ${heart.address}`);
-    await (await controller.editHeart(heart.address, { gasPrice })).wait();
+    await (await controller.editHeart(heart.address, { maxPriorityFeePerGas })).wait();
   }
 
   if (network.live && heart.newlyDeployed) {

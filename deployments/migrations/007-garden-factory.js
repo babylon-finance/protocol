@@ -11,7 +11,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const gardenFactoryContract = 'GardenFactory';
   const gardenContract = 'Garden';
@@ -23,7 +23,7 @@ module.exports = async ({
     from: deployer,
     args: [],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   const beacon = await deploy(beaconContract, {
@@ -31,19 +31,19 @@ module.exports = async ({
     contract: 'UpgradeableBeacon',
     args: [garden.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   const gardenFactory = await deploy(gardenFactoryContract, {
     from: deployer,
     args: [controller.address, beacon.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (gardenFactory.newlyDeployed) {
     console.log(`Setting garden factory on controller ${gardenFactory.address}`);
-    await (await controller.editGardenFactory(gardenFactory.address, { gasPrice })).wait();
+    await (await controller.editGardenFactory(gardenFactory.address, { maxPriorityFeePerGas })).wait();
   }
 
   if (network.live && garden.newlyDeployed) {
