@@ -13,6 +13,8 @@ interface ICEther {
 
     function repayBorrow() external payable;
 
+    function getCash() external view returns (uint256);
+
     function repayBorrowBehalf(address borrower) external payable;
 
     function borrowBalanceCurrent(address account) external returns (uint256);

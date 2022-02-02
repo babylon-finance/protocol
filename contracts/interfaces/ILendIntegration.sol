@@ -40,6 +40,8 @@ interface ILendIntegration {
 
     function getRewardToken() external view returns (address);
 
+    function getCollateralFactor(address _assetToken) external view returns (uint256);
+
     function getRewardsAccrued(address _strategy) external view returns (uint256);
 
     function getExpectedShares(address _assetToken, uint256 _numTokensToSupply) external view returns (uint256);

@@ -14,18 +14,13 @@ module.exports = async ({
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const gasPrice = await getGasPrice();
-  const contract = 'CompoundBorrowIntegration';
+  const contract = 'FuseBorrowIntegration';
 
   const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [
-      'compoundborrow',
-      controller.address,
-      ethers.utils.parseEther('0.30'),
-      '0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b',
-    ],
+    args: [controller.address, ethers.utils.parseEther('0.35'), '0xC7125E3A2925877C7371d579D29dAe4729Ac9033'],
     log: true,
     gasPrice,
   });
@@ -35,4 +30,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Compound-borrow'];
+module.exports.tags = ['Fuse-borrow-goldlender'];
