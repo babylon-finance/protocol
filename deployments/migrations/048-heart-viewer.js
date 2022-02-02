@@ -11,19 +11,19 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'HeartViewer';
 
   const controller = await deployments.get('BabControllerProxy');
   const governor = await deployments.get('BabylonGovernor');
   const heart = await deployments.get('HeartProxy');
-  const HEART_GARDEN_ADDRES = ''; // todo: put garden address once created
+  const HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
 
   const deployment = await deploy(contract, {
     from: deployer,
     args: [controller.address, governor.address, heart.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (deployment.newlyDeployed) {
@@ -32,7 +32,7 @@ module.exports = async ({
 
   if (network.live && deployment.newlyDeployed) {
     if (HEART_GARDEN_ADDRES) {
-      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { gasPrice })).wait();
+      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { maxPriorityFeePerGas })).wait();
     }
     await tenderly.push(await getTenderlyContract(contract));
   }

@@ -18,11 +18,11 @@
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
+
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import {IVoteToken} from './interfaces/IVoteToken.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -40,6 +40,8 @@ import {ICEther} from './interfaces/external/compound/ICEther.sol';
 import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
+import {IVoteToken} from './interfaces/IVoteToken.sol';
+
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';

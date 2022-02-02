@@ -41,14 +41,14 @@ describe('GardenValuer', function () {
     it('should NOT allow zero address for controller during deployment', async function () {
       const { deploy } = deployments;
       const { deployer, owner } = await getNamedAccounts();
-      const gasPrice = await getGasPrice();
+      const { maxPriorityFeePerGas } = await getGasPrice();
       const contract = 'GardenValuer';
       await expect(
         deploy(contract, {
           from: deployer,
           args: [ADDRESS_ZERO],
           log: true,
-          gasPrice,
+          maxPriorityFeePerGas,
         }),
       ).to.be.revertedWith('Incorrect address');
     });
