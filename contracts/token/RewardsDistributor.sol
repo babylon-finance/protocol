@@ -300,7 +300,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // Rewards Assistant for rewards calculations
     IRewardsAssistant public rewardsAssistant;
     // User address => rewards nonce
-    mapping(address => uint256) private rewardsUserNonce;
+    mapping(address => uint256) private userRewardsNonce;
 
     /* ============ Constructor ============ */
 
@@ -437,7 +437,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden          Garden address.
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
-     * @param _rewardsUserNonce           Current nonce to prevent replay attacks.
+     * @param _userRewardsNonce           Current nonce to prevent replay attacks.
      * @param _maxFee          Max fee user is willing to pay keeper. Fee is
      *                         substracted from user wallet in reserveAsset. Fee is
      *                         expressed in reserve asset.
@@ -450,7 +450,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         uint256 _babl,
         uint256 _profits,
-        uint256 _rewardsUserNonce,
+        uint256 _userRewardsNonce,
         uint256 _maxFee,
         uint256 _fee,
         uint8 v,
@@ -460,13 +460,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
         bytes32 hash =
-            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _rewardsUserNonce, _maxFee))
+            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _userRewardsNonce, _maxFee))
                 .toEthSignedMessageHash();
         address signer = ECDSA.recover(hash, v, r, s);
         // Used in by sig
         _require(signer != address(0), Errors.INVALID_SIGNER);
         // to prevent replay attacks we use nonce at RD level
-        _require(rewardsUserNonce[signer] == _rewardsUserNonce, Errors.INVALID_NONCE);
+        _require(userRewardsNonce[signer] == _userRewardsNonce, Errors.INVALID_NONCE);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
         // Send BABL
         uint256 bablSent = _sendBABLToContributor(signer, _babl);
@@ -530,7 +530,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _require(signer != address(0), Errors.INVALID_SIGNER);
         // To prevent replay attacks we use nonce at RD level
         // We also save gas avoiding nonce check per garden
-        _require(rewardsUserNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
+        _require(userRewardsNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
         for (uint256 i = 0; i < _gardens.length; i++) {
             // We pay all the keeper fee using the first garden in the array to have only 1 tx
             // Pay keeper fee only from the first garden and send profits set aside per each garden
@@ -927,7 +927,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the user rewards nonce
      */
     function getUserRewardsNonce(address _user) external view override returns (uint256) {
-        return rewardsUserNonce[_user];
+        return userRewardsNonce[_user];
     }
 
     /* ============ Internal Functions ============ */
@@ -965,7 +965,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             numCheckpoints[_garden][_address] = nCheckpoints + 1;
         }
         // To avoid rewards replay attacks claim vs deposit/withdraw
-        rewardsUserNonce[_address]++;
+        userRewardsNonce[_address]++;
     }
 
     /**
@@ -1160,7 +1160,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
         // To avoid replay-attacks
-        rewardsUserNonce[_to]++;
+        userRewardsNonce[_to]++;
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
         if (bablToSend > 0) {

@@ -2598,6 +2598,298 @@ async function getStrategyState(strategy) {
           }),
       ).to.be.revertedWith('BAB#089');
     });
+    it('can claimAllRewardsBySig all BABL and profit rewards from two different Gardens in only 1 claim tx by sig', async function () {
+      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
+      const whaleSigner = await impersonateAddress(whaleAddress);
+      await dai.connect(whaleSigner).transfer(signer1.address, eth('5000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(whaleSigner).transfer(signer3.address, eth('5000'), {
+        gasPrice: 0,
+      });
+      await dai.connect(signer1).approve(babController.address, eth('2000'), {
+        gasPrice: 0,
+      });
+
+      const whaleAddress2 = '0x0a59649758aa4d66e25f08dd01271e891fe52199'; // Has USDC
+      const whaleSigner2 = await impersonateAddress(whaleAddress2);
+      const thousandUSDC = ethers.BigNumber.from(1e4 * 1e6);
+
+      await usdc.connect(whaleSigner2).transfer(signer1.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(whaleSigner2).transfer(signer3.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
+        gasPrice: 0,
+      });
+      const params = [...USDC_GARDEN_PARAMS];
+      params[3] = thousandUSDC.div(10);
+      // USC Garden
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.USDC,
+          'Absolute USDC Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          params,
+          thousandUSDC.div(2),
+          [false, false, false],
+          [0, 0, 0],
+          {},
+        );
+      const gardens = await babController.getGardens();
+      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
+
+      // DAI Garden
+      await babController
+        .connect(signer1)
+        .createGarden(
+          addresses.tokens.DAI,
+          'Absolute DAI Return [beta]',
+          'EYFA',
+          'http...',
+          0,
+          GARDEN_PARAMS_STABLE,
+          eth('500'),
+          [false, false, false],
+          [0, 0, 0],
+          {},
+        );
+      const gardens2 = await babController.getGardens();
+      daiGarden = await ethers.getContractAt('Garden', gardens2[5]);
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
+      await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
+      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
+
+      // Mining program has to be enabled before the strategy starts its execution
+
+      const long1 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        uniswapV3TradeIntegration.address,
+        usdcGarden,
+        USDC_STRATEGY_PARAMS,
+        [dai.address, 0],
+      );
+
+      const long2 = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer3],
+        uniswapV3TradeIntegration.address,
+        daiGarden,
+        DAI_STRATEGY_PARAMS,
+        [usdc.address, 0],
+      );
+      // Execute USDC Garden strategy long1
+      await executeStrategy(long1, { amount: ethers.BigNumber.from(1000 * 1000000) });
+
+      // Execute DAI Garden strategy long2
+      await executeStrategy(long2, { amount: eth('1000') });
+
+      await injectFakeProfits(long1, eth('200')); // We inject Dai with 18 decimals during strategy execution
+
+      await injectFakeProfits(long2, ethers.BigNumber.from(200 * 1000000)); // We inject usdc (6 decimals) during strategy execution
+
+      // Finalize both strategies (long 2 has higher duration -> more rewards)
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyImmediate(long2);
+      // Check pending rewards for users at USDC Garden
+      const signer3RewardsUSDC = await rewardsDistributor.getRewards(usdcGarden.address, signer3.address, [
+        long1.address,
+      ]);
+      // Check pending rewards for users at DAI Garden
+      const signer3RewardsDAI = await rewardsDistributor.getRewards(daiGarden.address, signer3.address, [
+        long2.address,
+      ]);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(
+        signer3.address,
+        [usdcGarden.address, daiGarden.address],
+        {
+          gasPrice: 0,
+        },
+      );
+      expect(signer3RewardsUSDC[5].add(signer3RewardsDAI[5])).to.eq(rewardsAll[3]);
+      expect(signer3RewardsUSDC[6].add(signer3RewardsDAI[6])).to.eq(rewardsAll[4]);
+
+      const babl = rewardsAll[3]; // total babl
+      const profits = rewardsAll[4]; // total profits
+      const nonce = await rewardsDistributor.getUserRewardsNonce(signer3.address);
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(rewardsDistributor.address, signer3, babl, profits, nonce, maxFee);
+      const rewardsData = [rewardsAll[3], rewardsAll[4], nonce, maxFee, fee];
+      // rewardsData = param _signatureData  =>  Array of 5 values with totalBabl, totalProfits, rewardsDistributorNonce, maxFee and Fee.
+      const signer3BABLBalanceBefore = await bablToken.balanceOf(signer3.address);
+      // Note: we need to be sure that there is allowance to pay keeper
+      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
+      const signer3USDCBalanceBefore = await usdc.balanceOf(signer3.address);
+      const signer3DAIBalanceBefore = await dai.balanceOf(signer3.address);
+      // Signer 3 claim ALL rewards by sig
+      await rewardsDistributor
+        .connect(keeper)
+        .claimAllRewardsBySig(rewardsAll[0], rewardsAll[1], rewardsAll[2], rewardsData, sig.v, sig.r, sig.s, {
+          gasPrice: 0,
+        });
+      // BABL Balance
+      const signer3USDCBalanceAfter = await usdc.balanceOf(signer3.address);
+      const signer3DAIBalanceAfter = await dai.balanceOf(signer3.address);
+      expect(signer3BABLBalanceBefore).to.eq(0);
+      expect(await rewardsDistributor.getUserRewardsNonce(signer3.address)).to.be.eq(nonce.add(1));
+      expect(rewardsAll[3]).to.eq(await bablToken.balanceOf(signer3.address));
+      expect(signer3USDCBalanceAfter.sub(signer3USDCBalanceBefore)).to.eq(rewardsAll[2][0].sub(fee));
+      expect(signer3DAIBalanceAfter.sub(signer3DAIBalanceBefore)).to.eq(rewardsAll[2][1]);
+    });
+    it('can NOT claimAllRewardsBySig by a signer if not a keeper', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer2.address, [newGarden.address], {
+        gasPrice: 0,
+      });
+      expect(rewardsAll[3]).to.be.gt(0); // BABL
+      expect(rewardsAll[4]).to.be.gt(0); // Profit rewards as steward
+
+      const babl = rewardsAll[3];
+      const profits = rewardsAll[4];
+      const nonce = 4; // nonce is 4 as it deposited twice before in 2 different gardens
+      const maxFee = 1;
+      const fee = 1;
+      const rewardsData = [rewardsAll[3], rewardsAll[4], nonce, maxFee, fee];
+      const sig = await getRewardsSig(rewardsDistributor.address, signer2, babl, profits, nonce, maxFee);
+      // Signer 2 claim rewards by sig
+      await expect(
+        rewardsDistributor
+          .connect(signer2)
+          .claimAllRewardsBySig(rewardsAll[0], rewardsAll[1], rewardsAll[2], rewardsData, sig.v, sig.r, sig.s, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#018');
+    });
+    it('can NOT execute a replay attack between claimRewards and claimAllRewardsBySig protected by nonce', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden2 }]);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long2);
+      const rewardsSigner1Garden1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer1.address, [garden2.address, garden1.address], {
+        gasPrice: 0,
+      });
+      const babl = rewardsAll[3]; // total babl
+      const profits = rewardsAll[4]; // total profits
+      const nonce = await rewardsDistributor.getUserRewardsNonce(signer1.address);
+      const maxFee = 1;
+      const fee = 1;
+      const sig1 = await getRewardsSig(
+        garden1.address,
+        signer1,
+        rewardsSigner1Garden1[5],
+        rewardsSigner1Garden1[6],
+        nonce,
+        maxFee,
+      );
+      const sig2 = await getRewardsSig(rewardsDistributor.address, signer1, babl, profits, nonce, maxFee);
+      const rewardsData = [babl, profits, nonce, maxFee, fee];
+      const token = addresses.tokens.WETH;
+      // Needs reserve asset (weth) funds and enough allowance to pay keeper
+      await transferFunds(token);
+      await weth.connect(signer1).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await rewardsDistributor.connect(signer1).claimRewards(garden1.address, [long1.address], { gasPrice: 0 });
+      // We use the same nonce for both as there is a replay attack ongoing
+      await expect(
+        rewardsDistributor
+          .connect(keeper)
+          .claimAllRewardsBySig(rewardsAll[0], rewardsAll[1], rewardsAll[2], rewardsData, sig2.v, sig2.r, sig2.s, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#089');
+      expect(await rewardsDistributor.getUserRewardsNonce(signer1.address)).to.eq(nonce.add(1));
+    });
+    it('can NOT execute a replay attack between claimRewardsBySig and claimAllRewardsBySig protected by nonce', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden2 }]);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long2);
+      const rewardsSigner1Garden1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+      ]);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer1.address, [garden2.address, garden1.address], {
+        gasPrice: 0,
+      });
+      const babl = rewardsAll[3]; // total babl
+      const profits = rewardsAll[4]; // total profits
+      const nonce = await rewardsDistributor.getUserRewardsNonce(signer1.address);
+      const maxFee = 1;
+      const fee = 1;
+      const sig1 = await getRewardsSig(
+        garden1.address,
+        signer1,
+        rewardsSigner1Garden1[5],
+        rewardsSigner1Garden1[6],
+        nonce,
+        maxFee,
+      );
+      const sig2 = await getRewardsSig(rewardsDistributor.address, signer1, babl, profits, nonce, maxFee);
+      const rewardsData = [babl, profits, nonce, maxFee, fee];
+      const token = addresses.tokens.WETH;
+      // Needs reserve asset (weth) funds and enough allowance to pay keeper
+      await transferFunds(token);
+      await weth.connect(signer1).approve(garden1.address, eth(1), { gasPrice: 0 });
+      await rewardsDistributor
+        .connect(keeper)
+        .claimRewardsBySig(
+          garden1.address,
+          rewardsSigner1Garden1[5],
+          rewardsSigner1Garden1[6],
+          nonce,
+          maxFee,
+          fee,
+          sig1.v,
+          sig1.r,
+          sig1.s,
+          { gasPrice: 0 },
+        );
+      // We use the same nonce for both as there is a replay attack ongoing
+      await expect(
+        rewardsDistributor
+          .connect(keeper)
+          .claimAllRewardsBySig(rewardsAll[0], rewardsAll[1], rewardsAll[2], rewardsData, sig2.v, sig2.r, sig2.s, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#089');
+      expect(await rewardsDistributor.getUserRewardsNonce(signer1.address)).to.eq(nonce.add(1));
+    });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
@@ -3823,8 +4115,8 @@ async function getStrategyState(strategy) {
       ).to.be.revertedWith('BAB#073');
     });
   });
-  describe('claimAllMyGardenRewards', function () {
-    it('can claim BABL rewards from two different Gardens in only 1 claim tx', async function () {
+  describe('claimAllRewards', function () {
+    it('can claim all BABL and profit rewards from two different Gardens in only 1 claim tx', async function () {
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -3874,7 +4166,6 @@ async function getStrategyState(strategy) {
       expect(balanceAfter).to.be.gt(0);
       expect(balanceAfter).to.eq(rewardsSigner1Garden1[5].add(rewardsSigner1Garden2[5]));
       expect(rewardsAll[3]).to.eq(balanceAfter);
-      console.log(rewardsAll.toString());
     });
   });
   describe('NFT stake in Gardens to boost BABL rewards', function () {
