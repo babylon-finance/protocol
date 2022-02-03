@@ -691,7 +691,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Make sure creator can still have normal permissions after renouncing
         // Creator can only renounce to 0x in public gardens
         _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE);
-        if (msg.sender == creator) {
+        if (msg.sender == creator || creator == address(0)) {
+            // An extra creator can re-assign original creator role only if creator is zero address
             creator = _newCreator;
             return;
         }
@@ -700,12 +701,31 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /*
+     * PRIVILEGE FUNCTION to recover creator rights in case of renouncing.
+     * Caller must be a governance or emergency
+     * @param _newCreator  New creator address
+     */
+    function recoverCreator(address _newCreator) external override {
+        _require(
+            msg.sender == IBabController(controller).owner() ||
+                msg.sender == IBabController(controller).EMERGENCY_OWNER(),
+            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
+        );
+        _require(_newCreator != address(0) && creator == address(0), Errors.ADDRESS_IS_ZERO);
+        creator = _newCreator;
+    }
+
+    /*
      * Adds extra creators. Only the original creator can call this.
      * Can only be called if all the addresses are zero
      * @param _newCreators  Addresses of the new creators
      */
     function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
-        _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
+        // Failsafe mode in cases where
+        _require(
+            msg.sender == creator || (_isCreator(msg.sender) && creator == address(0)),
+            Errors.ONLY_FIRST_CREATOR_CAN_ADD
+        );
         _assignExtraCreator(0, _newCreators[0]);
         _assignExtraCreator(1, _newCreators[1]);
         _assignExtraCreator(2, _newCreators[2]);
