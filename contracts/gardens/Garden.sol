@@ -721,11 +721,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * @param _newCreators  Addresses of the new creators
      */
     function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
-        // Failsafe mode in cases where
-        _require(
-            msg.sender == creator || (_isCreator(msg.sender) && creator == address(0)),
-            Errors.ONLY_FIRST_CREATOR_CAN_ADD
-        );
+        _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
         _assignExtraCreator(0, _newCreators[0]);
         _assignExtraCreator(1, _newCreators[1]);
         _assignExtraCreator(2, _newCreators[2]);
