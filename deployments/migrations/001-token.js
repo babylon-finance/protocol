@@ -2,7 +2,7 @@ const { ADDRESS_ZERO } = require('../../lib/constants');
 
 module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getGasPrice, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const { deploy } = deployments;
 
   const controller = await deployments.get('BabControllerProxy');
@@ -11,7 +11,7 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (network.live && token.newlyDeployed) {

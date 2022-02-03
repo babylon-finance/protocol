@@ -10,7 +10,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'HarvestPoolV3Integration';
 
   const controller = await deployments.get('BabControllerProxy');
@@ -19,7 +19,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
   if (deployment.newlyDeployed) {
     console.log(`Adding harvest univ3 integration ${contract}(${deployment.address})`);

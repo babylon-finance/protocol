@@ -43,6 +43,7 @@ describe('Strategy', function () {
   let strategy21;
   let wethToken;
   let treasury;
+  let heart;
   let aaveLendIntegration;
   let uniswapV3TradeIntegration;
   let uniswapPoolIntegration;
@@ -75,6 +76,7 @@ describe('Strategy', function () {
       garden1,
       garden2,
       treasury,
+      heart,
       strategy11,
       strategy21,
       signer2,
@@ -680,34 +682,33 @@ describe('Strategy', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      const treasuryBalance0 = await wethToken.balanceOf(treasury.address);
+      const treasuryBalance0 = await wethToken.balanceOf(heart.address);
       expect(treasuryBalance0.toString()).to.be.equal('25000000000000000');
 
-      await injectFakeProfits(long1, eth().mul(200));
+      await injectFakeProfits(long1, eth(200));
       await finalizeStrategy(long1);
 
-      const treasuryBalance1 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance1).to.be.closeTo(ethers.BigNumber.from('27488436671748554'), treasuryBalance1.div(20));
+      const treasuryBalance1 = await wethToken.balanceOf(heart.address);
+      expect(treasuryBalance1).to.be.closeTo(from('27488436671748554'), treasuryBalance1.div(20));
 
-      // Strategy long2 has not profits
       await finalizeStrategy(long2);
-      const treasuryBalance2 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance2).to.be.closeTo(ethers.BigNumber.from('27488436671748554'), treasuryBalance2.div(20));
+      const treasuryBalance2 = await wethToken.balanceOf(heart.address);
+      expect(treasuryBalance2).to.be.closeTo(from('27488436671748554'), treasuryBalance2.div(20));
 
-      await injectFakeProfits(long3, eth().mul(200));
+      await injectFakeProfits(long3, eth(200));
       await finalizeStrategy(long3);
-      const treasuryBalance3 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance3).to.be.closeTo(ethers.BigNumber.from('29974155131285971'), treasuryBalance3.div(20));
+      const treasuryBalance3 = await wethToken.balanceOf(heart.address);
+      expect(treasuryBalance3).to.be.closeTo(from('32737424404549201'), treasuryBalance3.div(20));
 
-      await injectFakeProfits(long4, eth().mul(222));
+      await injectFakeProfits(long4, eth(200));
       await finalizeStrategy(long4);
-      const treasuryBalance4 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance4).to.be.closeTo(ethers.BigNumber.from('32737424404549201'), treasuryBalance4.div(20));
+      const treasuryBalance4 = await wethToken.balanceOf(heart.address);
+      expect(treasuryBalance4).to.be.closeTo(from('37006406897484371'), treasuryBalance4.div(20));
 
-      await injectFakeProfits(long5, eth().mul(222));
+      await injectFakeProfits(long5, eth(222));
       await finalizeStrategy(long5);
-      const treasuryBalance5 = await wethToken.balanceOf(treasury.address);
-      expect(treasuryBalance5).to.be.closeTo(ethers.BigNumber.from('35499309567917156'), treasuryBalance5.div(20));
+      const treasuryBalance5 = await wethToken.balanceOf(heart.address);
+      expect(treasuryBalance5).to.be.closeTo(from('41257596971714644'), treasuryBalance5.div(20));
     });
 
     it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {
@@ -717,18 +718,19 @@ describe('Strategy', function () {
 
       increaseTime(ONE_DAY_IN_SECONDS * 30);
 
-      const treasuryBalance0 = await wethToken.balanceOf(treasury.address);
+      const treasuryBalance0 = await wethToken.balanceOf(heart.address);
 
       await injectFakeProfits(long1, eth().mul(200));
 
       await finalizeStrategy(long1);
-      const treasuryBalance1 = await wethToken.balanceOf(treasury.address);
+
+      const treasuryBalance1 = await wethToken.balanceOf(heart.address);
       const feeLong1 = treasuryBalance1 - treasuryBalance0;
       const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
       const capitalReturnedLong1 = await long1.capitalReturned();
       const valueLong1 = reserveAssetRewardsSetAsideLong1.add(feeLong1);
 
-      // TODO: Calculate and test reserveAssetRewardsSetAside, treasury fee, profits
+      // TODO: Calculate and test reserveAssetRewardsSetAside, heart fee, profits
       // expect(capitalReturnedLong1).to.be.closeTo(valueLong1, 10);
     });
   });

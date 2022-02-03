@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon.sol';
 

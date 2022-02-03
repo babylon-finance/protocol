@@ -304,8 +304,26 @@ library Errors {
     uint256 internal constant ONLY_GOVERNANCE_OR_EMERGENCY = 107;
     // Strategy invalid reserve asset amount
     uint256 internal constant INVALID_RESERVE_AMOUNT = 108;
+    // Heart only pumps once a week
+    uint256 internal constant HEART_ALREADY_PUMPED = 109;
+    // Heart needs garden votes to pump
+    uint256 internal constant HEART_VOTES_MISSING = 110;
+    // Not enough fees for heart
+    uint256 internal constant HEART_MINIMUM_FEES = 111;
+    // Invalid heart votes length
+    uint256 internal constant HEART_VOTES_LENGTH = 112;
+    // Heart LP tokens not received
+    uint256 internal constant HEART_LP_TOKENS = 113;
+    // Heart invalid asset to lend
+    uint256 internal constant HEART_ASSET_LEND_INVALID = 114;
+    // Heart garden not set
+    uint256 internal constant HEART_GARDEN_NOT_SET = 115;
+    // Heart asset to lend is the same
+    uint256 internal constant HEART_ASSET_LEND_SAME = 116;
+    // Heart invalid ctoken
+    uint256 internal constant HEART_INVALID_CTOKEN = 117;
     // Not enough BABL reserves
-    uint256 internal constant NOT_ENOUGH_BABL = 109;
+    uint256 internal constant NOT_ENOUGH_BABL = 118;
     // Not enough Profits reserves
-    uint256 internal constant NOT_ENOUGH_PROFITS = 110;
+    uint256 internal constant NOT_ENOUGH_PROFITS = 119;
 }

@@ -3,6 +3,7 @@ const { expect } = require('chai');
 // const { increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
 const addresses = require('lib/addresses');
+const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
@@ -22,7 +23,8 @@ const STUCK_EXECUTE = [
   // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
-  '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
+  // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
+  '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
 ];
 
 describe('deploy', function () {
@@ -234,7 +236,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('gets right NAV strategies', async () => {
+    it('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
@@ -249,8 +251,25 @@ describe('deploy', function () {
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
+
     it.only('can finalize stuck strategies', async () => {
-      await finalizeStuckStrategies();
+      const strategies = STUCK_EXECUTE;
+      for (const strategy of strategies) {
+        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+        const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+        const reserveAsset = await gardenContract.reserveAsset();
+        const name = await strategyNft.getStrategyName(strategy);
+        const isExecuting = await strategyContract.isStrategyActive();
+
+        console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
+        try {
+          await strategyContract
+            .connect(await impersonateAddress('0xde3bAAea1799338349C50E0F80d37a8BaE79CC54'))
+            .sweep('0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', eth().div(10));
+        } catch (e) {
+          console.log(`failed to finalize strategy ${e}`);
+        }
+      }
     });
   });
 });

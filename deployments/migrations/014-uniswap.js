@@ -13,7 +13,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'UniswapPoolIntegration';
 
   const controller = await getController();
@@ -22,7 +22,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, addresses.uniswap.router],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (network.live && deployment.newlyDeployed) {

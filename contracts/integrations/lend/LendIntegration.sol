@@ -84,6 +84,10 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         return _getInvestmentToken(_assetToken);
     }
 
+    function getCollateralFactor(address _assetToken) external view override returns (uint256) {
+        return _getCollateralFactor(_assetToken);
+    }
+
     /**
      * Returns the reward token
      *
@@ -413,6 +417,8 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     ) internal view virtual returns (address);
 
     function _getRewardToken() internal view virtual returns (address);
+
+    function _getCollateralFactor(address _asset) internal view virtual returns (uint256);
 
     function _getRewardsAccrued(address _strategy) internal view virtual returns (uint256);
 

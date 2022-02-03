@@ -11,12 +11,12 @@ module.exports = async ({
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const deployment = await upgradesDeployer.deployAdminProxy(
     'Assistant',
     'AssistantProxy',
-    { from: deployer, log: true, gasPrice },
+    { from: deployer, log: true, maxPriorityFeePerGas },
     {
       initializer: { method: 'initialize', args: [] },
     },

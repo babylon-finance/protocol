@@ -64,7 +64,7 @@ abstract contract BaseIntegration is IBaseIntegration {
     /* ============ State Variables ============ */
 
     // Address of the controller
-    IBabController public controller;
+    IBabController public immutable controller;
 
     // Name of the integration
     string public override name;

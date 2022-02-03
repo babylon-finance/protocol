@@ -13,16 +13,21 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'CompoundBorrowIntegration';
 
   const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, ethers.utils.parseEther('0.30')],
+    args: [
+      'compoundborrow',
+      controller.address,
+      ethers.utils.parseEther('0.30'),
+      '0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b',
+    ],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (network.live && deployment.newlyDeployed) {

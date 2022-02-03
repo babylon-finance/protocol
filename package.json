@@ -103,6 +103,8 @@
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "hardhat coverage --max-memory 8096",
     "tvl": "hardhat tvl --network mainnet",
+    "stuck": "hardhat stuck --network mainnet",
+    "mining": "hardhat mining --network mainnet",
     "users": "hardhat users --network mainnet",
     "gardens": "hardhat gardens --network mainnet"
   },

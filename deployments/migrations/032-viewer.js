@@ -10,7 +10,7 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await getGasPrice();
+  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'BabylonViewer';
 
   const controller = await deployments.get('BabControllerProxy');
@@ -19,7 +19,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    maxPriorityFeePerGas,
   });
 
   if (deployment.newlyDeployed) {
@@ -31,4 +31,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Viewer'];
+module.exports.tags = ['BabViewer'];

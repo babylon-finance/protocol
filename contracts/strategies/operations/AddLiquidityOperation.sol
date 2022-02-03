@@ -181,6 +181,7 @@ contract AddLiquidityOperation is Operation {
             }
         }
         _sellRewardTokens(_integration, _data, reserveAsset);
+        // BUG: Should respect percentage and not return all the capital
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
 

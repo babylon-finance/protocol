@@ -78,6 +78,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
     event GardenNFTChanged(address indexed _newGardenNFT, address _oldStrategyNFT);
     event StrategyNFTChanged(address indexed _newStrategyNFT, address _oldStrategyNFT);
+    event HeartChanged(address indexed _newHeart, address _oldHeart);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -174,6 +175,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
     address public override mardukGate;
+    address public override heart;
 
     /* ============ Constants ============ */
 
@@ -187,7 +189,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * Initializes the initial fee recipient on deployment.
      */
-    function initialize() public {
+    function initialize() public initializer {
         OwnableUpgradeable.__Ownable_init();
 
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
@@ -395,6 +397,20 @@ contract BabController is OwnableUpgradeable, IBabController {
         treasury = _newTreasury;
 
         emit TreasuryChanged(_newTreasury, oldTreasury);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the heart contract
+     *
+     * @param _newHeart      Address of the new heart
+     */
+    function editHeart(address _newHeart) external override onlyGovernanceOrEmergency {
+        require(_newHeart != address(0), 'Address must not be 0');
+
+        address oldHeart = heart;
+        heart = _newHeart;
+
+        emit HeartChanged(_newHeart, oldHeart);
     }
 
     /**
@@ -665,4 +681,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV11 is BabController {}
+contract BabControllerV12 is BabController {}

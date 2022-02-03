@@ -10,11 +10,23 @@ interface IComptroller {
      */
     function isComptroller() external view returns (bool);
 
+    function markets(address _cToken) external view returns (bool, uint256);
+
+    function getRewardsDistributors() external view returns (address[] memory);
+
     /*** Assets You Are In ***/
 
     function enterMarkets(address[] calldata cTokens) external returns (uint256[] memory);
 
     function exitMarket(address cToken) external returns (uint256);
+
+    function getAllMarkets() external view returns (address[] memory);
+
+    function _borrowGuardianPaused() external view returns (bool);
+
+    function borrowGuardianPaused(address _asset) external view returns (bool);
+
+    function borrowCaps(address _asset) external view returns (uint256);
 
     function compAccrued(address holder) external view returns (uint256);
 
