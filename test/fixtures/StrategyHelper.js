@@ -6,8 +6,6 @@ const { getAssetWhale } = require('lib/whale');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const STRATEGY_PARAMS = [
-  eth(10), // _maxCapitalRequested
-  eth(0.1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
   eth(0.05), // 5% _expectedReturn,
   eth(0.1), // 10% _maxAllocationPercentage
@@ -18,31 +16,19 @@ const STRATEGY_PARAMS = [
 const DEFAULT_STRATEGY_PARAMS = [
   eth(10), // _maxCapitalRequested
   eth(0.1), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
+  ...STRATEGY_PARAMS,
 ];
 
 const DAI_STRATEGY_PARAMS = [
   eth(1e5), // _maxCapitalRequested
   eth(100), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn
-  eth(0.1), // 10% _maxAllocationPercentage,
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
+  ...STRATEGY_PARAMS,
 ];
 
 const USDC_STRATEGY_PARAMS = [
   from(1e8 * 1e6), // _maxCapitalRequested
   from(100 * 1e6), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn
-  eth(0.1), // 10% _maxAllocationPercentage
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
+  ...STRATEGY_PARAMS,
 ];
 
 const WBTC_STRATEGY_PARAMS = [
@@ -59,10 +45,7 @@ const BABL_STRATEGY_PARAMS = [
   eth(1e3), // _maxCapitalRequested
   eth(1), // _stake
   ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn
-  eth(0.1), // 10% _maxAllocationPercentage,
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
+  ...STRATEGY_PARAMS,
 ];
 
 const GARDEN_PARAMS_MAP = {

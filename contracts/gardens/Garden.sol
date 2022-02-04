@@ -401,10 +401,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 pricePerShare =
-            IGardenValuer(controller.gardenValuer()).calculateGardenValuation(
-                address(this),
-                reserveAsset
-            );
+            IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
         _withdrawInternal(
@@ -581,8 +578,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         IPriceOracle oracle = IPriceOracle(controller.priceOracle());
         uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
-        uint256 feeInDAI = SafeDecimalMath.normalizeAmountTokens( reserveAsset, DAI, pricePerTokenUnitInDAI.preciseMul(_fee));
-
+        uint256 feeInDAI =
+            SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, pricePerTokenUnitInDAI.preciseMul(_fee));
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
@@ -846,8 +843,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVoters
     ) private {
         _require(
-            _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) &&
-                _minLiquidityAsset > 0,
+            _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
             Errors.MIN_LIQUIDITY
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
@@ -1069,9 +1065,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, _amount);
         _require(
-            from == address(0) ||
-                to == address(0) ||
-                (controller.gardenTokensTransfersEnabled() && !privateGarden),
+            from == address(0) || to == address(0) || (controller.gardenTokensTransfersEnabled() && !privateGarden),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
     }
