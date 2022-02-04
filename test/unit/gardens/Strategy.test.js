@@ -116,6 +116,7 @@ describe('Strategy', function () {
       expect(await strategyDataset.maxGasFeePercentage()).to.eq(eth(0.1));
       expect(await strategyDataset.maxTradeSlippagePercentage()).to.eq(eth(0.1));
       expect(await strategyDataset.maxAllocationPercentage()).to.eq(eth());
+      expect(await strategyDataset.maxCapitalRequested()).to.eq(eth(10));
     });
 
     it('only strategist or gov can update params', async function () {
