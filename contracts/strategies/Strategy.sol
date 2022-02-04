@@ -258,10 +258,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
 
-        maxCapitalRequested = _maxCapitalRequested;
-
+        _setMaxCapitalRequested(_maxCapitalRequested);
         _setStake(_stake, _strategist);
         _setDuration(_strategyDuration);
         _setMaxTradeSlippage(_maxTradeSlippagePercentage);
@@ -481,9 +479,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      *   _params[1]  maxGasFeePercentage
      *   _params[2]  maxTradeSlippagePercentage
      *   _params[3]  maxAllocationPercentage
+     *   _params[4]  maxCapitalRequested
      * @param _params  New params
      */
-    function updateParams(uint256[4] calldata _params) external override {
+    function updateParams(uint256[5] calldata _params) external override {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
 
@@ -493,6 +492,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _setMaxGasFeePercentage(_params[1]);
         _setMaxTradeSlippage(_params[2]);
         _setMaxAllocationPercentage(_params[3]);
+        _setMaxCapitalRequested(_params[4]);
 
         emit StrategyDurationChanged(_params[0], duration);
     }
@@ -792,6 +792,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _setMaxAllocationPercentage(uint256 _maxAllocationPercentage) internal {
         _require(_maxAllocationPercentage <= 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
         maxAllocationPercentage = _maxAllocationPercentage;
+    }
+
+    function _setMaxCapitalRequested(uint256 _maxCapitalRequested) internal {
+        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
+        maxCapitalRequested = _maxCapitalRequested;
     }
 
     function _setMaxGasFeePercentage(uint256 _maxGasFeePercentage) internal {
