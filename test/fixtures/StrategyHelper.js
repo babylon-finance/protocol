@@ -5,6 +5,16 @@ const addresses = require('lib/addresses');
 const { getAssetWhale } = require('lib/whale');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
+const STRATEGY_PARAMS = [
+  eth(10), // _maxCapitalRequested
+  eth(0.1), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  eth(0.05), // 5% _expectedReturn,
+  eth(0.1), // 10% _maxAllocationPercentage
+  eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
+];
+
 const DEFAULT_STRATEGY_PARAMS = [
   eth(10), // _maxCapitalRequested
   eth(0.1), // _stake
@@ -45,11 +55,22 @@ const WBTC_STRATEGY_PARAMS = [
   eth(0.09), // 9% _maxTradeSlippagePercentage
 ];
 
+const BABL_STRATEGY_PARAMS = [
+  eth(1e3), // _maxCapitalRequested
+  eth(1), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  eth(0.05), // 5% _expectedReturn
+  eth(0.1), // 10% _maxAllocationPercentage,
+  eth(0.05), // 5% _maxGasFeePercentage
+  eth(0.05), // 5% _maxTradeSlippagePercentage
+];
+
 const GARDEN_PARAMS_MAP = {
   [addresses.tokens.WETH]: DEFAULT_STRATEGY_PARAMS,
   [addresses.tokens.DAI]: DAI_STRATEGY_PARAMS,
   [addresses.tokens.USDC]: USDC_STRATEGY_PARAMS,
   [addresses.tokens.WBTC]: WBTC_STRATEGY_PARAMS,
+  [addresses.tokens.BABL]: BABL_STRATEGY_PARAMS,
 };
 
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
@@ -195,14 +216,17 @@ async function deposit(garden, signers) {
     case addresses.tokens.USDC.toLowerCase():
       amount = ethers.BigNumber.from(2000 * 1e6);
       break;
+    case addresses.tokens.BABL.toLowerCase():
+      amount = STRATEGY_EXECUTE_MAP[reserveAsset];
+      break;
     case addresses.tokens.DAI.toLowerCase():
-      amount = eth('2000');
+      amount = eth(2000);
       break;
     case addresses.tokens.WBTC.toLowerCase():
       amount = 1e6;
       break;
     default:
-      amount = eth('2');
+      amount = eth(2);
   }
 
   for (const signer of signers.slice(0, 2)) {

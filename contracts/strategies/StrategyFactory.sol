@@ -37,7 +37,7 @@ import {IGarden} from '../interfaces/IGarden.sol';
 contract StrategyFactory is IStrategyFactory {
     modifier onlyGarden {
         require(
-            controller.isGarden(msg.sender) && IGarden(msg.sender).controller() == address(controller),
+            controller.isGarden(msg.sender) && IGarden(msg.sender).controller() == controller,
             'Only the garden can create strategies'
         );
         _;

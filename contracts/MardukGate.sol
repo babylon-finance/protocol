@@ -67,7 +67,7 @@ contract MardukGate is IMardukGate, Ownable {
     modifier onlyGardenCreator(address _garden) {
         require(address(_garden) != address(0), 'Garden must exist');
         IGarden garden = IGarden(_garden);
-        require(garden.controller() == address(controller), 'Controller must match');
+        require((garden.controller()) == controller, 'Controller must match');
         require(_isCreator(IGarden(_garden), msg.sender), 'Only creator can give access to garden');
         require(IBabController(controller).isGarden(address(_garden)));
         require(gardenAccessCount[_garden] <= maxNumberOfInvites, 'The number of contributors must be below the limit');

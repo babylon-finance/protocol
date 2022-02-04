@@ -17,6 +17,8 @@
 */
 pragma solidity 0.7.6;
 
+import {IBabController} from './IBabController.sol';
+
 /**
  * @title IGarden
  * @author Babylon Finance
@@ -27,7 +29,7 @@ interface IGarden {
     /* ============ Functions ============ */
     function initialize(
         address _reserveAsset,
-        address _controller,
+        IBabController _controller,
         address _creator,
         string memory _name,
         string memory _symbol,
@@ -50,7 +52,7 @@ interface IGarden {
 
     function publicStewards() external view returns (bool);
 
-    function controller() external view returns (address);
+    function controller() external view returns (IBabController);
 
     function creator() external view returns (address);
 
