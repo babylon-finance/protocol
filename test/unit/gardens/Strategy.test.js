@@ -488,7 +488,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(strategyContract, { fee: eth(), amount: eth().mul(4) });
+      await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
       // add extra WETH to repay keeper
       await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
@@ -506,15 +506,14 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(keeper.address)).to.be.closeTo(eth(), eth());
+      expect(await wethToken.balanceOf(keeper.address)).to.be.closeTo(eth(0.1), eth());
       expect(await garden1.keeperDebt()).to.equal(0);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
 
       expect(capitalReturned).to.be.lt(capitalAllocated);
-      // takes into account ETH send to withdrawal window
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(eth().mul(6), eth().div(10));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(eth(6.9), eth().div(10));
     });
 
     it('should finalize strategy with profits', async function () {
