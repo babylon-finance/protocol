@@ -110,7 +110,7 @@ describe('Strategy', function () {
 
   describe('updateParams', function () {
     it('strategist can update duration, maxGasFeePercentage, maxAllocationPercentage, and maxTradeSlippagePercentage of a strategy', async function () {
-      await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1), eth()]);
+      await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1), eth(), eth(10)]);
 
       expect(await strategyDataset.duration()).to.eq(ONE_DAY_IN_SECONDS * 3);
       expect(await strategyDataset.maxGasFeePercentage()).to.eq(eth(0.1));
@@ -120,7 +120,7 @@ describe('Strategy', function () {
 
     it('only strategist or gov can update params', async function () {
       await expect(
-        strategyDataset.connect(signer3).updateParams([ONE_DAY_IN_SECONDS * 3, 0, 0, eth()]),
+        strategyDataset.connect(signer3).updateParams([ONE_DAY_IN_SECONDS * 3, 0, 0, eth(), eth(10)]),
       ).to.be.revertedWith('BAB#032');
     });
   });

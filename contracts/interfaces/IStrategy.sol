@@ -45,7 +45,7 @@ interface IStrategy {
         uint256 fee
     ) external;
 
-    function updateParams(uint256[4] calldata _params) external;
+    function updateParams(uint256[5] calldata _params) external;
 
     function sweep(address _token, uint256 _newSlippage) external;
 
