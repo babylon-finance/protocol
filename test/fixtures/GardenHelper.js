@@ -257,21 +257,63 @@ async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, max
   return ethers.utils.splitSignature(signature);
 }
 
-function getRewardsSigHash(garden, babl, profits, nonce, maxFee) {
+function getRewardsSigHash(
+  distributor,
+  babl,
+  profits,
+  userRewardsNonce,
+  minAmountOut,
+  gardenNonce,
+  maxFee,
+  mintNft,
+  stakeRewards,
+) {
   const REWARDS_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)'),
+    ethers.utils.toUtf8Bytes(
+      'RewardsBySig(uint256 _babl,uint256 _profits,uint256 _userRewardsNonce,uint256 _minAmountOut,uint256 _gardenNonce,uint256 _maxFee,bool _mintNft,bool _stakeRewards)',
+    ),
   );
-
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
-    [REWARDS_BY_SIG_TYPEHASH, garden, babl, profits, nonce, maxFee],
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'bool'],
+    [
+      REWARDS_BY_SIG_TYPEHASH,
+      distributor,
+      babl,
+      profits,
+      userRewardsNonce,
+      minAmountOut,
+      gardenNonce,
+      maxFee,
+      mintNft,
+      stakeRewards,
+    ],
   );
-
   return ethers.utils.keccak256(payload);
 }
 
-async function getRewardsSig(garden, signer, babl, profits, nonce, maxFee) {
-  let payloadHash = getRewardsSigHash(garden, babl, profits, nonce, maxFee);
+async function getRewardsSig(
+  signer,
+  distributor,
+  babl,
+  profits,
+  userRewardsNonce,
+  minAmountOut,
+  gardenNonce,
+  maxFee,
+  mintNft,
+  stakeRewards,
+) {
+  let payloadHash = getRewardsSigHash(
+    distributor,
+    babl,
+    profits,
+    userRewardsNonce,
+    minAmountOut,
+    gardenNonce,
+    maxFee,
+    mintNft,
+    stakeRewards,
+  );
 
   let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
   return ethers.utils.splitSignature(signature);

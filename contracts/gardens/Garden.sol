@@ -314,23 +314,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _mintNft
     ) external payable override nonReentrant {
         // calculate pricePerShare
-        uint256 pricePerShare;
-        // if there are no strategies then NAV === liquidReserve
-        if (strategies.length == 0) {
-            pricePerShare = totalSupply() == 0
-                ? PreciseUnitMath.preciseUnit()
-                : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
-                    totalSupply()
-                );
-        } else {
-            // Get valuation of the Garden with the quote asset as the reserve asset.
-            pricePerShare = IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                address(this),
-                reserveAsset
-            );
-        }
-
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare, minContribution);
+        uint256 pricePerShare = _getPricePershare();
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare, minContribution, 0);
     }
 
     function depositBySig(
@@ -366,12 +351,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
                 signer,
                 _mintNft,
                 _pricePerShare,
-                minContribution > _fee ? minContribution.sub(_fee) : 0
+                minContribution > _fee ? minContribution.sub(_fee) : 0,
+                0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare, minContribution);
+            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare, minContribution, 0);
         }
     }
 
@@ -513,6 +499,54 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             IERC20(reserveAsset).safeTransferFrom(_to, _keeper, _fee);
         }
         _sendRewardsInternal(_to, _bablSent, _profits);
+    }
+
+    /**
+     * @notice
+     *  This method allows to Rewards Distributor to stake rewards during claim
+     *  It returns garden tokens to depositor
+     * @dev
+     *   If bySig = true it is using signature tx instead of normal tx
+     *   to save gas due to getRewards is calulated off-chain.
+     *
+     * @param _to               Address of user to send hBABL to
+     * @param _garden           Address of garden to stake
+     * @param _asset            Reserve asset token
+     * @param _amountIn         Balance amount to stake
+     * @param _minAmountOut     Minimum amount out
+     * @param _mintNft          If the user wants to mint an Nft during stake
+     * @param _nonce            User nonce in the garden to stake
+     * @param _pricePerShare    Precalculated price per share (it might be overriden during a normal tx)
+     * @param _bySig            Whether or not it belongs to a signature based tx or not
+     */
+    function stakeRewards(
+        address _to,
+        address _garden,
+        address _asset,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        bool _bySig
+    ) external override {
+        // It is valid for both normal and bySig
+        // Fee is paid before this function call, during RD claim phase
+        // Stake is only valid for now for Heart Garden (_garden) and BABL (_asset)
+        // TODO To be able to compound (stake) also profit rewards in any other reserve asset and garden
+        _require(msg.sender == address(rewardsDistributor), Errors.ONLY_RD);
+        _require(address(this) == _garden && _asset == reserveAsset, Errors.WRONG_GARDEN_OR_RESERVE);
+        if (_bySig) {
+            // PricePerShare provided by keeper
+            _onlyValidSigner(_to, _nonce);
+        } else {
+            _require(_to != address(0), Errors.ADDRESS_IS_ZERO);
+            // Direct user tx, needs to calculate pricePerShare for staking (gas intensive)
+            _pricePerShare = _getPricePershare();
+        }
+        // Staking is in reserveAsset (_amountIn)
+        uint256 amountToStake = _amountIn;
+        _internalDeposit(_amountIn, _minAmountOut, _to, _to, _mintNft, _pricePerShare, minContribution, amountToStake);
     }
 
     /**
@@ -887,6 +921,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         depositHardlock = _depositHardlock;
     }
 
+    function _getPricePershare() internal view returns (uint256) {
+        // if there are no strategies then NAV === liquidReserve
+        if (strategies.length == 0) {
+            return
+                totalSupply() == 0
+                    ? PreciseUnitMath.preciseUnit()
+                    : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
+                        totalSupply()
+                    );
+        } else {
+            // Get valuation of the Garden with the quote asset as the reserve asset.
+            return
+                IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
+                    address(this),
+                    reserveAsset
+                );
+        }
+    }
+
     function _sharesToReserve(uint256 _shares, uint256 _pricePerShare) internal view returns (uint256) {
         // in case of USDC that would with 6 decimals
         return _shares.preciseMul(_pricePerShare).preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
@@ -983,7 +1036,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         address _from,
         bool _mintNft,
         uint256 _pricePerShare,
-        uint256 _minContribution
+        uint256 _minContribution,
+        uint256 _stakingAmount
     ) private {
         _onlyUnpaused();
         _onlyNonZero(_to);
@@ -996,17 +1050,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         }
 
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
-
-        uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
-
-        // If reserve asset is WETH and user sent ETH then wrap it
-        if (reserveAsset == WETH && msg.value > 0) {
-            IWETH(WETH).deposit{value: msg.value}();
-        } else {
-            // Transfer ERC20 to the garden
-            IERC20(reserveAsset).safeTransferFrom(_from, address(this), _amountIn);
+        // Staking transfer (if any) is done before this call (e.g. from RD or garden itself)
+        uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this)).sub(_stakingAmount);
+        if (_stakingAmount == 0) {
+            // We handle transfers here only if not staking (stakingAmount == 0)
+            // If reserve asset is WETH and user sent ETH then wrap it
+            if (reserveAsset == WETH && msg.value > 0) {
+                IWETH(WETH).deposit{value: msg.value}();
+            } else {
+                // Transfer ERC20 to the garden
+                IERC20(reserveAsset).safeTransferFrom(_from, address(this), _amountIn);
+            }
         }
-
         // Make sure we received the correct amount of reserve asset
         _require(
             IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,

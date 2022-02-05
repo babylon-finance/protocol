@@ -182,6 +182,18 @@ interface IGarden {
         uint256 _fee
     ) external;
 
+    function stakeRewards(
+        address _to,
+        address _garden,
+        address _asset,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        bool _mintNft,
+        uint256 _nonce,
+        uint256 _pricePerShare,
+        bool _bySig
+    ) external;
+
     function getLockedBalance(address _contributor) external view returns (uint256);
 
     function updateGardenParams(uint256[9] memory _newParams) external;

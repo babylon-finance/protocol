@@ -132,7 +132,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
 
     bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
-        keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
+        keccak256(
+            'RewardsBySig(uint256 _babl,uint256 _profits,uint256 _userRewardsNonce,uint256 _minAmountOut,uint256 _gardenNonce,uint256 _maxFee,bool _mintNft,bool _stakeRewards)'
+        );
 
     /* ============ State Variables ============ */
 
@@ -298,7 +300,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
     // Rewards Assistant for rewards calculations
-    IRewardsAssistant public rewardsAssistant;
+    IRewardsAssistant private rewardsAssistant;
+    // Heart garden address
+    address private heartGarden;
     // User address => rewards nonce
     mapping(address => uint256) private userRewardsNonce;
 
@@ -368,110 +372,57 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * @notice
-     *   This method allows users to claim their rewards either profits or BABL.
-     *   Rewards come from the strategies that his principal
-     *   was invested in.
-     * @dev
-     *   Users should preferably call `claimRewardsBySig` instead of this method to save gas due to
-     *   getRewards is caculated on-chain in this method.
-     *
-     * @param _garden               Address of the garden.
-     * @param _finalizedStrategies  Array of finalized strategies to get rewards for.
-     */
-    function claimRewards(address _garden, address[] calldata _finalizedStrategies) external override nonReentrant {
-        uint256[] memory rewards = new uint256[](8);
-        rewards = getRewards(_garden, msg.sender, _finalizedStrategies);
-        // Send BABL
-        uint256 bablSent = _sendBABLToContributor(msg.sender, rewards[5]);
-        // Send profits but do not pay keeper fee
-        // The following check includes flashload security check (vs. depositHardlock)
-        IGarden(_garden).sendRewardsToContributor(msg.sender, address(0), bablSent, rewards[6], 0);
-    }
-
-    /**
-     * @notice
      *   This method allows users to claim all their rewards from an array of gardens in 1 user tx.
      *   Rewards come from the strategies that his principal
      *   was invested in in each of the gardens.
      * @dev
      *   Users should preferably call `claimAllMyGardenRewardsBySig` instead of this method to save gas due to
      *   getRewards is caculated on-chain in this method.
-     *   TODO Pending handling of all reserve assets at RD to remove rewardsSetAside from Gardens
+     *   TODO Pending handling of all profits rewards in reserve assets at RD to remove rewardsSetAside from Gardens
      *
      * @param _myGardens            Array of user gardens (portfolio)
+     * @param _stakeInHeart         Whether or not the user wants to stake BABL in the heart garden
+     * @param _stakeMinAmountOut    MinAmountOut in case of staking (e.g. hBABL)
+     * @param _mintNft              Whether or not the user wants to mintNFT for the stake
      */
-    function claimAllRewards(address[] memory _myGardens) external override nonReentrant {
+    function claimRewards(
+        address[] memory _myGardens,
+        bool _stakeInHeart,
+        uint256 _stakeMinAmountOut,
+        bool _mintNft
+    ) external override nonReentrant {
+        uint256[] memory data = new uint256[](8);
+        // data[0]: totalBabl (stakeAmountIn)
+        // data[1]: totalProfits
+        // data[2]: userRewardsNonce
+        // data[3]: stakeMinAmountOut
+        // data[4]: heart garden user nonce
+        // data[5]: maxFee
+        // data[6]: fee
+        // data[7]: pricePerShare (it will be overriden if user wants to stake)
+        bool[] memory boolData = new bool[](2);
+        // boolData[0]: mintNft
+        // boolData[1]: stakeInHeart
         (
             address[] memory gardens,
             uint256[] memory babl,
             uint256[] memory profits,
-            uint256 totalBABL,
+            uint256 totalBabl,
             uint256 totalProfits
         ) = IRewardsAssistant(rewardsAssistant).getAllUserRewards(msg.sender, _myGardens);
-        uint256 bablCount;
-        uint256 profitsCount;
-        for (uint256 i = 0; i < gardens.length; i++) {
-            // We do not pay keeper fee as it is a user tx
-            // The following check includes flashload security check (vs. depositHardlock)
-            IGarden(gardens[i]).sendRewardsToContributor(msg.sender, address(0), babl[i], profits[i], 0);
-            bablCount = bablCount.add(babl[i]);
-            // It will sum different reserveAsset with different decimals
-            // to be used only as a total profits lump sum security check
-            profitsCount = profitsCount.add(profits[i]);
-        }
-        // We send total BABL in only 1 aggregated tx (if any)
-        uint256 bablSent = _sendBABLToContributor(msg.sender, totalBABL);
-        _require(bablSent == totalBABL, Errors.NOT_ENOUGH_BABL);
-        _require(profitsCount == totalProfits, Errors.NOT_ENOUGH_PROFITS);
-    }
-
-    /**
-     * @notice
-     *   This method allows users
-     *   to claim their rewards either profits or BABL.
-     * @dev
-     *   Should be called instead of the `claimRewards at RD` to save gas due to
-     *   getRewards caculated off-chain.
-     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
-     *
-     * @param _garden          Garden address.
-     * @param _babl            BABL rewards from mining program.
-     * @param _profits         Profit rewards in reserve asset.
-     * @param _userRewardsNonce           Current nonce to prevent replay attacks.
-     * @param _maxFee          Max fee user is willing to pay keeper. Fee is
-     *                         substracted from user wallet in reserveAsset. Fee is
-     *                         expressed in reserve asset.
-     * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
-     * @param v                 Signature v value
-     * @param r                 Signature r value
-     * @param s                 Signature s value
-     */
-    function claimRewardsBySig(
-        address _garden,
-        uint256 _babl,
-        uint256 _profits,
-        uint256 _userRewardsNonce,
-        uint256 _maxFee,
-        uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external override nonReentrant {
-        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
-        bytes32 hash =
-            keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, _garden, _babl, _profits, _userRewardsNonce, _maxFee))
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        // Used in by sig
-        _require(signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay attacks we use nonce at RD level
-        _require(userRewardsNonce[signer] == _userRewardsNonce, Errors.INVALID_NONCE);
-        _require(_fee > 0, Errors.FEE_TOO_LOW);
-        // Send BABL
-        uint256 bablSent = _sendBABLToContributor(signer, _babl);
-        // Pay keeper fee and send profits set aside
-        IGarden(_garden).sendRewardsToContributor(signer, msg.sender, bablSent, _profits, _fee);
+        data[0] = totalBabl;
+        data[1] = totalProfits;
+        data[2] = userRewardsNonce[msg.sender];
+        data[3] = _stakeMinAmountOut;
+        (, , , , , , , , , data[4]) = IGarden(heartGarden).getContributor(msg.sender);
+        data[5] = 0;
+        data[6] = 0;
+        data[7] = 1e18;
+        boolData[0] = _mintNft;
+        boolData[1] = _stakeInHeart;
+        bool bySig = false;
+        address keeper = address(0);
+        _handleRewards(gardens, babl, profits, msg.sender, keeper, data, boolData, bySig);
     }
 
     /**
@@ -482,73 +433,46 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      *   Should be called instead of the `claimAllRewards at RD` to save gas due to
      *   getAllUserRewards caculated off-chain.
      *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
-     *   TODO Pending handling of all reserve assets at RD to remove rewardsSetAside from Gardens
+     *   TODO Pending handling of all profits rewards in reserve assets at RD to remove rewardsSetAside from Gardens
      *
      * @param _gardens          Array of gardens
      * @param _babl             Array of BABL rewards from mining program per garden.
      * @param _profits          Array of Profit rewards in reserve asset per garden.
-     * @param _signatureData    Array of 5 values with totalBabl, totalProfits, rewardsDistributorNonce, maxFee and Fee.
+     * @param _signatureData    Array of 5 values with totalBabl, totalProfits, userRewardsNonce, maxFee and Fee.
+     * @param _boolSignatureData Array of 2 values mintNft and stakeRewards
      * @param v                 Signature v value
      * @param r                 Signature r value
      * @param s                 Signature s value
      *
      *
-     * // signatureData[0]: totalBabl
-     * // signatureData[1]: totalProfits
-     * // signatureData[2]: rewardsDistributorNonce
-     * // signatureData[3]: maxFee
-     * // signatureData[4]: fee
+     * _signatureData[0]: totalBabl (stakeAmountIn)
+     * _signatureData[1]: totalProfits
+     * _signatureData[2]: userRewardsNonce
+     * _signatureData[3]: stakeMinAmountOut
+     * _signatureData[4]: heart garden user nonce
+     * _signatureData[5]: maxFee
+     * _signatureData[6]: fee
+     * _signatureData[7]: pricePerShare
+     * _boolSignatureData[0]: _mintNft
+     * _boolSignatureData[1]: _stakeInHeart
      */
-    function claimAllRewardsBySig(
+
+    function claimRewardsBySig(
         address[] memory _gardens,
         uint256[] memory _babl,
         uint256[] memory _profits,
         uint256[] memory _signatureData,
+        bool[] memory _boolSignatureData,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external override nonReentrant {
         _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-        uint256[] memory amountCounter = new uint256[](2); // Babl and Profit counter
-        // uint256 profitsCount;
-        _require(_signatureData[4] <= _signatureData[3], Errors.FEE_TOO_HIGH);
-        _require(_signatureData[4] > 0, Errors.FEE_TOO_LOW);
-        bytes32 hash =
-            keccak256(
-                abi.encode(
-                    REWARDS_BY_SIG_TYPEHASH,
-                    address(this),
-                    _signatureData[0],
-                    _signatureData[1],
-                    _signatureData[2],
-                    _signatureData[3]
-                )
-            )
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        // Used in by sig
-        _require(signer != address(0), Errors.INVALID_SIGNER);
-        // To prevent replay attacks we use nonce at RD level
-        // We also save gas avoiding nonce check per garden
-        _require(userRewardsNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
-        for (uint256 i = 0; i < _gardens.length; i++) {
-            // We pay all the keeper fee using the first garden in the array to have only 1 tx
-            // Pay keeper fee only from the first garden and send profits set aside per each garden
-            IGarden(_gardens[i]).sendRewardsToContributor(
-                signer,
-                i == 0 ? msg.sender : address(0),
-                _babl[i],
-                _profits[i],
-                i == 0 ? _signatureData[4] : 0
-            );
-            amountCounter[0] = amountCounter[0].add(_babl[i]); // BABL counter
-            amountCounter[1] = amountCounter[1].add(_profits[i]); // Profits counter
-        }
-        _require(amountCounter[0] == _signatureData[0], Errors.NOT_ENOUGH_BABL);
-        // Send All BABL in only 1 tx
-        uint256 bablSent = _sendBABLToContributor(signer, _signatureData[0]);
-        _require(bablSent == _signatureData[0], Errors.NOT_ENOUGH_BABL);
-        _require(amountCounter[1] == _signatureData[1], Errors.NOT_ENOUGH_PROFITS);
+        _require(_signatureData[6] <= _signatureData[5], Errors.FEE_TOO_HIGH);
+        _require(_signatureData[6] > 0, Errors.FEE_TOO_LOW);
+        address signer = _getSigner(_signatureData, _boolSignatureData, v, r, s);
+        bool bySig = true;
+        _handleRewards(_gardens, _babl, _profits, signer, msg.sender, _signatureData, _boolSignatureData, bySig);
     }
 
     /** PRIVILEGE FUNCTION
@@ -566,7 +490,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) external override {
         _onlyGovernanceOrEmergency();
         _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
-        _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
+        _require(_strategistShare.add(_stewardsShare).add(_lpShare) == 95e16, Errors.PROFIT_SHARING_MISMATCH);
+        // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
+        if (
+            _strategistShare != strategistProfitPercentage ||
+            _stewardsShare != stewardsProfitPercentage ||
+            _lpShare != lpsProfitPercentage
+        ) {
+            // Different from standard %
+            gardenCustomProfitSharing[_garden] = true;
+            gardenProfitSharing[_garden][0] = _strategistShare;
+            gardenProfitSharing[_garden][1] = _stewardsShare;
+            gardenProfitSharing[_garden][2] = _lpShare;
+        }
     }
 
     /** PRIVILEGE FUNCTION
@@ -624,7 +560,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /** PRIVILEGE FUNCTION
      * Updates Rewards Assistant contract
-     * @param _newRewardsAssistant      Array of new mining params to be set by government
+     * @param _newRewardsAssistant      New Assistant smartcontract address
      */
     function setRewardsAssistant(address _newRewardsAssistant) external override onlyOwner {
         _require(
@@ -632,6 +568,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             Errors.INVALID_ADDRESS
         );
         rewardsAssistant = IRewardsAssistant(_newRewardsAssistant);
+    }
+
+    /** PRIVILEGE FUNCTION
+     * Updates Heart Garden contract
+     * @param _newHeartGarden      New Heart Garden smartcontract address
+     */
+    function setHeartGarden(address _newHeartGarden) external override onlyOwner {
+        _require(_newHeartGarden != address(0) && _newHeartGarden != address(heartGarden), Errors.INVALID_ADDRESS);
+        heartGarden = _newHeartGarden;
     }
 
     /* ========== View functions ========== */
@@ -1152,6 +1097,126 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
+     * Recover the signer of a claim by signature.
+     * @param _signatureData        Signature metadata
+     * @param _boolSignatureData    Boolean signature metadata
+     * @param v                 Signature v value
+     * @param r                 Signature r value
+     * @param s                 Signature s value
+     *
+     */
+    function _getSigner(
+        uint256[] memory _signatureData,
+        bool[] memory _boolSignatureData,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view returns (address) {
+        // signatureData[0]: totalBabl (stakeAmountIn)
+        // signatureData[1]: totalProfits
+        // signatureData[2]: userRewardsNonce
+        // signatureData[3]: stakeMinAmountOut
+        // signatureData[4]: heart garden user nonce
+        // signatureData[5]: maxFee
+        // signatureData[6]: fee
+        // signatureData[7]: pricePerShare (it will be overriden if user wants to stake)
+        // _boolSignatureData[0]: mintNft
+        // _boolSignatureData[1]: stakeInHeart
+        bytes32 hash =
+            keccak256(
+                abi.encode(
+                    REWARDS_BY_SIG_TYPEHASH,
+                    address(this),
+                    _signatureData[0],
+                    _signatureData[1],
+                    _signatureData[2],
+                    _signatureData[3],
+                    _signatureData[4],
+                    _signatureData[5],
+                    _boolSignatureData[0],
+                    _boolSignatureData[1]
+                )
+            )
+                .toEthSignedMessageHash();
+        address signer = ECDSA.recover(hash, v, r, s);
+        // Used in by sig
+        _require(signer != address(0), Errors.INVALID_SIGNER);
+        // To prevent replay attacks we use nonce at RD level
+        // We also save gas avoiding nonce check per garden
+        _require(userRewardsNonce[signer] == _signatureData[2], Errors.INVALID_NONCE);
+        return signer;
+    }
+
+    /**
+     * Handle and execute/sends rewards to the user or stake them otherwise depending on user selection
+     * @param _gardens        Array of user gardens
+     * @param _babl           Array of babl rewards per garden
+     * @param _profits        Array of profit rewards per garden
+     * @param _contributor    Address of the contributor
+     * @param _keeper         Address of the keeper to receive fee payment (in signed tx's)
+     * @param _data           Array of rewards metadata
+     * @param _boolData       Array of rewards boolean metadata
+     * @param _bySig          Whether or not it is a signature based tx
+     *
+     */
+    function _handleRewards(
+        address[] memory _gardens,
+        uint256[] memory _babl,
+        uint256[] memory _profits,
+        address _contributor,
+        address _keeper,
+        uint256[] memory _data,
+        bool[] memory _boolData,
+        bool _bySig
+    ) internal {
+        uint256 bablCount;
+        uint256 profitsCount;
+        uint256 bablSent;
+        for (uint256 i = 0; i < _gardens.length; i++) {
+            // We do not pay keeper fee in normal user tx (keeper = address(0) && _data[6] == 0)
+            // The following check includes flashload security check (vs. depositHardlock) at garden level
+            // In case of paying keeper, we only use the first garden to use only one payKeeper to pay all and save gas
+            IGarden(_gardens[i]).sendRewardsToContributor(
+                _contributor,
+                i == 0 ? _keeper : address(0),
+                _babl[i],
+                _profits[i],
+                i == 0 ? _data[6] : 0
+            );
+            bablCount = bablCount.add(_babl[i]);
+            // It will sum different reserveAsset with different decimals
+            // to be used only as a total profits lump sum security check
+            profitsCount = profitsCount.add(_profits[i]);
+        }
+        _require(bablCount == _data[0], Errors.NOT_ENOUGH_BABL);
+        // We send total BABL in only 1 aggregated tx (if any)
+        if (_boolData[1]) {
+            // Staking into heart
+            // Direct sending RD into Heart Garden on behalf of the user
+            bablSent = _sendBABLToContributor(heartGarden, _data[0]);
+            // We then make the accounting for the user as a deposit to get hBABL
+            // We use 1e18 as default pricePerShare, it will be overriden by real price per share
+            IGarden(heartGarden).stakeRewards(
+                _contributor,
+                heartGarden,
+                address(babltoken),
+                bablSent,
+                _data[3],
+                _boolData[0],
+                _data[4],
+                _data[7],
+                _bySig
+            );
+        } else {
+            // Not staking into heart
+            // Direct send to user wallet
+            bablSent = _sendBABLToContributor(_contributor, _data[0]);
+        }
+        _require(bablSent == _data[0], Errors.NOT_ENOUGH_BABL);
+        _require(profitsCount == _data[1], Errors.NOT_ENOUGH_PROFITS);
+    }
+
+    /**
      * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
      * @param _to        Address to send the profit and tokens to
      * @param _babl      Amount of BABL to send
@@ -1168,36 +1233,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         return bablToSend;
     }
-
-    /**
-     * Set a customized profit rewards
-     * @param _garden           Address of the garden
-     * @param _strategistShare  New sharing profit % for strategist
-     * @param _stewardsShare    New sharing profit % for stewards
-     * @param _lpShare          New sharing profit % for lp
-     */
-    function _setProfitRewards(
-        address _garden,
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare
-    ) internal {
-        _require(_strategistShare.add(_stewardsShare).add(_lpShare) == 95e16, Errors.PROFIT_SHARING_MISMATCH);
-        // [0]: _strategistProfit , [1]: _stewardsProfit, [2]: _lpProfit
-        if (
-            _strategistShare != strategistProfitPercentage ||
-            _stewardsShare != stewardsProfitPercentage ||
-            _lpShare != lpsProfitPercentage
-        ) {
-            // Different from standard %
-            gardenCustomProfitSharing[_garden] = true;
-            gardenProfitSharing[_garden][0] = _strategistShare;
-            gardenProfitSharing[_garden][1] = _stewardsShare;
-            gardenProfitSharing[_garden][2] = _lpShare;
-        }
-    }
-
-    /* ========== Internal View functions ========== */
 
     /**
      * Get the price per token to be used in the adding or substraction normalized to DAI (supports multiple asset)

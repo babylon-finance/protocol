@@ -326,4 +326,6 @@ library Errors {
     uint256 internal constant NOT_ENOUGH_BABL = 118;
     // Not enough Profits reserves
     uint256 internal constant NOT_ENOUGH_PROFITS = 119;
+    // Not enough Profits reserves
+    uint256 internal constant WRONG_GARDEN_OR_RESERVE = 120;
 }
