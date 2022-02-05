@@ -111,7 +111,9 @@ describe('deploy', function () {
     try {
       await strategyContract
         .connect(gov)
-        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
+        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth(), eth(100)], {
+          gasPrice: 0,
+        });
 
       await strategyContract.connect(keeper).finalizeStrategy(1, '', 0);
 

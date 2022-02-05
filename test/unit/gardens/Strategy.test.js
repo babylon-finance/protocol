@@ -110,17 +110,18 @@ describe('Strategy', function () {
 
   describe('updateParams', function () {
     it('strategist can update duration, maxGasFeePercentage, maxAllocationPercentage, and maxTradeSlippagePercentage of a strategy', async function () {
-      await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1), eth()]);
+      await strategyDataset.connect(signer1).updateParams([ONE_DAY_IN_SECONDS * 3, eth(0.1), eth(0.1), eth(), eth(10)]);
 
       expect(await strategyDataset.duration()).to.eq(ONE_DAY_IN_SECONDS * 3);
       expect(await strategyDataset.maxGasFeePercentage()).to.eq(eth(0.1));
       expect(await strategyDataset.maxTradeSlippagePercentage()).to.eq(eth(0.1));
       expect(await strategyDataset.maxAllocationPercentage()).to.eq(eth());
+      expect(await strategyDataset.maxCapitalRequested()).to.eq(eth(10));
     });
 
     it('only strategist or gov can update params', async function () {
       await expect(
-        strategyDataset.connect(signer3).updateParams([ONE_DAY_IN_SECONDS * 3, 0, 0, eth()]),
+        strategyDataset.connect(signer3).updateParams([ONE_DAY_IN_SECONDS * 3, 0, 0, eth(), eth(10)]),
       ).to.be.revertedWith('BAB#032');
     });
   });
@@ -487,7 +488,7 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(strategyContract, { fee: eth(), amount: eth().mul(4) });
+      await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
       // add extra WETH to repay keeper
       await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
@@ -505,15 +506,14 @@ describe('Strategy', function () {
       expect(exitedAt).to.not.equal(0);
 
       // Keeper gets paid
-      expect(await wethToken.balanceOf(keeper.address)).to.be.closeTo(eth(), eth());
+      expect(await wethToken.balanceOf(keeper.address)).to.be.closeTo(eth(0.1), eth());
       expect(await garden1.keeperDebt()).to.equal(0);
 
       const capitalAllocated = await strategyContract.capitalAllocated();
       const capitalReturned = await strategyContract.capitalReturned();
 
       expect(capitalReturned).to.be.lt(capitalAllocated);
-      // takes into account ETH send to withdrawal window
-      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(eth().mul(6), eth().div(10));
+      expect(await wethToken.balanceOf(garden1.address)).to.be.closeTo(eth(6.9), eth().div(10));
     });
 
     it('should finalize strategy with profits', async function () {

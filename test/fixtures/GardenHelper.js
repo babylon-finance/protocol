@@ -24,10 +24,11 @@ const GARDEN_PARAMS_MAP = {
 };
 
 const CONTRIBUTORS_MAP = {
-  [addresses.tokens.WETH]: parse('1'),
-  [addresses.tokens.DAI]: parse('10000'),
+  [addresses.tokens.WETH]: eth(),
+  [addresses.tokens.DAI]: eth(10000),
   [addresses.tokens.USDC]: from(10000 * 1e6),
-  [addresses.tokens.WBTC]: from(1e7),
+  [addresses.tokens.WBTC]: from(1e8),
+  [addresses.tokens.BABL]: eth(100),
 };
 
 async function createGarden({

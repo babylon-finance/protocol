@@ -30,6 +30,7 @@ import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
 
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
@@ -85,8 +86,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     // Strategy cooldown period
     uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
@@ -123,7 +122,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     address public override reserveAsset;
 
     // Address of the controller
-    address public override controller;
+    IBabController public override controller;
 
     // Address of the rewards distributor
     IRewardsDistributor private rewardsDistributor;
@@ -194,7 +193,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
     }
 
     /**
@@ -215,7 +214,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      * Check if msg.sender is keeper
      */
     function _onlyKeeperAndFee(uint256 _fee, uint256 _maxFee) private view {
-        _require(IBabController(controller).isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
     }
 
@@ -252,7 +251,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function initialize(
         address _reserveAsset,
-        address _controller,
+        IBabController _controller,
         address _creator,
         string memory _name,
         string memory _symbol,
@@ -265,9 +264,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
-        rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
+        rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
         _onlyNonZero(address(rewardsDistributor));
-        privateGarden = !(IBabController(controller).allowPublicGardens() && _publicGardenStrategistsStewards[0]);
+        privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
         publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
 
         publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
@@ -386,10 +385,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
         uint256 pricePerShare =
-            IGardenValuer(IBabController(controller).gardenValuer()).calculateGardenValuation(
-                address(this),
-                reserveAsset
-            );
+            IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
         _withdrawInternal(
@@ -599,28 +595,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function payKeeper(address payable _keeper, uint256 _fee) public override nonReentrant {
         _onlyUnpaused();
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
-        _require(IBabController(controller).isValidKeeper(_keeper), Errors.ONLY_KEEPER);
+        _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 
-        if (reserveAsset == WETH) {
-            // 1 ETH
-            _require(_fee <= (1e6 * 1e12), Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == DAI) {
-            // 2000 DAI
-            _require(_fee <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == USDC) {
-            // 2000 USDC
-            _require(_fee <= 2000 * 1e6, Errors.FEE_TOO_HIGH);
-        } else if (reserveAsset == WBTC) {
-            // 0.05 WBTC
-            _require(_fee <= 0.05 * 1e8, Errors.FEE_TOO_HIGH);
-        } else {
-            _revert(Errors.RESERVE_ASSET_NOT_SUPPORTED);
-        }
+        IPriceOracle oracle = IPriceOracle(controller.priceOracle());
+        uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
+        uint256 feeInDAI =
+            SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, pricePerTokenUnitInDAI.preciseMul(_fee));
+
+        _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
         keeperDebt = keeperDebt.add(_fee);
+        uint256 liquidReserve = liquidReserve();
         // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && liquidReserve() >= 0) {
-            uint256 toPay = liquidReserve() > keeperDebt ? keeperDebt : liquidReserve();
+        if (keeperDebt > 0 && liquidReserve > 0) {
+            uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
             totalKeeperFees = totalKeeperFees.add(toPay);
             keeperDebt = keeperDebt.sub(toPay);
@@ -632,7 +620,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      */
     function makeGardenPublic() external override {
         _onlyCreator(msg.sender);
-        _require(privateGarden && IBabController(controller).allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
+        _require(privateGarden && controller.allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         privateGarden = false;
     }
 
@@ -670,7 +658,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         address strategy =
-            IStrategyFactory(IBabController(controller).strategyFactory()).createStrategy(
+            IStrategyFactory(controller.strategyFactory()).createStrategy(
                 _name,
                 _symbol,
                 msg.sender,
@@ -693,11 +681,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     function allocateCapitalToStrategy(uint256 _capital) external override {
         _onlyStrategy();
 
-        uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee().preciseMul(_capital);
+        uint256 protocolMgmtFee = controller.protocolManagementFee().preciseMul(_capital);
         _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee to the heart
-        IERC20(reserveAsset).safeTransfer(IBabController(controller).heart(), protocolMgmtFee);
+        IERC20(reserveAsset).safeTransfer(controller.heart(), protocolMgmtFee);
 
         // Send Capital to strategy
         IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
@@ -892,8 +880,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 _minVoters
     ) private {
         _require(
-            _minLiquidityAsset >= IBabController(controller).minLiquidityPerReserve(reserveAsset) &&
-                _minLiquidityAsset > 0,
+            _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
             Errors.MIN_LIQUIDITY
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
@@ -1082,7 +1069,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
 
         // Mint the garden NFT
         if (_mintNft) {
-            IGardenNFT(IBabController(controller).gardenNFT()).grantGardenNFT(_to);
+            IGardenNFT(controller.gardenNFT()).grantGardenNFT(_to);
         }
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
@@ -1137,9 +1124,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, _amount);
         _require(
-            from == address(0) ||
-                to == address(0) ||
-                (IBabController(controller).gardenTokensTransfersEnabled() && !privateGarden),
+            from == address(0) || to == address(0) || (controller.gardenTokensTransfersEnabled() && !privateGarden),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
     }
@@ -1238,7 +1223,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             bool canCreateStrategy
         )
     {
-        IMardukGate mgate = IMardukGate(IBabController(controller).mardukGate());
+        IMardukGate mgate = IMardukGate(controller.mardukGate());
         bool betaAccess = true;
         canDeposit = (betaAccess && !privateGarden) || mgate.canJoinAGarden(address(this), _user);
         canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
