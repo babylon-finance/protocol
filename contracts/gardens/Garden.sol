@@ -384,8 +384,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 pricePerShare =
-            IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
+        uint256 pricePerShare = _getPricePershare();
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
         _withdrawInternal(
@@ -540,9 +539,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             // Direct user tx, needs to calculate pricePerShare for staking (gas intensive)
             _pricePerShare = _getPricePershare();
         }
-        // Staking is in reserveAsset (_amountIn)
-        uint256 amountToStake = _amountIn;
-        _internalDeposit(_amountIn, _minAmountOut, _to, _to, _mintNft, _pricePerShare, minContribution, amountToStake);
+        // Staking is in reserveAsset (amountToStake == _amountIn)
+        // uint256 amountToStake = _amountIn;
+        _internalDeposit(_amountIn, _minAmountOut, _to, _to, _mintNft, _pricePerShare, minContribution, _amountIn);
     }
 
     /**
@@ -723,21 +722,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /*
-     * PRIVILEGE FUNCTION to recover creator rights in case of renouncing.
-     * Caller must be a governance or emergency
-     * @param _newCreator  New creator address
-     */
-    function recoverCreator(address _newCreator) external override {
-        _require(
-            msg.sender == IBabController(controller).owner() ||
-                msg.sender == IBabController(controller).EMERGENCY_OWNER(),
-            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
-        );
-        _require(_newCreator != address(0) && creator == address(0), Errors.ADDRESS_IS_ZERO);
-        creator = _newCreator;
-    }
-
-    /*
      * Adds extra creators. Only the original creator can call this.
      * Can only be called if all the addresses are zero
      * @param _newCreators  Addresses of the new creators
@@ -842,10 +826,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             if (_contributor == strategy.strategist()) {
                 lockedAmount = lockedAmount.add(strategy.stake());
             }
-        }
-        // Avoid overflows if off-chain voting system fails
-        if (balanceOf(_contributor) < lockedAmount) {
-            lockedAmount = balanceOf(_contributor);
         }
         return lockedAmount;
     }
@@ -1040,7 +1020,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         // Staking transfer (if any) is done before this call (e.g. from RD or garden itself)
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this)).sub(_stakingAmount);
         if (_stakingAmount == 0) {
-            // We handle transfers here only if not staking (stakingAmount == 0)
+            // We handle transfers here only if not a staking operation (stakingAmount == 0)
             // If reserve asset is WETH and user sent ETH then wrap it
             if (reserveAsset == WETH && msg.value > 0) {
                 IWETH(WETH).deposit{value: msg.value}();
@@ -1088,8 +1068,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         Contributor storage contributor = contributors[_contributor];
         _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
-        // Flashloan protection
-        _require(block.timestamp.sub(contributor.lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
         // To avoid replay attack we use a global nonce at RD per user

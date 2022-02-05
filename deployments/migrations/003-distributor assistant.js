@@ -18,20 +18,17 @@ module.exports = async ({
 
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
   const controller = await getController();
-  console.log('check 1');
   const rewardsAssistant = await deploy(contract, {
     from: deployer,
     args: [controller.address],
     log: true,
     maxPriorityFeePerGas,
   });
-  console.log('check 2');
 
   if (rewardsAssistant.newlyDeployed) {
     console.log(`Setting rewards assistant on rewards distributor ${rewardsAssistant.address}`);
     await (await rewardsDistributor.setRewardsAssistant(rewardsAssistant.address, { maxPriorityFeePerGas })).wait();
   }
-  console.log('check 3');
 
   if (network.live && rewardsDistributor.newlyDeployed) {
     // fails, mostly likely because of the usage of libs
