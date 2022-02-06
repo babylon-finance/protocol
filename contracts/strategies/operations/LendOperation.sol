@@ -93,7 +93,7 @@ contract LendOperation is Operation {
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken);
+                IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken, 0);
             }
         }
         uint256 numTokensToSupply;
@@ -239,7 +239,8 @@ contract LendOperation is Operation {
             IStrategy(_sender).trade(
                 tokenToTradeFrom,
                 IERC20(tokenToTradeFrom).balanceOf(_sender),
-                _garden.reserveAsset()
+                _garden.reserveAsset(),
+                0
             );
         }
         address rewardsToken = _getRewardToken(_integration);
@@ -247,7 +248,7 @@ contract LendOperation is Operation {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
-                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset(), 70e15);
             }
         }
     }

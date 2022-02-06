@@ -174,7 +174,8 @@ contract AddLiquidityOperation is Operation {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).balanceOf(msg.sender),
-                            reserveAsset
+                            reserveAsset,
+                            0
                         );
                     }
                 }
@@ -273,7 +274,7 @@ contract AddLiquidityOperation is Operation {
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
-            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
+            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken, 0);
             normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
                 ? normalizedTokenAmount
                 : IERC20(_poolToken).balanceOf(msg.sender);
@@ -281,7 +282,7 @@ contract AddLiquidityOperation is Operation {
         }
         if (_isETH(_poolToken)) {
             if (_asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
+                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH, 0); // normalized amount in original asset decimals
             }
             // Convert WETH to ETH
             // We consider the slippage in the trade
@@ -337,7 +338,12 @@ contract AddLiquidityOperation is Operation {
             for (uint256 i = 0; i < rewards.length; i++) {
                 if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
                     try
-                        IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
+                        IStrategy(msg.sender).trade(
+                            rewards[i],
+                            IERC20(rewards[i]).balanceOf(msg.sender),
+                            _reserveAsset,
+                            70e15
+                        )
                     {} catch {}
                 }
             }

@@ -95,7 +95,8 @@ interface IStrategy {
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        uint256 _overrideSlippage
     ) external returns (uint256);
 
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external;

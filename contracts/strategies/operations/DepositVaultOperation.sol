@@ -106,11 +106,11 @@ contract DepositVaultOperation is Operation {
             // get ETH if it's needed
             if (vaultAsset == address(0)) {
                 if (_asset != WETH) {
-                    IStrategy(msg.sender).trade(_asset, _capital, WETH);
+                    IStrategy(msg.sender).trade(_asset, _capital, WETH, 0);
                 }
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             } else {
-                IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
+                IStrategy(msg.sender).trade(_asset, _capital, vaultAsset, 0);
             }
         }
         uint256 minAmountExpected = _getMinAmountExpected(yieldVault, _capital, _integration);

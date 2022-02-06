@@ -97,7 +97,7 @@ contract BuyOperation is Operation {
         if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
-        IStrategy(msg.sender).trade(_asset, _capital, token);
+        IStrategy(msg.sender).trade(_asset, _capital, token, 0);
         return (token, ERC20(token).balanceOf(address(msg.sender)), 0); // liquid
     }
 
@@ -132,7 +132,8 @@ contract BuyOperation is Operation {
         IStrategy(msg.sender).trade(
             token,
             ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset()
+            _garden.reserveAsset(),
+            0
         );
         return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
