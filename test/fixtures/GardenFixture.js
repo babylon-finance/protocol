@@ -69,6 +69,7 @@ async function setUpFixture(
   const weth = await getERC20(addresses.tokens.WETH);
   const wbtc = await getERC20(addresses.tokens.WBTC);
   const babl = await getERC20(addresses.tokens.BABL);
+  const bablTest = await getERC20(bablToken.address);
 
   const owner = await impersonateAddress(timelockController.address);
   await signer4.sendTransaction({ to: owner.address, value: ethers.utils.parseEther('5') });
@@ -83,6 +84,12 @@ async function setUpFixture(
       addresses.tokens.FRAX,
     ],
   });
+  // fund with local hardhat BABL Token created to create a Test Heart Garden of local BABL reserveAsset
+  const treasurySigner = await impersonateAddress(treasury.address);
+  await bablToken.connect(owner).enableTokensTransfers();
+  const amount = eth('1000');
+  await bablToken.connect(treasurySigner).transfer(signer1.address, amount, { gasPrice: 0 });
+  await bablToken.connect(signer1).approve(babController.address, amount, { gasPrice: 0 });
 
   const TOKEN_MAP = {
     [addresses.tokens.WETH]: weth,
@@ -185,6 +192,21 @@ async function setUpFixture(
       {},
     );
 
+  await babController
+    .connect(signer1)
+    .createGarden(
+      bablToken.address,
+      'The Test Heart of Babylon',
+      'hBABL',
+      'http...',
+      5,
+      BABL_GARDEN_PARAMS,
+      eth('200'),
+      [false, false, false],
+      [0, 0, 0],
+      {},
+    );
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('Garden', gardens[0]);
@@ -196,6 +218,8 @@ async function setUpFixture(
   const garden4 = await ethers.getContractAt('Garden', gardens[3]);
 
   const heartGarden = await ethers.getContractAt('Garden', gardens[4]);
+
+  const heartTestGarden = await ethers.getContractAt('Garden', gardens[5]);
 
   // Set the heart
   await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
@@ -272,6 +296,7 @@ async function setUpFixture(
     garden3,
     garden4,
     heartGarden,
+    heartTestGarden,
 
     strategy11,
     strategy21,

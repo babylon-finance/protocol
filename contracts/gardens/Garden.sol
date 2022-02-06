@@ -1010,7 +1010,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyNonZero(_to);
         (bool canDeposit, , ) = _getUserPermission(_from);
         _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
-
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
             _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
@@ -1046,7 +1045,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
-
         // Mint the garden NFT
         if (_mintNft) {
             IGardenNFT(controller.gardenNFT()).grantGardenNFT(_to);

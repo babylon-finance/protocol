@@ -13,7 +13,6 @@ module.exports = async ({
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const { maxPriorityFeePerGas } = await getGasPrice();
-  console.log('check 0');
   const contract = 'RewardsAssistant';
 
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');

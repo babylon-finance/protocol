@@ -362,8 +362,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _previousBalance,
         uint256 _tokenDiff,
-        bool _addOrSubstract
-    ) external override nonReentrant {
+        bool _addOrSubstract /*nonReentrant*/
+    ) external override {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
         // Creates a new user checkpoint
@@ -1199,7 +1199,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             IGarden(heartGarden).stakeRewards(
                 _contributor,
                 heartGarden,
-                address(babltoken),
+                IGarden(heartGarden).reserveAsset(),
                 bablSent,
                 _data[3],
                 _boolData[0],

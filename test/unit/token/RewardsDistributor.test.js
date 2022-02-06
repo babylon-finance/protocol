@@ -126,6 +126,8 @@ async function getStrategyState(strategy) {
   let nft;
   let rewardsAssistant;
   let heartGarden;
+  let heartTestGarden;
+  let gardenValuer;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -303,11 +305,13 @@ async function getStrategyState(strategy) {
       nft,
       rewardsAssistant,
       heartGarden,
+      heartTestGarden,
+      gardenValuer,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
     // We need to set heartGarden to test rewards staking
-    await rewardsDistributor.connect(owner).setHeartGarden(heartGarden.address);
+    await rewardsDistributor.connect(owner).setHeartGarden(heartTestGarden.address);
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
@@ -2251,7 +2255,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       const mintNft = false;
       const stakeInHeart = false;
       // We create the signature
@@ -2305,6 +2309,107 @@ async function getStrategyState(strategy) {
       expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
       expect(signer2BABLBalanceBefore).to.be.equal(0);
       expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
+    });
+    it('can claimRewardsBySig and Stake in the same tx ', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+      expect(rewardsSigner2[5]).to.be.gt(0); // BABL
+      expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+      // WETH gardens pay rewards in ETH
+      const signer2ETHBalanceBefore = await ethers.provider.getBalance(signer2.address);
+      // Fee is going to be paid by burning garden tokens
+      const signer2GardenBalanceBefore = await newGarden.balanceOf(signer2.address);
+      // BABL Balance
+      const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer2.address, [newGarden.address], {
+        gasPrice: 0,
+      });
+      expect(rewardsAll[3]).to.eq(rewardsSigner2[5]); // total BABL
+      expect(rewardsAll[4]).to.eq(rewardsSigner2[6]); // total Profit
+      const gardens = rewardsAll[0];
+      const bablPerGarden = rewardsAll[1];
+      const profitsPerGarden = rewardsAll[2];
+      const totalBabl = rewardsAll[3];
+      const totalProfits = rewardsAll[4];
+      // nonce is 4 as it deposited twice in 2 gardens before
+      const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer2.address);
+      const stakeMinAmountOut = minAmountOut;
+      const contributorData = await heartTestGarden.getContributor(signer2.address);
+      const heartGardenUserNonce = contributorData[9];
+      const maxFee = 1;
+      const fee = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+      const mintNft = false;
+      // We stake BABL into Heart!!
+      const stakeInHeart = true;
+      // We create the signature
+      const sig = await getRewardsSig(
+        signer2,
+        rewardsDistributor.address,
+        totalBabl,
+        totalProfits,
+        userRewardsNonce,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        mintNft,
+        stakeInHeart,
+      );
+      // We prepare the call data
+      const signatureData = [
+        totalBabl,
+        totalProfits,
+        userRewardsNonce,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        fee,
+        pricePerShare,
+      ];
+      const boolSignatureData = [mintNft, stakeInHeart];
+      const signer2HeartGardenBalanceBefore = await heartTestGarden.balanceOf(signer2.address);
+      // Signer 2 claim rewards by sig
+      await rewardsDistributor
+        .connect(keeper)
+        .claimRewardsBySig(
+          gardens,
+          bablPerGarden,
+          profitsPerGarden,
+          signatureData,
+          boolSignatureData,
+          sig.v,
+          sig.r,
+          sig.s,
+          { gasPrice: 0 },
+        );
+      const signer2HeartGardenBalanceAfter = await heartTestGarden.balanceOf(signer2.address);
+      // WETH gardens pay rewards in ETH
+      const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
+      const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
+      // BABL Balance
+      const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
+      expect(signer2ETHBalanceAfter).to.be.gt(signer2ETHBalanceBefore);
+      expect(signer2ETHBalanceAfter).to.be.closeTo(signer2ETHBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
+      expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
+      expect(signer2BABLBalanceBefore).to.be.equal(signer2BABLBalanceAfter); // We have staked into heart garden instead
+      expect(signer2HeartGardenBalanceBefore).to.eq(0);
+      expect(signer2HeartGardenBalanceAfter).to.be.gt(signer2HeartGardenBalanceBefore);
+      expect(signer2HeartGardenBalanceAfter).to.eq(totalBabl);
     });
     [
       {
@@ -2371,7 +2476,7 @@ async function getStrategyState(strategy) {
         const stakeMinAmountOut = minAmountOut;
         const contributorData = await heartGarden.getContributor(signer2.address);
         const heartGardenUserNonce = contributorData[9];
-        const pricePerShare = 1;
+        const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
         const mintNft = false;
         const stakeInHeart = false;
         // We create the signature
@@ -2473,7 +2578,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       const mintNft = false;
       const stakeInHeart = false;
       // We create the signature
@@ -2556,7 +2661,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       const mintNft = false;
       const stakeInHeart = false;
       // We prepare the call data
@@ -2784,7 +2889,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       const mintNft = false;
       const stakeInHeart = false;
       // We prepare the call data
@@ -2881,7 +2986,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -2899,7 +3004,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[6]);
+      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -2972,7 +3077,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = 1;
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       const mintNft = false;
       const stakeInHeart = false;
       // We create the signature
@@ -3267,7 +3372,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens[5]);
+      daiGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3346,7 +3451,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3441,7 +3546,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3459,7 +3564,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[6]);
+      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3573,7 +3678,7 @@ async function getStrategyState(strategy) {
         {},
       );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       // DAI Garden
       await babController.connect(signer1).createGarden(
@@ -3590,7 +3695,7 @@ async function getStrategyState(strategy) {
         {},
       );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[6]);
+      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3710,7 +3815,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3728,7 +3833,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[6]);
+      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3844,7 +3949,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[5]);
+      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3862,7 +3967,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[6]);
+      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
