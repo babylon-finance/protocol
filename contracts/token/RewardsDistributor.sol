@@ -362,7 +362,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         uint256 _previousBalance,
         uint256 _tokenDiff,
-        bool _addOrSubstract /*nonReentrant*/
+        bool _addOrSubstract
     ) external override {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);

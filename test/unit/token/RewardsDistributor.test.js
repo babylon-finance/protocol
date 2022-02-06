@@ -125,8 +125,8 @@ async function getStrategyState(strategy) {
   let keeper;
   let nft;
   let rewardsAssistant;
-  let heartGarden;
   let heartTestGarden;
+  let heartGarden;
   let gardenValuer;
 
   async function createStrategies(strategies) {
@@ -304,13 +304,13 @@ async function getStrategyState(strategy) {
       keeper,
       nft,
       rewardsAssistant,
-      heartGarden,
       heartTestGarden,
+      heartGarden,
       gardenValuer,
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
-    // We need to set heartGarden to test rewards staking
+    // We need to set heartTestGarden to test rewards staking
     await rewardsDistributor.connect(owner).setHeartGarden(heartTestGarden.address);
   });
 
@@ -2251,7 +2251,7 @@ async function getStrategyState(strategy) {
       // nonce is 4 as it deposited twice in 2 gardens before
       const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer2.address);
       const stakeMinAmountOut = minAmountOut;
-      const contributorData = await heartGarden.getContributor(signer2.address);
+      const contributorData = await heartTestGarden.getContributor(signer2.address);
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
@@ -2474,7 +2474,7 @@ async function getStrategyState(strategy) {
         // nonce is 4 as it deposited twice in 2 gardens before
         const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer2.address);
         const stakeMinAmountOut = minAmountOut;
-        const contributorData = await heartGarden.getContributor(signer2.address);
+        const contributorData = await heartTestGarden.getContributor(signer2.address);
         const heartGardenUserNonce = contributorData[9];
         const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
         const mintNft = false;
@@ -2574,7 +2574,7 @@ async function getStrategyState(strategy) {
       // nonce is 4 as it deposited twice in 2 gardens before
       const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer2.address);
       const stakeMinAmountOut = minAmountOut;
-      const contributorData = await heartGarden.getContributor(signer2.address);
+      const contributorData = await heartTestGarden.getContributor(signer2.address);
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
@@ -2627,9 +2627,10 @@ async function getStrategyState(strategy) {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
       // Heart has a min contribution of 10 BABL
+      // We use testGarden to use real BABL reserve asset (addresses.tokens.BABL)
+      await rewardsDistributor.connect(owner).setHeartGarden(heartGarden.address);
       const reserveAssetContract = await getERC20(addresses.tokens.BABL);
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH, addresses.tokens.BABL] });
-
       const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
       await weth.connect(signer2).approve(newGarden.address, amountIn, {
         gasPrice: 0,
@@ -2661,7 +2662,7 @@ async function getStrategyState(strategy) {
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
-      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
       const mintNft = false;
       const stakeInHeart = false;
       // We prepare the call data
@@ -2812,7 +2813,7 @@ async function getStrategyState(strategy) {
       const totalProfitsLast = rewardsAll2[4];
       const userRewardsNonceLast = 7;
       const stakeMinAmountOutLast = minAmountOut;
-      const contributorDataLast = await heartGarden.getContributor(signer2.address);
+      const contributorDataLast = await heartTestGarden.getContributor(signer2.address);
       const heartGardenUserNonceLast = contributorDataLast[9];
 
       sig = await getRewardsSig(
@@ -2885,7 +2886,7 @@ async function getStrategyState(strategy) {
       // nonce is 4 as it deposited twice in 2 gardens before
       const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer2.address);
       const stakeMinAmountOut = minAmountOut;
-      const contributorData = await heartGarden.getContributor(signer2.address);
+      const contributorData = await heartTestGarden.getContributor(signer2.address);
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
@@ -3073,7 +3074,7 @@ async function getStrategyState(strategy) {
       // nonce is 4 as it deposited twice in 2 gardens before
       const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer3.address);
       const stakeMinAmountOut = eth(0.9);
-      const contributorData = await heartGarden.getContributor(signer3.address);
+      const contributorData = await heartTestGarden.getContributor(signer3.address);
       const heartGardenUserNonce = contributorData[9];
       const maxFee = 1;
       const fee = 1;
@@ -3187,10 +3188,9 @@ async function getStrategyState(strategy) {
         .connect(signer1)
         .claimRewards([garden2.address, garden1.address], stakeInHeart, stakeMinAmountOut, mintNft, { gasPrice: 0 });
       const balanceAfter = await bablToken.balanceOf(signer1.address);
-      expect(balanceBefore).to.eq(0);
-      expect(balanceAfter).to.be.gt(0);
-      expect(balanceAfter).to.eq(rewardsSigner1Garden1[5].add(rewardsSigner1Garden2[5]));
-      expect(rewardsAll[3]).to.eq(balanceAfter);
+      expect(balanceAfter).to.be.gt(balanceBefore);
+      expect(balanceAfter).to.eq(balanceBefore.add(rewardsSigner1Garden1[5]).add(rewardsSigner1Garden2[5]));
+      expect(rewardsAll[3]).to.eq(balanceAfter.sub(balanceBefore));
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -3378,8 +3378,6 @@ async function getStrategyState(strategy) {
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
       await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
 
-      // Mining program has to be enabled before the strategy starts its execution
-
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -3401,6 +3399,7 @@ async function getStrategyState(strategy) {
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
+      const signer1BalanceBABLBefore = await bablToken.balanceOf(signer1.address);
       await rewardsDistributor
         .connect(signer1)
         .claimRewards([daiGarden.address], stakeInHeart, stakeMinAmountOut, mintNft);
@@ -3411,8 +3410,8 @@ async function getStrategyState(strategy) {
       const value = signer1DAIBalance2.add(signer1Profit);
       // LP profits
       // Receive BABL token after claim
-      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, eth('0.005'));
+      const signer1BalanceBABLAfter = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABLAfter).to.be.closeTo(signer1BABL.add(signer1BalanceBABLBefore), eth('0.005'));
       // Receive DAI as strategist and steward directly in its wallet after claim
       const signer1BalanceDAI = await dai.balanceOf(signer1.address);
       expect(signer1BalanceDAI).to.equal(value);
@@ -3457,8 +3456,6 @@ async function getStrategyState(strategy) {
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
-      // Mining program has to be enabled before the strategy starts its execution
-
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -3481,6 +3478,7 @@ async function getStrategyState(strategy) {
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
+      const signer1BalanceBABLBefore = await bablToken.balanceOf(signer1.address);
       // We claim our tokens and check that they are received properly
       await rewardsDistributor
         .connect(signer1)
@@ -3492,8 +3490,8 @@ async function getStrategyState(strategy) {
       const value = signer1USDCBalance2.add(signer1Profit);
       // LP profits
       // Receive BABL token after claim
-      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABL, eth('0.0005'));
+      const signer1BalanceBABLAfter = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABLAfter).to.be.closeTo(signer1BABL.add(signer1BalanceBABLBefore), eth('0.0005'));
       // Receive USDC as strategist and steward directly in its wallet after claim
       const signer1BalanceUSDC = await usdc.balanceOf(signer1.address);
       expect(signer1BalanceUSDC).to.equal(value);
@@ -3574,8 +3572,6 @@ async function getStrategyState(strategy) {
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
-      // Mining program has to be enabled before the strategy starts its execution
-
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -3622,6 +3618,9 @@ async function getStrategyState(strategy) {
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
+
+      const signer1BalanceBABLBefore = await bablToken.balanceOf(signer1.address);
+
       // We claim our tokens and check that they are received properly
       await rewardsDistributor
         .connect(signer1)
@@ -3632,8 +3631,11 @@ async function getStrategyState(strategy) {
         .connect(signer1)
         .claimRewards([daiGarden.address], stakeInHeart, stakeMinAmountOut, mintNft);
       // Receive BABL token after claim
-      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), signer1BalanceBABL.div(100));
+      const signer1BalanceBABLAfter = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABLAfter).to.be.closeTo(
+        signer1BABLUSDC.add(signer1BABLDAI).add(signer1BalanceBABLBefore),
+        signer1BalanceBABLAfter.div(100),
+      );
       expect(signer1BABLUSDC).to.be.closeTo(signer1BABLDAI, signer1BABLDAI.div(50));
     });
     it('should provide correct % of strategy rewards per profile with profits', async function () {
@@ -3891,6 +3893,8 @@ async function getStrategyState(strategy) {
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
+      const signer1BalanceBefore = await bablToken.balanceOf(signer1.address);
+
       // We claim our tokens and check that they are received properly
       await rewardsDistributor
         .connect(signer1)
@@ -3902,8 +3906,11 @@ async function getStrategyState(strategy) {
         .claimRewards([daiGarden.address], stakeInHeart, stakeMinAmountOut, mintNft);
 
       // Receive BABL token after claim
-      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), eth('0.0005'));
+      const signer1BalanceBABLAfter = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABLAfter).to.be.closeTo(
+        signer1BABLUSDC.add(signer1BABLDAI).add(signer1BalanceBefore),
+        eth('0.0005'),
+      );
     });
     it('should claim and update BABL Rewards of Signer1 in USDC Garden and DAI Garden as contributor of 2 strategies in 2 different gardens without profit within a quarter', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
@@ -3977,8 +3984,6 @@ async function getStrategyState(strategy) {
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
       await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), false);
 
-      // Mining program has to be enabled before the strategy starts its execution
-
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -4035,6 +4040,7 @@ async function getStrategyState(strategy) {
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
+      const signer1BalanceBABLBefore = await bablToken.balanceOf(signer1.address);
       // We claim our tokens and check that they are received properly
       await rewardsDistributor
         .connect(signer1)
@@ -4046,8 +4052,11 @@ async function getStrategyState(strategy) {
         .claimRewards([daiGarden.address], stakeInHeart, stakeMinAmountOut, mintNft);
 
       // Receive BABL token after claim
-      const signer1BalanceBABL = await bablToken.balanceOf(signer1.address);
-      expect(signer1BalanceBABL).to.be.closeTo(signer1BABLUSDC.add(signer1BABLDAI), eth('0.005'));
+      const signer1BalanceBABLAfter = await bablToken.balanceOf(signer1.address);
+      expect(signer1BalanceBABLAfter).to.be.closeTo(
+        signer1BABLUSDC.add(signer1BABLDAI).add(signer1BalanceBABLBefore),
+        eth('0.005'),
+      );
     });
     it('should not allow a race condition of two consecutive claims for the same rewards & profit of the same strategies', async function () {
       // Mining program has to be enabled before the strategy starts its execution
@@ -4061,6 +4070,9 @@ async function getStrategyState(strategy) {
       await finalizeStrategyAfterQuarter(long1);
 
       await finalizeStrategyAfterQuarter(long2);
+
+      const signer1BABLBefore = await bablToken.balanceOf(signer1.address);
+      const signer2BABLBefore = await bablToken.balanceOf(signer2.address);
 
       // Check pending rewards for users
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
@@ -4077,8 +4089,6 @@ async function getStrategyState(strategy) {
       const signer1GardenBalance = await garden1.balanceOf(signer1.address);
       const signer2GardenBalance = await garden1.balanceOf(signer2.address);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
-      expect((await bablToken.balanceOf(signer2.address)).toString()).to.be.equal('0');
       const stakeInHeart = false;
       const stakeMinAmountOut = eth(0.9);
       const mintNft = false;
@@ -4130,8 +4140,8 @@ async function getStrategyState(strategy) {
       expect(signer2Profits2.toString()).to.be.equal('0');
       expect(signer2BABL2.toString()).to.be.equal('0');
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.05'));
-      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, eth('0.05'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL.add(signer1BABLBefore), eth('0.05'));
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL.add(signer2BABLBefore), eth('0.05'));
       expect((await garden1.balanceOf(signer1.address)).toString()).to.be.equal(signer1GardenBalance);
       expect((await garden1.balanceOf(signer2.address)).toString()).to.be.equal(signer2GardenBalance);
     });
@@ -4145,8 +4155,7 @@ async function getStrategyState(strategy) {
       await injectFakeProfits(long1, eth().mul(240));
       await finalizeStrategyAfterQuarter(long1);
 
-      expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.equal('0');
-
+      const signer1BABLBefore = await bablToken.balanceOf(signer1.address);
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -4159,7 +4168,10 @@ async function getStrategyState(strategy) {
       await rewardsDistributor
         .connect(signer1)
         .claimRewards([garden1.address], stakeInHeart, stakeMinAmountOut, mintNft);
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL.add(signer1BABLBefore),
+        eth('0.005'),
+      );
       expect(signer1Profit.toString()).to.be.closeTo('11230104410277293', eth('0.005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -4194,6 +4206,7 @@ async function getStrategyState(strategy) {
 
       await injectFakeProfits(long1, eth().mul(240));
       await finalizeStrategyAfterQuarter(long1);
+      const signer1BABLBefore = await bablToken.balanceOf(signer1.address);
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
         long2.address,
@@ -4243,7 +4256,7 @@ async function getStrategyState(strategy) {
         .connect(signer1)
         .claimRewards([garden1.address], stakeInHeart, stakeMinAmountOut, mintNft);
       expect((await bablToken.balanceOf(signer1.address)).toString()).to.be.closeTo(
-        signer1BABL.add(signer1BABL2),
+        signer1BABL.add(signer1BABL2).add(signer1BABLBefore),
         eth('0.02'),
       );
       expect(rewardsSetAside1).to.be.closeTo(strategistLong1.add(stewardLong1), 5);
@@ -4344,6 +4357,9 @@ async function getStrategyState(strategy) {
       await injectFakeProfits(long5, eth().mul(142));
       await finalizeStrategyAfter3Quarters(long5);
 
+      const signer1BABLBefore = await bablToken.balanceOf(signer1.address);
+      const signer2BABLBefore = await bablToken.balanceOf(signer2.address);
+
       // We claim our tokens and check that they are received properly
       const signer1Rewards = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
         long1.address,
@@ -4367,8 +4383,14 @@ async function getStrategyState(strategy) {
         .connect(signer2)
         .claimRewards([garden1.address], stakeInHeart, stakeMinAmountOut, mintNft);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.0005'));
-      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, eth('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL.add(signer1BABLBefore),
+        eth('0.0005'),
+      );
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(
+        signer2BABL.add(signer2BABLBefore),
+        eth('0.0005'),
+      );
       expect(signer1Profit.toString()).to.be.closeTo('5273755118202756', eth('0.0005'));
       expect(signer2Profit.toString()).to.be.closeTo('871026681481226', eth('0.0005'));
       const signer1Rewards2 = await rewardsDistributor.getRewards(garden2.address, signer1.address, [
@@ -4394,8 +4416,14 @@ async function getStrategyState(strategy) {
         .connect(signer2)
         .claimRewards([garden2.address], stakeInHeart, stakeMinAmountOut, mintNft);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL2.add(signer1BABL), eth('0.0005'));
-      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL2.add(signer2BABL), eth('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL2.add(signer1BABL).add(signer1BABLBefore),
+        eth('0.0005'),
+      );
+      expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(
+        signer2BABL2.add(signer2BABL).add(signer2BABLBefore),
+        eth('0.0005'),
+      );
 
       // expect(signer1Profit2.toString()).to.be.closeTo('12620698068025778', eth('0.00005'));
       // expect(signer2Profit2.toString()).to.be.closeTo('2283637919986919', eth('0.00005'));
