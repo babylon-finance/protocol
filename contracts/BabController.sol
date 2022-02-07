@@ -573,7 +573,6 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function setGlobalPause(bool _state) external override returns (bool) {
         require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
 
         guardianGlobalPaused = _state;
         emit ActionPaused('Guardian global pause', _state);
@@ -591,7 +590,6 @@ contract BabController is OwnableUpgradeable, IBabController {
             msg.sender == guardian || msg.sender == owner(),
             'only pause guardian and owner can pause individually'
         );
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
         for (uint256 i = 0; i < _address.length; i++) {
             guardianPaused[_address[i]] = _state;
             emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
