@@ -2,14 +2,13 @@ const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('../../lib/constants');
 
 module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getGasPrice, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const { deploy } = deployments;
 
   const timelockController = await deploy('TimelockController', {
     from: deployer,
     args: [ONE_DAY_IN_SECONDS, [], []],
     log: true,
-    maxPriorityFeePerGas,
+    ...await getGasPrice()
   });
   console.log('Deployed TimelockController at', timelockController.address);
 

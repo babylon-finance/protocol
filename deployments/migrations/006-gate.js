@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'IshtarGate';
 
   const controller = await getController();
@@ -20,12 +19,11 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, 'https://babylon.mypinata.cloud/ipfs/QmTTcF8a1asL9YKsCB5DzND1Biy4Kyw4nX7EPSgv1pLEDA'],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting ishtar gate on controller ${deployment.address}`);
-    // await (await controller.editIshtarGate(deployment.address, { maxPriorityFeePerGas })).wait();
 
     const ishtarGate = await ethers.getContractAt('IshtarGate', deployment.address, signer);
     for (const address of [
@@ -40,7 +38,7 @@ module.exports = async ({
       '0x48d21Dc6BBF18288520E9384aA505015c26ea43C',
     ]) {
       console.log(`Setting creator permission for ${address}`);
-      await (await ishtarGate.setCreatorPermissions(address, true, { maxPriorityFeePerGas })).wait();
+      await (await ishtarGate.setCreatorPermissions(address, true, { ...(await getGasPrice()) })).wait();
     }
   }
 

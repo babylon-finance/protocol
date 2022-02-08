@@ -12,7 +12,6 @@ module.exports = async ({
 }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
-  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
@@ -31,21 +30,21 @@ module.exports = async ({
   const proxyAdmin = new ethers.Contract(proxyAdminDeployment.address, proxyAdminDeployment.abi, signer);
   if ((await proxyAdmin.owner()) !== timelockAddress) {
     console.log('Transfer ownership of ProxyAdmin');
-    await (await proxyAdmin.transferOwnership(timelockAddress, { maxPriorityFeePerGas })).wait();
+    await (await proxyAdmin.transferOwnership(timelockAddress, { ...(await getGasPrice()) })).wait();
   }
 
   let deployment = await deployments.get('GardenBeacon');
   let contract = new ethers.Contract(deployment.address, deployment.abi, signer);
   if ((await contract.owner()) !== timelockAddress) {
     console.log(`Transfer ownership of GardenBeacon to ${timelockAddress}`);
-    await (await contract.transferOwnership(timelockAddress, { maxPriorityFeePerGas })).wait();
+    await (await contract.transferOwnership(timelockAddress, { ...(await getGasPrice()) })).wait();
   }
 
   deployment = await deployments.get('StrategyBeacon');
   contract = new ethers.Contract(deployment.address, deployment.abi, signer);
   if ((await contract.owner()) !== timelockAddress) {
     console.log(`Transfer ownership of StrategyBeacon to ${timelockAddress}`);
-    await (await contract.transferOwnership(timelockAddress, { maxPriorityFeePerGas })).wait();
+    await (await contract.transferOwnership(timelockAddress, { ...(await getGasPrice()) })).wait();
   }
 
   for (const entry of [
@@ -62,10 +61,10 @@ module.exports = async ({
     const contract = await getContract(entry[0], entry[1], signer);
     if ((await contract.owner()) !== timelockAddress && entry[0] !== 'TimeLockRegistry') {
       console.log(`Transfer ownership of ${entry[0]} to ${timelockAddress}`);
-      await (await contract.transferOwnership(timelockAddress, { maxPriorityFeePerGas })).wait();
+      await (await contract.transferOwnership(timelockAddress, { ...(await getGasPrice()) })).wait();
     } else if (entry[0] === 'TimeLockRegistry') {
       console.log(`Transfer ownership of ${entry[0]} to ${MULTISIG}`);
-      await (await contract.transferOwnership(MULTISIG, { maxPriorityFeePerGas })).wait();
+      await (await contract.transferOwnership(MULTISIG, { ...(await getGasPrice()) })).wait();
     }
   }
 };

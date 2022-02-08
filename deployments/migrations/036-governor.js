@@ -1,6 +1,5 @@
 module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, getGasPrice, network, tenderly }) => {
   const { deployer } = await getNamedAccounts();
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const { deploy } = deployments;
   const signer = await getSigner(deployer);
 
@@ -20,15 +19,15 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
     from: deployer,
     args: [bablToken.address, timelockController.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   console.log(`Deployed BabylonGovernor ${governor.address}`);
 
   // We give proposer and executor permissions to Governor
   console.log('Setting Governor on TimelockController');
-  await (await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { maxPriorityFeePerGas })).wait();
-  await (await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { maxPriorityFeePerGas })).wait();
+  await (await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { ...(await getGasPrice()) })).wait();
+  await (await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { ...(await getGasPrice()) })).wait();
 
   if (network.live && governor.newlyDeployed) {
     const contract = await getTenderlyContract('BabylonGovernor');

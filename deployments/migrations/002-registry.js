@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
 
   const bablToken = await deployments.get('BABLToken');
 
@@ -19,7 +18,7 @@ module.exports = async ({
     from: deployer,
     args: [bablToken.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (timeLockRegistry.newlyDeployed) {
