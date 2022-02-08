@@ -203,7 +203,7 @@ contract BorrowOperation is Operation {
                 ? address(msg.sender).balance
                 : IERC20(_assetToken).balanceOf(address(msg.sender));
         if (_asset != _assetToken && _assetToken != address(0) && debtTokenBalance == 0) {
-            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken, 0);
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
         }
     }
 }
