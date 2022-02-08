@@ -1,6 +1,7 @@
 const { expect } = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const { ethers } = require('hardhat');
+const { fund } = require('lib/whale');
 
 require('chai').use(chaiAsPromised);
 
@@ -51,6 +52,7 @@ describe('Strategy', function () {
   let oneInchPoolIntegration;
   let yearnVaultIntegration;
   let masterSwapper;
+  let weth;
 
   async function createStrategies(strategies) {
     const retVal = [];
@@ -88,6 +90,7 @@ describe('Strategy', function () {
       oneInchPoolIntegration,
       yearnVaultIntegration,
       masterSwapper,
+      weth,
     } = await setupTests()());
 
     strategyDataset = await ethers.getContractAt('Strategy', strategy11);
@@ -581,6 +584,35 @@ describe('Strategy', function () {
       await expect(
         strategyContract.connect(keeper).finalizeStrategy(42, 'http://', minReserveOut.div(2), { gasPrice: 0 }),
       ).to.be.not.reverted;
+    });
+  });
+
+  describe('sweep', async function () {
+    it('can sweep with a custom slippage', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
+
+      // add extra WETH to repay keeper
+      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
+        value: eth().mul(2),
+      });
+
+      await finalizeStrategy(strategyContract);
+
+      await fund([strategyContract.address]);
+
+      const balanceBefore = await weth.balanceOf(garden1.address)
+
+      await strategyContract.sweep(addresses.tokens.DAI, eth(0.5));
+
+      expect((await weth.balanceOf(garden1.address)).sub(balanceBefore)).to.gt(eth(100));
     });
   });
 
