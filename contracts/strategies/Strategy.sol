@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -505,7 +506,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        _setMaxTradeSlippage(_newSlippage);
         _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
@@ -513,7 +513,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 balance = IERC20(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
 
-        _trade(_token, balance, garden.reserveAsset());
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
@@ -566,7 +566,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _sendToken                    Token to exchange
      * @param _sendQuantity                 Amount of tokens to send
      * @param _receiveToken                 Token to receive
+     * @param _overrideSlippage             Slippage to override
      */
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _overrideSlippage
+    ) external override returns (uint256) {
+        _onlyOperation();
+        _onlyUnpaused();
+        return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage);
+    }
+
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
@@ -574,7 +586,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken);
+        return _trade(_sendToken, _sendQuantity, _receiveToken, 0);
     }
 
     /**
@@ -908,7 +920,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetFinalized = WETH;
             }
             if (assetFinalized != garden.reserveAsset()) {
-                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset());
+                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset(), 0);
             }
         }
     }
@@ -954,11 +966,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _sendToken                    Token to exchange
      * @param _sendQuantity                 Amount of tokens to send
      * @param _receiveToken                 Token to receive
+     * @param _overrideSlippage             Override slippage
      */
     function _trade(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        uint256 _overrideSlippage
     ) private returns (uint256) {
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
@@ -970,12 +984,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 minAmountExpected =
-            exactAmount.sub(
-                exactAmount.preciseMul(
-                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
-                )
-            );
+        uint256 slippage =
+            _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
+                ? maxTradeSlippagePercentage
+                : DEFAULT_TRADE_SLIPPAGE;
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,

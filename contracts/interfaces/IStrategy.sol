@@ -98,6 +98,13 @@ interface IStrategy {
         address _receiveToken
     ) external returns (uint256);
 
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _overrideSlippage
+    ) external returns (uint256);
+
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
 
     function getStrategyDetails()
