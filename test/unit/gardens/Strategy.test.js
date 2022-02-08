@@ -599,7 +599,6 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
-      // add extra WETH to repay keeper
       await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
         value: eth().mul(2),
       });
@@ -608,7 +607,7 @@ describe('Strategy', function () {
 
       await fund([strategyContract.address]);
 
-      const balanceBefore = await weth.balanceOf(garden1.address)
+      const balanceBefore = await weth.balanceOf(garden1.address);
 
       await strategyContract.sweep(addresses.tokens.DAI, eth(0.5));
 
