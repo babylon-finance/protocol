@@ -8,7 +8,7 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
     from: deployer,
     args: [ONE_DAY_IN_SECONDS, [], []],
     log: true,
-    ...await getGasPrice()
+    ...(await getGasPrice()),
   });
   console.log('Deployed TimelockController at', timelockController.address);
 

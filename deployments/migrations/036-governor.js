@@ -26,8 +26,12 @@ module.exports = async ({ getTenderlyContract, getNamedAccounts, deployments, ge
 
   // We give proposer and executor permissions to Governor
   console.log('Setting Governor on TimelockController');
-  await (await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { ...(await getGasPrice()) })).wait();
-  await (await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { ...(await getGasPrice()) })).wait();
+  await (
+    await timelockControllerContract.grantRole(PROPOSER_ROLE, governor.address, { ...(await getGasPrice()) })
+  ).wait();
+  await (
+    await timelockControllerContract.grantRole(EXECUTOR_ROLE, governor.address, { ...(await getGasPrice()) })
+  ).wait();
 
   if (network.live && governor.newlyDeployed) {
     const contract = await getTenderlyContract('BabylonGovernor');

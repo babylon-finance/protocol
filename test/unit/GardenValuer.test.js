@@ -49,7 +49,7 @@ describe('GardenValuer', function () {
           from: deployer,
           args: [ADDRESS_ZERO],
           log: true,
-    ...await getGasPrice()
+          ...(await getGasPrice()),
         }),
       ).to.be.revertedWith('Incorrect address');
     });
