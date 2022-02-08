@@ -95,6 +95,12 @@ interface IStrategy {
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
+        address _receiveToken
+    ) external returns (uint256);
+
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
         address _receiveToken,
         uint256 _overrideSlippage
     ) external returns (uint256);

@@ -93,7 +93,7 @@ contract LendOperation is Operation {
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken, 0);
+                IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken);
             }
         }
         uint256 numTokensToSupply;

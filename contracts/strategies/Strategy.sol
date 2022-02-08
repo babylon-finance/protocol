@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -578,6 +579,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage);
     }
 
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken
+    ) external override returns (uint256) {
+        _onlyOperation();
+        _onlyUnpaused();
+        return _trade(_sendToken, _sendQuantity, _receiveToken, 0);
+    }
+
     /**
      * Deposits or withdraws weth from an operation in this context
      * @param _isDeposit                    Whether is a deposit or withdraw
@@ -973,10 +984,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 slippage = maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE;
-        if (_overrideSlippage != 0 && _overrideSlippage > slippage) {
-            slippage = _overrideSlippage;
-        }
+        uint256 slippage =
+            _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
+                ? maxTradeSlippagePercentage
+                : DEFAULT_TRADE_SLIPPAGE;
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),

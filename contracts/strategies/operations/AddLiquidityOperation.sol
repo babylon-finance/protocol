@@ -174,8 +174,7 @@ contract AddLiquidityOperation is Operation {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).balanceOf(msg.sender),
-                            reserveAsset,
-                            0
+                            reserveAsset
                         );
                     }
                 }
@@ -274,7 +273,7 @@ contract AddLiquidityOperation is Operation {
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
-            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken, 0);
+            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
             normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
                 ? normalizedTokenAmount
                 : IERC20(_poolToken).balanceOf(msg.sender);
@@ -282,7 +281,7 @@ contract AddLiquidityOperation is Operation {
         }
         if (_isETH(_poolToken)) {
             if (_asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH, 0); // normalized amount in original asset decimals
+                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
             }
             // Convert WETH to ETH
             // We consider the slippage in the trade
