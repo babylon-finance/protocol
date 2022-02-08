@@ -1191,4 +1191,4 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     receive() external payable {}
 }
 
-contract GardenV16 is Garden {}
+contract GardenV17 is Garden {}
