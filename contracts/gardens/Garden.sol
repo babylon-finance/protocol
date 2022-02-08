@@ -563,7 +563,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IPriceOracle oracle = IPriceOracle(controller.priceOracle());
         uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
-            pricePerTokenUnitInDAI.preciseMul(_fee).preciseMul(
+            pricePerTokenUnitInDAI.preciseMul(_fee).mul(
                 10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
             );
 
