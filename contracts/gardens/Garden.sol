@@ -550,8 +550,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   Pays gas costs back to the keeper from executing transactions
      *   including the past debt
      * @dev
-     *   We assume that calling keeper functions should be less expensive than
-     *   1 million gas and the gas price should be lower than 1000 gwei.
+     *   We assume that calling keeper functions should be less expensive than 2000 DAI.
      * @param _keeper  Keeper that executed the transaction
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
@@ -560,8 +559,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 
-        IPriceOracle oracle = IPriceOracle(controller.priceOracle());
-        uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
+        uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
             pricePerTokenUnitInDAI.preciseMul(_fee).mul(
                 10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
