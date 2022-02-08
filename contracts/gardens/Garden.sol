@@ -315,23 +315,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _mintNft
     ) external payable override nonReentrant {
         // calculate pricePerShare
-        uint256 pricePerShare;
         // if there are no strategies then NAV === liquidReserve
-        if (strategies.length == 0) {
-            pricePerShare = totalSupply() == 0
-                ? PreciseUnitMath.preciseUnit()
-                : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
-                    totalSupply()
-                );
-        } else {
-            // Get valuation of the Garden with the quote asset as the reserve asset.
-            pricePerShare = IGardenValuer(controller.gardenValuer()).calculateGardenValuation(
-                address(this),
-                reserveAsset
-            );
-        }
 
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare, minContribution);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, _getPricePerShare(), minContribution);
     }
 
     function depositBySig(
@@ -400,8 +386,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 pricePerShare =
-            IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
         _withdrawInternal(
@@ -410,7 +394,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _to,
             _withPenalty,
             _unwindStrategy,
-            pricePerShare,
+            _getPricePerShare(),
             _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0,
             0
         );
@@ -579,7 +563,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         IPriceOracle oracle = IPriceOracle(controller.priceOracle());
         uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
-            SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, pricePerTokenUnitInDAI.preciseMul(_fee));
+            pricePerTokenUnitInDAI.preciseMul(_fee).preciseMul(
+                10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
+            );
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
@@ -930,6 +916,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
+    }
+
+    function _getPricePerShare() internal view returns (uint256) {
+        if (strategies.length == 0) {
+            return
+                totalSupply() == 0
+                    ? PreciseUnitMath.preciseUnit()
+                    : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
+                        totalSupply()
+                    );
+        } else {
+            // Get valuation of the Garden with the quote asset as the reserve asset.
+            return IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
+        }
     }
 
     function _getWithdrawSigner(
