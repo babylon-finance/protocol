@@ -386,7 +386,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _mintNft              Whether or not the user wants to mintNFT for the stake
      */
     function claimRewards(
-        address[] memory _myGardens,
+        address[] calldata _myGardens,
         bool _stakeInHeart,
         uint256 _stakeMinAmountOut,
         bool _mintNft
@@ -458,11 +458,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
 
     function claimRewardsBySig(
-        address[] memory _gardens,
-        uint256[] memory _babl,
-        uint256[] memory _profits,
-        uint256[] memory _signatureData,
-        bool[] memory _boolSignatureData,
+        address[] calldata _gardens,
+        uint256[] calldata _babl,
+        uint256[] calldata _profits,
+        uint256[] calldata _signatureData,
+        bool[] calldata _boolSignatureData,
         uint8 v,
         bytes32 r,
         bytes32 s
