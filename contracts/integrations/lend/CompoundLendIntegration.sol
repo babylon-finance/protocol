@@ -45,19 +45,6 @@ contract CompoundLendIntegration is LendIntegration {
     using SafeCast for uint256;
     using UniversalERC20 for IERC20;
 
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency() {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Only governance or emergency can call this'
-        );
-        _;
-    }
-
     /* ============ Constant ============ */
 
     IComptroller internal immutable comptroller;

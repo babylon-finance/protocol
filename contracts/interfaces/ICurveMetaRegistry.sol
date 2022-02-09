@@ -42,6 +42,10 @@ interface ICurveMetaRegistry {
 
     function getLpToken(address _pool) external view returns (address);
 
+    function getPoolFromLpToken(address _lpToken) external view returns (address);
+
+    function getVirtualPriceFromLpToken(address _pool) external view returns (uint256);
+
     function isMeta(address _pool) external view returns (bool);
 
     function getUnderlyingAndRate(address _pool, uint256 _i) external view returns (address, uint256);

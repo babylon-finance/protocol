@@ -184,6 +184,26 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     }
 
     /**
+     * Gets the pool from a curve lp token
+     * @param _lpToken                Address of the lp token
+     *
+     * @return address                Address of the pool
+     */
+    function getPoolFromLpToken(address _lpToken) external view override returns (address) {
+        // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
+        try curveRegistry.get_pool_from_lp_token(_lpToken) returns (address pool) {
+            return pool;
+        } catch {
+            try cryptoRegistry.get_pool_from_lp_token(_lpToken) returns (address pool2) {
+                return pool2;
+            } catch {
+                // Factory pools use the pool as the token
+                return _lpToken;
+            }
+        }
+    }
+
+    /**
      * Returns whether the pool is a meta pool
      * @param _pool                   Pool Address
      *
@@ -198,6 +218,23 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             return curveRegistry.is_meta(_pool);
         }
         return factoryRegistry.is_meta(_pool);
+    }
+
+    /**
+     * Returns the virtual price of an lp token from curve
+     * @param _pool                   Pool Address
+     *
+     * @return uint256                Whether the pool is a meta pool or not
+     */
+    function getVirtualPriceFromLpToken(address _pool) external view override returns (uint256) {
+        uint256 registryKind = poolToRegistry[_pool];
+        if (registryKind != 1 && registryKind != 3) {
+            return 1e18;
+        }
+        if (registryKind == 1) {
+            return curveRegistry.get_virtual_price_from_lp_token(_pool);
+        }
+        return cryptoRegistry.get_virtual_price_from_lp_token(_pool);
     }
 
     /**

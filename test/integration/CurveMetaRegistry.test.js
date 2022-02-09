@@ -8,12 +8,8 @@ describe('CurveMetaRegistry Integration Test', function () {
   let babController;
 
   beforeEach(async () => {
-    ({
-      babController,
-      curveMetaRegistry
-    } = await setupTests()());
+    ({ babController, curveMetaRegistry } = await setupTests()());
   });
-
 
   describe('Registries are properly set up', async function () {
     it('checks a normal curve pool', async function () {

@@ -46,19 +46,6 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     using SafeERC20 for ERC20;
     using UniversalERC20 for IERC20;
 
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency() {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Only governance or emergency can call this'
-        );
-        _;
-    }
-
     /* ============ State Variables ============ */
 
     IComptroller internal immutable comptroller;

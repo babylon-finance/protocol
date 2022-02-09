@@ -21,8 +21,7 @@ pragma solidity 0.7.6;
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
-import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
 import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
@@ -36,10 +35,6 @@ import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
  */
 contract TokenIdentifier is ITokenIdentifier {
     /* ============ Constants ============ */
-
-    // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider =
-        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
@@ -432,14 +427,13 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = SYNTH_TOKEN;
         }
 
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-
         // Curve LP Token
-        address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
+        address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
         if (crvPool != address(0)) {
             tokenInType = CURVE_LP_TOKEN;
         }
-        crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+        crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
         if (crvPool != address(0)) {
             tokenOutType = CURVE_LP_TOKEN;
         }

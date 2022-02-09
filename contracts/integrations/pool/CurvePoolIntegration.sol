@@ -43,10 +43,10 @@ contract CurvePoolIntegration is PoolIntegration {
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
-    // Registry of first party pools
-    ICurveMetaRegistry public immutable curveMetaRegistry;
-
     /* ============ State Variables ============ */
+
+    // Registry of first party pools
+    ICurveMetaRegistry public curveMetaRegistry;
 
     // Mapping of pools to deposit contract
     mapping(address => address) public poolToDeposit;
@@ -95,6 +95,16 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     /* ============ External Functions ============ */
+
+    /**
+     * Updates the curve meta registry
+     *
+     * @param _curveMetaRegistry            Address of the curve meta registry
+     */
+    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external onlyGovernanceOrEmergency {
+        require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
+        curveMetaRegistry = _curveMetaRegistry;
+    }
 
     function getPoolTokens(bytes calldata _pool, bool forNAV) public view override returns (address[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
@@ -468,6 +478,11 @@ contract CurvePoolIntegration is PoolIntegration {
             }
         }
         return bytes('');
+    }
+
+    function _getLpToken(address _pool) internal view override returns (address) {
+        // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
+        return curveMetaRegistry.getLpToken(_pool);
     }
 
     function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view override returns (address, uint256) {

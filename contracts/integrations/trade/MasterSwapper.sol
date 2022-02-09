@@ -65,19 +65,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
     /* ============ Struct ============ */
 
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
-
     /* ============ Events ============ */
 
     /* ============ Constants ============ */
