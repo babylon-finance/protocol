@@ -310,8 +310,6 @@ async function getStrategyState(strategy) {
     } = await setupTests()());
 
     await bablToken.connect(owner).enableTokensTransfers();
-    // We need to set heartTestGarden to test rewards staking
-    await rewardsDistributor.connect(owner).setHeartGarden(heartTestGarden.address);
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
