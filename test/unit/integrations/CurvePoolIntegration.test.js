@@ -78,7 +78,7 @@ describe('CurvePoolIntegrationTest', function () {
 
     pick(pools).forEach(({ name, pool }) => {
       it(`can enter and exit the ${name} pool`, async function () {
-        const slippage = ['compound', 'susd', 'y'].includes(name) ? eth().div(4) : eth().div(20);
+        const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
         const reserveAsset = await getERC20(await garden1.reserveAsset());
         const strategyContract = await createStrategy(
           'lp',
