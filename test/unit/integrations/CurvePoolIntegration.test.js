@@ -30,12 +30,28 @@ describe('CurvePoolIntegrationTest', function () {
       'ICurveAddressProvider',
       '0x0000000022d53366457f9d5e68ec105046fc4383',
     );
-    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
+    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(0));
+    const factoryRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(3));
+    const cryptoRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(5));
     const curvePoolsD = {};
-    const curvePools = await Promise.all(
+    let curvePools = await Promise.all(
       [...Array((await crvRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
         return await getCurvePoolInfo(pid, crvRegistry);
       }),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await factoryRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, factoryRegistry, true);
+        }),
+      ),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await cryptoRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, cryptoRegistry);
+        }),
+      ),
     );
     curvePools
       .filter((c) => c)
@@ -45,13 +61,16 @@ describe('CurvePoolIntegrationTest', function () {
     console.log('pools', curvePoolsD);
   }
 
-  async function getCurvePoolInfo(pid, crvRegistry) {
+  async function getCurvePoolInfo(pid, crvRegistry, isFactory = false, isCrypto = false) {
+    // TODO: Need to filter by TVL
     const address = await crvRegistry.pool_list(pid);
-    const name = await crvRegistry.get_pool_name(address);
+    const name = isFactory ? 'factory' + pid : await crvRegistry.get_pool_name(address);
     if (name) {
       return {
         name,
         address,
+        isFactory,
+        isCrypto,
       };
     }
     return null;
@@ -66,7 +85,7 @@ describe('CurvePoolIntegrationTest', function () {
   describe('Liquidity Pools', function () {
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tricrypto2, 0]);
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tripool, 0]);
       expect(await curvePoolIntegration.isPool(data)).to.equal(true);
     });
 
@@ -77,7 +96,7 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pick(pools).forEach(({ name, pool }) => {
-      it(`can enter and exit the ${name} pool`, async function () {
+      it.only(`can enter and exit the ${name} pool`, async function () {
         const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
         const reserveAsset = await getERC20(await garden1.reserveAsset());
         const strategyContract = await createStrategy(
