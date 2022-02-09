@@ -199,7 +199,7 @@ describe('CompoundBorrowIntegrationTest', function () {
     });
   });
 
-  describe.only('Compound Borrow Multigarden multiasset', function () {
+  describe('Compound Borrow Multigarden multiasset', function () {
     pick(GARDENS).forEach(({ token, name }) => {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);

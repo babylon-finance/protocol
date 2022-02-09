@@ -110,7 +110,7 @@ describe('FuseBorrowIntegrationTest', function () {
     await cFRAX.connect(owner).accrueInterest({ gasPrice: 0 });
   });
 
-  describe.only('Fuse Borrow Multigarden multiasset', function () {
+  describe('Fuse Borrow Multigarden multiasset', function () {
     pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
