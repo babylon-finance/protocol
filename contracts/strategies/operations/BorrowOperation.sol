@@ -107,7 +107,7 @@ contract BorrowOperation is Operation {
         _onlyPositiveCollateral(msg.sender, _asset, _integration);
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
-        if(borrowToken == address(0)) {
+        if (borrowToken == address(0)) {
             IStrategy(msg.sender).handleWeth(true, normalizedAmount);
             borrowToken = WETH;
         }
@@ -209,7 +209,7 @@ contract BorrowOperation is Operation {
     function _tradeToDebtToken(address _asset, address _assetToken) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance == 0) {
-            if(_assetToken != address(0) ) {
+            if (_assetToken != address(0)) {
                 IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
             } else {
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
