@@ -13,7 +13,7 @@ interface ICryptoRegistry {
 
     function get_n_coins(address _pool) external view returns (uint256);
 
-    function get_coins(address _pool) external view returns (address[2] memory);
+    function get_coins(address _pool) external view returns (address[8] memory);
 
     function get_virtual_price_from_lp_token(address _lpToken) external view returns (uint256);
 

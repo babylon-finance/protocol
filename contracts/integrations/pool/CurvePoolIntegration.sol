@@ -53,16 +53,16 @@ contract CurvePoolIntegration is PoolIntegration {
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
     // Registry of first party pools
-    ICurveRegistry internal immutable curveRegistry;
+    ICurveRegistry public immutable curveRegistry;
 
     // Registry of user created pools
-    ICurveRegistry internal immutable factoryRegistry;
+    ICurveRegistry public immutable factoryRegistry;
 
     // Registry of first party crypto pools
-    ICryptoRegistry internal immutable cryptoRegistry;
+    ICryptoRegistry public immutable cryptoRegistry;
 
     // Registry of third party crypto pools
-    ICryptoRegistry internal immutable cryptoRegistryF;
+    ICryptoRegistry public immutable cryptoRegistryF;
     /* ============ State Variables ============ */
 
     // Mapping of pools to deposit contract
@@ -82,6 +82,16 @@ contract CurvePoolIntegration is PoolIntegration {
     // 2 means factory pools
     // 3 means crypto first party
     // 4 means crypto third party
+
+    /* ============ Modifiers ============ */
+
+    modifier onlyGovernanceOrEmergency {
+        require(
+            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
+            'Not enough privileges'
+        );
+        _;
+    }
 
     /* ============ Constructor ============ */
 
@@ -115,28 +125,26 @@ contract CurvePoolIntegration is PoolIntegration {
         supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
         supportsUnderlyingParam[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
 
-        curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
-        cryptoRegistry = IFactoryRegistry(curveAddressProvider.get_address(5));
-        cryptoRegistryF = IFactoryRegistry(0xf18056bbd320e96a48e3fbf8bc061322531aac99);
-        updatePoolsList();
+        ICurveRegistry curveRegistryRead = ICurveRegistry(curveAddressProvider.get_registry());
+        ICurveRegistry factoryRegistryRead = ICurveRegistry(curveAddressProvider.get_address(3));
+        curveRegistry = curveRegistryRead;
+        factoryRegistry = factoryRegistryRead;
+        address cryptoFactoryAddress = curveAddressProvider.get_address(5);
+        cryptoRegistry = ICryptoRegistry(cryptoFactoryAddress);
+        cryptoRegistryF = ICryptoRegistry(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99);
+        _updateMapping(1, curveRegistryRead);
+        _updateMapping(2, factoryRegistryRead);
+        _updateMapping(3, ICurveRegistry(cryptoFactoryAddress));
+        _updateMapping(4, ICurveRegistry(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99));
     }
 
     /* ============ External Functions ============ */
 
-    function updatePoolsList() public onlyGovernanceOrEmergency {
-        for (uint256 i = 0; i < curveRegistry.pool_count(); i++) {
-            poolToRegistry[curveRegistry.pool_list(i)] = 1;
-        }
-        for (uint256 i = 0; i < factoryRegistry.pool_count(); i++) {
-            poolToRegistry[factoryRegistry.pool_list(i)] = 2;
-        }
-        for (uint256 i = 0; i < cryptoRegistry.pool_count(); i++) {
-            poolToRegistry[cryptoRegistry.pool_list(i)] = 3;
-        }
-        for (uint256 i = 0; i < cryptoRegistryF.pool_count(); i++) {
-            poolToRegistry[cryptoRegistryF.pool_list(i)] = 4;
-        }
+    function updatePoolsList() external onlyGovernanceOrEmergency {
+      _updateMapping(1, curveRegistry);
+      _updateMapping(2, factoryRegistry);
+      _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
+      _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
     }
 
     function getPoolTokens(bytes calldata _pool, bool forNAV) public view override returns (address[] memory) {
@@ -524,7 +532,7 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     function _getLpToken(address _pool) internal view override returns (address) {
-        uint256 registryKind = poolToRegistry[poolAddress];
+        uint256 registryKind = poolToRegistry[_pool];
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
         if (registryKind == 1) {
             return curveRegistry.get_lp_token(_pool);
@@ -613,6 +621,13 @@ contract CurvePoolIntegration is PoolIntegration {
         if (registryKind == 1) {
             return curveRegistry.is_meta(_pool);
         }
-        return factoryRegistry.is_meta(pool);
+        return factoryRegistry.is_meta(_pool);
+    }
+
+    // Function to the update the registry mappings
+    function _updateMapping(uint8 _index, ICurveRegistry _registry) internal {
+      for (uint i = 0; i < _registry.pool_count(); i++) {
+          poolToRegistry[_registry.pool_list(i)] = _index;
+      }
     }
 }
