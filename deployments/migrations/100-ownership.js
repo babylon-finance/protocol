@@ -56,6 +56,8 @@ module.exports = async ({
     ['TimeLockRegistry', ''],
     ['IshtarGate', ''],
     ['MardukGate', ''],
+    ['CurveMetaRegistry', ''],
+    ['TokenIdentifier', ''],
     ['Heart', 'HeartProxy'],
   ]) {
     const contract = await getContract(entry[0], entry[1], signer);

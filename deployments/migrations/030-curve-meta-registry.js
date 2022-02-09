@@ -1,3 +1,5 @@
+const addresses = require('../../lib/addresses');
+
 module.exports = async ({
   network,
   getTenderlyContract,
@@ -6,29 +8,25 @@ module.exports = async ({
   deployments,
   ethers,
   getGasPrice,
+  getContract,
   getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const contract = 'CurveTradeIntegration';
+  const controller = await getController();
 
-  const controller = await deployments.get('BabControllerProxy');
-
-  const curveMetaRegistry = await deployments.get('CurveMetaRegistry');
-
+  const contract = 'CurveMetaRegistry';
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, curveMetaRegistry.address],
+    args: [controller.address],
     log: true,
     ...(await getGasPrice()),
   });
-  if (deployment.newlyDeployed) {
-    console.log(`Adding curve trade integration ${contract}(${deployment.address})`);
-  }
+
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
 };
 
-module.exports.tags = ['CurveTrade'];
+module.exports.tags = ['CurveMetaRegistry'];

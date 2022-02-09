@@ -23,6 +23,7 @@ async function setUpFixture(
   const ishtarGate = await getContract('IshtarGate');
   const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
+  const curveMetaRegistry = await getContract('CurveMetaRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -251,6 +252,7 @@ async function setUpFixture(
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
+    curveMetaRegistry,
     synthetixTradeIntegration,
     univ2TradeIntegration,
     aaveLendIntegration,
