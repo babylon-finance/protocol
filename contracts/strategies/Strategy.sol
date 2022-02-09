@@ -765,7 +765,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 opDatas.length > 0
                     ? opDatas[lastOp]
                     : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12);
-            uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
+            uint256 borrowBalance = IERC20(token == address(0) ? WETH : token).balanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
                 positiveNav = positiveNav.add(
