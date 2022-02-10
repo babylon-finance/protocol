@@ -64,6 +64,8 @@ interface IHeart {
 
     function voteProposal(uint256 _proposalId, bool _isApprove) external;
 
+    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external;
+
     function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) external;
 
     function updateMarkets() external;

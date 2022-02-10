@@ -46,32 +46,15 @@ describe('FuseBorrowIntegrationTest', function () {
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
-    if (asset1.address === WETH.address) {
-      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
-    } else {
-      expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
-    }
-    if (asset2.address === WETH.address) {
-      expect(await ethers.provider.getBalance(strategyContract.address)).to.be.gt(0);
-    } else {
-      expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
-    }
+    expect(await asset1.balanceOf(strategyContract.address)).to.eq(0);
+    expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
     expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, asset2Address)).to.be.gt(0);
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
 
-    if (asset2.address === WETH.address) {
-      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
-    } else {
-      expect(await asset2.balanceOf(strategyContract.address)).to.equal(0);
-    }
-
-    if (asset1.address === WETH.address) {
-      expect(await ethers.provider.getBalance(strategyContract.address)).to.equal(0);
-    } else {
-      expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
-    }
+    expect(await asset2.balanceOf(strategyContract.address)).to.eq(0);
+    expect(await asset1.balanceOf(strategyContract.address)).to.eq(0);
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.gt(balanceBeforeExiting);
   }
@@ -132,24 +115,31 @@ describe('FuseBorrowIntegrationTest', function () {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
+
       it(`can supply BABL and borrow FEI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(BABL, FEI, token);
       });
+
       it(`can supply FRAX and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(FRAX, DAI, token);
       });
+
       it(`can supply FEI and borrow ETH at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(FEI, WETH, token);
       });
+
       it.skip(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
+
       it(`should fail trying to supply DAI and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
       });
+
       it(`should fail trying to supply ETH and borrow ETH at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
       });
+
       it(`should fail trying to supply BABL and borrow BABL at Fuse in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(BABL, BABL, token, 'There is no collateral locked');
       });
