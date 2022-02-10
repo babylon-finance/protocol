@@ -414,7 +414,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[1] = totalProfits;
         data[2] = userRewardsNonce[msg.sender];
         data[3] = _stakeMinAmountOut;
-        (, , , , , , , , , data[4]) = IGarden(heartGarden).getContributor(msg.sender);
+        // Backward compatible if still not set
+        if (address(heartGarden) != address(0)) {
+            (, , , , , , , , , data[4]) = IGarden(heartGarden).getContributor(msg.sender);
+        }
         data[5] = 0;
         data[6] = 0;
         data[7] = 1e18;
