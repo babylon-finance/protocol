@@ -194,7 +194,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _feeWeights             Weights of the fee distribution
      */
-    function initialize(uint256[] calldata _feeWeights) public initializer {
+    function initialize(uint256[] calldata _feeWeights) external initializer {
         OwnableUpgradeable.__Ownable_init();
         updateFeeWeights(_feeWeights);
         updateMarkets();
@@ -215,7 +215,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
-    function pump() external override {
+    function pump() public override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
         _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
@@ -257,7 +257,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * Note: Only keeper can call this
      * @param _gardens             Gardens that are going to receive investment
-     * @param _weights             Weight for the investment in each garden
+     * @param _weights             Weight for the investment in each garden normalied to 1e18 precision
      */
     function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) public override {
         _onlyKeeper();
@@ -270,6 +270,11 @@ contract Heart is OwnableUpgradeable, IHeart {
         }
         lastVotesAt = block.timestamp;
         emit UpdatedGardenWeights(block.timestamp);
+    }
+
+    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external override {
+        resolveGardenVotes(_gardens, _weights);
+        pump();
     }
 
     /**
@@ -315,7 +320,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _bablAmount             Total amount to distribute
      * @param _weeklyRate             Weekly amount to distribute
      */
-    function addReward(uint256 _bablAmount, uint256 _weeklyRate) public override onlyGovernanceOrEmergency {
+    function addReward(uint256 _bablAmount, uint256 _weeklyRate) external override onlyGovernanceOrEmergency {
         // Get the BABL reward
         IERC20(BABL).safeTransferFrom(msg.sender, address(this), _bablAmount);
         bablRewardLeft = bablRewardLeft.add(_bablAmount);
@@ -328,7 +333,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _asset                Asset to edit the min amount
      * @param _minAmount            New min amount
      */
-    function setMinTradeAmount(address _asset, uint256 _minAmount) public override onlyGovernanceOrEmergency {
+    function setMinTradeAmount(address _asset, uint256 _minAmount) external override onlyGovernanceOrEmergency {
         minAmounts[_asset] = _minAmount;
     }
 
@@ -337,7 +342,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _heartGarden                New heart garden address
      */
-    function setHeartGardenAddress(address _heartGarden) public override onlyGovernanceOrEmergency {
+    function setHeartGardenAddress(address _heartGarden) external override onlyGovernanceOrEmergency {
         heartGarden = IGarden(_heartGarden);
     }
 
@@ -346,7 +351,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _tradeSlippage                Trade slippage
      */
-    function setTradeSlippage(uint256 _tradeSlippage) public override onlyGovernanceOrEmergency {
+    function setTradeSlippage(uint256 _tradeSlippage) external override onlyGovernanceOrEmergency {
         tradeSlippage = _tradeSlippage;
     }
 
