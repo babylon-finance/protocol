@@ -272,7 +272,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         emit UpdatedGardenWeights(block.timestamp);
     }
 
-    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) public override {
+    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external override {
         resolveGardenVotes(_gardens, _weights);
         pump();
     }
