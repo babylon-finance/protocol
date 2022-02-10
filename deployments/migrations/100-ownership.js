@@ -16,7 +16,7 @@ module.exports = async ({
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
 
-  if (chainId === '31337') {
+  if (chainId === '1337') {
     // use the third signer as MULTISIG
     MULTISIG = signers[2].address;
   } else if (!MULTISIG) {

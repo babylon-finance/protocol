@@ -14,7 +14,7 @@ module.exports = async ({
 
   let KEEPER = process.env.KEEPER;
 
-  if (chainId === '31337') {
+  if (chainId === '1337') {
     // user second signer as Keeper
     KEEPER = signers[1].address;
   } else if (!KEEPER) {

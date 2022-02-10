@@ -28,7 +28,7 @@ describe.skip('VoteToken', function () {
       [
         DOMAIN_TYPEHASH,
         ethers.utils.keccak256(ethers.utils.toUtf8Bytes(await bablToken.name())),
-        31337,
+        1337,
         bablToken.address,
       ],
     );
