@@ -39,7 +39,7 @@ describe('deploy', function () {
 
   async function iterateStrategiesFromGardens(cb) {
     for (const garden of gardens) {
-      const gardenContract = await ethers.getContractAt('Garden', garden);
+      const gardenContract = await ethers.getContractAt('IGarden', garden);
       console.log(`${await gardenContract.name()}`);
 
       const reserveAsset = await gardenContract.reserveAsset();
@@ -101,7 +101,7 @@ describe('deploy', function () {
 
   async function finalizeStrategy(strategyContract, name, reserveAsset) {
     const isExecuting = await strategyContract.isStrategyActive();
-    const gardenContract = await ethers.getContractAt('Garden', await strategyContract.garden());
+    const gardenContract = await ethers.getContractAt('IGarden', await strategyContract.garden());
     if (!isExecuting) {
       console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
       return;
@@ -131,7 +131,7 @@ describe('deploy', function () {
     const strategies = STUCK_EXECUTE;
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
       await addCapitalToStrategy(strategyContract, name, reserveAsset);
@@ -142,7 +142,7 @@ describe('deploy', function () {
     const strategies = STUCK_EXECUTE;
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
       await finalizeStrategy(strategyContract, name, reserveAsset);
@@ -154,7 +154,7 @@ describe('deploy', function () {
     for (const strategy of strategies) {
       console.log('strategy', strategy);
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       console.log('reserve', reserveAsset);
       const name = await strategyNft.getStrategyName(strategy);
@@ -215,7 +215,7 @@ describe('deploy', function () {
 
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
-        const gardenContract = await ethers.getContractAt('Garden', garden);
+        const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))
           .mul(await gardenContract.totalSupply())
           .div(eth());
@@ -258,7 +258,7 @@ describe('deploy', function () {
       const strategies = STUCK_EXECUTE;
       for (const strategy of strategies) {
         const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-        const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+        const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
         const reserveAsset = await gardenContract.reserveAsset();
         const name = await strategyNft.getStrategyName(strategy);
         const isExecuting = await strategyContract.isStrategyActive();

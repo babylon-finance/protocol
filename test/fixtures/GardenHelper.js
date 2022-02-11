@@ -72,7 +72,7 @@ async function createGarden({
       },
     );
   const gardens = await babController.getGardens();
-  const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
+  const garden = await ethers.getContractAt('IGarden', gardens.slice(-1)[0]);
   await ishtarGate
     .connect(signer)
     .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {

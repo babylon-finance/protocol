@@ -37,7 +37,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
+import {IGarden, IBaseGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -51,7 +51,7 @@ import {VTableBeacon} from '../proxy/VTableBeacon.sol';
  *
  * Class that holds common garden-related state and functions
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden {
+contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -169,7 +169,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden
 
     // Strategies variables
     uint256 public override totalStake;
-    uint256 public override minVotesQuorum = TEN_PERCENT; // 10%. (0.01% = 1e14, 1% = 1e16)
+    uint256 public override minVotesQuorum; // 10%. (0.01% = 1e14, 1% = 1e16)
     uint256 public override minVoters;
     uint256 public override minStrategyDuration; // Min duration for an strategy
     uint256 public override maxStrategyDuration; // Max duration for an strategy
@@ -206,13 +206,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden
      */
     function _onlyStrategy() private view {
         _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
-    }
-
-    /**
-     * Checks if the address passed is a creator in the garden
-     */
-    function _onlyCreator(address _creator) private view {
-        _require(_isCreator(_creator), Errors.ONLY_CREATOR);
     }
 
     /**
@@ -584,25 +577,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden
         }
     }
 
-    /**
-     * Makes a previously private garden public
-     */
-    function makeGardenPublic() external override {
-        _onlyCreator(msg.sender);
-        _require(privateGarden && controller.allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
-        privateGarden = false;
-    }
-
-    /**
-     * Gives the right to create strategies and/or voting power to garden users
-     */
-    function setPublicRights(bool _publicStrategists, bool _publicStewards) external override {
-        _onlyCreator(msg.sender);
-        _require(!privateGarden, Errors.GARDEN_IS_NOT_PUBLIC);
-        publicStrategists = _publicStrategists;
-        publicStewards = _publicStewards;
-    }
-
     /* ============ Strategy Functions ============ */
     /**
      * Creates a new strategy calling the factory and adds it to the array
@@ -668,59 +642,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden
         _onlyStrategy();
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
-    }
-
-    /*
-     * Creator transfer his creator rights to another account.
-     * Must be a creator or an aux creator
-     * @param _newCreator  New creator address
-     * @param _index       Index of the creator if it is in the extra
-     */
-    function transferCreatorRights(address _newCreator, uint8 _index) external override {
-        _onlyCreator(msg.sender);
-        _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        // Make sure creator can still have normal permissions after renouncing
-        // Creator can only renounce to 0x in public gardens
-        _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE);
-        if (msg.sender == creator) {
-            creator = _newCreator;
-            return;
-        }
-        _require(extraCreators[_index] == msg.sender, Errors.ONLY_CREATOR);
-        extraCreators[_index] = _newCreator;
-    }
-
-    /*
-     * Adds extra creators. Only the original creator can call this.
-     * Can only be called if all the addresses are zero
-     * @param _newCreators  Addresses of the new creators
-     */
-    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
-        _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
-        _assignExtraCreator(0, _newCreators[0]);
-        _assignExtraCreator(1, _newCreators[1]);
-        _assignExtraCreator(2, _newCreators[2]);
-        _assignExtraCreator(3, _newCreators[3]);
-    }
-
-    /**
-     * Updates Garden Params
-     * Can only be called by the creator
-     * @param _newParams  New params
-     */
-    function updateGardenParams(uint256[9] memory _newParams) external override {
-        _onlyCreator(msg.sender);
-        _start(
-            _newParams[0], // uint256 _maxDepositLimit
-            _newParams[1], // uint256 _minLiquidityAsset,
-            _newParams[2], // uint256 _depositHardlock,
-            _newParams[3], // uint256 _minContribution,
-            _newParams[4], // uint256 _strategyCooldownPeriod,
-            _newParams[5], // uint256 _minVotesQuorum,
-            _newParams[6], // uint256 _minStrategyDuration,
-            _newParams[7], // uint256 _maxStrategyDuration,
-            _newParams[8] // uint256 _minVoters
-        );
     }
 
     /* ============ External Getter Functions ============ */
@@ -1185,16 +1106,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden
                 extraCreators[3] == _creator ||
                 _creator == creator);
     }
-
-    // Assign extra creators
-    function _assignExtraCreator(uint8 _index, address _newCreator) private {
-        _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        _require(extraCreators[_index] == address(0), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[_index] = _newCreator;
-    }
-
-    // solhint-disable-next-line
-    receive() external payable override {}
 }
 
 contract GardenV17 is Garden {

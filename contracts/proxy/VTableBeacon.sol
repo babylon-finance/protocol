@@ -34,18 +34,18 @@ contract VTableBeacon is Ownable {
     bytes4 private constant _FALLBACK_SIGN = 0xffffffff;
 
     // Mapping of methods signatures to their implementations
-    mapping(bytes4 => address) private _delegates;
+    mapping(bytes4 => address) public delegates;
 
     event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);
 
-    function implementation(bytes4 selector) external view virtual returns (address module) {
-        module = _delegates[msg.sig];
+    function implementation(bytes4 _selector) external view virtual returns (address module) {
+        module = delegates[_selector];
         if (module != address(0)) return module;
 
-        module = _delegates[_FALLBACK_SIGN];
+        module = delegates[_FALLBACK_SIGN];
         if (module != address(0)) return module;
 
-        revert("VTableProxy: No implementation found");
+        revert("VTableBeacon: No implementation found");
     }
 
     /**
@@ -56,8 +56,8 @@ contract VTableBeacon is Ownable {
             ModuleDefinition memory module = modules[i];
             for (uint256 j = 0; j < module.selectors.length; ++j) {
                 bytes4 selector = module.selectors[j];
-                emit VTableUpdate(selector, _delegates[selector], module.implementation);
-                _delegates[selector] = module.implementation;
+                emit VTableUpdate(selector, delegates[selector], module.implementation);
+                delegates[selector] = module.implementation;
             }
         }
     }

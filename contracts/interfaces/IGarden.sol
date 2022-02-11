@@ -17,16 +17,42 @@
 */
 pragma solidity 0.7.6;
 
-import {IBabController} from './IBabController.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import { IBabController } from './IBabController.sol';
+
+/**
+ * @title IAdminGarden
+ *
+ * Interface for functions of the garden
+ */
+interface IAdminGarden {
+
+    /* ============ Constructor ============ */
+
+    /* ============ View ============ */
+
+    /* ============ Write ============ */
+
+    function makeGardenPublic() external;
+
+    function transferCreatorRights(address _newCreator, uint8 _index) external;
+
+    function addExtraCreators(address[4] memory _newCreators) external;
+
+    function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
+
+    function updateGardenParams(uint256[9] memory _newParams) external;
+}
 
 /**
  * @title IGarden
- * @author Babylon Finance
  *
  * Interface for operating with a Garden.
  */
-interface IGarden {
-    /* ============ Functions ============ */
+interface IBaseGarden {
+    /* ============ Constructor ============ */
+
     function initialize(
         address _reserveAsset,
         IBabController _controller,
@@ -38,13 +64,7 @@ interface IGarden {
         bool[] memory _publicGardenStrategistsStewards
     ) external payable;
 
-    function makeGardenPublic() external;
-
-    function transferCreatorRights(address _newCreator, uint8 _index) external;
-
-    function addExtraCreators(address[4] memory _newCreators) external;
-
-    function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
+    /* ============ View ============ */
 
     function privateGarden() external view returns (bool);
 
@@ -111,6 +131,14 @@ interface IGarden {
     function getFinalizedStrategies() external view returns (address[] memory);
 
     function strategyMapping(address _strategy) external view returns (bool);
+
+    function getLockedBalance(address _contributor) external view returns (uint256);
+
+    function keeperDebt() external view returns (uint256);
+
+    function totalKeeperFees() external view returns (uint256);
+
+    /* ============ Write ============ */
 
     function finalizeStrategy(
         uint256 _profits,
@@ -185,15 +213,10 @@ interface IGarden {
         bytes32 s
     ) external;
 
-    function getLockedBalance(address _contributor) external view returns (uint256);
-
-    function updateGardenParams(uint256[9] memory _newParams) external;
 
     function expireCandidateStrategy(address _strategy) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
-
-    function keeperDebt() external view returns (uint256);
-
-    function totalKeeperFees() external view returns (uint256);
 }
+
+interface IGarden is IBaseGarden, IERC20, IAdminGarden {}
