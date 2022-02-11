@@ -14,39 +14,39 @@
 
 pragma solidity 0.7.6;
 
-import { Address } from '@openzeppelin/contracts/utils/Address.sol';
-import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import { SafeERC20 } from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import { ReentrancyGuard } from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import { ECDSA } from '@openzeppelin/contracts/cryptography/ECDSA.sol';
-import { ERC20Upgradeable } from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import { LowGasSafeMath } from '../lib/LowGasSafeMath.sol';
-import { SafeDecimalMath } from '../lib/SafeDecimalMath.sol';
-import { SafeCast } from '@openzeppelin/contracts/utils/SafeCast.sol';
-import { SignedSafeMath } from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 
-import { Errors, _require, _revert } from '../lib/BabylonErrors.sol';
-import { AddressArrayUtils } from '../lib/AddressArrayUtils.sol';
-import { PreciseUnitMath } from '../lib/PreciseUnitMath.sol';
-import { Math } from '../lib/Math.sol';
+import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
+import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
 
-import { IPriceOracle } from '../interfaces/IPriceOracle.sol';
-import { IRewardsDistributor } from '../interfaces/IRewardsDistributor.sol';
-import { IBabController } from '../interfaces/IBabController.sol';
-import { IStrategyFactory } from '../interfaces/IStrategyFactory.sol';
-import { IGardenValuer } from '../interfaces/IGardenValuer.sol';
-import { IStrategy } from '../interfaces/IStrategy.sol';
-import { IGarden } from '../interfaces/IGarden.sol';
-import { IGardenNFT } from '../interfaces/IGardenNFT.sol';
-import { IMardukGate } from '../interfaces/IMardukGate.sol';
-import { IWETH } from '../interfaces/external/weth/IWETH.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IStrategyGarden} from '../interfaces/IGarden.sol';
 
-import { VTableBeaconProxy } from '../proxy/VTableBeaconProxy.sol';
-import { VTableBeacon } from '../proxy/VTableBeacon.sol';
+import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
+import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 
-import { BaseGardenModule } from './BaseGardenModule.sol';
+import {BaseGardenModule} from './BaseGardenModule.sol';
 
 /**
  * @title StrategyGardenModule
@@ -80,7 +80,6 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
     uint256 private constant MAX_COOLDOWN_PERIOD = 7 days;
     uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
-
 
     /* ============ Structs ============ */
 
@@ -270,5 +269,4 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
         canCreateStrategy = (betaAccess && publicStrategists) || mgate.canAddStrategiesInAGarden(address(this), _user);
     }
-
 }

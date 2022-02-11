@@ -14,39 +14,39 @@
 
 pragma solidity 0.7.6;
 
-import { Address } from '@openzeppelin/contracts/utils/Address.sol';
-import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import { SafeERC20 } from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import { ReentrancyGuard } from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import { ECDSA } from '@openzeppelin/contracts/cryptography/ECDSA.sol';
-import { ERC20Upgradeable } from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import { LowGasSafeMath } from '../lib/LowGasSafeMath.sol';
-import { SafeDecimalMath } from '../lib/SafeDecimalMath.sol';
-import { SafeCast } from '@openzeppelin/contracts/utils/SafeCast.sol';
-import { SignedSafeMath } from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 
-import { Errors, _require, _revert } from '../lib/BabylonErrors.sol';
-import { AddressArrayUtils } from '../lib/AddressArrayUtils.sol';
-import { PreciseUnitMath } from '../lib/PreciseUnitMath.sol';
-import { Math } from '../lib/Math.sol';
+import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
+import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {Math} from '../lib/Math.sol';
 
-import { IPriceOracle } from '../interfaces/IPriceOracle.sol';
-import { IRewardsDistributor } from '../interfaces/IRewardsDistributor.sol';
-import { IBabController } from '../interfaces/IBabController.sol';
-import { IStrategyFactory } from '../interfaces/IStrategyFactory.sol';
-import { IGardenValuer } from '../interfaces/IGardenValuer.sol';
-import { IStrategy } from '../interfaces/IStrategy.sol';
-import { IGarden } from '../interfaces/IGarden.sol';
-import { IGardenNFT } from '../interfaces/IGardenNFT.sol';
-import { IMardukGate } from '../interfaces/IMardukGate.sol';
-import { IWETH } from '../interfaces/external/weth/IWETH.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
+import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IAdminGarden} from '../interfaces/IGarden.sol';
 
-import { VTableBeaconProxy } from '../proxy/VTableBeaconProxy.sol';
-import { VTableBeacon } from '../proxy/VTableBeacon.sol';
+import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
+import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 
-import { BaseGardenModule } from './BaseGardenModule.sol';
+import {BaseGardenModule} from './BaseGardenModule.sol';
 
 /**
  * @title AdminGardenModule
@@ -103,7 +103,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _newCreator  New creator address
      * @param _index       Index of the creator if it is in the extra
      */
-    function transferCreatorRights(address _newCreator, uint8 _index) override external {
+    function transferCreatorRights(address _newCreator, uint8 _index) external override {
         _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         // Make sure creator can still have normal permissions after renouncing
@@ -120,7 +120,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     /**
      * Makes a previously private garden public
      */
-    function makeGardenPublic() override external {
+    function makeGardenPublic() external override {
         _onlyCreator(msg.sender);
         _require(privateGarden && controller.allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         privateGarden = false;
@@ -129,7 +129,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     /**
      * Gives the right to create strategies and/or voting power to garden users
      */
-    function setPublicRights(bool _publicStrategists, bool _publicStewards) override external {
+    function setPublicRights(bool _publicStrategists, bool _publicStewards) external override {
         _onlyCreator(msg.sender);
         _require(!privateGarden, Errors.GARDEN_IS_NOT_PUBLIC);
         publicStrategists = _publicStrategists;
@@ -141,7 +141,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called if all the addresses are zero
      * @param _newCreators  Addresses of the new creators
      */
-    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) override external {
+    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
         _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
         _assignExtraCreator(0, _newCreators[0]);
         _assignExtraCreator(1, _newCreators[1]);
@@ -154,7 +154,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[9] memory _newParams) override external {
+    function updateGardenParams(uint256[9] memory _newParams) external override {
         _onlyCreator(msg.sender);
         _start(
             _newParams[0], // uint256 _maxDepositLimit

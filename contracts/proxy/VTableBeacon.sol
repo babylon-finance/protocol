@@ -19,7 +19,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { Ownable } from '@openzeppelin/contracts/access/Ownable.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
 /**
  * @title VTableBeacon
@@ -45,7 +45,7 @@ contract VTableBeacon is Ownable {
         module = delegates[_FALLBACK_SIGN];
         if (module != address(0)) return module;
 
-        revert("VTableBeacon: No implementation found");
+        revert('VTableBeacon: No implementation found');
     }
 
     /**
