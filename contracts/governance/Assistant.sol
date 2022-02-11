@@ -59,7 +59,7 @@ contract Assistant is OwnableUpgradeable {
     function startHeart() external onlyGovernanceOrEmergency {
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
 
-        BABL.safeTransferFrom(address(this), 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 10000e18);
+        BABL.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 10000e18);
     }
 
     /* ============ External Getter Functions ============ */
@@ -70,4 +70,4 @@ contract Assistant is OwnableUpgradeable {
     receive() external payable {}
 }
 
-contract AssistantV3 is Assistant {}
+contract AssistantV4 is Assistant {}

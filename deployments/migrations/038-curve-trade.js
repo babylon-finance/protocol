@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'CurveTradeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
@@ -20,7 +19,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
   if (deployment.newlyDeployed) {
     console.log(`Adding curve trade integration ${contract}(${deployment.address})`);
