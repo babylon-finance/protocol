@@ -41,6 +41,7 @@ import { IGarden } from '../interfaces/IGarden.sol';
 import { IGardenNFT } from '../interfaces/IGardenNFT.sol';
 import { IMardukGate } from '../interfaces/IMardukGate.sol';
 import { IWETH } from '../interfaces/external/weth/IWETH.sol';
+import {IAdminGarden} from '../interfaces/IGarden.sol';
 
 import { VTableBeaconProxy } from '../proxy/VTableBeaconProxy.sol';
 import { VTableBeacon } from '../proxy/VTableBeacon.sol';
@@ -52,7 +53,7 @@ import { BaseGardenModule } from './BaseGardenModule.sol';
  *
  * Class that holds common garden-related state and functions
  */
-contract AdminGardenModule is BaseGardenModule {
+contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -102,7 +103,7 @@ contract AdminGardenModule is BaseGardenModule {
      * @param _newCreator  New creator address
      * @param _index       Index of the creator if it is in the extra
      */
-    function transferCreatorRights(address _newCreator, uint8 _index) external {
+    function transferCreatorRights(address _newCreator, uint8 _index) override external {
         _onlyCreator(msg.sender);
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         // Make sure creator can still have normal permissions after renouncing
@@ -119,7 +120,7 @@ contract AdminGardenModule is BaseGardenModule {
     /**
      * Makes a previously private garden public
      */
-    function makeGardenPublic() external {
+    function makeGardenPublic() override external {
         _onlyCreator(msg.sender);
         _require(privateGarden && controller.allowPublicGardens(), Errors.GARDEN_ALREADY_PUBLIC);
         privateGarden = false;
@@ -128,7 +129,7 @@ contract AdminGardenModule is BaseGardenModule {
     /**
      * Gives the right to create strategies and/or voting power to garden users
      */
-    function setPublicRights(bool _publicStrategists, bool _publicStewards) external {
+    function setPublicRights(bool _publicStrategists, bool _publicStewards) override external {
         _onlyCreator(msg.sender);
         _require(!privateGarden, Errors.GARDEN_IS_NOT_PUBLIC);
         publicStrategists = _publicStrategists;
@@ -140,7 +141,7 @@ contract AdminGardenModule is BaseGardenModule {
      * Can only be called if all the addresses are zero
      * @param _newCreators  Addresses of the new creators
      */
-    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) external {
+    function addExtraCreators(address[MAX_EXTRA_CREATORS] memory _newCreators) override external {
         _require(msg.sender == creator, Errors.ONLY_FIRST_CREATOR_CAN_ADD);
         _assignExtraCreator(0, _newCreators[0]);
         _assignExtraCreator(1, _newCreators[1]);
@@ -153,7 +154,7 @@ contract AdminGardenModule is BaseGardenModule {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[9] memory _newParams) external {
+    function updateGardenParams(uint256[9] memory _newParams) override external {
         _onlyCreator(msg.sender);
         _start(
             _newParams[0], // uint256 _maxDepositLimit

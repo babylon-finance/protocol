@@ -15,6 +15,7 @@ module.exports = async ({
   const gardenFactoryName = 'GardenFactory';
   const gardenName = 'Garden';
   const adminGardenModuleName = 'AdminGardenModule';
+  const strategyGardenModuleName = 'StrategyGardenModule';
   const beaconName = 'GardenBeacon';
   const vTableBeaconName = 'GardenVTableBeacon';
 
@@ -42,6 +43,13 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
 
+  const strategyGardenModule = await deploy(strategyGardenModuleName, {
+    from: deployer,
+    args: [],
+    log: true,
+    ...(await getGasPrice()),
+  });
+
   const beacon = await deploy(beaconName, {
     from: deployer,
     contract: 'UpgradeableBeacon',
@@ -61,6 +69,20 @@ module.exports = async ({
     console.log(`Setting garden factory on controller ${gardenFactory.address}`);
     await (await controller.editGardenFactory(gardenFactory.address, { ...(await getGasPrice()) })).wait();
   }
+  const vTableBeaconContract = await ethers.getContractAt('VTableBeacon', vTableBeacon.address, signer);
+
+  if (strategyGardenModule.newlyDeployed) {
+    const strategyGardenModuleContract = await ethers.getContractAt(
+      strategyGardenModuleName,
+      strategyGardenModule.address,
+      signer,
+    );
+    // update admin module on the beacon
+    const sigs = Object.keys(strategyGardenModuleContract.interface.functions).map((func) =>
+      strategyGardenModuleContract.interface.getSighash(func),
+    );
+    await vTableBeaconContract.updateVTable([[strategyGardenModule.address, sigs]]);
+  }
 
   if (adminGardenModule.newlyDeployed) {
     const adminGardenModuleContract = await ethers.getContractAt(
@@ -68,7 +90,6 @@ module.exports = async ({
       adminGardenModule.address,
       signer,
     );
-    const vTableBeaconContract = await ethers.getContractAt('VTableBeacon', vTableBeacon.address, signer);
     // update admin module on the beacon
     const sigs = Object.keys(adminGardenModuleContract.interface.functions).map((func) =>
       adminGardenModuleContract.interface.getSighash(func),

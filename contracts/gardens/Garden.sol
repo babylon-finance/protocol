@@ -37,7 +37,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {IStrategyFactory} from '../interfaces/IStrategyFactory.sol';
 import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
-import {IGarden, IBaseGarden} from '../interfaces/IGarden.sol';
+import {IGarden, ICoreGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
@@ -47,11 +47,10 @@ import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 
 /**
  * @title BaseGarden
- * @author Babylon Finance
  *
- * Class that holds common garden-related state and functions
+ * User facing features of Garden plus BeaconProxy
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGarden {
+contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -79,7 +78,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
         uint256 reserveTokenQuantity,
         uint256 timestamp
     );
-    event AddStrategy(address indexed _strategy, string _name, uint256 _expectedReturn);
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
@@ -88,7 +86,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     // Strategy cooldown period
     uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
@@ -96,7 +93,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
 
     uint8 private constant MAX_EXTRA_CREATORS = 4;
     uint256 private constant EARLY_WITHDRAWAL_PENALTY = 25e15;
-    uint256 private constant MAX_TOTAL_STRATEGIES = 20; // Max number of strategies
     uint256 private constant TEN_PERCENT = 1e17;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
@@ -199,13 +195,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
-    }
-
-    /**
-     * Throws if the sender is not an strategy of this garden
-     */
-    function _onlyStrategy() private view {
-        _require(strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
     }
 
     /**
@@ -507,143 +496,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
         _sendRewardsInternal(signer, _babl, _profits);
     }
 
-    /**
-     * @notice
-     *  When strategy ends puts saves returns, rewards and marks strategy as
-     *  finalized.
-     *
-     * @param _rewards        Amount of Reserve Asset to set aside forever
-     * @param _returns        Profits or losses that the strategy received
-     * @param _burningAmount  The amount of strategist stake to burn in case of
-     *                        strategy losses.
-     */
-    function finalizeStrategy(
-        uint256 _rewards,
-        int256 _returns,
-        uint256 _burningAmount
-    ) external override nonReentrant {
-        _onlyUnpaused();
-        _onlyStrategy();
-
-        // burn stategist stake
-        if (_burningAmount > 0) {
-            address strategist = IStrategy(msg.sender).strategist();
-            if (_burningAmount >= balanceOf(strategist)) {
-                // Avoid underflow condition
-                _burningAmount = balanceOf(strategist);
-            }
-            _burn(strategist, _burningAmount);
-        }
-
-        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
-
-        // Mark strategy as finalized
-        absoluteReturns = absoluteReturns.add(_returns);
-        strategies = strategies.remove(msg.sender);
-        finalizedStrategies.push(msg.sender);
-        strategyMapping[msg.sender] = false;
-    }
-
-    /**
-     * @notice
-     *   Pays gas costs back to the keeper from executing transactions
-     *   including the past debt
-     * @dev
-     *   We assume that calling keeper functions should be less expensive than 2000 DAI.
-     * @param _keeper  Keeper that executed the transaction
-     * @param _fee     The fee paid to keeper to compensate the gas cost
-     */
-    function payKeeper(address payable _keeper, uint256 _fee) public override nonReentrant {
-        _onlyUnpaused();
-        _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
-        _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
-
-        uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
-        uint256 feeInDAI =
-            pricePerTokenUnitInDAI.preciseMul(_fee).mul(
-                10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
-            );
-
-        _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
-
-        keeperDebt = keeperDebt.add(_fee);
-        uint256 liquidReserve = liquidReserve();
-        // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && liquidReserve > 0) {
-            uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
-            IERC20(reserveAsset).safeTransfer(_keeper, toPay);
-            totalKeeperFees = totalKeeperFees.add(toPay);
-            keeperDebt = keeperDebt.sub(toPay);
-        }
-    }
-
-    /* ============ Strategy Functions ============ */
-    /**
-     * Creates a new strategy calling the factory and adds it to the array
-     * @param _name                          Name of the strategy
-     * @param _symbol                        Symbol of the strategy
-     * @param _stratParams                   Num params for the strategy
-     * @param _opTypes                      Type for every operation in the strategy
-     * @param _opIntegrations               Integration to use for every operation
-     * @param _opEncodedDatas               Param for every operation in the strategy
-     */
-    function addStrategy(
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _stratParams,
-        uint8[] calldata _opTypes,
-        address[] calldata _opIntegrations,
-        bytes calldata _opEncodedDatas
-    ) external override {
-        _onlyUnpaused();
-        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-        (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
-        _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
-        _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
-        address strategy =
-            IStrategyFactory(controller.strategyFactory()).createStrategy(
-                _name,
-                _symbol,
-                msg.sender,
-                address(this),
-                _stratParams
-            );
-        strategyMapping[strategy] = true;
-        totalStake = totalStake.add(_stratParams[1]);
-        strategies.push(strategy);
-        IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
-        isGardenStrategy[strategy] = true;
-        emit AddStrategy(strategy, _name, _stratParams[3]);
-    }
-
-    /**
-     * Allocates garden capital to an strategy
-     *
-     * @param _capital        Amount of capital to allocate to the strategy
-     */
-    function allocateCapitalToStrategy(uint256 _capital) external override {
-        _onlyStrategy();
-
-        uint256 protocolMgmtFee = controller.protocolManagementFee().preciseMul(_capital);
-        _require(_capital.add(protocolMgmtFee) <= liquidReserve(), Errors.MIN_LIQUIDITY);
-
-        // Take protocol mgmt fee to the heart
-        IERC20(reserveAsset).safeTransfer(controller.heart(), protocolMgmtFee);
-
-        // Send Capital to strategy
-        IERC20(reserveAsset).safeTransfer(msg.sender, _capital);
-    }
-
-    /*
-     * Remove an expire candidate from the strategy Array
-     * @param _strategy      Strategy to remove
-     */
-    function expireCandidateStrategy(address _strategy) external override {
-        _onlyStrategy();
-        strategies = strategies.remove(_strategy);
-        strategyMapping[_strategy] = false;
-    }
-
     /* ============ External Getter Functions ============ */
 
     /**
@@ -818,7 +670,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
         // if withPenaltiy then unwind strategy
-        if (_withPenalty && !(liquidReserve() >= amountOut)) {
+        if (_withPenalty && !(_liquidReserve() >= amountOut)) {
             amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
@@ -830,7 +682,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
 
         _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
 
-        _require(liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
+        _require(_liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         _burn(_to, _amountIn);
         _safeSendReserveAsset(_to, amountOut.sub(_fee));
@@ -848,7 +700,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
             return
                 totalSupply() == 0
                     ? PreciseUnitMath.preciseUnit()
-                    : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
+                    : _liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
                         totalSupply()
                     );
         } else {
@@ -901,7 +753,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
-            _require(liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            _require(_liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
@@ -977,7 +829,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IBaseGa
     /**
      * Gets liquid reserve available for to Garden.
      */
-    function liquidReserve() private view returns (uint256) {
+    function _liquidReserve() private view returns (uint256) {
         uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }

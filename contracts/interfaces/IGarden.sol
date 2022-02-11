@@ -17,9 +17,39 @@
 */
 pragma solidity 0.7.6;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import { IBabController } from './IBabController.sol';
+
+/**
+ * @title IStrategyGarden
+ *
+ * Interface for functions of the garden
+ */
+interface IStrategyGarden {
+    /* ============ Write ============ */
+
+    function finalizeStrategy(
+        uint256 _profits,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external;
+
+    function allocateCapitalToStrategy(uint256 _capital) external;
+
+    function expireCandidateStrategy(address _strategy) external;
+
+    function addStrategy(
+        string memory _name,
+        string memory _symbol,
+        uint256[] calldata _stratParams,
+        uint8[] calldata _opTypes,
+        address[] calldata _opIntegrations,
+        bytes calldata _opEncodedDatas
+    ) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
+}
 
 /**
  * @title IAdminGarden
@@ -27,11 +57,6 @@ import { IBabController } from './IBabController.sol';
  * Interface for functions of the garden
  */
 interface IAdminGarden {
-
-    /* ============ Constructor ============ */
-
-    /* ============ View ============ */
-
     /* ============ Write ============ */
 
     function makeGardenPublic() external;
@@ -50,7 +75,7 @@ interface IAdminGarden {
  *
  * Interface for operating with a Garden.
  */
-interface IBaseGarden {
+interface ICoreGarden {
     /* ============ Constructor ============ */
 
     function initialize(
@@ -140,23 +165,6 @@ interface IBaseGarden {
 
     /* ============ Write ============ */
 
-    function finalizeStrategy(
-        uint256 _profits,
-        int256 _returns,
-        uint256 _burningAmount
-    ) external;
-
-    function allocateCapitalToStrategy(uint256 _capital) external;
-
-    function addStrategy(
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _stratParams,
-        uint8[] calldata _opTypes,
-        address[] calldata _opIntegrations,
-        bytes calldata _opEncodedDatas
-    ) external;
-
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
@@ -212,11 +220,6 @@ interface IBaseGarden {
         bytes32 r,
         bytes32 s
     ) external;
-
-
-    function expireCandidateStrategy(address _strategy) external;
-
-    function payKeeper(address payable _keeper, uint256 _fee) external;
 }
 
-interface IGarden is IBaseGarden, IERC20, IAdminGarden {}
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20 {}
