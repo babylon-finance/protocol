@@ -42,13 +42,16 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
+import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
+import {VTableBeacon} from '../proxy/VTableBeacon.sol';
+
 /**
  * @title BaseGarden
  * @author Babylon Finance
  *
  * Class that holds common garden-related state and functions
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
+contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, IGarden {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -235,6 +238,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     /* ============ Constructor ============ */
+
+    constructor(VTableBeacon _beacon) VTableBeaconProxy(_beacon) {
+    }
 
     /**
      * When a new Garden is created.
@@ -1190,7 +1196,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     }
 
     // solhint-disable-next-line
-    receive() external payable {}
+    receive() external payable override {}
 }
 
-contract GardenV16 is Garden {}
+contract GardenV16 is Garden {
+    constructor(VTableBeacon _beacon) Garden(_beacon) { }
+}

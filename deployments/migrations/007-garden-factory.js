@@ -16,6 +16,7 @@ module.exports = async ({
   const gardenFactoryContract = 'GardenFactory';
   const gardenContract = 'Garden';
   const beaconContract = 'GardenBeacon';
+  const vTableBeaconContract = 'GardenVTableBeacon';
 
   const controller = await getController();
 
