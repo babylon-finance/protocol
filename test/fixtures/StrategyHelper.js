@@ -189,7 +189,6 @@ async function createStrategyWithManyOperations(
 }
 
 async function deposit(garden, signers) {
-  const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
   const reserveContract = await getERC20(reserveAsset);
   let amount;

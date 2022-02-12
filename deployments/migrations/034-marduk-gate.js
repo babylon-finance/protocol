@@ -8,7 +8,7 @@ module.exports = async ({
   getGasPrice,
   getSigner,
   getContract,
-  getConroller,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
