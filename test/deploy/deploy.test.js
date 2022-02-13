@@ -213,7 +213,7 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
-    it('NAV has NOT changed for gardens after deploy', async () => {
+    it.only('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))
@@ -238,7 +238,7 @@ describe('deploy', function () {
       }
     });
 
-    it('gets right NAV strategies', async () => {
+    it.only('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
@@ -254,7 +254,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it.only('can finalize stuck strategies', async () => {
+    it('can finalize stuck strategies', async () => {
       const strategies = STUCK_EXECUTE;
       for (const strategy of strategies) {
         const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
