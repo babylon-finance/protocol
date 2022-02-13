@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'BorrowOperation';
 
   const controller = await getController();
@@ -20,12 +19,12 @@ module.exports = async ({
     from: deployer,
     args: ['borrow', controller.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Adding operation ${contract}(${deployment.address}) to BabController`);
-    await (await controller.setOperation(4, deployment.address, { maxPriorityFeePerGas })).wait();
+    await (await controller.setOperation(4, deployment.address, { ...(await getGasPrice()) })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

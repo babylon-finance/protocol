@@ -313,8 +313,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         bool _mintNft
     ) external payable override nonReentrant {
         // calculate pricePerShare
-        uint256 pricePerShare = _getPricePershare();
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, pricePerShare, minContribution, 0);
+        // if there are no strategies then NAV === liquidReserve
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, _getPricePerShare(), minContribution);
     }
 
     function depositBySig(
@@ -384,7 +384,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external override nonReentrant {
         // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
         // Reverts if price is not found
-        uint256 pricePerShare = _getPricePershare();
 
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
         _withdrawInternal(
@@ -393,7 +392,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
             _to,
             _withPenalty,
             _unwindStrategy,
-            pricePerShare,
+            _getPricePerShare(),
             _withPenalty ? IStrategy(_unwindStrategy).getNAV() : 0,
             0
         );
@@ -562,7 +561,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _onlyStrategy();
 
-        // burn statgist stake
+        // burn stategist stake
         if (_burningAmount > 0) {
             address strategist = IStrategy(msg.sender).strategist();
             if (_burningAmount >= balanceOf(strategist)) {
@@ -586,8 +585,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
      *   Pays gas costs back to the keeper from executing transactions
      *   including the past debt
      * @dev
-     *   We assume that calling keeper functions should be less expensive than
-     *   1 million gas and the gas price should be lower than 1000 gwei.
+     *   We assume that calling keeper functions should be less expensive than 2000 DAI.
      * @param _keeper  Keeper that executed the transaction
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
@@ -596,10 +594,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 
-        IPriceOracle oracle = IPriceOracle(controller.priceOracle());
-        uint256 pricePerTokenUnitInDAI = oracle.getPrice(reserveAsset, DAI);
+        uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
-            SafeDecimalMath.normalizeAmountTokens(reserveAsset, DAI, pricePerTokenUnitInDAI.preciseMul(_fee));
+            pricePerTokenUnitInDAI.preciseMul(_fee).mul(
+                10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
+            );
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
@@ -966,6 +965,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
+    }
+
+    function _getPricePerShare() internal view returns (uint256) {
+        if (strategies.length == 0) {
+            return
+                totalSupply() == 0
+                    ? PreciseUnitMath.preciseUnit()
+                    : liquidReserve().preciseDiv(uint256(10)**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(
+                        totalSupply()
+                    );
+        } else {
+            // Get valuation of the Garden with the quote asset as the reserve asset.
+            return IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
+        }
     }
 
     function _getWithdrawSigner(

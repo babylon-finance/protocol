@@ -337,7 +337,12 @@ contract AddLiquidityOperation is Operation {
             for (uint256 i = 0; i < rewards.length; i++) {
                 if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
                     try
-                        IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
+                        IStrategy(msg.sender).trade(
+                            rewards[i],
+                            IERC20(rewards[i]).balanceOf(msg.sender),
+                            _reserveAsset,
+                            70e15
+                        )
                     {} catch {}
                 }
             }
