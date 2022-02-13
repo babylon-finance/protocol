@@ -24,6 +24,7 @@ import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {IFactoryRegistry} from './interfaces/external/curve/IFactoryRegistry.sol';
 import {ICryptoRegistry} from './interfaces/external/curve/ICryptoRegistry.sol';
 
 /**
@@ -51,7 +52,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     ICurveRegistry public curveRegistry;
 
     // Registry of user created pools
-    ICurveRegistry public factoryRegistry;
+    IFactoryRegistry public factoryRegistry;
 
     // Registry of first party crypto pools
     ICryptoRegistry public cryptoRegistry;
@@ -83,11 +84,11 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     constructor(IBabController _controller) {
         controller = _controller;
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        factoryRegistry = ICurveRegistry(curveAddressProvider.get_address(3));
+        factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
         cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
         _updateMapping(1, curveRegistry);
-        _updateMapping(2, factoryRegistry);
+        _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
     }
@@ -100,7 +101,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      */
     function updatePoolsList() public override onlyGovernanceOrEmergency {
         _updateMapping(1, curveRegistry);
-        _updateMapping(2, factoryRegistry);
+        _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
     }
@@ -111,7 +112,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      */
     function updateCryptoRegistries() external override onlyGovernanceOrEmergency {
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        factoryRegistry = ICurveRegistry(curveAddressProvider.get_address(3));
+        factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
         cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
         updatePoolsList();
@@ -139,7 +140,17 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
                 return curveRegistry.get_coins(_pool);
             }
             if (registryKind == 2) {
-                return factoryRegistry.get_coins(_pool);
+                address[4] memory addressesF = factoryRegistry.get_coins(_pool);
+                return [
+                  addressesF[0],
+                  addressesF[1],
+                  addressesF[2],
+                  addressesF[3],
+                  address(0),
+                  address(0),
+                  address(0),
+                  address(0)
+                ];
             }
             if (registryKind == 3) {
                 return cryptoRegistry.get_coins(_pool);
@@ -162,7 +173,13 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             return curveRegistry.get_n_coins(_pool)[0];
         }
         if (registryKind == 2) {
-            return factoryRegistry.get_n_coins(_pool)[0];
+            uint coins = factoryRegistry.get_n_coins(_pool);
+            console.log('coins', coins);
+            if (coins == 0) {
+              // Try through meta
+              (coins,) = factoryRegistry.get_meta_n_coins(_pool);
+            }
+            return coins;
         }
         if (registryKind == 3) {
             return cryptoRegistry.get_n_coins(_pool);
@@ -195,7 +212,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      *
      * @return address                Address of the pool, 0 if it doesn't exist
      */
-    function getPoolFromLpToken(address _lpToken) external view override returns (address) {
+    function getPoolFromLpToken(address _lpToken) public view override returns (address) {
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
         try curveRegistry.get_pool_from_lp_token(_lpToken) returns (address pool) {
             return pool;
@@ -231,27 +248,26 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     /**
      * Returns the virtual price of an lp token from curve
-     * @param _pool                   Pool Address
+     * @param _lpToken                Lp token Address
      *
      * @return uint256                Whether the pool is a meta pool or not
      */
-    function getVirtualPriceFromLpToken(address _pool) external view override returns (uint256) {
-        uint256 registryKind = poolToRegistry[_pool];
-        // Factory pools
-        if (registryKind == 2) {
-            // verify
-            return 1e18;
-        }
+    function getVirtualPriceFromLpToken(address _lpToken) external view override returns (uint256) {
+        address pool = getPoolFromLpToken(_lpToken);
+        uint256 registryKind = poolToRegistry[pool];
+        // Normal pools
         if (registryKind == 1) {
-            return curveRegistry.get_virtual_price_from_lp_token(_pool);
+            return curveRegistry.get_virtual_price_from_lp_token(_lpToken);
         }
-        if (_pool == TRI_CURVE_POOL_2_LP) {
-          // Check if needed and check if it's pool or lp token
-          // TRI2
+        // Special case tricrypto 2
+        if (_lpToken == TRI_CURVE_POOL_2_LP) {
           return
               IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
-        return cryptoRegistry.get_virtual_price_from_lp_token(_pool);
+        // Factory pools do not have the method
+        // TODO: Check crypto virtual price. It returns weird stuff
+        // cryptoRegistry.get_virtual_price_from_lp_token(_lpToken);
+        return 0;
     }
 
     /**

@@ -34,6 +34,7 @@ import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {ICurvePoolV3DY} from './interfaces/external/curve/ICurvePoolV3DY.sol';
 import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
@@ -552,29 +553,11 @@ contract PriceOracle is Ownable, IPriceOracle {
     ) private view returns (uint256) {
         (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (
-            _curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 ||
-            _curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5
-        ) {
-            price = ICurvePoolV3(_curvePool).get_dy(
-                i,
-                j,
-                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-            );
+        uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
+        if (underlying) {
+            price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
         } else {
-            if (underlying) {
-                price = ICurvePoolV3(_curvePool).get_dy_underlying(
-                    int128(i),
-                    int128(j),
-                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-                );
-            } else {
-                price = ICurvePoolV3(_curvePool).get_dy(
-                    int128(i),
-                    int128(j),
-                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-                );
-            }
+            price = _getCurveDY(_curvePool, i, j, decimalsIn);
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
@@ -582,6 +565,46 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
         return 0;
+    }
+
+    function _getCurveDY(address _curvePool, uint i, uint j, uint decimals) private view returns(uint256) {
+      try ICurvePoolV3DY(_curvePool).get_dy(
+          i,
+          j,
+          decimals
+      ) returns (uint256 price) {
+        return price;
+      } catch {
+          try ICurvePoolV3(_curvePool).get_dy(
+             int128(i),
+             int128(j),
+             decimals
+         ) returns (uint256 price2) {
+           return price2;
+         } catch {
+           revert('get dy failed');
+         }
+      }
+    }
+
+    function _getCurveDYUnderlying(address _curvePool, uint i, uint j, uint decimals) private view returns(uint256) {
+      try ICurvePoolV3DY(_curvePool).get_dy_underlying(
+          i,
+          j,
+          decimals
+      ) returns (uint256 price) {
+        return price;
+      } catch {
+          try ICurvePoolV3(_curvePool).get_dy_underlying(
+             int128(i),
+             int128(j),
+             decimals
+         ) returns (uint256 price2) {
+           return price2;
+         } catch {
+           revert('get dy underlying failed');
+         }
+      }
     }
 
     function _checkPairThroughCurve(

@@ -97,7 +97,6 @@ contract AddLiquidityOperation is Operation {
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         console.log('poolWeights', _poolWeights[0], _poolWeights[1]);
         // if the weights need to be adjusted by price, do so
-        console.log('a');
         try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
             if (priceWeights) {
                 uint256 poolTotal = 0;
@@ -257,6 +256,11 @@ contract AddLiquidityOperation is Operation {
                 }
             }
             uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            // Special case for weth in some pools
+            if (poolTokens[i] == WETH && balance == 0) {
+              balance = pool.balance;
+            }
+            console.log('balance', balance);
             if (price != 0 && balance != 0) {
                 NAV += SafeDecimalMath.normalizeAmountTokens(
                     asset,
