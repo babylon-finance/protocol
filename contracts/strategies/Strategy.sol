@@ -17,7 +17,6 @@
 */
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -1039,14 +1038,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
-        return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
-        // try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
-        //     uint256 price
-        // ) {
-        //     return price;
-        // } catch {
-        //     return 0;
-        // }
+        try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
+            uint256 price
+        ) {
+            return price;
+        } catch {
+            return 0;
+        }
     }
 
     function _updateExpectedReturn(
