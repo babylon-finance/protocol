@@ -17,7 +17,11 @@ const {
   eth,
 } = require('utils/test-helpers');
 
-describe('VTableBeacon', function () {
+const SIGS = ['0xaaaaaaaa', '0xbbbbbbbb', '0xcccccccc'];
+const IMPL = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const NEW_IMPL = '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF';
+
+describe.only('VTableBeacon', function () {
   let vTableBeacon;
   let owner;
 
@@ -31,28 +35,40 @@ describe('VTableBeacon', function () {
   describe('updateVTable', async function () {
     it('set many modules at once', async function () {
       await vTableBeacon.connect(owner).updateVTable([
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
-        [vTableBeacon.address, getSigs(vTableBeacon)],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
+        [IMPL, SIGS],
       ]);
     });
 
     it('remove module', async function () {
-      await vTableBeacon.connect(owner).updateVTable([[vTableBeacon.address, getSigs(vTableBeacon)]]);
-      await vTableBeacon.connect(owner).updateVTable([[ADDRESS_ZERO, getSigs(vTableBeacon)]]);
+      await vTableBeacon.connect(owner).updateVTable([[IMPL, SIGS]]);
+      await vTableBeacon.connect(owner).updateVTable([[ADDRESS_ZERO, SIGS]]);
+
+      for (const sig of SIGS) {
+        expect(await vTableBeacon.delegates(sig)).to.eq(ADDRESS_ZERO);
+      }
     });
 
     it('update module', async function () {
-      await vTableBeacon.connect(owner).updateVTable([[vTableBeacon.address, getSigs(vTableBeacon)]]);
-      await vTableBeacon.connect(owner).updateVTable([[vTableBeacon.address, getSigs(vTableBeacon)]]);
+      await vTableBeacon.connect(owner).updateVTable([[IMPL, SIGS]]);
+      await vTableBeacon.connect(owner).updateVTable([[NEW_IMPL, SIGS]]);
+
+      for (const sig of SIGS) {
+        expect(await vTableBeacon.delegates(sig)).to.eq(NEW_IMPL);
+      }
     });
 
     it('add new module', async function () {
-      await vTableBeacon.connect(owner).updateVTable([[vTableBeacon.address, getSigs(vTableBeacon)]]);
+      await vTableBeacon.connect(owner).updateVTable([[IMPL, SIGS]]);
+
+      for (const sig of SIGS) {
+        expect(await vTableBeacon.delegates(sig)).to.eq(IMPL);
+      }
     });
 
     it('only owner can update', async function () {
