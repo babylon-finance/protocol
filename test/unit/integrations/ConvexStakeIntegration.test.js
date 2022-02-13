@@ -17,7 +17,7 @@ describe('ConvexStakeIntegrationTest', function () {
   // Used to create addresses info. do not remove
   async function logConvexPools() {
     const convexpools = await Promise.all(
-      [...Array(40).keys()].map(async (pid) => {
+      [...Array(50).keys()].map(async (pid) => {
         return await createConvexPoolInfo(pid);
       }),
     );
