@@ -17,7 +17,7 @@
 */
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -69,6 +69,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     IYearnRegistry private constant yearnRegistry = IYearnRegistry(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
 
     address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address internal constant cvxCRV = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address internal constant cvxCRVPool = 0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
+    address internal constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
@@ -253,9 +256,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(
-                        getPrice(denominator, _tokenOut)
-                    );
+                    curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(getPrice(denominator, _tokenOut));
             }
         }
 
@@ -265,12 +266,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    getPrice(_tokenIn, denominator).preciseDiv(
-                        curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut)
-                    );
+                    getPrice(_tokenIn, denominator).preciseDiv(curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut));
             }
         }
-
         // Yearn vaults
         if (tokenInType == 6) {
             price = IYearnVault(_tokenIn).pricePerShare().preciseMul(
@@ -304,6 +302,21 @@ contract PriceOracle is Ownable, IPriceOracle {
         price = _getBestPriceUniV3(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
+        }
+
+        // cvxcrv
+        if (_tokenIn == cvxCRV) {
+          uint256 tokenInPrice = _getPriceThroughCurve(cvxCRVPool, cvxCRV, CRV, curveMetaRegistry);
+          if (tokenInPrice != 0) {
+              return tokenInPrice.preciseMul(_getBestPriceUniV3(CRV, _tokenOut));
+          }
+        }
+
+        if (_tokenOut == cvxCRV) {
+          uint256 tokenOutPrice = _getPriceThroughCurve(cvxCRVPool, CRV, cvxCRV, curveMetaRegistry);
+          if (tokenOutPrice != 0) {
+              return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, CRV));
+          }
         }
 
         // Curve to UniV3 or UniV3 to Curve via DAI/WETH/WBTC/USDC
@@ -567,44 +580,42 @@ contract PriceOracle is Ownable, IPriceOracle {
         return 0;
     }
 
-    function _getCurveDY(address _curvePool, uint i, uint j, uint decimals) private view returns(uint256) {
-      try ICurvePoolV3DY(_curvePool).get_dy(
-          i,
-          j,
-          decimals
-      ) returns (uint256 price) {
-        return price;
-      } catch {
-          try ICurvePoolV3(_curvePool).get_dy(
-             int128(i),
-             int128(j),
-             decimals
-         ) returns (uint256 price2) {
-           return price2;
-         } catch {
-           revert('get dy failed');
-         }
-      }
+    function _getCurveDY(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        try ICurvePoolV3DY(_curvePool).get_dy(i, j, decimals) returns (uint256 price) {
+            return price;
+        } catch {
+            try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price2) {
+                return price2;
+            } catch {
+                revert('get dy failed');
+            }
+        }
     }
 
-    function _getCurveDYUnderlying(address _curvePool, uint i, uint j, uint decimals) private view returns(uint256) {
-      try ICurvePoolV3DY(_curvePool).get_dy_underlying(
-          i,
-          j,
-          decimals
-      ) returns (uint256 price) {
-        return price;
-      } catch {
-          try ICurvePoolV3(_curvePool).get_dy_underlying(
-             int128(i),
-             int128(j),
-             decimals
-         ) returns (uint256 price2) {
-           return price2;
-         } catch {
-           revert('get dy underlying failed');
-         }
-      }
+    function _getCurveDYUnderlying(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        try ICurvePoolV3DY(_curvePool).get_dy_underlying(i, j, decimals) returns (uint256 price) {
+            return price;
+        } catch {
+            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
+                return price2;
+            } catch {
+              try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
+                  return price3;
+              } catch {
+                revert('get dy underlying failed');
+              }
+            }
+        }
     }
 
     function _checkPairThroughCurve(

@@ -142,14 +142,14 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             if (registryKind == 2) {
                 address[4] memory addressesF = factoryRegistry.get_coins(_pool);
                 return [
-                  addressesF[0],
-                  addressesF[1],
-                  addressesF[2],
-                  addressesF[3],
-                  address(0),
-                  address(0),
-                  address(0),
-                  address(0)
+                    addressesF[0],
+                    addressesF[1],
+                    addressesF[2],
+                    addressesF[3],
+                    address(0),
+                    address(0),
+                    address(0),
+                    address(0)
                 ];
             }
             if (registryKind == 3) {
@@ -173,11 +173,11 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             return curveRegistry.get_n_coins(_pool)[0];
         }
         if (registryKind == 2) {
-            uint coins = factoryRegistry.get_n_coins(_pool);
+            uint256 coins = factoryRegistry.get_n_coins(_pool);
             console.log('coins', coins);
             if (coins == 0) {
-              // Try through meta
-              (coins,) = factoryRegistry.get_meta_n_coins(_pool);
+                // Try through meta
+                (coins, ) = factoryRegistry.get_meta_n_coins(_pool);
             }
             return coins;
         }
@@ -222,7 +222,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             } catch {
                 // Factory pools use the pool as the token
                 if (poolToRegistry[_lpToken] != 0) {
-                  return _lpToken;
+                    return _lpToken;
                 }
                 return address(0);
             }
@@ -261,8 +261,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         // Special case tricrypto 2
         if (_lpToken == TRI_CURVE_POOL_2_LP) {
-          return
-              IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
+            return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
         // Factory pools do not have the method
         // TODO: Check crypto virtual price. It returns weird stuff

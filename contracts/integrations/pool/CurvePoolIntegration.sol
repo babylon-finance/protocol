@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
@@ -40,6 +39,7 @@ contract CurvePoolIntegration is PoolIntegration {
 
     /* ============ Constant ============ */
     address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
+    address private constant cvxCRVPool = 0x9D0464996170c6B9e75eED71c68B99dDEDf279e8; // Pool only takes CRV for us
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
@@ -112,7 +112,6 @@ contract CurvePoolIntegration is PoolIntegration {
         address[] memory result = new address[](ncoins);
         address[8] memory coins =
             curveMetaRegistry.getCoinAddresses(poolAddress, usesUnderlying[poolAddress] && !forNAV);
-
         for (uint8 i = 0; i < ncoins; i++) {
             result[i] = coins[i];
         }
@@ -127,6 +126,13 @@ contract CurvePoolIntegration is PoolIntegration {
             result[0] = 0;
             result[1] = 0;
             result[2] = uint256(1e18);
+            return result;
+        }
+        // cvxCRV
+        if (poolAddress == cvxCRVPool) {
+          result[0] = uint256(1e18);
+          result[1] = 0;
+          return result;
         }
         // If it's a meta pool, deposit and withdraw from the stable one
         if (curveMetaRegistry.isMeta(poolAddress)) {
@@ -376,7 +382,7 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
         // For meta remove everything in the stable coin
-        if (curveMetaRegistry.isMeta(_poolAddress)) {
+        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool) {
             return
                 abi.encodeWithSignature(
                     'remove_liquidity_one_coin(uint256,int128,uint256)',
