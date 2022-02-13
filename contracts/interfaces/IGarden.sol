@@ -17,9 +17,9 @@
 */
 pragma solidity 0.7.6;
 
-import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import { IBabController } from './IBabController.sol';
+import {IBabController} from './IBabController.sol';
 
 /**
  * @title IStrategyGarden
@@ -68,7 +68,6 @@ interface IAdminGarden {
         uint256 _initialContribution,
         bool[] memory _publicGardenStrategistsStewards
     ) external payable;
-
 
     function makeGardenPublic() external;
 
