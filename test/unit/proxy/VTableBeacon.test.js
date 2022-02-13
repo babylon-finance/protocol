@@ -17,7 +17,7 @@ const {
   eth,
 } = require('utils/test-helpers');
 
-describe.only('VTableBeacon', function () {
+describe('VTableBeacon', function () {
   let vTableBeacon;
   let owner;
 
