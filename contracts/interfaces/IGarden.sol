@@ -221,4 +221,8 @@ interface ICoreGarden {
     ) external;
 }
 
-interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20 {}
+interface IERC20Metadata {
+    function name() external view returns (string memory);
+}
+
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {}

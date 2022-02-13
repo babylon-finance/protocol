@@ -3,7 +3,6 @@ const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO } = require('lib/constants');
 const { fund } = require('lib/whale');
-const { getSigs } = require('lib/web3');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const {
