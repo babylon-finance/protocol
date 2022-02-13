@@ -314,7 +314,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
     ) external payable override nonReentrant {
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, _getPricePerShare(), minContribution);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, _getPricePerShare(), minContribution, 0);
     }
 
     function depositBySig(
