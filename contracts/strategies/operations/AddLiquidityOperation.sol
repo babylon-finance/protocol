@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -109,14 +108,10 @@ contract AddLiquidityOperation is Operation {
                     _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
                 }
             }
-        } catch {
-            console.log('catch');
-        }
-        console.log('b');
+        } catch {}
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
-        console.log('before join pool');
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
@@ -124,7 +119,6 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        console.log('after join pool');
         return (
             _getLPTokenFromBytes(_integration, _data),
             IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
@@ -257,7 +251,6 @@ contract AddLiquidityOperation is Operation {
             if (poolTokens[i] == WETH && balance == 0) {
                 balance = pool.balance;
             }
-            console.log('balance', balance);
             if (price != 0 && balance != 0) {
                 NAV += SafeDecimalMath.normalizeAmountTokens(
                     asset,

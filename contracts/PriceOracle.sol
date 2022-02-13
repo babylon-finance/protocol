@@ -306,17 +306,17 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // cvxcrv
         if (_tokenIn == cvxCRV) {
-          uint256 tokenInPrice = _getPriceThroughCurve(cvxCRVPool, cvxCRV, CRV, curveMetaRegistry);
-          if (tokenInPrice != 0) {
-              return tokenInPrice.preciseMul(_getBestPriceUniV3(CRV, _tokenOut));
-          }
+            uint256 tokenInPrice = _getPriceThroughCurve(cvxCRVPool, cvxCRV, CRV, curveMetaRegistry);
+            if (tokenInPrice != 0) {
+                return tokenInPrice.preciseMul(_getBestPriceUniV3(CRV, _tokenOut));
+            }
         }
 
         if (_tokenOut == cvxCRV) {
-          uint256 tokenOutPrice = _getPriceThroughCurve(cvxCRVPool, CRV, cvxCRV, curveMetaRegistry);
-          if (tokenOutPrice != 0) {
-              return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, CRV));
-          }
+            uint256 tokenOutPrice = _getPriceThroughCurve(cvxCRVPool, CRV, cvxCRV, curveMetaRegistry);
+            if (tokenOutPrice != 0) {
+                return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, CRV));
+            }
         }
 
         // Curve to UniV3 or UniV3 to Curve via DAI/WETH/WBTC/USDC
@@ -609,11 +609,11 @@ contract PriceOracle is Ownable, IPriceOracle {
             try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
                 return price2;
             } catch {
-              try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
-                  return price3;
-              } catch {
-                revert('get dy underlying failed');
-              }
+                try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
+                    return price3;
+                } catch {
+                    revert('get dy underlying failed');
+                }
             }
         }
     }

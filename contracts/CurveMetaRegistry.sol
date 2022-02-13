@@ -40,9 +40,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
 
-
     address private constant TRI_CURVE_POOL_2_LP = 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff;
-
 
     /* ============ State Variables ============ */
 

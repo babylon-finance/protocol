@@ -130,9 +130,9 @@ contract CurvePoolIntegration is PoolIntegration {
         }
         // cvxCRV
         if (poolAddress == cvxCRVPool) {
-          result[0] = uint256(1e18);
-          result[1] = 0;
-          return result;
+            result[0] = uint256(1e18);
+            result[1] = 0;
+            return result;
         }
         // If it's a meta pool, deposit and withdraw from the stable one
         if (curveMetaRegistry.isMeta(poolAddress)) {
