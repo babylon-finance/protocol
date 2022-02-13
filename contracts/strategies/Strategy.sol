@@ -17,6 +17,7 @@
 */
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -334,7 +335,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
-
         // set votes to zero expecting keeper to provide correct values
         totalPositiveVotes = 0;
         totalNegativeVotes = 0;
@@ -348,12 +348,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
             }
         }
-
         _require(totalPositiveVotes.sub(totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
 
         // Keeper will account for strategist vote/stake
         voters = _voters;
-
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
         emit StrategyVoted(address(garden), totalPositiveVotes, totalNegativeVotes, block.timestamp);
@@ -1041,13 +1039,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
-        try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
-            uint256 price
-        ) {
-            return price;
-        } catch {
-            return 0;
-        }
+        return IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo);
+        // try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
+        //     uint256 price
+        // ) {
+        //     return price;
+        // } catch {
+        //     return 0;
+        // }
     }
 
     function _updateExpectedReturn(

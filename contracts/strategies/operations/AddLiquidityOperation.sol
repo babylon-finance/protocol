@@ -18,6 +18,7 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -90,9 +91,13 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
+        console.log('in execute');
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
+        console.log('poolTokens', poolTokens[0], poolTokens[1]);
         uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
+        console.log('poolWeights', _poolWeights[0], _poolWeights[1]);
         // if the weights need to be adjusted by price, do so
+        console.log('a');
         try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
             if (priceWeights) {
                 uint256 poolTotal = 0;
@@ -108,10 +113,14 @@ contract AddLiquidityOperation is Operation {
                     _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
                 }
             }
-        } catch {}
+        } catch {
+            console.log('catch');
+        }
+        console.log('b');
         // Get the tokens needed to enter the pool
         uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
         uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
+        console.log('before join pool');
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
@@ -119,6 +128,7 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
+        console.log('after join pool');
         return (
             _getLPTokenFromBytes(_integration, _data),
             IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
