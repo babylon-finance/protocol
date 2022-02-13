@@ -30,7 +30,7 @@ interface ICurveMetaRegistry {
 
     function updatePoolsList() external;
 
-    function updateCryptoRegistries(address _cryptoRegistryF) external;
+    function updateCryptoRegistries() external;
 
     /* ============ View Functions ============ */
 

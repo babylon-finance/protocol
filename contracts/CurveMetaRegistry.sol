@@ -18,8 +18,10 @@
 
 pragma solidity 0.7.6;
 
+import 'hardhat/console.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
+import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
 import {ICryptoRegistry} from './interfaces/external/curve/ICryptoRegistry.sol';
@@ -36,6 +38,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     // Address of Curve Address provider
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+
+
+    address private constant TRI_CURVE_POOL_2_LP = 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff;
+
 
     /* ============ State Variables ============ */
 
@@ -79,7 +85,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = ICurveRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
-        cryptoRegistryF = ICryptoRegistry(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99);
+        cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
         _updateMapping(1, curveRegistry);
         _updateMapping(2, factoryRegistry);
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
@@ -103,11 +109,11 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Updates the addresses of the registries themselves
      *
      */
-    function updateCryptoRegistries(address _cryptoRegistryF) external override onlyGovernanceOrEmergency {
+    function updateCryptoRegistries() external override onlyGovernanceOrEmergency {
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = ICurveRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
-        cryptoRegistryF = ICryptoRegistry(_cryptoRegistryF);
+        cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
         updatePoolsList();
     }
 
@@ -187,7 +193,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Gets the pool from a curve lp token
      * @param _lpToken                Address of the lp token
      *
-     * @return address                Address of the pool
+     * @return address                Address of the pool, 0 if it doesn't exist
      */
     function getPoolFromLpToken(address _lpToken) external view override returns (address) {
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
@@ -198,7 +204,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
                 return pool2;
             } catch {
                 // Factory pools use the pool as the token
-                return _lpToken;
+                if (poolToRegistry[_lpToken] != 0) {
+                  return _lpToken;
+                }
+                return address(0);
             }
         }
     }
@@ -228,11 +237,19 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      */
     function getVirtualPriceFromLpToken(address _pool) external view override returns (uint256) {
         uint256 registryKind = poolToRegistry[_pool];
-        if (registryKind != 1 && registryKind != 3) {
+        // Factory pools
+        if (registryKind == 2) {
+            // verify
             return 1e18;
         }
         if (registryKind == 1) {
             return curveRegistry.get_virtual_price_from_lp_token(_pool);
+        }
+        if (_pool == TRI_CURVE_POOL_2_LP) {
+          // Check if needed and check if it's pool or lp token
+          // TRI2
+          return
+              IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
         return cryptoRegistry.get_virtual_price_from_lp_token(_pool);
     }

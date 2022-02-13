@@ -23,6 +23,19 @@ describe('CurvePoolIntegrationTest', function () {
       pool: addresses.curve.pools.v3[key],
     };
   });
+  const cryptopools = Object.keys(addresses.curve.pools.crypto).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.crypto[key],
+    };
+  });
+
+  const factorypools = Object.keys(addresses.curve.pools.factory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.factory[key],
+    };
+  });
 
   // Used to create addresses info. do not remove
   async function logCurvePools() {
@@ -78,6 +91,35 @@ describe('CurvePoolIntegrationTest', function () {
 
   // logCurvePools();
 
+  async function testCurvePool(name, pool) {
+    const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
+    const reserveAsset = await getERC20(await garden1.reserveAsset());
+    const strategyContract = await createStrategy(
+      'lp',
+      'vote',
+      [signer1, signer2, signer3],
+      curvePoolIntegration.address,
+      garden1,
+      DEFAULT_STRATEGY_PARAMS,
+      [pool, 0],
+    );
+    const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
+    console.log('before execute');
+    await executeStrategy(strategyContract, { amount: eth() });
+    console.log('after execute');
+    expect(await strategyContract.capitalAllocated()).to.equal(eth());
+    const lpToken = await curvePoolIntegration.getLPToken(pool);
+    const poolContract = await getERC20(lpToken);
+    expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
+    expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
+    console.log('before finalize');
+    const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
+    await finalizeStrategy(strategyContract, 0);
+
+    expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
+  }
+
   beforeEach(async () => {
     ({ curvePoolIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
@@ -97,32 +139,19 @@ describe('CurvePoolIntegrationTest', function () {
 
     pick(pools).forEach(({ name, pool }) => {
       it.only(`can enter and exit the ${name} pool`, async function () {
-        const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
-        const reserveAsset = await getERC20(await garden1.reserveAsset());
-        const strategyContract = await createStrategy(
-          'lp',
-          'vote',
-          [signer1, signer2, signer3],
-          curvePoolIntegration.address,
-          garden1,
-          DEFAULT_STRATEGY_PARAMS,
-          [pool, 0],
-        );
+        await testCurvePool(name, pool);
+      });
+    });
 
-        const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
-        await executeStrategy(strategyContract, { amount: eth() });
+    pick(cryptopools).forEach(({ name, pool }) => {
+      it(`can enter and exit the crypto ${name} pool`, async function () {
+        await testCurvePool(name, pool);
+      });
+    });
 
-        expect(await strategyContract.capitalAllocated()).to.equal(eth());
-        const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await getERC20(lpToken);
-        expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
-
-        const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
-        await finalizeStrategy(strategyContract, 0);
-
-        expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
-        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
+    pick(factorypools).forEach(({ name, pool }) => {
+      it(`can enter and exit the factory ${name} pool`, async function () {
+        await testCurvePool(name, pool);
       });
     });
   });

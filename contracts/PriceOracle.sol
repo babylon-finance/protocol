@@ -33,7 +33,6 @@ import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
-import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
 import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
@@ -75,7 +74,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    address private constant TRI_CURVE_POOL_2_LP = 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -203,7 +201,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         uint256 exchangeRate;
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
-
         // Comp assets
         if (tokenInType == 1) {
             exchangeRate = getCompoundExchangeRate(_tokenIn, _finalAssetIn);
@@ -250,40 +247,24 @@ contract PriceOracle is Ownable, IPriceOracle {
         // Curve LP tokens
         ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         if (tokenInType == 5) {
-            if (_tokenIn != TRI_CURVE_POOL_2_LP) {
-                address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
-                if (crvPool != address(0)) {
-                    address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
-                    return
-                        curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(
-                            getPrice(denominator, _tokenOut)
-                        );
-                }
-            } else {
-                // TRI2
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(
-                        getPrice(DAI, _tokenOut)
+                    curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(
+                        getPrice(denominator, _tokenOut)
                     );
             }
         }
 
         if (tokenOutType == 5) {
             // Token out is a curve lp
-            if (_tokenOut != TRI_CURVE_POOL_2_LP) {
-                address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
-                if (crvPool != address(0)) {
-                    address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
-                    return
-                        getPrice(_tokenIn, denominator).preciseDiv(
-                            curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut)
-                        );
-                }
-            } else {
-                // TRI2
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    getPrice(_tokenIn, DAI).preciseDiv(
-                        IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price()
+                    getPrice(_tokenIn, denominator).preciseDiv(
+                        curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut)
                     );
             }
         }
