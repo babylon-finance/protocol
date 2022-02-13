@@ -93,7 +93,68 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         _require(_isCreator(_creator), Errors.ONLY_CREATOR);
     }
 
+    function _onlyNonZero(address _address) private pure {
+        _require(_address != address(0), Errors.ADDRESS_IS_ZERO);
+    }
+
     /* ============ Constructor ============ */
+
+    /**
+     * When a new Garden is created.
+     * All parameter validations are on the BabController contract. Validations are performed already on the
+     * BabController.
+     * WARN: If the reserve Asset is different than WETH the gardener needs to have approved the controller.
+     *
+     * @param _reserveAsset                     Address of the reserve asset ERC20
+     * @param _controller                       Address of the controller
+     * @param _creator                          Address of the creator
+     * @param _name                             Name of the Garden
+     * @param _symbol                           Symbol of the Garden
+     * @param _gardenParams                     Array of numeric garden params
+     * @param _initialContribution              Initial Contribution by the Gardener
+     * @param _publicGardenStrategistsStewards  Public garden, public strategists rights and public stewards rights
+     */
+    function initialize(
+        address _reserveAsset,
+        IBabController _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
+    ) public payable override initializer {
+        __ERC20_init(_name, _symbol);
+
+        controller = _controller;
+        reserveAsset = _reserveAsset;
+        creator = _creator;
+        rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
+        _onlyNonZero(address(rewardsDistributor));
+        privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
+        publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
+
+        publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
+        _require(
+            _gardenParams[3] > 0 &&
+                _initialContribution >= _gardenParams[3] &&
+                _initialContribution <= _gardenParams[0],
+            Errors.MIN_CONTRIBUTION
+        );
+        gardenInitializedAt = block.timestamp;
+        _start(
+            _gardenParams[0],
+            _gardenParams[1],
+            _gardenParams[2],
+            _gardenParams[3],
+            _gardenParams[4],
+            _gardenParams[5],
+            _gardenParams[6],
+            _gardenParams[7],
+            _gardenParams[8]
+        );
+    }
+
 
     /* ============ External Functions ============ */
 

@@ -223,62 +223,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     constructor(VTableBeacon _beacon) VTableBeaconProxy(_beacon) {}
 
-    /**
-     * When a new Garden is created.
-     * All parameter validations are on the BabController contract. Validations are performed already on the
-     * BabController.
-     * WARN: If the reserve Asset is different than WETH the gardener needs to have approved the controller.
-     *
-     * @param _reserveAsset                     Address of the reserve asset ERC20
-     * @param _controller                       Address of the controller
-     * @param _creator                          Address of the creator
-     * @param _name                             Name of the Garden
-     * @param _symbol                           Symbol of the Garden
-     * @param _gardenParams                     Array of numeric garden params
-     * @param _initialContribution              Initial Contribution by the Gardener
-     * @param _publicGardenStrategistsStewards  Public garden, public strategists rights and public stewards rights
-     */
-    function initialize(
-        address _reserveAsset,
-        IBabController _controller,
-        address _creator,
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _gardenParams,
-        uint256 _initialContribution,
-        bool[] memory _publicGardenStrategistsStewards
-    ) public payable override initializer {
-        __ERC20_init(_name, _symbol);
-
-        controller = _controller;
-        reserveAsset = _reserveAsset;
-        creator = _creator;
-        rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
-        _onlyNonZero(address(rewardsDistributor));
-        privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
-        publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
-
-        publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
-        _require(
-            _gardenParams[3] > 0 &&
-                _initialContribution >= _gardenParams[3] &&
-                _initialContribution <= _gardenParams[0],
-            Errors.MIN_CONTRIBUTION
-        );
-        gardenInitializedAt = block.timestamp;
-        _start(
-            _gardenParams[0],
-            _gardenParams[1],
-            _gardenParams[2],
-            _gardenParams[3],
-            _gardenParams[4],
-            _gardenParams[5],
-            _gardenParams[6],
-            _gardenParams[7],
-            _gardenParams[8]
-        );
-    }
-
     /* ============ External Functions ============ */
 
     /**
@@ -576,62 +520,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /* ============ Internal Functions ============ */
-
-    /**
-     * FUND LEAD ONLY.  Starts the Garden with allowed reserve assets,
-     * fees and issuance premium. Only callable by the Garden's creator
-     *
-     * @param _maxDepositLimit             Max deposit limit
-     * @param _minLiquidityAsset           Number that represents min amount of liquidity denominated in ETH
-     * @param _depositHardlock             Number that represents the time deposits are locked for
-     *                                     an user after he deposits
-     * @param _minContribution             Min contribution to the garden
-     * @param _strategyCooldownPeriod      How long after the strategy has been activated, will it be ready
-     *                                     to be executed
-     * @param _minVotesQuorum              Percentage of votes needed to activate an strategy (0.01% = 1e14, 1% = 1e16)
-     * @param _minStrategyDuration         Min duration of an strategy
-     * @param _maxStrategyDuration         Max duration of an strategy
-     * @param _minVoters                   The minimum amount of voters needed for quorum
-     */
-    function _start(
-        uint256 _maxDepositLimit,
-        uint256 _minLiquidityAsset,
-        uint256 _depositHardlock,
-        uint256 _minContribution,
-        uint256 _strategyCooldownPeriod,
-        uint256 _minVotesQuorum,
-        uint256 _minStrategyDuration,
-        uint256 _maxStrategyDuration,
-        uint256 _minVoters
-    ) private {
-        _require(
-            _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
-            Errors.MIN_LIQUIDITY
-        );
-        _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
-        _require(
-            _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD && _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
-            Errors.NOT_IN_RANGE
-        );
-        _require(_minVotesQuorum >= TEN_PERCENT.div(2) && _minVotesQuorum <= TEN_PERCENT.mul(5), Errors.VALUE_TOO_LOW);
-        _require(
-            _maxStrategyDuration >= _minStrategyDuration &&
-                _minStrategyDuration >= 1 days &&
-                _maxStrategyDuration <= 500 days,
-            Errors.DURATION_RANGE
-        );
-        _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
-
-        minContribution = _minContribution;
-        strategyCooldownPeriod = _strategyCooldownPeriod;
-        minVotesQuorum = _minVotesQuorum;
-        minVoters = _minVoters;
-        minStrategyDuration = _minStrategyDuration;
-        maxStrategyDuration = _maxStrategyDuration;
-        maxDepositLimit = _maxDepositLimit;
-        minLiquidityAsset = _minLiquidityAsset;
-        depositHardlock = _depositHardlock;
-    }
 
     function _sharesToReserve(uint256 _shares, uint256 _pricePerShare) internal view returns (uint256) {
         // in case of USDC that would with 6 decimals

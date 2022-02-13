@@ -17,9 +17,9 @@
 */
 pragma solidity 0.7.6;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {IBabController} from './IBabController.sol';
+import { IBabController } from './IBabController.sol';
 
 /**
  * @title IStrategyGarden
@@ -58,6 +58,17 @@ interface IStrategyGarden {
  */
 interface IAdminGarden {
     /* ============ Write ============ */
+    function initialize(
+        address _reserveAsset,
+        IBabController _controller,
+        address _creator,
+        string memory _name,
+        string memory _symbol,
+        uint256[] calldata _gardenParams,
+        uint256 _initialContribution,
+        bool[] memory _publicGardenStrategistsStewards
+    ) external payable;
+
 
     function makeGardenPublic() external;
 
@@ -77,17 +88,6 @@ interface IAdminGarden {
  */
 interface ICoreGarden {
     /* ============ Constructor ============ */
-
-    function initialize(
-        address _reserveAsset,
-        IBabController _controller,
-        address _creator,
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _gardenParams,
-        uint256 _initialContribution,
-        bool[] memory _publicGardenStrategistsStewards
-    ) external payable;
 
     /* ============ View ============ */
 
