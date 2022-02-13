@@ -7,7 +7,7 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
 
-  if (chainId === '31337') {
+  if (chainId === '1337') {
     // use the third signer as MULTISIG
     MULTISIG = signers[2].address;
   } else if (!MULTISIG) {

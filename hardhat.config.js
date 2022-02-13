@@ -49,7 +49,7 @@ const defaultNetwork = 'hardhat';
 const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14168000; // old 13171630 new 13665320
 
 const CHAIN_IDS = {
-  hardhat: 31337,
+  hardhat: 1337,
   kovan: 42,
   goerli: 5,
   mainnet: 1,
