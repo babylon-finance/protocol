@@ -11,8 +11,7 @@ async function setUpFixture(
   options,
   { gardenParams = GARDEN_PARAMS },
 ) {
-  const signers = await ethers.getSigners();
-  const [deployer, keeper, , signer1, signer2, signer3, signer4] = signers;
+  const [deployer, keeper, , signer1, signer2, signer3, signer4] = await ethers.getSigners();
 
   await deployments.fixture();
 
