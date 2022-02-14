@@ -37,6 +37,13 @@ describe('CurvePoolIntegrationTest', function () {
     };
   });
 
+  const cryptofactorypools = Object.keys(addresses.curve.pools.cryptofactory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.cryptofactory[key],
+    };
+  });
+
   // Used to create addresses info. do not remove
   async function logCurvePools() {
     const crvAddressProvider = await ethers.getContractAt(
@@ -46,6 +53,7 @@ describe('CurvePoolIntegrationTest', function () {
     const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(0));
     const factoryRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(3));
     const cryptoRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(5));
+    const cryptoFactoryRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(6));
     const curvePoolsD = {};
     let curvePools = await Promise.all(
       [...Array((await crvRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
@@ -62,7 +70,14 @@ describe('CurvePoolIntegrationTest', function () {
     curvePools = curvePools.concat(
       await Promise.all(
         [...Array((await cryptoRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
-          return await getCurvePoolInfo(pid, cryptoRegistry);
+          return await getCurvePoolInfo(pid, cryptoRegistry, false, true);
+        }),
+      ),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await cryptoFactoryRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, cryptoFactoryRegistry, true, true);
         }),
       ),
     );
@@ -77,7 +92,7 @@ describe('CurvePoolIntegrationTest', function () {
   async function getCurvePoolInfo(pid, crvRegistry, isFactory = false, isCrypto = false) {
     // TODO: Need to filter by TVL
     const address = await crvRegistry.pool_list(pid);
-    const name = isFactory ? 'factory' + pid : await crvRegistry.get_pool_name(address);
+    const name = isFactory ? `factory${isCrypto ? 'c' : ''}` + pid : await crvRegistry.get_pool_name(address);
     if (name) {
       return {
         name,
@@ -148,6 +163,12 @@ describe('CurvePoolIntegrationTest', function () {
 
     pick(factorypools).forEach(({ name, pool }) => {
       it(`can enter and exit the factory ${name} pool`, async function () {
+        await testCurvePool(name, pool);
+      });
+    });
+
+    pick(cryptofactorypools).forEach(({ name, pool }) => {
+      it.only(`can enter and exit the factory ${name} pool`, async function () {
         await testCurvePool(name, pool);
       });
     });
