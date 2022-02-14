@@ -12,7 +12,7 @@ const { fund } = require('lib/whale');
 
 const EMERGENCY = '0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9';
 
-describe.only('BabController', function () {
+describe('BabController', function () {
   let babController;
   let treasury;
   let bablToken;
