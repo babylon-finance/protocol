@@ -240,7 +240,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         address cryptoFactoryPool = cryptoFactoryLpTokenToPools[_lpToken];
         if (cryptoFactoryPool != address(0)) {
-          return cryptoFactoryPool;
+            return cryptoFactoryPool;
         }
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
         try curveRegistry.get_pool_from_lp_token(_lpToken) returns (address pool) {
@@ -420,7 +420,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             poolToRegistry[pool] = _index;
             // Adds lptoken to pool for cryptofactory pools
             if (_index == 4) {
-              cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
+                cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
             }
         }
     }

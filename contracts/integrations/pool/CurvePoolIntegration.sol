@@ -407,13 +407,13 @@ contract CurvePoolIntegration is PoolIntegration {
                     );
             } else {
                 if (_poolAddress == palstkaave) {
-                  return
-                      abi.encodeWithSignature(
-                          'remove_liquidity_one_coin(uint256,uint256,uint256)',
-                          _poolTokensIn,
-                          uint256(0),
-                          _minAmountsOut[0]
-                      );
+                    return
+                        abi.encodeWithSignature(
+                            'remove_liquidity_one_coin(uint256,uint256,uint256)',
+                            _poolTokensIn,
+                            uint256(0),
+                            _minAmountsOut[0]
+                        );
                 }
                 return
                     abi.encodeWithSignature(
