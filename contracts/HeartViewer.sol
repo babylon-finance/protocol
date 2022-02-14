@@ -19,12 +19,15 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {IBabController} from './interfaces/IBabController.sol';
 import {IHeart} from './interfaces/IHeart.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IGarden} from './interfaces/IGarden.sol';
 import {IGovernor} from './interfaces/external/oz/IGovernor.sol';
+
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
+import {ControllerLib} from './lib/ControllerLib.sol';
 
 /**
  * @title HeartViewer
@@ -34,17 +37,9 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
  */
 contract HeartViewer {
     using SafeMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not a keeper in the protocol
-     */
-
-    modifier onlyGovernanceOrEmergency {
-        require(msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(), 'Non valid');
-        _;
-    }
 
     /* ============ Variables ============ */
 
@@ -70,7 +65,8 @@ contract HeartViewer {
         heart = _heart;
     }
 
-    function setHeartGarden(IGarden _heartGarden) external onlyGovernanceOrEmergency {
+    function setHeartGarden(IGarden _heartGarden) external {
+        controller.onlyGovernanceOrEmergency();
         heartGarden = _heartGarden;
     }
 

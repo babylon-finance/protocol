@@ -27,6 +27,8 @@ import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
 import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
 
+import {ControllerLib} from './lib/ControllerLib.sol';
+
 /**
  * @title TokenIdentifier
  * @author Babylon Finance Protocol
@@ -34,6 +36,8 @@ import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
  * Returns the type of the asset
  */
 contract TokenIdentifier is ITokenIdentifier {
+    using ControllerLib for IBabController;
+
     /* ============ Constants ============ */
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -64,17 +68,6 @@ contract TokenIdentifier is ITokenIdentifier {
     mapping(address => bool) public vaults;
 
     /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
 
     /* ============ Constructor ============ */
 
@@ -319,8 +312,9 @@ contract TokenIdentifier is ITokenIdentifier {
     function updateYearnVault(address[] calldata _vaults, bool[] calldata _values)
         external
         override
-        onlyGovernanceOrEmergency
+        
     {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _vaults.length; i++) {
             vaults[_vaults[i]] = _values[i];
         }
@@ -329,8 +323,9 @@ contract TokenIdentifier is ITokenIdentifier {
     function updateSynth(address[] calldata _synths, bool[] calldata _values)
         external
         override
-        onlyGovernanceOrEmergency
+        
     {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _synths.length; i++) {
             synths[_synths[i]] = _values[i];
         }
@@ -339,8 +334,9 @@ contract TokenIdentifier is ITokenIdentifier {
     function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings)
         external
         override
-        onlyGovernanceOrEmergency
+        
     {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _creamTokens.length; i++) {
             crTokenToAsset[_creamTokens[i]] = _underlyings[i];
         }
@@ -349,8 +345,8 @@ contract TokenIdentifier is ITokenIdentifier {
     function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings)
         external
         override
-        onlyGovernanceOrEmergency
     {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _aaveTokens.length; i++) {
             aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
         }
@@ -359,8 +355,8 @@ contract TokenIdentifier is ITokenIdentifier {
     function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings)
         external
         override
-        onlyGovernanceOrEmergency
     {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _cTokens.length; i++) {
             cTokenToAsset[_cTokens[i]] = _underlyings[i];
         }

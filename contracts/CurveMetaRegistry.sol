@@ -29,6 +29,8 @@ import {IFactoryRegistry} from './interfaces/external/curve/IFactoryRegistry.sol
 import {ICryptoRegistry} from './interfaces/external/curve/ICryptoRegistry.sol';
 import {ICryptoFactoryRegistry} from './interfaces/external/curve/ICryptoFactoryRegistry.sol';
 
+import {ControllerLib} from './lib/ControllerLib.sol';
+
 /**
  * @title CurveMetaRegistry
  * @author Babylon Finance Protocol
@@ -36,6 +38,8 @@ import {ICryptoFactoryRegistry} from './interfaces/external/curve/ICryptoFactory
  * Abstraction for all the different curve registries
  */
 contract CurveMetaRegistry is ICurveMetaRegistry {
+    using ControllerLib for IBabController;
+
     /* ============ Constants ============ */
 
     // Address of Curve Address provider
@@ -71,14 +75,6 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     /* ============ Modifiers ============ */
 
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
-
     /* ============ Constructor ============ */
 
     constructor(IBabController _controller) {
@@ -99,7 +95,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Updates the mapping of pools for gas efficiency
      *
      */
-    function updatePoolsList() public override onlyGovernanceOrEmergency {
+    function updatePoolsList() public override {
+        controller.onlyGovernanceOrEmergency();
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
         _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
@@ -110,7 +107,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Updates the addresses of the registries themselves
      *
      */
-    function updateCryptoRegistries() external override onlyGovernanceOrEmergency {
+    function updateCryptoRegistries() external override {
+        controller.onlyGovernanceOrEmergency();
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));

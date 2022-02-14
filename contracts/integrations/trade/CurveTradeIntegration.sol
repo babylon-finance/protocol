@@ -24,6 +24,7 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
 
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
 
@@ -35,6 +36,7 @@ import {TradeIntegration} from './TradeIntegration.sol';
  */
 contract CurveTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Modifiers ============ */
 
@@ -63,7 +65,8 @@ contract CurveTradeIntegration is TradeIntegration {
      *
      * @param _curveMetaRegistry            Address of the curve meta registry
      */
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external onlyGovernanceOrEmergency {
+    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external {
+        controller.onlyGovernanceOrEmergency();
         require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
         curveMetaRegistry = _curveMetaRegistry;
     }

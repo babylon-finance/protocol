@@ -31,6 +31,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {LendIntegration} from './LendIntegration.sol';
 
@@ -44,6 +45,7 @@ contract CompoundLendIntegration is LendIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using UniversalERC20 for IERC20;
+    using ControllerLib for IBabController;
 
     /* ============ Constant ============ */
 
@@ -79,12 +81,14 @@ contract CompoundLendIntegration is LendIntegration {
     /* ============ External Functions ============ */
 
     // Governance function
-    function overrideMappings() external onlyGovernanceOrEmergency {
+    function overrideMappings() external {
+        controller.onlyGovernanceOrEmergency();
         _overrideMappings(comptroller);
     }
 
     // Governance function
-    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyGovernanceOrEmergency {
+    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external {
+        controller.onlyGovernanceOrEmergency();
         assetToCToken[_assetAddress] = _cTokenAddress;
     }
 
