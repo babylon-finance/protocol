@@ -13,7 +13,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'FuseLendIntegration';
 
   const controller = await getController();
@@ -22,7 +21,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, '0xC7125E3A2925877C7371d579D29dAe4729Ac9033'],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (network.live && deployment.newlyDeployed) {

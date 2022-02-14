@@ -178,7 +178,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ Constants ============ */
 
-    address public constant override EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
+    address public constant override EMERGENCY_OWNER = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
     uint8 public constant MAX_OPERATIONS = 20;

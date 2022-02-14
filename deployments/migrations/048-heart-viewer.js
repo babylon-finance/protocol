@@ -11,7 +11,6 @@ module.exports = async ({
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'HeartViewer';
 
   const controller = await deployments.get('BabControllerProxy');
@@ -23,7 +22,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, governor.address, heart.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
@@ -32,7 +31,7 @@ module.exports = async ({
 
   if (network.live && deployment.newlyDeployed) {
     if (HEART_GARDEN_ADDRES) {
-      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { maxPriorityFeePerGas })).wait();
+      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { ...(await getGasPrice()) })).wait();
     }
     await tenderly.push(await getTenderlyContract(contract));
   }

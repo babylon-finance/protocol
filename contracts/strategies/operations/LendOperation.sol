@@ -239,7 +239,8 @@ contract LendOperation is Operation {
             IStrategy(_sender).trade(
                 tokenToTradeFrom,
                 IERC20(tokenToTradeFrom).balanceOf(_sender),
-                _garden.reserveAsset()
+                _garden.reserveAsset(),
+                0
             );
         }
         address rewardsToken = _getRewardToken(_integration);
@@ -247,7 +248,7 @@ contract LendOperation is Operation {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
-                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset(), 70e15);
             }
         }
     }

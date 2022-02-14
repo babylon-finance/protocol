@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const contract = 'Treasury';
 
   const controller = await getController();
@@ -20,12 +19,12 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting treasury on controller ${deployment.address}`);
-    await (await controller.editTreasury(deployment.address, { maxPriorityFeePerGas })).wait();
+    await (await controller.editTreasury(deployment.address, { ...(await getGasPrice()) })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

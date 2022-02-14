@@ -14,7 +14,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const { maxPriorityFeePerGas } = await getGasPrice();
   const controller = await getController();
   const oracle = await deployments.get('TokenIdentifier');
 
@@ -22,12 +21,12 @@ module.exports = async ({
     from: deployer,
     args: [oracle.address, controller.address],
     log: true,
-    maxPriorityFeePerGas,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting price oracle on controller ${deployment.address}`);
-    await (await controller.editPriceOracle(deployment.address, { maxPriorityFeePerGas })).wait();
+    await (await controller.editPriceOracle(deployment.address, { ...(await getGasPrice()) })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {
