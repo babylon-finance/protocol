@@ -104,15 +104,12 @@ describe('CurvePoolIntegrationTest', function () {
       [pool, 0],
     );
     const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
-    console.log('before execute');
     await executeStrategy(strategyContract, { amount: eth() });
-    console.log('after execute');
     expect(await strategyContract.capitalAllocated()).to.equal(eth());
     const lpToken = await curvePoolIntegration.getLPToken(pool);
     const poolContract = await getERC20(lpToken);
     expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
     expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
-    console.log('before finalize');
     const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
     await finalizeStrategy(strategyContract, 0);
 
