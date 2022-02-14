@@ -11,6 +11,7 @@ describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
   let curvePoolIntegration;
   let priceOracle;
+  let curveMetaRegistry;
   let owner;
   let daiVault;
   let signer1;
@@ -22,6 +23,7 @@ describe('YearnVaultIntegrationTest', function () {
       priceOracle,
       curvePoolIntegration,
       yearnVaultIntegration,
+      curveMetaRegistry,
       owner,
       signer1,
       signer2,
@@ -43,18 +45,16 @@ describe('YearnVaultIntegrationTest', function () {
     const yvault = await ethers.getContractAt('IYearnVault', vault.vault);
     vault.needs = await yvault.token();
     if (vault.curve) {
-      const crvAddressProvider = await ethers.getContractAt(
-        'ICurveAddressProvider',
-        '0x0000000022d53366457f9d5e68ec105046fc4383',
-      );
-      const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
-      vault.crvpool = await crvRegistry.get_pool_from_lp_token(vault.needs);
+      vault.crvpool = await curveMetaRegistry.getPoolFromLpToken(vault.needs);
     }
-    console.log(JSON.stringify(vault), ',');
+    // console.log(JSON.stringify(vault), ',');
   }
 
-  // logYearnVaults();
-
+  describe('logs vaults', function () {
+    it.skip('logs all vaults', async function () {
+      await logYearnVaults();
+    });
+  });
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
       expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
