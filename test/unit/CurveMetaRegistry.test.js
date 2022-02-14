@@ -107,7 +107,7 @@ describe('CurveMetaRegistry', function () {
     });
 
     it('checks a crypto factory Curve pool', async function () {
-      expect(await curveMetaRegistry.isPool(addresses.curve.pools.crypto.tricrypto2)).to.equal(true);
+      expect(await curveMetaRegistry.isPool(addresses.curve.pools.cryptofactory.palstkaave)).to.equal(true);
     });
 
     it('checks a non-valid Curve pool', async function () {
