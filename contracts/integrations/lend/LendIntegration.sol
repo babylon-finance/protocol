@@ -30,7 +30,6 @@ import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 
-
 /**
  * @title LendIntegration
  * @author Babylon Finance Protocol

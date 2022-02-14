@@ -309,53 +309,35 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ External Functions ============ */
 
-    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values)
-        external
-        override
-        
-    {
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _vaults.length; i++) {
             vaults[_vaults[i]] = _values[i];
         }
     }
 
-    function updateSynth(address[] calldata _synths, bool[] calldata _values)
-        external
-        override
-        
-    {
+    function updateSynth(address[] calldata _synths, bool[] calldata _values) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _synths.length; i++) {
             synths[_synths[i]] = _values[i];
         }
     }
 
-    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings)
-        external
-        override
-        
-    {
+    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _creamTokens.length; i++) {
             crTokenToAsset[_creamTokens[i]] = _underlyings[i];
         }
     }
 
-    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings)
-        external
-        override
-    {
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _aaveTokens.length; i++) {
             aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
         }
     }
 
-    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings)
-        external
-        override
-    {
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _cTokens.length; i++) {
             cTokenToAsset[_cTokens[i]] = _underlyings[i];

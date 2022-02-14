@@ -14,7 +14,7 @@
 
 pragma solidity 0.7.6;
 
-import { IBabController } from '../interfaces/IBabController.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
 
 library ControllerLib {
     /**
