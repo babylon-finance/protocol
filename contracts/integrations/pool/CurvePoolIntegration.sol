@@ -40,6 +40,7 @@ contract CurvePoolIntegration is PoolIntegration {
     /* ============ Constant ============ */
     address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
     address private constant cvxCRVPool = 0x9D0464996170c6B9e75eED71c68B99dDEDf279e8; // Pool only takes CRV for us
+    address private constant palstkaave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15; // Pool only takes CRV for us
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
 
@@ -129,7 +130,7 @@ contract CurvePoolIntegration is PoolIntegration {
             return result;
         }
         // cvxCRV
-        if (poolAddress == cvxCRVPool) {
+        if (poolAddress == cvxCRVPool || poolAddress == palstkaave) {
             result[0] = uint256(1e18);
             result[1] = 0;
             return result;
@@ -382,7 +383,7 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
         // For meta remove everything in the stable coin
-        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool) {
+        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool || _poolAddress == palstkaave) {
             return
                 abi.encodeWithSignature(
                     'remove_liquidity_one_coin(uint256,int128,uint256)',

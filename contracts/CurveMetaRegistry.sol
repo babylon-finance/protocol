@@ -27,6 +27,7 @@ import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressPr
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
 import {IFactoryRegistry} from './interfaces/external/curve/IFactoryRegistry.sol';
 import {ICryptoRegistry} from './interfaces/external/curve/ICryptoRegistry.sol';
+import {ICryptoFactoryRegistry} from './interfaces/external/curve/ICryptoFactoryRegistry.sol';
 
 /**
  * @title CurveMetaRegistry
@@ -57,7 +58,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     ICryptoRegistry public cryptoRegistry;
 
     // Registry of third party crypto pools
-    ICryptoRegistry public cryptoRegistryF;
+    ICryptoFactoryRegistry public cryptoRegistryF;
 
     // Mapping of pool to registryId
     mapping(address => uint8) public poolToRegistry;
@@ -85,7 +86,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
-        cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
+        cryptoRegistryF = ICryptoFactoryRegistry(curveAddressProvider.get_address(6));
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
         _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
@@ -113,7 +114,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
-        cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
+        cryptoRegistryF = ICryptoFactoryRegistry(curveAddressProvider.get_address(6));
         updatePoolsList();
     }
 
@@ -163,7 +164,17 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
                 return cryptoRegistry.get_coins(_pool);
             }
             if (registryKind == 4) {
-                return cryptoRegistryF.get_coins(_pool);
+                address[2] memory addressesCF = cryptoRegistryF.get_coins(_pool);
+                return [
+                    addressesCF[0],
+                    addressesCF[1],
+                    address(0),
+                    address(0),
+                    address(0),
+                    address(0),
+                    address(0),
+                    address(0)
+                ];
             }
         }
     }
@@ -190,7 +201,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         if (registryKind == 3) {
             return cryptoRegistry.get_n_coins(_pool);
         }
-        return cryptoRegistryF.get_n_coins(_pool);
+        // Crypto factory always two
+        return 2;
     }
 
     /**
@@ -209,7 +221,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             return cryptoRegistry.get_lp_token(_pool);
         }
         // Factory pools use the pool as the token
-        return _pool;
+        if (registryKind == 2) {
+          return _pool;
+        }
+        return cryptoRegistryF.get_token(_pool);
     }
 
     /**
