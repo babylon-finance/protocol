@@ -150,9 +150,11 @@ describe('YearnVaultIntegrationTest', function () {
     });
   });
   describe('enter and exits curve vaults', function () {
-    pick(GARDENS).forEach(({ token, name }) => {
+    pick(GARDENS.slice(0, 1)).forEach(({ token, name }) => {
       pick(
-        addresses.yearn.vaults.filter((y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000'),
+        addresses.yearn.vaults.filter(
+          (y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000' && !y.skipTest,
+        ),
       ).forEach((yvault) => {
         it(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
           await testVault(yvault, token, name, yvault.crvpool);
