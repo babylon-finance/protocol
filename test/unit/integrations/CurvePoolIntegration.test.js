@@ -138,7 +138,7 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pick(pools).forEach(({ name, pool }) => {
-      it.only(`can enter and exit the ${name} pool`, async function () {
+      it(`can enter and exit the ${name} pool`, async function () {
         await testCurvePool(name, pool);
       });
     });

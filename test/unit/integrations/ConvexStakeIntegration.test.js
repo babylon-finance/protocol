@@ -68,11 +68,7 @@ describe('ConvexStakeIntegrationTest', function () {
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
       pick(addresses.convex.pools).forEach(({ crvpool, cvxpool, name }) => {
-        it(`can enter ${name} CRV pool and stake into convex`, async function () {
-          // TODO: bump the block number to fix these tests
-          if (['y', 'tusd', 'busdv2'].includes(name)) {
-            return;
-          }
+        it.only(`can enter ${name} CRV pool and stake into convex`, async function () {
           await depositAndStakeStrategy(crvpool, cvxpool, token);
         });
       });

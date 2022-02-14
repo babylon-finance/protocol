@@ -22,6 +22,7 @@ import 'hardhat/console.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
+import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
 import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
 import {IFactoryRegistry} from './interfaces/external/curve/IFactoryRegistry.sol';
@@ -261,8 +262,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
         if (registryKind == 2) {
-          // Factory pools do not have the method
-          return 1e18;
+          // Factory registry do not have the method but pools do
+          return ICurvePoolV3(pool).get_virtual_price();
         }
         // TODO: Check crypto virtual price. It returns weird stuff
         // cryptoRegistry.get_virtual_price_from_lp_token(_lpToken);
