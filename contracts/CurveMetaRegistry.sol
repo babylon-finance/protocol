@@ -130,9 +130,17 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
                 return curveRegistry.get_underlying_coins(_pool);
             }
             if (registryKind == 2) {
-                return factoryRegistry.get_underlying_coins(_pool);
+                try factoryRegistry.get_underlying_coins(_pool) returns (address[8] memory coins) {
+                    return coins;
+                } catch {
+                    // try normal. Some pools revert
+                    _getUnderlying = false;
+                }
             }
-            revert('Crypto curve pools cannot use underlying');
+            if (registryKind > 2) {
+                // crypto pools only have normal
+                _getUnderlying = false;
+            }
         }
         if (!_getUnderlying) {
             if (registryKind == 1) {
@@ -166,7 +174,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      *
      * @return uint256                Number of coins in the pool
      */
-    function getNCoins(address _pool) external view override returns (uint256) {
+    function getNCoins(address _pool) public view override returns (uint256) {
         uint256 registryKind = poolToRegistry[_pool];
         if (registryKind == 1) {
             return curveRegistry.get_n_coins(_pool)[0];
@@ -211,19 +219,20 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * @return address                Address of the pool, 0 if it doesn't exist
      */
     function getPoolFromLpToken(address _lpToken) public view override returns (address) {
+        // Factory pools use the pool as the token
+        if (poolToRegistry[_lpToken] == 2 || poolToRegistry[_lpToken] == 4) {
+            return _lpToken;
+        }
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
         try curveRegistry.get_pool_from_lp_token(_lpToken) returns (address pool) {
-            return pool;
-        } catch {
-            try cryptoRegistry.get_pool_from_lp_token(_lpToken) returns (address pool2) {
-                return pool2;
-            } catch {
-                // Factory pools use the pool as the token
-                if (poolToRegistry[_lpToken] != 0) {
-                    return _lpToken;
-                }
-                return address(0);
+            if (pool != address(0)) {
+                return pool;
             }
+        } catch {}
+        try cryptoRegistry.get_pool_from_lp_token(_lpToken) returns (address pool2) {
+            return pool2;
+        } catch {
+            return address(0);
         }
     }
 
@@ -257,17 +266,20 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         if (registryKind == 1) {
             return curveRegistry.get_virtual_price_from_lp_token(_lpToken);
         }
+        if (registryKind == 2) {
+            // Factory registry do not have the method but pools do
+            return ICurvePoolV3(pool).get_virtual_price();
+        }
         // Special case tricrypto 2
         if (_lpToken == TRI_CURVE_POOL_2_LP) {
             return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
-        if (registryKind == 2) {
-          // Factory registry do not have the method but pools do
-          return ICurvePoolV3(pool).get_virtual_price();
+        // for crypto pools get directly from the pool the lp price
+        try ICurvePoolV3(pool).lp_price() returns (uint256 price) {
+            return price;
+        } catch {
+            return 0;
         }
-        // TODO: Check crypto virtual price. It returns weird stuff
-        // cryptoRegistry.get_virtual_price_from_lp_token(_lpToken);
-        return 0;
     }
 
     /**

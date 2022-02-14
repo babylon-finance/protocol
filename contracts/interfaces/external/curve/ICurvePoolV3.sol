@@ -25,6 +25,8 @@ interface ICurvePoolV3 {
 
     function get_virtual_price() external view returns (uint256);
 
+    function lp_price() external view returns (uint256);
+
     function lp_token() external view returns (address out);
 
     function token() external view returns (address out);

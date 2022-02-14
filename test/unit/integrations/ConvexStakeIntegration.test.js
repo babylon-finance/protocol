@@ -83,13 +83,8 @@ describe('ConvexStakeIntegrationTest', function () {
     const garden = await createGarden({ reserveAsset: token });
     const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
-    const crvAddressProvider = await ethers.getContractAt(
-      'ICurveAddressProvider',
-      '0x0000000022d53366457f9d5e68ec105046fc4383',
-    );
-    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
     const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
-    const crvLpToken = await getERC20(await crvRegistry.get_lp_token(crvpool));
+    const crvLpToken = await getERC20(await curveMetaRegistry.getLpToken(crvpool));
     const pid = (await convexStakeIntegration.getPid(cvxpool))[1].toNumber();
     const poolInfo = await convexBooster.poolInfo(pid);
     const convexRewardToken = await getERC20(poolInfo[3]);
