@@ -222,7 +222,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         // Factory pools use the pool as the token
         if (registryKind == 2) {
-          return _pool;
+            return _pool;
         }
         return cryptoRegistryF.get_token(_pool);
     }
