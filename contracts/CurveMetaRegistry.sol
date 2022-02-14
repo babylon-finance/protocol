@@ -85,10 +85,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
         cryptoRegistryF = ICryptoRegistry(curveAddressProvider.get_address(6));
-        _updateMapping(1, curveRegistry);
+        _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
         _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
-        _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
+        _updateMapping(1, curveRegistry);
     }
 
     /* ============ External Functions ============ */
@@ -98,10 +98,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      *
      */
     function updatePoolsList() public override onlyGovernanceOrEmergency {
-        _updateMapping(1, curveRegistry);
-        _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
-        _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
+        _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
+        _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
+        _updateMapping(1, curveRegistry);
     }
 
     /**
@@ -172,7 +172,6 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         if (registryKind == 2) {
             uint256 coins = factoryRegistry.get_n_coins(_pool);
-            console.log('coins', coins);
             if (coins == 0) {
                 // Try through meta
                 (coins, ) = factoryRegistry.get_meta_n_coins(_pool);
@@ -261,7 +260,10 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         if (_lpToken == TRI_CURVE_POOL_2_LP) {
             return IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price();
         }
-        // Factory pools do not have the method
+        if (registryKind == 2) {
+          // Factory pools do not have the method
+          return 1e18;
+        }
         // TODO: Check crypto virtual price. It returns weird stuff
         // cryptoRegistry.get_virtual_price_from_lp_token(_lpToken);
         return 0;
