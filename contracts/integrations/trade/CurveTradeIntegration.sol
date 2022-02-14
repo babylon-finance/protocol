@@ -57,6 +57,7 @@ contract CurveTradeIntegration is TradeIntegration {
     constructor(IBabController _controller, ICurveMetaRegistry _curveMetaRegistry)
         TradeIntegration('curve_trade', _controller)
     {
+        require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
         curveMetaRegistry = _curveMetaRegistry;
     }
 
