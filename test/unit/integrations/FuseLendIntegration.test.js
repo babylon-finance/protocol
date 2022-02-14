@@ -75,7 +75,7 @@ describe('FuseLendIntegrationTest', function () {
       await executeStrategy(strategyContract);
       await executeStrategy(strategyContract);
       await finalizeStrategy(strategyContract);
-      expect(await cDAI.balanceOf(strategyContract.address)).to.be.closeTo(0, eth().div(100));
+      expect(await cDAI.balanceOf(strategyContract.address)).to.be.closeTo(ethers.BigNumber.from(0), eth().div(100));
       expect(await cDAI.balanceOf(strategyContract.address)).to.be.lt(beforeCdai.div(1000));
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
     });
