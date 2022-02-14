@@ -35,7 +35,7 @@ import {ControllerLib} from './lib/ControllerLib.sol';
  * @title CurveMetaRegistry
  * @author Babylon Finance Protocol
  *
- * Abstraction for all the different curve registries
+ * Abstraction for all the different Curve registries
  */
 contract CurveMetaRegistry is ICurveMetaRegistry {
     using ControllerLib for IBabController;
