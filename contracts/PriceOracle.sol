@@ -47,6 +47,7 @@ import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
+import {ControllerLib} from './lib/ControllerLib.sol';
 
 /**
  * @title PriceOracle
@@ -59,6 +60,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Constants ============ */
 
@@ -100,17 +102,6 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     /* ============ Modifiers ============ */
 
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
-
     /* ============ Constructor ============ */
 
     constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) {
@@ -123,17 +114,20 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     /* ============ External Functions ============ */
 
-    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyGovernanceOrEmergency {
+    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override {
+        controller.onlyGovernanceOrEmergency();
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
         tokenIdentifier = _tokenIdentifier;
     }
 
-    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override onlyGovernanceOrEmergency {
+    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override {
+        controller.onlyGovernanceOrEmergency();
         require(_maxTwapDeviation < 1500, 'Max twap deviation must be within range');
         maxTwapDeviation = _maxTwapDeviation;
     }
 
-    function updateReserves(address[] memory list) public override onlyGovernanceOrEmergency {
+    function updateReserves(address[] memory list) public override {
+        controller.onlyGovernanceOrEmergency();
         _updateReserves(list);
     }
 

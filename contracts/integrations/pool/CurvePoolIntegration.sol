@@ -25,6 +25,7 @@ import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 /**
  * @title CurvePoolIntegration
@@ -36,6 +37,7 @@ contract CurvePoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Constant ============ */
     address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
@@ -92,7 +94,7 @@ contract CurvePoolIntegration is PoolIntegration {
         supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
         supportsUnderlyingParam[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
 
-        curveMetaRegistry = ICurveMetaRegistry(_curveMetaRegistry);
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /* ============ External Functions ============ */
@@ -102,7 +104,8 @@ contract CurvePoolIntegration is PoolIntegration {
      *
      * @param _curveMetaRegistry            Address of the curve meta registry
      */
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external onlyGovernanceOrEmergency {
+    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external {
+        controller.onlyGovernanceOrEmergency();
         require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
         curveMetaRegistry = _curveMetaRegistry;
     }

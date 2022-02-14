@@ -31,6 +31,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {LendIntegration} from './LendIntegration.sol';
 
@@ -44,6 +45,7 @@ contract CompoundLendIntegration is LendIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using UniversalERC20 for IERC20;
+    using ControllerLib for IBabController;
 
     /* ============ Constant ============ */
 
@@ -79,12 +81,14 @@ contract CompoundLendIntegration is LendIntegration {
     /* ============ External Functions ============ */
 
     // Governance function
-    function overrideMappings() external onlyGovernanceOrEmergency {
+    function overrideMappings() external {
+        controller.onlyGovernanceOrEmergency();
         _overrideMappings(comptroller);
     }
 
     // Governance function
-    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyGovernanceOrEmergency {
+    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external {
+        controller.onlyGovernanceOrEmergency();
         assetToCToken[_assetAddress] = _cTokenAddress;
     }
 
@@ -153,7 +157,7 @@ contract CompoundLendIntegration is LendIntegration {
     function _getRedeemCalldata(
         address, /* _strategy */
         address _assetToken,
-        uint256 _numTokensToSupply
+        uint256 _numTokensToReedem
     )
         internal
         view
@@ -165,7 +169,7 @@ contract CompoundLendIntegration is LendIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToSupply);
+        bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToReedem);
 
         return (assetToCToken[_assetToken], 0, methodData);
     }
