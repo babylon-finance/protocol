@@ -157,7 +157,7 @@ contract CompoundLendIntegration is LendIntegration {
     function _getRedeemCalldata(
         address, /* _strategy */
         address _assetToken,
-        uint256 _numTokensToSupply
+        uint256 _numTokensToReedem
     )
         internal
         view
@@ -169,7 +169,7 @@ contract CompoundLendIntegration is LendIntegration {
         )
     {
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToSupply);
+        bytes memory methodData = abi.encodeWithSignature('redeemUnderlying(uint256)', _numTokensToReedem);
 
         return (assetToCToken[_assetToken], 0, methodData);
     }

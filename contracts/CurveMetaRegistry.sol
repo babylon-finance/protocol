@@ -48,9 +48,9 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     address private constant TRI_CURVE_POOL_2_LP = 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff;
 
-    /* ============ State Variables ============ */
-
     IBabController public immutable controller;
+
+    /* ============ State Variables ============ */
 
     // Registry of first party pools
     ICurveRegistry public curveRegistry;
@@ -83,6 +83,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
         cryptoRegistryF = ICryptoFactoryRegistry(curveAddressProvider.get_address(6));
+
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
         _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));

@@ -30,6 +30,7 @@ import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 
+
 /**
  * @title LendIntegration
  * @author Babylon Finance Protocol
@@ -150,7 +151,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        // not needed for eth
+        // not needed for ETH
         if (_assetToken != address(0)) {
             investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
         }
