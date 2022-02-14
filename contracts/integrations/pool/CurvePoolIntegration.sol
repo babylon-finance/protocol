@@ -383,7 +383,7 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
         // For meta remove everything in the stable coin
-        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool || _poolAddress == palstkaave) {
+        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool) {
             return
                 abi.encodeWithSignature(
                     'remove_liquidity_one_coin(uint256,int128,uint256)',
@@ -403,6 +403,15 @@ contract CurvePoolIntegration is PoolIntegration {
                         true
                     );
             } else {
+                if (_poolAddress == palstkaave) {
+                  return
+                      abi.encodeWithSignature(
+                          'remove_liquidity_one_coin(uint256,uint256,uint256)',
+                          _poolTokensIn,
+                          uint256(0),
+                          _minAmountsOut[0]
+                      );
+                }
                 return
                     abi.encodeWithSignature(
                         'remove_liquidity(uint256,uint256[2])',

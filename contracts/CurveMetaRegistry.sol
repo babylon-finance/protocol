@@ -18,7 +18,6 @@
 
 pragma solidity 0.7.6;
 
-import 'hardhat/console.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
@@ -59,6 +58,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     // Registry of third party crypto pools
     ICryptoFactoryRegistry public cryptoRegistryF;
+
+    mapping(address => address) public cryptoFactoryLpTokenToPools;
 
     // Mapping of pool to registryId
     mapping(address => uint8) public poolToRegistry;
@@ -235,8 +236,12 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      */
     function getPoolFromLpToken(address _lpToken) public view override returns (address) {
         // Factory pools use the pool as the token
-        if (poolToRegistry[_lpToken] == 2 || poolToRegistry[_lpToken] == 4) {
+        if (poolToRegistry[_lpToken] == 2) {
             return _lpToken;
+        }
+        address cryptoFactoryPool = cryptoFactoryLpTokenToPools[_lpToken];
+        if (cryptoFactoryPool != address(0)) {
+          return cryptoFactoryPool;
         }
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
         try curveRegistry.get_pool_from_lp_token(_lpToken) returns (address pool) {
@@ -412,7 +417,12 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     // Function to the update the registry mappings
     function _updateMapping(uint8 _index, ICurveRegistry _registry) internal {
         for (uint256 i = 0; i < _registry.pool_count(); i++) {
-            poolToRegistry[_registry.pool_list(i)] = _index;
+            address pool = _registry.pool_list(i);
+            poolToRegistry[pool] = _index;
+            // Adds lptoken to pool for cryptofactory pools
+            if (_index == 4) {
+              cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
+            }
         }
     }
 }
