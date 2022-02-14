@@ -132,7 +132,7 @@ describe('YearnVaultIntegrationTest', function () {
     const executionTokenBalance = await tokenContract.balanceOf(garden.address);
     expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
       expectedShares,
-      expectedShares.div(33), // 3% precision
+      expectedShares.div(25), // 4% precision
     );
 
     await finalizeStrategy(strategyContract, 0);
