@@ -1216,8 +1216,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
-            slippage = slippage.add(
-                block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
+            slippage = slippage.add(block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
             _require(
                 _pricePerShare > lastPricePerShare
                     ? _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage)
