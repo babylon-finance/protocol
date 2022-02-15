@@ -298,6 +298,7 @@ describe('Garden', function () {
       expect(profitSharing[1]).to.equal(PROFIT_STEWARD_SHARE);
       expect(profitSharing[2]).to.equal(PROFIT_LP_SHARE);
     });
+
     it('should fail if trying to set garden profit sharing params by non-contract account', async function () {
       // TODO CHECK all require at modifier
       await expect(
@@ -309,102 +310,32 @@ describe('Garden', function () {
         ),
       ).to.be.reverted;
     });
+
+    async function testPublicSharing(shares) {
+      const newGarden = await createGarden({ publicSharing: shares });
+      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
+
+      expect(profitSharing[0]).to.equal(shares[0]);
+      expect(profitSharing[1]).to.equal(shares[1]);
+      expect(profitSharing[2]).to.equal(shares[2]);
+    }
+
     it('only the protocol should be able to custom garden profit sharing (95% to LP) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0'), eth('0'), eth('0.95')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0'));
-      expect(profitSharing[1]).to.equal(eth('0'));
-      expect(profitSharing[2]).to.equal(eth('0.95'));
+      await testPublicSharing([eth(0), eth(0), eth(0.95)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (95% to Stewards) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0'), eth('0.95'), eth('0')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0'));
-      expect(profitSharing[1]).to.equal(eth('0.95'));
-      expect(profitSharing[2]).to.equal(eth('0'));
+      await testPublicSharing([eth(0), eth(0.95), eth(0)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (95% to Strategist) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0.95'), eth('0'), eth('0')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0.95'));
-      expect(profitSharing[1]).to.equal(eth('0'));
-      expect(profitSharing[2]).to.equal(eth('0'));
+      await testPublicSharing([eth(0.95), eth(0), eth(0)]);
     });
+
     it('only the protocol should be able to custom garden profit sharing (15% , 40%, 40%) while creation', async function () {
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.WETH,
-          'New Garden',
-          'NEWG',
-          'http...',
-          0,
-          GARDEN_PARAMS,
-          eth(),
-          [false, false, false],
-          [eth('0.15'), eth('0.40'), eth('0.40')],
-          {
-            value: eth(),
-          },
-        );
-      const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[4]);
-      const profitSharing = await rewardsDistributor.getGardenProfitsSharing(newGarden.address);
-      expect(profitSharing[0]).to.equal(eth('0.15'));
-      expect(profitSharing[1]).to.equal(eth('0.40'));
-      expect(profitSharing[2]).to.equal(eth('0.40'));
+      await testPublicSharing([eth(0.15), eth(0.4), eth(0.4)]);
     });
+
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation', async function () {
       await expect(
         babController
@@ -1287,111 +1218,61 @@ describe('Garden', function () {
 
   describe('deposit', async function () {
     it('a contributor can make an initial deposit and withdraw with DAI', async function () {
-      const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
-      const whaleSigner = await impersonateAddress(whaleAddress);
-      await dai.connect(whaleSigner).transfer(signer1.address, eth('1000'), {
+      const amountIn = eth(1000);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await dai.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
       });
-      await dai.connect(whaleSigner).transfer(signer3.address, eth('1000'), {
-        gasPrice: 0,
-      });
-      await dai.connect(signer1).approve(babController.address, eth('1000'), {
-        gasPrice: 0,
-      });
 
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.DAI,
-          'Absolute DAI Return [beta]',
-          'EYFA',
-          'http...',
-          0,
-          GARDEN_PARAMS_STABLE,
-          eth('100'),
-          [false, false, false],
-          [0, 0, 0],
-          {},
-        );
-      const gardens = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens[4]);
-      expect(await daiGarden.totalContributors()).to.equal(1);
+      const gardenBalance = await dai.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
 
-      const gardenBalance = await dai.balanceOf(daiGarden.address);
-      const supplyBefore = await daiGarden.totalSupply();
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
 
-      await mardukGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
-      await dai.connect(signer3).approve(daiGarden.address, eth('1000'), { gasPrice: 0 });
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
 
-      await daiGarden.connect(signer3).deposit(eth(1000), eth(1000), signer3.getAddress(), false);
-      const gardenBalanceAfter = await dai.balanceOf(daiGarden.address);
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
 
-      // await daiGarden.connect(keeper).processDeposit(signer3.address, eth());
+      const gardenBalanceAfter = await dai.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
 
-      const supplyAfter = await daiGarden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(eth('1000'), eth('0.1'));
-
-      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(eth('1000'));
-      expect(await daiGarden.totalContributors()).to.equal(2);
-
-      ethers.provider.send('evm_increaseTime', [1]);
-
-      await daiGarden
-        .connect(signer3)
-        .withdraw(await daiGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
-
-      expect(await daiGarden.totalContributors()).to.equal(1);
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
     });
 
     it('a contributor can make an initial deposit and withdraw with USDC', async function () {
-      const whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503'; // Has USDC
-      const whaleSigner = await impersonateAddress(whaleAddress);
-      const thousandUSDC = ethers.BigNumber.from(1000 * 1000000);
-      await usdc.connect(whaleSigner).transfer(signer1.address, thousandUSDC, {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn, {
         gasPrice: 0,
       });
-      await usdc.connect(whaleSigner).transfer(signer3.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      await usdc.connect(signer1).approve(babController.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      const params = [...GARDEN_PARAMS_STABLE];
-      params[3] = thousandUSDC.div(10);
-      await babController
-        .connect(signer1)
-        .createGarden(
-          addresses.tokens.USDC,
-          'Absolute USDC Return [beta]',
-          'EYFA',
-          'http...',
-          0,
-          params,
-          thousandUSDC.div(10),
-          [false, false, false],
-          [0, 0, 0],
-          {},
-        );
-      const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[4]);
-      expect(await usdcGarden.totalContributors()).to.equal(1);
-      const gardenBalance = await usdc.balanceOf(usdcGarden.address);
-      const supplyBefore = await usdcGarden.totalSupply();
-      await mardukGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
-      await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, {
-        gasPrice: 0,
-      });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC, eth(1000), signer3.getAddress(), false);
-      const gardenBalanceAfter = await usdc.balanceOf(usdcGarden.address);
-      const supplyAfter = await usdcGarden.totalSupply();
-      expect(supplyAfter.sub(supplyBefore)).to.be.closeTo(eth('1000'), eth('0.1'));
-      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(thousandUSDC);
-      expect(await usdcGarden.totalContributors()).to.equal(2);
-      ethers.provider.send('evm_increaseTime', [1]);
-      await usdcGarden
-        .connect(signer3)
-        .withdraw(await usdcGarden.balanceOf(signer3.address), 1, signer3.getAddress(), false, ADDRESS_ZERO);
-      expect(await usdcGarden.totalContributors()).to.equal(1);
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(signer3.address);
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
+
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
     });
 
     describe('mint NFT', async function () {

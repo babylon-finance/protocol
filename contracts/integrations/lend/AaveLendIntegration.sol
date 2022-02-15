@@ -77,6 +77,11 @@ contract AaveLendIntegration is LendIntegration {
         return AAVE;
     }
 
+    function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
+        (, , uint256 collateral, , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
+        return collateral.mul(1e14);
+    }
+
     function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
         return IStakedAave(stkAAVE).stakerRewardsToClaim(_strategy);
     }

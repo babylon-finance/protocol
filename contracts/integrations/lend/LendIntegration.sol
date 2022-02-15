@@ -84,6 +84,10 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         return _getInvestmentToken(_assetToken);
     }
 
+    function getCollateralFactor(address _assetToken) external view override returns (uint256) {
+        return _getCollateralFactor(_assetToken);
+    }
+
     /**
      * Returns the reward token
      *
@@ -146,7 +150,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
 
-        // not needed for eth
+        // not needed for ETH
         if (_assetToken != address(0)) {
             investmentInfo.strategy.invokeApprove(_getSpender(_assetToken), _assetToken, _numTokensToSupply);
         }
@@ -413,6 +417,8 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
     ) internal view virtual returns (address);
 
     function _getRewardToken() internal view virtual returns (address);
+
+    function _getCollateralFactor(address _asset) internal view virtual returns (uint256);
 
     function _getRewardsAccrued(address _strategy) internal view virtual returns (uint256);
 

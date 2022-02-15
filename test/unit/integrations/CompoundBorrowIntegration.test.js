@@ -1,5 +1,4 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
 const {
   createStrategy,
   executeStrategy,
@@ -54,12 +53,12 @@ describe('CompoundBorrowIntegrationTest', function () {
     const amount = STRATEGY_EXECUTE_MAP[token];
     await executeStrategy(strategyContract, { amount });
     // Check NAV
-    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(50));
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(20));
 
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
 
-    expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, asset2.address)).to.be.gt(0);
+    expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, asset2Address)).to.be.gt(0);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract);
 
@@ -205,21 +204,31 @@ describe('CompoundBorrowIntegrationTest', function () {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
       });
+
       it(`can supply WBTC and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WBTC, DAI, token);
       });
+
       it(`can supply USDC and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(USDC, DAI, token);
       });
+
+      it(`can supply DAI and borrow ETH at Compound in a ${name} Garden`, async function () {
+        await supplyBorrowStrategy(DAI, WETH, token);
+      });
+
       it(`can supply WETH and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
+
       it(`should fail trying to supply DAI and borrow DAI at Compound in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
       });
+
       it(`should fail trying to supply WETH and borrow WETH at Compound in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
       });
+
       it(`should fail trying to supply USDC and borrow USDC at Compound in a ${name} Garden`, async function () {
         await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });

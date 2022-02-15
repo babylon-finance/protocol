@@ -11,20 +11,23 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'CurveTradeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
 
+  const curveMetaRegistry = await deployments.get('CurveMetaRegistry');
+
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, curveMetaRegistry.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
+
   if (deployment.newlyDeployed) {
     console.log(`Adding curve trade integration ${contract}(${deployment.address})`);
   }
+
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }

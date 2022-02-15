@@ -78,6 +78,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event UniswapFactoryChanged(address indexed _newUniswapFactory, address _oldUniswapFactory);
     event GardenNFTChanged(address indexed _newGardenNFT, address _oldStrategyNFT);
     event StrategyNFTChanged(address indexed _newStrategyNFT, address _oldStrategyNFT);
+    event HeartChanged(address indexed _newHeart, address _oldHeart);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -173,11 +174,14 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+
     address public override mardukGate;
+    address public override heart;
+    address public override curveMetaRegistry;
 
     /* ============ Constants ============ */
 
-    address public constant override EMERGENCY_OWNER = 0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9;
+    address public constant override EMERGENCY_OWNER = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
     uint8 public constant MAX_OPERATIONS = 20;
@@ -187,7 +191,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     /**
      * Initializes the initial fee recipient on deployment.
      */
-    function initialize() public {
+    function initialize() public initializer {
         OwnableUpgradeable.__Ownable_init();
 
         // vars init values has to be set in initialize due to how upgrade proxy pattern works
@@ -343,9 +347,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
         reserveAssets.push(_reserveAsset);
-        if (priceOracle != address(0)) {
-            IPriceOracle(priceOracle).updateReserves();
-        }
         emit ReserveAssetAdded(_reserveAsset);
     }
 
@@ -358,9 +359,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
-        if (priceOracle != address(0)) {
-            IPriceOracle(priceOracle).updateReserves();
-        }
         emit ReserveAssetRemoved(_reserveAsset);
     }
 
@@ -401,6 +399,31 @@ contract BabController is OwnableUpgradeable, IBabController {
         treasury = _newTreasury;
 
         emit TreasuryChanged(_newTreasury, oldTreasury);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the heart contract
+     *
+     * @param _newHeart      Address of the new heart
+     */
+    function editHeart(address _newHeart) external override onlyGovernanceOrEmergency {
+        require(_newHeart != address(0), 'Address must not be 0');
+
+        address oldHeart = heart;
+        heart = _newHeart;
+
+        emit HeartChanged(_newHeart, oldHeart);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the curve meta registry
+     *
+     * @param _curveMetaRegistry      Address of the new curve meta registry
+     */
+    function editCurveMetaRegistry(address _curveMetaRegistry) external override onlyGovernanceOrEmergency {
+        require(_curveMetaRegistry != address(0), 'Address must not be 0');
+
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /**
@@ -671,4 +694,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV11 is BabController {}
+contract BabControllerV13 is BabController {}

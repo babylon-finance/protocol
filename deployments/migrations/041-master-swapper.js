@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'MasterSwapper';
 
   const controller = await getController();
@@ -24,12 +23,12 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, curve.address, univ3.address, synthetix.address, univ2.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log('Setting master swapper in controller', deployment.address);
-    await (await controller.setMasterSwapper(deployment.address, { gasPrice })).wait();
+    await (await controller.setMasterSwapper(deployment.address, { ...(await getGasPrice()) })).wait();
   }
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));

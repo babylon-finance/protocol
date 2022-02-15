@@ -13,7 +13,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'UniswapV3TradeIntegration';
 
   const controller = await getController();
@@ -22,7 +21,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (network.live && deployment.newlyDeployed) {

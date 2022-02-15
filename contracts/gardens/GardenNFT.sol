@@ -42,7 +42,7 @@ contract GardenNFT is ERC721, IGardenNFT {
 
     modifier onlyGarden {
         require(
-            controller.isSystemContract(msg.sender) && IGarden(msg.sender).controller() == address(controller),
+            controller.isSystemContract(msg.sender) && IGarden(msg.sender).controller() == controller,
             'Only the garden can mint the NFT'
         );
         _;

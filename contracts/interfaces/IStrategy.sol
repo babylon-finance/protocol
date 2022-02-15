@@ -45,7 +45,9 @@ interface IStrategy {
         uint256 fee
     ) external;
 
-    function updateParams(uint256[4] calldata _params) external;
+    function updateParams(uint256[5] calldata _params) external;
+
+    function sweep(address _token, uint256 _newSlippage) external;
 
     function setData(
         uint8[] calldata _opTypes,
@@ -70,7 +72,11 @@ interface IStrategy {
             bytes memory
         );
 
-    function finalizeStrategy(uint256 fee, string memory _tokenURI) external;
+    function finalizeStrategy(
+        uint256 fee,
+        string memory _tokenURI,
+        uint256 _minReserveOut
+    ) external;
 
     function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external;
 
@@ -90,6 +96,13 @@ interface IStrategy {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken
+    ) external returns (uint256);
+
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _overrideSlippage
     ) external returns (uint256);
 
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
