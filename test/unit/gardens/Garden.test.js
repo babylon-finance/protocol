@@ -77,7 +77,7 @@ describe('Garden', function () {
   let wbtc;
 
   async function deleteCandidateStrategies(community) {
-    const garden = await ethers.getContractAt('Garden', community);
+    const garden = await ethers.getContractAt('IGarden', community);
     // As the disabled garden has still 2 candidate strategies, we need to expire them before removing the garden
     const strategies = await garden.getStrategies();
     for (let i = 0; i < strategies.length; i++) {
@@ -356,6 +356,7 @@ describe('Garden', function () {
           ),
       ).to.be.revertedWith('BAB#092');
     });
+
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation', async function () {
       await expect(
         babController
@@ -376,6 +377,7 @@ describe('Garden', function () {
           ),
       ).to.be.revertedWith('BAB#092');
     });
+
     it('should fail if the protocol try a custom profit sharing which sum is below 95% while creation (by decimal difference)', async function () {
       await expect(
         babController
@@ -396,6 +398,7 @@ describe('Garden', function () {
           ),
       ).to.be.revertedWith('BAB#092');
     });
+
     it('should fail if the protocol try a custom profit sharing which sum is above 95% while creation (by decimal difference)', async function () {
       await expect(
         babController
@@ -417,6 +420,7 @@ describe('Garden', function () {
       ).to.be.revertedWith('BAB#092');
     });
   });
+
   describe('withdrawBySig', async function () {
     it('can withdraw', async function () {
       let amountIn = from(1000 * 1e6);

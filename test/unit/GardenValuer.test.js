@@ -94,12 +94,9 @@ describe('GardenValuer', function () {
     });
 
     it('accounts for the keeper debt', async function () {
-      console.log('createGarden');
       const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
-      console.log('getStrategy');
       const strategy = await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.USDT, 0] });
 
-      console.log('execute');
       await executeStrategy(strategy, { fee: eth(2000), amount: eth(12000), time: ONE_DAY_IN_SECONDS });
 
       const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.DAI);
