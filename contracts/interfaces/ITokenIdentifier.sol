@@ -31,7 +31,11 @@ import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
 interface ITokenIdentifier {
     /* ============ Functions ============ */
 
-    function identifyTokens(address _tokenIn, address _tokenOut, ICurveMetaRegistry _curveMetaRegistry)
+    function identifyTokens(
+        address _tokenIn,
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
+    )
         external
         view
         returns (

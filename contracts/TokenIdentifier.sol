@@ -350,7 +350,11 @@ contract TokenIdentifier is ITokenIdentifier {
      * @param _tokenOut             Address of the second token
      * @return (uint8,uint8)        Types of both tokens
      */
-    function identifyTokens(address _tokenIn, address _tokenOut, ICurveMetaRegistry _curveMetaRegistry)
+    function identifyTokens(
+        address _tokenIn,
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
+    )
         external
         view
         override
