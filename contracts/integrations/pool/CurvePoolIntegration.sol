@@ -45,20 +45,20 @@ contract CurvePoolIntegration is PoolIntegration {
     address private constant palstkaave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15; // Pool only takes CRV for us
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
+    ICurveMetaRegistry private immutable curveMetaRegistry;
 
     /* ============ State Variables ============ */
 
     // Registry of first party pools
-    ICurveMetaRegistry public curveMetaRegistry;
 
     // Mapping of pools to deposit contract
-    mapping(address => address) public poolToDeposit;
+    mapping(address => address) private poolToDeposit;
 
     // Whether to deposit using the underlying coins
-    mapping(address => bool) public usesUnderlying;
+    mapping(address => bool) private usesUnderlying;
 
     // Whether it supports the underlying param in add liquidity and remove liquidity
-    mapping(address => bool) public supportsUnderlyingParam;
+    mapping(address => bool) private supportsUnderlyingParam;
 
     /* ============ Constructor ============ */
 
@@ -72,6 +72,7 @@ contract CurvePoolIntegration is PoolIntegration {
     {
         require(address(_controller) != address(0), 'invalid address');
         require(address(_curveMetaRegistry) != address(0), 'invalid address');
+
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
         usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt
@@ -99,17 +100,6 @@ contract CurvePoolIntegration is PoolIntegration {
     }
 
     /* ============ External Functions ============ */
-
-    /**
-     * Updates the curve meta registry
-     *
-     * @param _curveMetaRegistry            Address of the curve meta registry
-     */
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external {
-        controller.onlyGovernanceOrEmergency();
-        require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
-        curveMetaRegistry = _curveMetaRegistry;
-    }
 
     function getPoolTokens(bytes calldata _pool, bool forNAV) public view override returns (address[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);

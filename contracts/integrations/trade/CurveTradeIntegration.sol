@@ -42,9 +42,9 @@ contract CurveTradeIntegration is TradeIntegration {
 
     /* ============ State Variables ============ */
 
-    ICurveMetaRegistry public curveMetaRegistry;
-
     /* ============ Constants ============ */
+
+    ICurveMetaRegistry private immutable curveMetaRegistry;
 
     /* ============ Constructor ============ */
 
@@ -57,17 +57,6 @@ contract CurveTradeIntegration is TradeIntegration {
     constructor(IBabController _controller, ICurveMetaRegistry _curveMetaRegistry)
         TradeIntegration('curve_trade', _controller)
     {
-        require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
-        curveMetaRegistry = _curveMetaRegistry;
-    }
-
-    /**
-     * Updates the curve meta registry
-     *
-     * @param _curveMetaRegistry            Address of the curve meta registry
-     */
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external {
-        controller.onlyGovernanceOrEmergency();
         require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
         curveMetaRegistry = _curveMetaRegistry;
     }
