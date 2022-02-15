@@ -17,33 +17,41 @@
 */
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IStETH} from '../../interfaces/external/lido/IStETH.sol';
-import {IWstETH} from '../../interfaces/external/lido/IWstETH.sol';
+import {IrETH2} from '../../interfaces/external/stakewise/IrETH2.sol';
 
 /**
- * @title LidoStakeIntegration
+ * @title StakewiseIntegration
  * @author Babylon Finance Protocol
  *
  * Lido Integration
  */
-contract LidoStakeIntegration is PassiveIntegration {
+contract StakewiseIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
 
-    IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-    IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    address private constant curveSteth = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    IERC20 private constant stETH2 = IERC20(0xC874b064f465bdD6411D45734b56fac750Cda29A);
+    IrETH2 private constant rETH2 = IrETH2(0x20BC832ca081b91433ff6c17f85701B6e92486c5);
+    // uint256 private constant INSTANT_LIMIT = 321e18; // 32 ETH
+    // address private constant stakeWisePool = 0xc874b064f465bdd6411d45734b56fac750cda29a;
+
+    uint24 private constant FEE_LOW = 500;
+    uint24 private constant FEE_MEDIUM = 3000;
+
+    // Address of Uniswap V3 SwapRouter contract
+    address private constant swapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     /* ============ Constructor ============ */
 
@@ -52,39 +60,34 @@ contract LidoStakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('lidostaking', _controller) {}
+    constructor(IBabController _controller) PassiveIntegration('stakewise', _controller) {}
 
     /* ============ Internal Functions ============ */
 
-    function _getSpender(address _asset, uint8 _op) internal pure override returns (address) {
-        if (_op == 1) {
-            return curveSteth;
-        }
-        return _asset;
+    function _getSpender(
+        address, /* _asset */
+        uint8 /* _op */
+    ) internal pure override returns (address) {
+        return swapRouter;
     }
 
-    function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        uint256 shares = stETH.getSharesByPooledEth(_amount);
-        if (_asset == address(wstETH)) {
-            return wstETH.getWstETHByStETH(shares);
-        }
-        return shares;
+    function _getExpectedShares(
+        address, /* _asset */
+        uint256 _amount
+    ) internal view override returns (uint256) {
+        return _amount;
     }
 
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        uint256 shares = 1e18;
-        // wrapped steth
-        if (_asset == address(wstETH)) {
-            shares = wstETH.getStETHByWstETH(shares);
-        }
-        return stETH.getPooledEthByShares(shares);
+    function _getPricePerShare(
+        address /* _asset */
+    ) internal view override returns (uint256) {
+        return 1e18;
     }
 
     function _getInvestmentAsset(
         address /* _asset */
     ) internal pure override returns (address) {
-        // Both take ETH
-        return address(0);
+        return WETH;
     }
 
     /**
@@ -101,9 +104,9 @@ contract LidoStakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address, /* _strategy */
-        address _asset,
-        uint256, /* _investmentTokensOut */
+        address _strategy,
+        address, /* _asset */
+        uint256 _investmentTokensOut,
         address, /* _tokenIn */
         uint256 _maxAmountIn
     )
@@ -116,16 +119,15 @@ contract LidoStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        // Encode method data for Garden to invoke
-        bytes memory methodData;
-        if (_asset == address(stETH)) {
-            methodData = abi.encodeWithSignature('submit(address)', controller.treasury());
-        } else {
-            // wstETH is just a raw transfer and does both
-            methodData = bytes('');
-        }
+        // Buy on univ3 directly
+        bytes memory path = abi.encodePacked(WETH, FEE_MEDIUM, address(stETH2));
+        ISwapRouter.ExactInputParams memory params =
+            ISwapRouter.ExactInputParams(path, _strategy, block.timestamp, _maxAmountIn, _investmentTokensOut);
 
-        return (_asset, _maxAmountIn, methodData);
+        // Buy sETH2 on univ3
+        bytes memory methodData =
+            abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
+        return (swapRouter, 0, methodData);
     }
 
     /**
@@ -140,13 +142,13 @@ contract LidoStakeIntegration is PassiveIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPreActionCallData(
-        address _asset,
+        address, /* _asset */
         uint256 _amount,
         uint256 _op,
-        address /* _strategy */
+        address _strategy
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -154,10 +156,22 @@ contract LidoStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        if (_op == 1 && _asset == address(wstETH)) {
-            // Exit 0p && wsteth need to unwrap before redeeming
-            bytes memory methodData = abi.encodeWithSignature('unwrap(uint256)', _amount);
-            return (address(wstETH), 0, methodData);
+        // Sell rETH2 on exit
+        if (_op == 1) {
+            bytes memory path = abi.encodePacked(address(rETH2), FEE_LOW, address(stETH2));
+            ISwapRouter.ExactInputParams memory params =
+                ISwapRouter.ExactInputParams(
+                    path,
+                    _strategy,
+                    block.timestamp,
+                    _amount,
+                    _amount.preciseMul(98e16) // 2% slippage
+                );
+
+            // Sell rETH2 on univ3
+            bytes memory methodData =
+                abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
+            return (swapRouter, 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -166,7 +180,7 @@ contract LidoStakeIntegration is PassiveIntegration {
      * Return exit investment calldata which is already generated from the investment API
      *
      * hparam  _strategy                       Address of the strategy
-     * hparam  _asset              Address of the investment
+     * hparam  _asset                          Address of the investment
      * @param  _investmentTokensIn             Amount of investment tokens to receive
      * hparam  _tokenOut                       Addresses of tokens to receive
      * hparam  _minAmountOut                   Amounts of investment tokens to receive
@@ -176,14 +190,14 @@ contract LidoStakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address, /* _strategy */
+        address _strategy,
         address, /* _asset */
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
-        uint256 /* _minAmountOut */
+        uint256 _minAmountOut
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -191,20 +205,24 @@ contract LidoStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        // Encode method data for Garden to invoke
+        bytes memory path = abi.encodePacked(address(stETH2), FEE_MEDIUM, WETH);
+        ISwapRouter.ExactInputParams memory params =
+            ISwapRouter.ExactInputParams(path, _strategy, block.timestamp, _investmentTokensIn, _minAmountOut);
+
+        // Sell sETH2 on univ3
         bytes memory methodData =
-            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', 1, 0, _investmentTokensIn, 1);
-        // Need to swap via curve. Lido doesn't implement withdraw yet
-        return (curveSteth, 0, methodData);
+            abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
+        return (swapRouter, 0, methodData);
     }
 
     function _preActionNeedsApproval() internal pure override returns (bool) {
         return true;
     }
 
-    function _getAssetAfterExitPreAction(
-        address /* _asset */
-    ) internal pure override returns (address) {
-        return address(stETH);
+    function _getRewards(
+        address _strategy,
+        address //_investmentAddress
+    ) internal view override returns (address, uint256) {
+        return (address(rETH2), rETH2.balanceOf(_strategy));
     }
 }
