@@ -42,7 +42,7 @@ contract StakewiseIntegration is PassiveIntegration {
 
     /* ============ State Variables ============ */
 
-    IERC20 private constant stETH2 = IERC20(0xC874b064f465bdD6411D45734b56fac750Cda29A);
+    IERC20 private constant sETH2 = IERC20(0xC874b064f465bdD6411D45734b56fac750Cda29A);
     IrETH2 private constant rETH2 = IrETH2(0x20BC832ca081b91433ff6c17f85701B6e92486c5);
     // uint256 private constant INSTANT_LIMIT = 321e18; // 32 ETH
     // address private constant stakeWisePool = 0xc874b064f465bdd6411d45734b56fac750cda29a;
@@ -120,7 +120,7 @@ contract StakewiseIntegration is PassiveIntegration {
         )
     {
         // Buy on univ3 directly
-        bytes memory path = abi.encodePacked(WETH, FEE_MEDIUM, address(stETH2));
+        bytes memory path = abi.encodePacked(WETH, FEE_MEDIUM, address(sETH2));
         ISwapRouter.ExactInputParams memory params =
             ISwapRouter.ExactInputParams(path, _strategy, block.timestamp, _maxAmountIn, _investmentTokensOut);
 
@@ -158,7 +158,7 @@ contract StakewiseIntegration is PassiveIntegration {
     {
         // Sell rETH2 on exit
         if (_op == 1) {
-            bytes memory path = abi.encodePacked(address(rETH2), FEE_LOW, address(stETH2));
+            bytes memory path = abi.encodePacked(address(rETH2), FEE_LOW, address(sETH2));
             ISwapRouter.ExactInputParams memory params =
                 ISwapRouter.ExactInputParams(
                     path,
@@ -205,7 +205,7 @@ contract StakewiseIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        bytes memory path = abi.encodePacked(address(stETH2), FEE_MEDIUM, WETH);
+        bytes memory path = abi.encodePacked(address(sETH2), FEE_MEDIUM, WETH);
         ISwapRouter.ExactInputParams memory params =
             ISwapRouter.ExactInputParams(path, _strategy, block.timestamp, _investmentTokensIn, _minAmountOut);
 
