@@ -350,7 +350,7 @@ contract TokenIdentifier is ITokenIdentifier {
      * @param _tokenOut             Address of the second token
      * @return (uint8,uint8)        Types of both tokens
      */
-    function identifyTokens(address _tokenIn, address _tokenOut)
+    function identifyTokens(address _tokenIn, address _tokenOut, ICurveMetaRegistry _curveMetaRegistry)
         external
         view
         override
@@ -406,12 +406,11 @@ contract TokenIdentifier is ITokenIdentifier {
         }
 
         // Curve LP Token
-        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
-        address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+        address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenIn);
         if (crvPool != address(0)) {
             tokenInType = CURVE_LP_TOKEN;
         }
-        crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+        crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenOut);
         if (crvPool != address(0)) {
             tokenOutType = CURVE_LP_TOKEN;
         }

@@ -194,10 +194,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
         _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
 
-        uint256 exchangeRate;
+        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
-            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
+            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut, curveMetaRegistry);
+
         // Comp assets
+        uint256 exchangeRate;
         if (tokenInType == 1) {
             exchangeRate = getCompoundExchangeRate(_tokenIn, _finalAssetIn);
             return getPrice(_finalAssetIn, _tokenOut).preciseMul(exchangeRate);
@@ -240,8 +242,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        // Curve LP tokens
-        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         if (tokenInType == 5) {
             address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
             if (crvPool != address(0)) {
