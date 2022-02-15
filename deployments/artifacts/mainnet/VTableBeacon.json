@@ -1,0 +1,246 @@
+{
+  "address": "0xaAaCb63Ab80969af93b811DEB81dDEB4C8710591",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "oldImplementation",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "VTableUpdate",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "",
+          "type": "bytes4"
+        }
+      ],
+      "name": "delegates",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "_selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "implementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "module",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes4[]",
+              "name": "selectors",
+              "type": "bytes4[]"
+            }
+          ],
+          "internalType": "struct VTableBeacon.ModuleDefinition[]",
+          "name": "modules",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "updateVTable",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xbe041620db1dd069572ec7bbf6dc0772962d9d3bff99d76c218f34a6f7092174",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0xaAaCb63Ab80969af93b811DEB81dDEB4C8710591",
+    "transactionIndex": 178,
+    "gasUsed": "524624",
+    "logsBloom": "0x00000000080000000000000000000000000000000000000000800000000000800000000000000000000000000000000000200000000000000000000000000000000000000000100000000000000000000001000000000000000000000000000000000000020000000000000000000800000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x3bf8c761e1cde4cad5b1754b91073850803aacec0311c8f161fe620ba026e884",
+    "transactionHash": "0xbe041620db1dd069572ec7bbf6dc0772962d9d3bff99d76c218f34a6f7092174",
+    "logs": [
+      {
+        "transactionIndex": 178,
+        "blockNumber": 14200412,
+        "transactionHash": "0xbe041620db1dd069572ec7bbf6dc0772962d9d3bff99d76c218f34a6f7092174",
+        "address": "0xaAaCb63Ab80969af93b811DEB81dDEB4C8710591",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000aec6233a45a3866e9f1c64ab121e4ee9dbeafbff"
+        ],
+        "data": "0x",
+        "logIndex": 179,
+        "blockHash": "0x3bf8c761e1cde4cad5b1754b91073850803aacec0311c8f161fe620ba026e884"
+      }
+    ],
+    "blockNumber": 14200412,
+    "cumulativeGasUsed": "10045049",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "7e58dbf614be163760408d04a8af9711",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"selector\",\"type\":\"bytes4\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldImplementation\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"VTableUpdate\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"\",\"type\":\"bytes4\"}],\"name\":\"delegates\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"_selector\",\"type\":\"bytes4\"}],\"name\":\"implementation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"module\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"selectors\",\"type\":\"bytes4[]\"}],\"internalType\":\"struct VTableBeacon.ModuleDefinition[]\",\"name\":\"modules\",\"type\":\"tuple[]\"}],\"name\":\"updateVTable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"},\"updateVTable((address,bytes4[])[])\":{\"details\":\"Updates the vtable\"}},\"title\":\"VTableBeacon\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Redirects calls to an implementation based on the method signature\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/proxy/VTableBeacon.sol\":\"VTableBeacon\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/access/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\nimport \\\"../utils/Context.sol\\\";\\n/**\\n * @dev Contract module which provides a basic access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership}.\\n *\\n * This module is used through inheritance. It will make available the modifier\\n * `onlyOwner`, which can be applied to your functions to restrict their use to\\n * the owner.\\n */\\nabstract contract Ownable is Context {\\n    address private _owner;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Initializes the contract setting the deployer as the initial owner.\\n     */\\n    constructor () internal {\\n        address msgSender = _msgSender();\\n        _owner = msgSender;\\n        emit OwnershipTransferred(address(0), msgSender);\\n    }\\n\\n    /**\\n     * @dev Returns the address of the current owner.\\n     */\\n    function owner() public view virtual returns (address) {\\n        return _owner;\\n    }\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        require(owner() == _msgSender(), \\\"Ownable: caller is not the owner\\\");\\n        _;\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions anymore. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby removing any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        emit OwnershipTransferred(_owner, address(0));\\n        _owner = address(0);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), \\\"Ownable: new owner is the zero address\\\");\\n        emit OwnershipTransferred(_owner, newOwner);\\n        _owner = newOwner;\\n    }\\n}\\n\",\"keccak256\":\"0x15e2d5bd4c28a88548074c54d220e8086f638a71ed07e6b3ba5a70066fcf458d\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/*\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with GSN meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address payable) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes memory) {\\n        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0x8d3cb350f04ff49cfb10aef08d87f19dcbaecc8027b0bed12f3275cd12f38cf0\",\"license\":\"MIT\"},\"contracts/proxy/VTableBeacon.sol\":{\"content\":\"/*\\n    Copyright 2021 Babylon Finance.\\n\\n    Licensed under the Apache License, Version 2.0 (the \\\"License\\\");\\n    you may not use this file except in compliance with the License.\\n    You may obtain a copy of the License at\\n\\n    http://www.apache.org/licenses/LICENSE-2.0\\n\\n    Unless required by applicable law or agreed to in writing, software\\n    distributed under the License is distributed on an \\\"AS IS\\\" BASIS,\\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\\n    See the License for the specific language governing permissions and\\n    limitations under the License.\\n\\n    SPDX-License-Identifier: Apache License, Version 2.0\\n*/\\n\\npragma solidity 0.7.6;\\npragma abicoder v2;\\n\\nimport {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';\\n\\n/**\\n * @title VTableBeacon\\n * @notice Redirects calls to an implementation based on the method signature\\n */\\ncontract VTableBeacon is Ownable {\\n    struct ModuleDefinition {\\n        address implementation;\\n        bytes4[] selectors;\\n    }\\n\\n    bytes4 private constant _FALLBACK_SIGN = 0xffffffff;\\n\\n    // Mapping of methods signatures to their implementations\\n    mapping(bytes4 => address) public delegates;\\n\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    function implementation(bytes4 _selector) external view virtual returns (address module) {\\n        module = delegates[_selector];\\n        if (module != address(0)) return module;\\n\\n        module = delegates[_FALLBACK_SIGN];\\n        if (module != address(0)) return module;\\n\\n        revert('VTableBeacon: No implementation found');\\n    }\\n\\n    /**\\n     * @dev Updates the vtable\\n     */\\n    function updateVTable(ModuleDefinition[] calldata modules) external onlyOwner {\\n        for (uint256 i = 0; i < modules.length; ++i) {\\n            ModuleDefinition memory module = modules[i];\\n            for (uint256 j = 0; j < module.selectors.length; ++j) {\\n                bytes4 selector = module.selectors[j];\\n                emit VTableUpdate(selector, delegates[selector], module.implementation);\\n                delegates[selector] = module.implementation;\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xcc893569e0f91defdd5f904f090e120d5822637a561b166c272ef1c92dfcf1ae\",\"license\":\"Apache License\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50600061001b61006a565b600080546001600160a01b0319166001600160a01b0383169081178255604051929350917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a35061006e565b3390565b6108138061007d6000396000f3fe608060405234801561001057600080fd5b50600436106100725760003560e01c80638da5cb5b116100505780638da5cb5b146100bd578063a0a2daf0146100c5578063f2fde38b146100d857610072565b80630d74157714610077578063715018a6146100a0578063719c5ac2146100aa575b600080fd5b61008a6100853660046105fb565b6100eb565b6040516100979190610615565b60405180910390f35b6100a8610187565b005b6100a86100b836600461058c565b610252565b61008a6103ed565b61008a6100d33660046105fb565b6103fc565b6100a86100e636600461056b565b610417565b6001600160e01b031981166000908152600160205260409020546001600160a01b0316801561011957610182565b506001600160e01b031960005260016020527fec646dc6d4c93e86591cb8725f06e50158b413031b568ac64820b172699c5e86546001600160a01b0316801561016157610182565b60405162461bcd60e51b815260040161017990610643565b60405180910390fd5b919050565b61018f610538565b6001600160a01b03166101a06103ed565b6001600160a01b0316146101fb576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a36000805473ffffffffffffffffffffffffffffffffffffffff19169055565b61025a610538565b6001600160a01b031661026b6103ed565b6001600160a01b0316146102c6576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b60005b818110156103e85760008383838181106102df57fe5b90506020028101906102f191906106a0565b6102fa906106e3565b905060005b8160200151518110156103de5760008260200151828151811061031e57fe5b6020908102919091018101516001600160e01b0319811660008181526001909352604092839020548651935192945090927ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a92610385926001600160a01b03169190610629565b60405180910390a282516001600160e01b0319919091166000908152600160208190526040909120805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0390931692909217909155016102ff565b50506001016102c9565b505050565b6000546001600160a01b031690565b6001602052600090815260409020546001600160a01b031681565b61041f610538565b6001600160a01b03166104306103ed565b6001600160a01b03161461048b576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b6001600160a01b0381166104d05760405162461bcd60e51b81526004018080602001828103825260268152602001806107b86026913960400191505060405180910390fd5b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a36000805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0392909216919091179055565b3390565b80356001600160a01b038116811461018257600080fd5b80356001600160e01b03198116811461018257600080fd5b60006020828403121561057c578081fd5b6105858261053c565b9392505050565b6000806020838503121561059e578081fd5b823567ffffffffffffffff808211156105b5578283fd5b818501915085601f8301126105c8578283fd5b8135818111156105d6578384fd5b86602080830285010111156105e9578384fd5b60209290920196919550909350505050565b60006020828403121561060c578081fd5b61058582610553565b6001600160a01b0391909116815260200190565b6001600160a01b0392831681529116602082015260400190565b60208082526025908201527f565461626c65426561636f6e3a204e6f20696d706c656d656e746174696f6e2060408201527f666f756e64000000000000000000000000000000000000000000000000000000606082015260800190565b60008235603e198336030181126106b5578182fd5b9190910192915050565b60405181810167ffffffffffffffff811182821017156106db57fe5b604052919050565b6000604082360312156106f4578081fd5b6040516040810167ffffffffffffffff828210818311171561071257fe5b8160405261071f8561053c565b8352602091508185013581811115610735578485fd5b850136601f820112610745578485fd5b80358281111561075157fe5b83810292506107618484016106bf565b81815284810190838601368686018801111561077b578889fd5b8895505b838610156107a45761079081610553565b83526001959095019491860191860161077f565b509486019490945250929594505050505056fe4f776e61626c653a206e6577206f776e657220697320746865207a65726f2061646472657373a2646970667358221220c0a6fd589630388eaad2e2ef48bbe69c911a7c90f8a5a99b822c90be8e79e43064736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100725760003560e01c80638da5cb5b116100505780638da5cb5b146100bd578063a0a2daf0146100c5578063f2fde38b146100d857610072565b80630d74157714610077578063715018a6146100a0578063719c5ac2146100aa575b600080fd5b61008a6100853660046105fb565b6100eb565b6040516100979190610615565b60405180910390f35b6100a8610187565b005b6100a86100b836600461058c565b610252565b61008a6103ed565b61008a6100d33660046105fb565b6103fc565b6100a86100e636600461056b565b610417565b6001600160e01b031981166000908152600160205260409020546001600160a01b0316801561011957610182565b506001600160e01b031960005260016020527fec646dc6d4c93e86591cb8725f06e50158b413031b568ac64820b172699c5e86546001600160a01b0316801561016157610182565b60405162461bcd60e51b815260040161017990610643565b60405180910390fd5b919050565b61018f610538565b6001600160a01b03166101a06103ed565b6001600160a01b0316146101fb576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a36000805473ffffffffffffffffffffffffffffffffffffffff19169055565b61025a610538565b6001600160a01b031661026b6103ed565b6001600160a01b0316146102c6576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b60005b818110156103e85760008383838181106102df57fe5b90506020028101906102f191906106a0565b6102fa906106e3565b905060005b8160200151518110156103de5760008260200151828151811061031e57fe5b6020908102919091018101516001600160e01b0319811660008181526001909352604092839020548651935192945090927ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a92610385926001600160a01b03169190610629565b60405180910390a282516001600160e01b0319919091166000908152600160208190526040909120805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0390931692909217909155016102ff565b50506001016102c9565b505050565b6000546001600160a01b031690565b6001602052600090815260409020546001600160a01b031681565b61041f610538565b6001600160a01b03166104306103ed565b6001600160a01b03161461048b576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b6001600160a01b0381166104d05760405162461bcd60e51b81526004018080602001828103825260268152602001806107b86026913960400191505060405180910390fd5b600080546040516001600160a01b03808516939216917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e091a36000805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0392909216919091179055565b3390565b80356001600160a01b038116811461018257600080fd5b80356001600160e01b03198116811461018257600080fd5b60006020828403121561057c578081fd5b6105858261053c565b9392505050565b6000806020838503121561059e578081fd5b823567ffffffffffffffff808211156105b5578283fd5b818501915085601f8301126105c8578283fd5b8135818111156105d6578384fd5b86602080830285010111156105e9578384fd5b60209290920196919550909350505050565b60006020828403121561060c578081fd5b61058582610553565b6001600160a01b0391909116815260200190565b6001600160a01b0392831681529116602082015260400190565b60208082526025908201527f565461626c65426561636f6e3a204e6f20696d706c656d656e746174696f6e2060408201527f666f756e64000000000000000000000000000000000000000000000000000000606082015260800190565b60008235603e198336030181126106b5578182fd5b9190910192915050565b60405181810167ffffffffffffffff811182821017156106db57fe5b604052919050565b6000604082360312156106f4578081fd5b6040516040810167ffffffffffffffff828210818311171561071257fe5b8160405261071f8561053c565b8352602091508185013581811115610735578485fd5b850136601f820112610745578485fd5b80358281111561075157fe5b83810292506107618484016106bf565b81815284810190838601368686018801111561077b578889fd5b8895505b838610156107a45761079081610553565b83526001959095019491860191860161077f565b509486019490945250929594505050505056fe4f776e61626c653a206e6577206f776e657220697320746865207a65726f2061646472657373a2646970667358221220c0a6fd589630388eaad2e2ef48bbe69c911a7c90f8a5a99b822c90be8e79e43064736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "owner()": {
+        "details": "Returns the address of the current owner."
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+      },
+      "transferOwnership(address)": {
+        "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+      },
+      "updateVTable((address,bytes4[])[])": {
+        "details": "Updates the vtable"
+      }
+    },
+    "title": "VTableBeacon",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "notice": "Redirects calls to an implementation based on the method signature",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 1456,
+        "contract": "contracts/proxy/VTableBeacon.sol:VTableBeacon",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 48752,
+        "contract": "contracts/proxy/VTableBeacon.sol:VTableBeacon",
+        "label": "delegates",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_bytes4,t_address)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bytes4": {
+        "encoding": "inplace",
+        "label": "bytes4",
+        "numberOfBytes": "4"
+      },
+      "t_mapping(t_bytes4,t_address)": {
+        "encoding": "mapping",
+        "key": "t_bytes4",
+        "label": "mapping(bytes4 => address)",
+        "numberOfBytes": "32",
+        "value": "t_address"
+      }
+    }
+  }
+}

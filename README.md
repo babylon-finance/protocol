@@ -89,16 +89,16 @@ For non-upgradeable contracts use named scripts from the `deployments/migrations
 would deploy `UniswapV2TradeIntegration`. To invoke the script use the following command.
 
 ```bash
-  GAS_LIMIT=1000000000000 npx hardhat deploy --network mainnet --tags UniV2Trade
+  npx hardhat deploy --network mainnet --tags UniV2Trade
 ```
 
-`GAS_LIMIT` is in wei. `tags` value can be found inside a deployment script.
+`tags` value can be found inside a deployment script.
 
 To deploy a new implementation for an upgradeable contract use `deploy-contract.js` script, e.g., to deploy a new
 implementation for the Strategy contract use the following command:
 
 ```bash
-  GAS_LIMIT=100000000000 npx hardhat deploy-contract --contract StrategyV16 --network mainnet
+  npx hardhat deploy-contract --contract StrategyV16 --network mainnet
 ```
 
 `contract` is the name of the new implementation.
@@ -106,11 +106,9 @@ implementation for the Strategy contract use the following command:
 To auto-deploy a contract use a simple bash script which will try until it succeeds.
 
 ```bash
-  while ! GAS_LIMIT=100000000000 npx hardhat deploy-contract --contract StrategyV16 --network mainnet; do echo 'Trying to deploy
+  while ! npx hardhat deploy-contract --contract StrategyV16 --network mainnet; do echo 'Trying to deploy
   again 🤖'; done; echo 'Deployed 🚀';
 ```
-
-where `GAS_LIMIT` has to be set to a maximum price deployer is willing to pay.
 
 ## Upgrade
 

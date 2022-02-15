@@ -133,7 +133,7 @@ describe.skip('MardukGate', function () {
           },
         );
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), false, {
         value: eth('1'),
       });
@@ -158,7 +158,7 @@ describe.skip('MardukGate', function () {
           },
         );
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
       await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), false, {
         value: eth('1'),
@@ -184,7 +184,7 @@ describe.skip('MardukGate', function () {
           },
         );
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await expect(newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0)).to.be.reverted;
     });
 
@@ -207,7 +207,7 @@ describe.skip('MardukGate', function () {
           },
         );
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await expect(newGarden.connect(signer2).transferCreatorRights(WALLET_ADDRESSES[7], 0)).to.not.be.reverted;
     });
 
@@ -232,7 +232,7 @@ describe.skip('MardukGate', function () {
           ),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await expect(
         createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden),
@@ -278,7 +278,7 @@ describe.skip('MardukGate', function () {
           ),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await mardukGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
       await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
         value: eth('1'),
@@ -309,7 +309,7 @@ describe.skip('MardukGate', function () {
           ),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
       await createStrategy('buy', 'dataset', [signer2, signer1, signer3], uniswapV3TradeIntegration.address, newGarden);
     });
@@ -335,7 +335,7 @@ describe.skip('MardukGate', function () {
           ),
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await mardukGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 2, { gasPrice: 0 });
       await expect(
         createStrategy('buy', 'vote', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, newGarden),
@@ -365,7 +365,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
@@ -396,7 +396,7 @@ describe.skip('MardukGate', function () {
 
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await expect(
         newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), false, {
@@ -426,7 +426,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await expect(mardukGate.connect(signer3).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
         .to.be.reverted;
@@ -453,7 +453,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await newGarden.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0);
       await expect(mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 }))
         .to.be.reverted;
@@ -479,7 +479,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await mardukGate
         .connect(signer1)
@@ -509,7 +509,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       // We try to set-up more than max limit 13 ADDRESSES
       await expect(
@@ -540,7 +540,7 @@ describe.skip('MardukGate', function () {
       ).to.not.be.reverted;
       const gardens = await babController.getGardens();
 
-      const newGarden = await ethers.getContractAt('Garden', gardens[gardens.length - 1]);
+      const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       // 9 additional addresses
       await expect(

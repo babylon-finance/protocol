@@ -232,7 +232,7 @@ async function deposit(garden, signers) {
 
 async function vote(strategy, signers) {
   const garden = await strategy.garden();
-  const gardenContract = await ethers.getContractAt('Garden', garden);
+  const gardenContract = await ethers.getContractAt('IGarden', garden);
 
   const [signer1, signer2] = signers;
 
@@ -260,7 +260,7 @@ async function executeStrategy(
   } = {},
 ) {
   const garden = await strategy.garden();
-  const gardenContract = await ethers.getContractAt('Garden', garden);
+  const gardenContract = await ethers.getContractAt('IGarden', garden);
   amount = amount || STRATEGY_EXECUTE_MAP[await gardenContract.reserveAsset()];
   const signers = await ethers.getSigners();
   if (time > 0) {
@@ -508,7 +508,7 @@ async function getStrategy({
     state,
     signers || [signer1, signer2, signer3],
     integrations || uniswapV3TradeIntegration.address,
-    garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
+    garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0])),
     params,
     specificParams,
   );
