@@ -245,7 +245,6 @@ describe('Strategy', function () {
 
   describe('executeStrategy', async function () {
     it('should execute strategy', async function () {
-      console.log('check 0');
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -253,13 +252,10 @@ describe('Strategy', function () {
         uniswapV3TradeIntegration.address,
         garden1,
       );
-      console.log('check 1');
 
       await executeStrategy(strategyContract, { amount: eth().mul(2), fee: 42 });
-      console.log('check 2');
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
-      console.log('check 3');
 
       expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(true);
@@ -460,6 +456,7 @@ describe('Strategy', function () {
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [addresses.oneinch.pools.wethdai, 0],
       );
@@ -476,6 +473,7 @@ describe('Strategy', function () {
         [signer1, signer2, signer3],
         uniswapPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [addresses.uniswap.pairs.wethdai, 0],
       );
@@ -733,17 +731,17 @@ describe('Strategy', function () {
       await injectFakeProfits(long3, eth(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance3).to.be.closeTo(from('32737424404549201'), treasuryBalance3.div(20));
+      expect(treasuryBalance3).to.be.closeTo(from('30828176461267569'), treasuryBalance3.div(20));
 
       await injectFakeProfits(long4, eth(200));
       await finalizeStrategy(long4);
       const treasuryBalance4 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance4).to.be.closeTo(from('37006406897484371'), treasuryBalance4.div(20));
+      expect(treasuryBalance4).to.be.closeTo(from('33737903640157303'), treasuryBalance4.div(20));
 
       await injectFakeProfits(long5, eth(222));
       await finalizeStrategy(long5);
       const treasuryBalance5 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance5).to.be.closeTo(from('41257596971714644'), treasuryBalance5.div(20));
+      expect(treasuryBalance5).to.be.closeTo(from('36998685764437278'), treasuryBalance5.div(20));
     });
 
     it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {

@@ -538,9 +538,9 @@ async function getStrategy({
     signers || [signer1, signer2, signer3],
     integrations || uniswapV3TradeIntegration.address,
     garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
+    executedBy || (await ethers.getSigners())[1],
     params,
     specificParams,
-    { executedBy: keeper },
   );
 }
 
