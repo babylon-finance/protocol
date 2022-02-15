@@ -28,7 +28,7 @@ import {CompoundLendIntegration} from './CompoundLendIntegration.sol';
  * @title FuseLendIntegration
  * @author Babylon Finance
  *
- * Class that houses fuse lending logic.
+ * Class that houses Fuse lending logic.
  */
 contract FuseLendIntegration is CompoundLendIntegration {
     /* ============ State Variables ============ */

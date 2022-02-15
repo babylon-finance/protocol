@@ -21,10 +21,10 @@ pragma abicoder v2;
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
+import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
 
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
 
@@ -36,6 +36,7 @@ import {TradeIntegration} from './TradeIntegration.sol';
  */
 contract CurveTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Modifiers ============ */
 
@@ -43,10 +44,7 @@ contract CurveTradeIntegration is TradeIntegration {
 
     /* ============ Constants ============ */
 
-    address private constant tricurvePool = 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5;
-    // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider =
-        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    ICurveMetaRegistry private immutable curveMetaRegistry;
 
     /* ============ Constructor ============ */
 
@@ -54,8 +52,14 @@ contract CurveTradeIntegration is TradeIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
+     * @param _curveMetaRegistry            Address of the curve meta registry
      */
-    constructor(IBabController _controller) TradeIntegration('curve_trade', _controller) {}
+    constructor(IBabController _controller, ICurveMetaRegistry _curveMetaRegistry)
+        TradeIntegration('curve_trade', _controller)
+    {
+        require(address(_curveMetaRegistry) != address(0), 'Address needs to be valid');
+        curveMetaRegistry = _curveMetaRegistry;
+    }
 
     /* ============ Internal Functions ============ */
 
@@ -82,39 +86,18 @@ contract CurveTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         (address curvePool, address realSendToken, address realReceiveToken) =
             _getPoolAndTokens(_sendToken, _receiveToken);
         require(curvePool != address(0), 'No curve pool');
-        (int128 i, int128 j, bool underlying) =
-            curveRegistry.get_coin_indices(curvePool, realSendToken, realReceiveToken);
+        (uint256 i, uint256 j, bool underlying) =
+            curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
         bytes memory methodData =
-            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', i, j, _sendQuantity, 1);
-        if (tricurvePool == curvePool) {
-            if (realSendToken == ETH_ADD_CURVE) {
-                methodData = abi.encodeWithSignature(
-                    'exchange(uint256,uint256,uint256,uint256,bool)',
-                    i,
-                    j,
-                    _sendQuantity,
-                    1,
-                    true
-                );
-            } else {
-                methodData = abi.encodeWithSignature(
-                    'exchange(uint256,uint256,uint256,uint256)',
-                    i,
-                    j,
-                    _sendQuantity,
-                    1
-                );
-            }
-        }
+            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', int128(i), int128(j), _sendQuantity, 1);
         if (underlying) {
             methodData = abi.encodeWithSignature(
                 'exchange_underlying(int128,int128,uint256,uint256)',
-                i,
-                j,
+                int128(i),
+                int128(j),
                 _sendQuantity,
                 1
             );
@@ -216,15 +199,14 @@ contract CurveTradeIntegration is TradeIntegration {
             address
         )
     {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        address curvePool = curveRegistry.find_pool_for_coins(_sendToken, _receiveToken, 0);
+        address curvePool = curveMetaRegistry.findPoolForCoins(_sendToken, _receiveToken, 0);
         if (_sendToken == WETH && curvePool == address(0)) {
             _sendToken = ETH_ADD_CURVE;
-            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _receiveToken, 0);
+            curvePool = curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _receiveToken, 0);
         }
         if (_receiveToken == WETH && curvePool == address(0)) {
             _receiveToken = ETH_ADD_CURVE;
-            curvePool = curveRegistry.find_pool_for_coins(_sendToken, ETH_ADD_CURVE, 0);
+            curvePool = curveMetaRegistry.findPoolForCoins(_sendToken, ETH_ADD_CURVE, 0);
         }
         return (curvePool, _sendToken, _receiveToken);
     }

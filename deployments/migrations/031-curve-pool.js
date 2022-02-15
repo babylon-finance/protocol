@@ -15,9 +15,11 @@ module.exports = async ({
 
   const controller = await getController();
 
+  const curveMetaRegistry = await deployments.get('CurveMetaRegistry');
+
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, curveMetaRegistry.address],
     log: true,
     ...(await getGasPrice()),
   });

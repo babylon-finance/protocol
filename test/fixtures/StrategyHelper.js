@@ -81,9 +81,7 @@ async function createStrategyWithPoolOperation(garden, signer, params, integrati
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-
   const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
   return strategy;
 }
 
@@ -240,7 +238,6 @@ async function vote(strategy, signers) {
 
   const signer1Balance = await gardenContract.balanceOf(signer1.getAddress());
   const signer2Balance = await gardenContract.balanceOf(signer2.getAddress());
-
   return (
     strategy
       // use keeper

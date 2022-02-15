@@ -46,6 +46,7 @@ import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
+import {ControllerLib} from './lib/ControllerLib.sol';
 
 /**
  * @title Heart
@@ -59,6 +60,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Modifiers ============ */
 
@@ -67,14 +69,6 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function _onlyKeeper() private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
-    }
-
-    modifier onlyGovernanceOrEmergency {
-        _require(
-            msg.sender == owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
-        );
-        _;
     }
 
     /* ============ Events ============ */
@@ -281,7 +275,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Updates fuse pool market information and enters the markets
      *
      */
-    function updateMarkets() public override onlyGovernanceOrEmergency {
+    function updateMarkets() public override {
+        controller.onlyGovernanceOrEmergency();
         // Enter markets of the fuse pool for all these assets
         address[] memory markets = IComptroller(BABYLON_FUSE_POOL_ADDRESS).getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
@@ -296,7 +291,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _feeWeights             Array of % (up to 1e18) with the fee weights
      */
-    function updateFeeWeights(uint256[] calldata _feeWeights) public override onlyGovernanceOrEmergency {
+    function updateFeeWeights(uint256[] calldata _feeWeights) public override {
+        controller.onlyGovernanceOrEmergency();
         delete feeDistributionWeights;
         for (uint256 i = 0; i < _feeWeights.length; i++) {
             feeDistributionWeights.push(_feeWeights[i]);
@@ -308,7 +304,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _assetToLend             New asset to lend
      */
-    function updateAssetToLend(address _assetToLend) public override onlyGovernanceOrEmergency {
+    function updateAssetToLend(address _assetToLend) public override {
+        controller.onlyGovernanceOrEmergency();
         _require(assetToLend != _assetToLend, Errors.HEART_ASSET_LEND_SAME);
         _require(assetToCToken[_assetToLend] != address(0), Errors.HEART_ASSET_LEND_INVALID);
         assetToLend = _assetToLend;
@@ -320,7 +317,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _bablAmount             Total amount to distribute
      * @param _weeklyRate             Weekly amount to distribute
      */
-    function addReward(uint256 _bablAmount, uint256 _weeklyRate) external override onlyGovernanceOrEmergency {
+    function addReward(uint256 _bablAmount, uint256 _weeklyRate) external override {
+        controller.onlyGovernanceOrEmergency();
         // Get the BABL reward
         IERC20(BABL).safeTransferFrom(msg.sender, address(this), _bablAmount);
         bablRewardLeft = bablRewardLeft.add(_bablAmount);
@@ -333,7 +331,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _asset                Asset to edit the min amount
      * @param _minAmount            New min amount
      */
-    function setMinTradeAmount(address _asset, uint256 _minAmount) external override onlyGovernanceOrEmergency {
+    function setMinTradeAmount(address _asset, uint256 _minAmount) external override {
+        controller.onlyGovernanceOrEmergency();
         minAmounts[_asset] = _minAmount;
     }
 
@@ -342,7 +341,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _heartGarden                New heart garden address
      */
-    function setHeartGardenAddress(address _heartGarden) external override onlyGovernanceOrEmergency {
+    function setHeartGardenAddress(address _heartGarden) external override {
+        controller.onlyGovernanceOrEmergency();
         heartGarden = IGarden(_heartGarden);
     }
 
@@ -351,7 +351,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _tradeSlippage                Trade slippage
      */
-    function setTradeSlippage(uint256 _tradeSlippage) external override onlyGovernanceOrEmergency {
+    function setTradeSlippage(uint256 _tradeSlippage) external override {
+        controller.onlyGovernanceOrEmergency();
         tradeSlippage = _tradeSlippage;
     }
 
