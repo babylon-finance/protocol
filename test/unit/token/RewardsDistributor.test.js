@@ -330,7 +330,6 @@ async function getStrategyState(strategy) {
     });
     it('should estimate BABL rewards for a strategy along the time in case of 1 strategy with negative profit and total duration of 1 quarter', async function () {
       const [long] = await createStrategies([{ garden: garden1 }]);
-      console.log(keeper.address);
       await executeStrategy(long, { amount: eth() });
       const estimatedBABL1 = await rewardsDistributor.estimateStrategyRewards(long.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
@@ -1936,12 +1935,12 @@ async function getStrategyState(strategy) {
         { garden: garden1 },
         { garden: garden1 },
       ]);
-
       await executeStrategy(long1, { amount: eth(1) });
       await executeStrategy(long2, { amount: eth(1) });
       await executeStrategy(long3, { amount: eth(1) });
       await executeStrategy(long4, { amount: eth(1) });
-      await injectFakeProfits(long1, { amount: eth(1).mul(240) });
+      await injectFakeProfits(long1, eth(1).mul(240));
+
       await finalizeStrategyAfterQuarter(long1);
 
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -2446,8 +2445,7 @@ async function getStrategyState(strategy) {
         await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false, { gasPrice: 0 });
 
         const [long1] = await createStrategies([{ garden: newGarden }]);
-
-        await executeStrategy(long1, { amount: eth() });
+        await executeStrategy(long1, eth());
         await injectFakeProfits(long1, eth().mul(200));
         await finalizeStrategyAfterQuarter(long1);
         const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
@@ -3020,7 +3018,6 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         usdcGarden,
-        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3031,7 +3028,6 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         daiGarden,
-        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
