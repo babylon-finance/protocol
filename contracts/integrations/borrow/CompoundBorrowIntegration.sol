@@ -32,6 +32,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {BorrowIntegration} from './BorrowIntegration.sol';
 
@@ -39,25 +40,13 @@ import {BorrowIntegration} from './BorrowIntegration.sol';
  * @title CompoundBorrowIntegration
  * @author Babylon Finance
  *
- * Abstract class that houses compound borrowing logic.
+ * Abstract class that houses Compound borrowing logic.
  */
 contract CompoundBorrowIntegration is BorrowIntegration {
     using LowGasSafeMath for uint256;
     using SafeERC20 for ERC20;
     using UniversalERC20 for IERC20;
-
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency() {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Only governance or emergency can call this'
-        );
-        _;
-    }
+    using ControllerLib for IBabController;
 
     /* ============ State Variables ============ */
 
@@ -89,7 +78,8 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     /* ============ External Functions ============ */
 
     // Governance function
-    function overrideMappings() external onlyGovernanceOrEmergency {
+    function overrideMappings() external {
+        controller.onlyGovernanceOrEmergency();
         _overrideMappings(comptroller);
     }
 

@@ -558,7 +558,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _onlyUnpaused();
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
-
         uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
             pricePerTokenUnitInDAI.preciseMul(_fee).mul(
@@ -568,10 +567,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, IGarden {
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
         keeperDebt = keeperDebt.add(_fee);
-        uint256 liquidReserve = liquidReserve();
+        uint256 liquidReserveAmount = liquidReserve();
         // Pay Keeper in Reserve Asset
-        if (keeperDebt > 0 && liquidReserve > 0) {
-            uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
+        if (keeperDebt > 0 && liquidReserveAmount > 0) {
+            uint256 toPay = liquidReserveAmount > keeperDebt ? keeperDebt : liquidReserveAmount;
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
             totalKeeperFees = totalKeeperFees.add(toPay);
             keeperDebt = keeperDebt.sub(toPay);

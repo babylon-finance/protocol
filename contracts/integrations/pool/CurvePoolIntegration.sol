@@ -20,14 +20,12 @@ pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
-import {ICurvePoolV3} from '../../interfaces/external/curve/ICurvePoolV3.sol';
-import {ICurvePoolInt128} from '../../interfaces/external/curve/ICurvePoolInt128.sol';
-import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
+import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 /**
  * @title CurvePoolIntegration
@@ -39,26 +37,28 @@ contract CurvePoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Constant ============ */
     address private constant TRICRYPTO2 = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46; // Pool only takes ETH
-    address private constant STETH = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022; // pool requires first amount to match msg.value
+    address private constant cvxCRVPool = 0x9D0464996170c6B9e75eED71c68B99dDEDf279e8; // Pool only takes CRV for us
+    address private constant palstkaave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15; // Pool only takes CRV for us
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
+    ICurveMetaRegistry private immutable curveMetaRegistry;
 
-    // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider =
-        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     /* ============ State Variables ============ */
 
+    // Registry of first party pools
+
     // Mapping of pools to deposit contract
-    mapping(address => address) public poolToDeposit;
+    mapping(address => address) private poolToDeposit;
 
     // Whether to deposit using the underlying coins
-    mapping(address => bool) public usesUnderlying;
+    mapping(address => bool) private usesUnderlying;
 
     // Whether it supports the underlying param in add liquidity and remove liquidity
-    mapping(address => bool) public supportsUnderlyingParam;
+    mapping(address => bool) private supportsUnderlyingParam;
 
     /* ============ Constructor ============ */
 
@@ -67,8 +67,12 @@ contract CurvePoolIntegration is PoolIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PoolIntegration('curve_pool', _controller) {
+    constructor(IBabController _controller, ICurveMetaRegistry _curveMetaRegistry)
+        PoolIntegration('curve_pool', _controller)
+    {
         require(address(_controller) != address(0), 'invalid address');
+        require(address(_curveMetaRegistry) != address(0), 'invalid address');
+
         usesUnderlying[0xDeBF20617708857ebe4F679508E7b7863a8A8EeE] = true; // aave
         usesUnderlying[0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56] = true; // compound
         usesUnderlying[0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C] = true; // usdt
@@ -91,21 +95,19 @@ contract CurvePoolIntegration is PoolIntegration {
         supportsUnderlyingParam[0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF] = true; // ironbank
         supportsUnderlyingParam[0x8925D9d9B4569D737a48499DeF3f67BaA5a144b9] = true; // yv2
         supportsUnderlyingParam[0xEB16Ae0052ed37f479f7fe63849198Df1765a733] = true; // saave
+
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /* ============ External Functions ============ */
 
     function getPoolTokens(bytes calldata _pool, bool forNAV) public view override returns (address[] memory) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
-        address[] memory result = new address[](_getNCoins(poolAddress));
-        address[8] memory coins;
-        if (usesUnderlying[poolAddress] && !forNAV) {
-            coins = curveRegistry.get_underlying_coins(poolAddress);
-        } else {
-            coins = curveRegistry.get_coins(poolAddress);
-        }
-        for (uint8 i = 0; i < _getNCoins(poolAddress); i++) {
+        uint256 ncoins = curveMetaRegistry.getNCoins(poolAddress);
+        address[] memory result = new address[](ncoins);
+        address[8] memory coins =
+            curveMetaRegistry.getCoinAddresses(poolAddress, usesUnderlying[poolAddress] && !forNAV);
+        for (uint8 i = 0; i < ncoins; i++) {
             result[i] = coins[i];
         }
         return result;
@@ -114,15 +116,21 @@ contract CurvePoolIntegration is PoolIntegration {
     function getPoolWeights(bytes calldata _pool) external view override returns (uint256[] memory) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         address[] memory poolTokens = getPoolTokens(_pool, false);
-        uint256[] memory result = new uint256[](_getNCoins(poolAddress));
+        uint256[] memory result = new uint256[](curveMetaRegistry.getNCoins(poolAddress));
         if (poolAddress == TRICRYPTO2) {
             result[0] = 0;
             result[1] = 0;
             result[2] = uint256(1e18);
+            return result;
         }
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
+        // cvxCRV
+        if (poolAddress == cvxCRVPool || poolAddress == palstkaave) {
+            result[0] = uint256(1e18);
+            result[1] = 0;
+            return result;
+        }
         // If it's a meta pool, deposit and withdraw from the stable one
-        if (curveRegistry.is_meta(poolAddress)) {
+        if (curveMetaRegistry.isMeta(poolAddress)) {
             result[0] = uint256(1e18);
         } else {
             for (uint8 i = 0; i < poolTokens.length; i++) {
@@ -146,7 +154,7 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256 /* _liquidity */
     ) external view override returns (uint256[] memory _minAmountsOut) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
-        uint256[] memory result = new uint256[](_getNCoins(poolAddress));
+        uint256[] memory result = new uint256[](curveMetaRegistry.getNCoins(poolAddress));
         return result;
     }
 
@@ -154,14 +162,7 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _isPool(bytes memory _pool) internal view override returns (bool) {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        try curveRegistry.get_A(poolAddress) returns (
-            uint256 /* A */
-        ) {
-            return true;
-        } catch {
-            return false;
-        }
+        return curveMetaRegistry.isPool(poolAddress);
     }
 
     function _getSpender(bytes calldata _pool) internal view override returns (address) {
@@ -208,8 +209,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
-        uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
-
+        uint256 poolCoins = curveMetaRegistry.getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
         // Encode method data for Garden to invoke
         bytes memory methodData = _getAddLiquidityMethodData(poolAddress, poolCoins, _maxAmountsIn, _poolTokensOut);
 
@@ -257,7 +257,7 @@ contract CurvePoolIntegration is PoolIntegration {
         )
     {
         address poolAddress = BytesLib.decodeOpDataAddressAssembly(_pool, 12);
-        uint256 poolCoins = _getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
+        uint256 poolCoins = curveMetaRegistry.getNCoins(poolAddress); //_decodeOpDataAsUint8(_pool, 0);
 
         require(_poolTokensIn > 0, '_poolTokensIn has to not 0');
         require(_minAmountsOut.length > 1, 'Has to provide _minAmountsOut');
@@ -376,9 +376,8 @@ contract CurvePoolIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut,
         uint256 _poolTokensIn
     ) private view returns (bytes memory) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         // For meta remove everything in the stable coin
-        if (curveRegistry.is_meta(_poolAddress)) {
+        if (curveMetaRegistry.isMeta(_poolAddress) || _poolAddress == cvxCRVPool) {
             return
                 abi.encodeWithSignature(
                     'remove_liquidity_one_coin(uint256,int128,uint256)',
@@ -398,6 +397,15 @@ contract CurvePoolIntegration is PoolIntegration {
                         true
                     );
             } else {
+                if (_poolAddress == palstkaave) {
+                    return
+                        abi.encodeWithSignature(
+                            'remove_liquidity_one_coin(uint256,uint256,uint256)',
+                            _poolTokensIn,
+                            uint256(0),
+                            _minAmountsOut[0]
+                        );
+                }
                 return
                     abi.encodeWithSignature(
                         'remove_liquidity(uint256,uint256[2])',
@@ -483,24 +491,12 @@ contract CurvePoolIntegration is PoolIntegration {
 
     function _getLpToken(address _pool) internal view override returns (address) {
         // For Deposits & stable swaps that support it get the LP token, otherwise get the pool
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        return curveRegistry.get_lp_token(_pool);
-    }
-
-    // Used when the contract is the Deposit
-    function _getPool(address _pool) internal pure override returns (address) {
-        return _pool;
+        return curveMetaRegistry.getLpToken(_pool);
     }
 
     function _getUnderlyingAndRate(bytes calldata _pool, uint256 _i) internal view override returns (address, uint256) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
-        return (curveRegistry.get_underlying_coins(poolAddress)[_i], curveRegistry.get_rates(poolAddress)[_i]);
-    }
-
-    function _getNCoins(address _pool) private view returns (uint256) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        return curveRegistry.get_n_coins(_pool)[0];
+        return curveMetaRegistry.getUnderlyingAndRate(poolAddress, _i);
     }
 
     function _getRewardTokens(

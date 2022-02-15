@@ -97,21 +97,21 @@ describe('FuseBorrowIntegrationTest', function () {
     // const comptroller = await ethers.getContractAt('IComptroller', '0xC7125E3A2925877C7371d579D29dAe4729Ac9033');
 
     // Add Liquidity to the markets
-    await DAI.connect(owner).approve(cDAI.address, eth('100000'), { gasPrice: 0 });
-    await cDAI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
-    await BABL.connect(owner).approve(cBABL.address, eth('1000'), { gasPrice: 0 });
-    await cBABL.connect(owner).mint(eth('1000'), { gasPrice: 0 });
-    await cWETH.connect(signer3).mint({ value: eth('5'), gasPrice: 0 });
-    await FRAX.connect(owner).approve(cFRAX.address, eth('100000'), { gasPrice: 0 });
-    await cFRAX.connect(owner).mint(eth('100000'), { gasPrice: 0 });
-    await FEI.connect(owner).approve(cFEI.address, eth('100000'), { gasPrice: 0 });
-    await cFEI.connect(owner).mint(eth('100000'), { gasPrice: 0 });
+    await DAI.connect(owner).approve(cDAI.address, eth(100000), { gasPrice: 0 });
+    await cDAI.connect(owner).mint(eth(100000), { gasPrice: 0 });
+    await BABL.connect(owner).approve(cBABL.address, eth(1000), { gasPrice: 0 });
+    await cBABL.connect(owner).mint(eth(1000), { gasPrice: 0 });
+    await cWETH.connect(signer3).mint({ value: eth(5), gasPrice: 0 });
+    await FRAX.connect(owner).approve(cFRAX.address, eth(100000), { gasPrice: 0 });
+    await cFRAX.connect(owner).mint(eth(100000), { gasPrice: 0 });
+    await FEI.connect(owner).approve(cFEI.address, eth(100000), { gasPrice: 0 });
+    await cFEI.connect(owner).mint(eth(100000), { gasPrice: 0 });
     await increaseTime(86400 * 20);
     await cFRAX.connect(owner).accrueInterest({ gasPrice: 0 });
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
-    pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
+    pick(GARDENS).forEach(({ token, name }) => {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
       });
@@ -128,7 +128,7 @@ describe('FuseBorrowIntegrationTest', function () {
         await supplyBorrowStrategy(FEI, WETH, token);
       });
 
-      it.skip(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
+      it(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
       });
 

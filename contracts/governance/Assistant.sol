@@ -27,27 +27,17 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {ControllerLib} from '../lib/ControllerLib.sol';
 
 contract Assistant is OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     /* ============ Events ============ */
     /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
-
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
+
+    IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
 
     /* ============ Constructor ============ */
 
@@ -56,12 +46,6 @@ contract Assistant is OwnableUpgradeable {
     }
 
     /* ============ External Functions ============ */
-    function startHeart() external onlyGovernanceOrEmergency {
-        IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
-
-        BABL.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 10000e18);
-    }
-
     /* ============ External Getter Functions ============ */
     /* ============ Internal Only Function ============ */
 
