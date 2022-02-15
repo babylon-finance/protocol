@@ -23,9 +23,11 @@ module.exports = async ({
     log: true,
     ...(await getGasPrice()),
   });
+
   if (deployment.newlyDeployed) {
     console.log(`Adding curve trade integration ${contract}(${deployment.address})`);
   }
+
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
