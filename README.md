@@ -126,21 +126,27 @@ All the arguments are optional meaning only required proxies should be upgraded.
 
 The list of options for upgrade is the following:
 
-*  controller
-*  distributor
-*  garden
-*  assistant
-*  strategy
-*  curve
-*  oracle
-*  buy
-*  liquidity
-*  deposit
-*  lend
-*  tradeCurve
-*  tradeUniV3
-*  tradeSynth
-*  tradeUniV2
+- controller
+- distributor
+- garden
+- assistant
+- strategy
+- curve
+- oracle
+- buy
+- liquidity
+- deposit
+- lend
+- tradeCurve
+- tradeUniV3
+- tradeSynth
+- tradeUniV2
+
+An example of the command:
+
+```bash
+npx hardhat upgrade-multisig --network mainnet --curve CurveMetaRegistry --oracle PriceOracle --trade-curve CurveTradeIntegration --liquidity AddLiquidityOperation
+```
 
 This script will create a proposal at [Defender Admin](https://defender.openzeppelin.com/#/admin). It has to be signed
 and executed to upgrade the protocol.
