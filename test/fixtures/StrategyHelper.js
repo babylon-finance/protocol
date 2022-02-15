@@ -65,6 +65,7 @@ async function createStrategyWithBuyOperation(garden, signer, params, integratio
   const abiCoder = new AbiCoder();
   const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.tokens.DAI, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams, encoded);
+
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
   const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
@@ -229,7 +230,7 @@ async function deposit(garden, signers) {
   }
 }
 
-async function vote(strategy, signers, { executedBy } = {}) {
+async function vote(strategy, signers, keeper) {
   const garden = await strategy.garden();
   const gardenContract = await ethers.getContractAt('Garden', garden);
 
@@ -237,8 +238,9 @@ async function vote(strategy, signers, { executedBy } = {}) {
 
   const signer1Balance = await gardenContract.balanceOf(signer1.getAddress());
   const signer2Balance = await gardenContract.balanceOf(signer2.getAddress());
-  const keeper = executedBy || (await ethers.getSigners())[1];
-  console.log('Resolving voting', keeper.address);
+  if (keeper === undefined) {
+    keeper = (await ethers.getSigners())[1];
+  }
   return (
     strategy
       // use keeper
@@ -268,7 +270,12 @@ async function executeStrategy(
   if (time > 0) {
     await increaseTime(time);
   }
-  const keeper = executedBy || signers[1];
+  let keeper;
+  if (executedBy === undefined) {
+    keeper = signers[1];
+  } else {
+    keeper = executedBy;
+  }
   return (
     strategy
       // use keeper
@@ -428,17 +435,21 @@ async function createStrategy(
   signers,
   integrations,
   garden,
+  executedBy,
   params,
   specificParams,
   customOps,
-  { executedBy } = {},
 ) {
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
-  const keeper = executedBy || signers[0];
-  console.log('creating strategy');
+  let keeper;
+  if (executedBy === undefined) {
+    keeper = (await ethers.getSigners())[1];
+  } else {
+    keeper = executedBy;
+  }
 
   switch (kind) {
     case 'buy':
@@ -492,18 +503,15 @@ async function createStrategy(
     if (state === 'deposit') {
       return strategy;
     }
-    await vote(strategy, signers, { keeper });
-    console.log('right after vote', keeper.address);
+    await vote(strategy, signers, keeper);
     if (state === 'vote') {
-      console.log('resolved votes returning...');
       return strategy;
     }
-    console.log('trying to execute');
-    await executeStrategy(strategy, { keeper });
+    await executeStrategy(strategy, { executedBy: keeper });
     if (state === 'active') {
       return strategy;
     }
-    await finalizeStrategy(strategy, { keeper });
+    await finalizeStrategy(strategy, { executedBy: keeper });
   }
 
   return strategy;

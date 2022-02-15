@@ -245,6 +245,7 @@ describe('Strategy', function () {
 
   describe('executeStrategy', async function () {
     it('should execute strategy', async function () {
+      console.log('check 0');
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -252,10 +253,13 @@ describe('Strategy', function () {
         uniswapV3TradeIntegration.address,
         garden1,
       );
+      console.log('check 1');
 
       await executeStrategy(strategyContract, { amount: eth().mul(2), fee: 42 });
+      console.log('check 2');
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+      console.log('check 3');
 
       expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(true);

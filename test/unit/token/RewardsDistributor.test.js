@@ -3018,6 +3018,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3028,6 +3029,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
@@ -3381,6 +3383,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
@@ -3459,6 +3462,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         masterSwapper.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3575,6 +3579,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3585,6 +3590,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
@@ -3712,6 +3718,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         masterSwapper.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3722,6 +3729,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         masterSwapper.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
@@ -3850,6 +3858,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         masterSwapper.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [dai.address, 0],
       );
@@ -3860,6 +3869,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         masterSwapper.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
@@ -3987,6 +3997,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         usdcGarden,
+        keeper,
         USDC_STRATEGY_PARAMS,
         [weth.address, 0],
       );
@@ -3997,6 +4008,7 @@ async function getStrategyState(strategy) {
         [signer1, signer3],
         uniswapV3TradeIntegration.address,
         daiGarden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [usdc.address, 0],
       );
