@@ -74,16 +74,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyStrategy(address _strategy) private view {
         address garden = address(IStrategy(_strategy).garden());
-        _require(IBabController(controller).isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
         _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
     }
 
     /**
      * Throws if the sender is not the controller
      */
-    function _onlyController() private view {
-        _require(IBabController(controller).isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
-        _require(address(controller) == msg.sender, Errors.ONLY_CONTROLLER);
+    function _onlyGovernanceOrEmergency() private view {
+        _require(
+            msg.sender == controller.owner() ||
+                msg.sender == owner() ||
+                msg.sender == controller.EMERGENCY_OWNER() ||
+                msg.sender == address(controller),
+            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
+        );
     }
 
     /**
@@ -91,7 +96,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
-        _require(!IBabController(controller).isPaused(address(this)), Errors.ONLY_UNPAUSED);
+        _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
     }
 
     /**
@@ -117,9 +122,19 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant DECAY_RATE = 12e16;
     // Duration of its EPOCH in days  // BABL & profits split from the protocol
     uint256 private constant EPOCH_DURATION = 90 days;
+    // DAI normalize asset
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    // Reentrancy guard countermeasure
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
+    // NFT Prophets
+    IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+
+    /* ============ State Variables ============ */
 
     // solhint-disable-next-line
-    uint256 public override START_TIME; // Starting time of the rewards distribution
+    uint256 private START_TIME; // Starting time of the rewards distribution
 
     // solhint-disable-next-line
     uint256 private strategistBABLPercentage;
@@ -137,13 +152,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private profitProtocolFee;
     // solhint-disable-next-line
     uint256 private gardenCreatorBonus;
-
-    // DAI normalize asset
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
-    // Reentrancy guard countermeasure
-    uint256 private constant NOT_ENTERED = 1;
-    uint256 private constant ENTERED = 2;
 
     /* ============ Structs ============ */
 
@@ -187,10 +195,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 power; // Contributor power
     }
     struct Checkpoints {
-        uint256 fromDepositAt; // DEPRECATED
-        uint256 lastDepositAt; // DEPRECATED
-        uint256 gardenFromDepositAt; // DEPRECATED
-        uint256 gardenLastDepositAt; // DEPRECATED
+        uint256 fromTime; // checkpoint block timestamp
+        uint256 tokens; // User garden tokens in the checkpoint
+        uint256 supply; // DEPRECATED
+        uint256 prevBalance; // Previous user balance (backward compatibility for beta users)
     }
 
     /* ============ State Variables ============ */
@@ -252,19 +260,44 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private miningUpdatedAt; // Timestamp of last strategy capital update
     mapping(address => uint256) private strategyPrincipal; // Last known strategy principal normalized into DAI
 
-    // Only for beta gardens and users as they need migration into new gas-optimized data structure
-    // Boolean check to control users and garden migration into to new mapping architecture without checkpoints
-    mapping(address => mapping(address => bool)) private betaUserMigrated; // DEPRECATED
-    mapping(address => bool) private betaGardenMigrated; // DEPRECATED
+    // Mapping re-used to trigger governance migrations into checkpoints for an address
+    // Address can be garden or an individual user
+    // Usage:
+    // a) to migrate the whole garden => betaAddressMigrated[_garden][_garden] = true
+    // b) to migrate a user for all gardens at once => betaAddressMigrated[_contributor][_contributor] = true
+    // Note: do not re-use it in the following format => [_garden][_contributor] as it was previously used for another older migration to avoid issues.
+    mapping(address => mapping(address => bool)) private betaAddressMigrated;
+    mapping(address => bool) private betaOldMigrations; // DEPRECATED
 
     uint256 private bablProfitWeight;
     uint256 private bablPrincipalWeight;
 
-    IProphets public constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+    // A record of garden token checkpoints for each address of each garden, by index
+    // garden -> address -> index checkpoint -> checkpoint struct data
+    mapping(address => mapping(address => mapping(uint256 => Checkpoints))) private gardenCheckpoints;
+
+    // The number of checkpoints for each address of each garden
+    // garden -> address -> number of checkpoints
+    mapping(address => mapping(address => uint256)) private numCheckpoints;
+    // Benchmark creates up to 3 segments to differentiate between cool strategies and bad strategies
+    // First 2 values benchmark[0] and benchmark[1] represent returned/allocated % min and max thresholds to create 3 segments
+    // benchmark[0] value: Used to define the threshold between very bad strategies and not cool strategies
+    // benchmark[0] = minThreshold default 0 (e.g. 90e16 represents profit of -10 %)
+    // It separates segment 1 (very bad strategies) and segment 2 (not cool strategies)
+    // benchmark[1] value: Used to define the threshold between not good/cool strategies and cool/good strategies
+    // benchmark[1] = maxThreshold default 0 (e.g. 103e16 represents profit of +3 %)
+    // It separates segment 2 (not cool strategies) and segment 3 (cool strategies)
+    // benchmark[2] value: Used to set a penalty (if any) for very bad strategies (segment 1)
+    // benchmark[2] = Segment1 Penalty default 0 (e.g. 50e16 represents 1/2 = 50% = half rewards penalty)
+    // benchmark[3] value: Used to set a penalty (if any) for not cool strategies (segment 2)
+    // benchmark[3] = Segment 2 Penalty/Boost default 0 (e.g. 1e18 represents 1 = 100% = no rewards penalty)
+    // becnhmark[4] value: Used to set a boost (if any) for cool strategies (segment 3)
+    // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
+    uint256[5] private benchmark;
 
     /* ============ Constructor ============ */
 
-    function initialize(TimeLockedToken _bablToken, IBabController _controller) public {
+    function initialize(TimeLockedToken _bablToken, IBabController _controller) public initializer {
         OwnableUpgradeable.__Ownable_init();
         _require(address(_bablToken) != address(0) && address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         babltoken = _bablToken;
@@ -281,12 +314,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         lpsBABLPercentage = 80e16; // 80%
         gardenCreatorBonus = 10e16; // 10%
 
-        bablProfitWeight = 65e16; // 65%
-        bablPrincipalWeight = 35e16; // 35%
+        bablProfitWeight = 65e16; // 65% (BIP-7 will change it into 95%)
+        bablPrincipalWeight = 35e16; // 35% (BIP-7 will change it into 5%)
 
         status = NOT_ENTERED;
-        // We start BABL rewards as they were started by bip#1
+        // BABL Mining program was started by bip#1
         START_TIME = block.timestamp;
+        // Benchmark conditions to apply to BABL rewards are initialized as 0
+        // Backward compatibility manages benchmark[4] value that must be always >= 1e18
+        benchmark[4] = 1e18; // default value
     }
 
     /* ============ External Functions ============ */
@@ -303,47 +339,36 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * PRIVILEGE FUNCTION to update strategy data
-     * @param _strategy               Address of the strategy
-     * @param _capital                Amount of capital in any type of asset to be normalized into DAI
-     * @param _addOrSubstract         Whether we are adding or substracting capital
+     * Function used by each garden to signal each deposit and withdrawal in checkpoints to be used for rewards
+     * @param _garden                Address of the garden
+     * @param _contributor           Address of the contributor
+     * @param _previousBalance       Previous balance of the contributor
+     * @param _tokenDiff             Amount difference in this deposit/withdraw
+     * @param _addOrSubstract        Whether the contributor is adding (true) or withdrawing capital (false)
      */
-    function updateStrategyCheckpoint(
-        address _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) external override onlyOwner {
-        _onlyUnpaused();
-        _onlyStrategy(_strategy);
-        _updateProtocolPrincipal(_strategy, _capital, _addOrSubstract);
-    }
-
     function updateGardenPowerAndContributor(
         address _garden,
         address _contributor,
         uint256 _previousBalance,
-        uint256 _previousSupply,
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external override nonReentrant {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        uint256 newSupply = _addOrSubstract ? _previousSupply.add(_tokenDiff) : _previousSupply.sub(_tokenDiff);
+        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
-        // End of temporal beta migrations for users and gardens
-        _updateGardenPower(_garden, _previousSupply, newSupply);
-        _updateContributorPower(_garden, _contributor, _previousBalance, newBalance);
+        // Creates a new user checkpoint
+        _writeCheckpoint(_garden, _contributor, newBalance, _previousBalance);
     }
 
     /**
-     * Garden keeper can claim the rewards from the strategies of a user bySig
-     * was invested in.
+     * Sending BABL as part of the claim process (either by sig or standard claim)
+     *
      */
     function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
-        _require(IBabController(controller).isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         return _sendBABLToContributor(_to, _babl);
     }
 
-    /**
+    /** PRIVILEGE FUNCTION
      * Set customized profit shares for a specific garden by the gardener
      * @param _garden               Address of the garden
      * @param _strategistShare      New % of strategistShare
@@ -356,40 +381,62 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _stewardsShare,
         uint256 _lpShare
     ) external override {
-        _onlyController();
-        _require(IBabController(controller).isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _onlyGovernanceOrEmergency();
+        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
-    /**
-     * Change default BABL shares % by the governance
-     * @param _strategistShare      New % of BABL strategist share
-     * @param _stewardsShare        New % of BABL stewards share
-     * @param _lpShare              New % of BABL lp share
-     * @param _creatorBonus         New % of creator bonus
-     * @param _profitWeight         New % of profit weigth for strategy rewards
-     * @param _principalWeight      New % of principal weigth for strategy rewards
+    /** PRIVILEGE FUNCTION
+     * Migrates by governance: (2 options)
+     * a) the whole garden or a user for all gardens into checkpoints deprecating c-power
+     * @param _address              Array of Address to migrate (garden or user)
+     * @param _toMigrate            Bool to migrate (true) or redo (false)
      */
-    function setBABLMiningParameters(
-        uint256 _strategistShare,
-        uint256 _stewardsShare,
-        uint256 _lpShare,
-        uint256 _creatorBonus,
-        uint256 _profitWeight,
-        uint256 _principalWeight
-    ) external override onlyOwner {
+    function migrateAddressToCheckpoints(address[] memory _address, bool _toMigrate) external override {
+        _onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _address.length; i++) {
+            betaAddressMigrated[_address[i]][_address[i]] = _toMigrate;
+        }
+    }
+
+    /** PRIVILEGE FUNCTION
+     * Change default BABL shares % by the governance
+     * @param _newMiningParams      Array of new mining params to be set by government
+     */
+    function setBABLMiningParameters(uint256[11] memory _newMiningParams) external override {
+        // _newMiningParams[0]: _strategistShare
+        // _newMiningParams[1]: _stewardsShare
+        // _newMiningParams[2]: _lpShare
+        // _newMiningParams[3]: _creatorBonus
+        // _newMiningParams[4]: _profitWeight
+        // _newMiningParams[5]: _principalWeight
+        // _newMiningParams[6]: _benchmark[0] to differentiate from very bad strategies and not cool strategies
+        // _newMiningParams[7]: _benchmark[1] to differentiate from not cool strategies and cool strategies
+        // _newMiningParams[8]: _benchmark[2] penalty to be applied to very bad strategies in benchmark segment 1
+        // _newMiningParams[9]: _benchmark[3] penalty to be applied to not cool strategies in benchmark segment 2
+        // _newMiningParams[10]: _benchmark[4] boost/bonus to be applied to cool strategies in benchmark segment 3
+        _onlyGovernanceOrEmergency();
         _require(
-            _strategistShare.add(_stewardsShare).add(_lpShare) == 1e18 &&
-                _creatorBonus <= 1e18 &&
-                _profitWeight.add(_principalWeight) == 1e18,
+            _newMiningParams[0].add(_newMiningParams[1]).add(_newMiningParams[2]) == 1e18 &&
+                _newMiningParams[3] <= 1e18 &&
+                _newMiningParams[4].add(_newMiningParams[5]) == 1e18 &&
+                _newMiningParams[6] <= _newMiningParams[7] &&
+                _newMiningParams[8] <= _newMiningParams[9] &&
+                _newMiningParams[9] <= _newMiningParams[10] &&
+                _newMiningParams[10] >= 1e18,
             Errors.INVALID_MINING_VALUES
         );
-        strategistBABLPercentage = _strategistShare;
-        stewardsBABLPercentage = _stewardsShare;
-        lpsBABLPercentage = _lpShare;
-        gardenCreatorBonus = _creatorBonus;
-        bablProfitWeight = _profitWeight;
-        bablPrincipalWeight = _principalWeight;
+        strategistBABLPercentage = _newMiningParams[0];
+        stewardsBABLPercentage = _newMiningParams[1];
+        lpsBABLPercentage = _newMiningParams[2];
+        gardenCreatorBonus = _newMiningParams[3];
+        bablProfitWeight = _newMiningParams[4];
+        bablPrincipalWeight = _newMiningParams[5];
+        benchmark[0] = _newMiningParams[6]; // minThreshold dividing segment 1 and 2 (if any)
+        benchmark[1] = _newMiningParams[7]; // maxThreshold dividing segment 2 and 3 (if any)
+        benchmark[2] = _newMiningParams[8]; // penalty for segment 1
+        benchmark[3] = _newMiningParams[9]; // penalty/boost for segment 2
+        benchmark[4] = _newMiningParams[10]; // boost for segment 3
     }
 
     /* ========== View functions ========== */
@@ -414,24 +461,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         address[] calldata _finalizedStrategies
     ) public view override returns (uint256[] memory) {
-        _require(IBabController(controller).isGarden(address(_garden)), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
-        uint256 initialDepositAt;
         uint256 claimedAt;
-        (, initialDepositAt, claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        (, , claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             // Security check
             _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
 
             uint256[] memory tempRewards = new uint256[](8);
 
-            tempRewards = _getStrategyProfitsAndBABL(
-                _garden,
-                _finalizedStrategies[i],
-                _contributor,
-                initialDepositAt,
-                claimedAt
-            );
+            tempRewards = _getStrategyProfitsAndBABL(_garden, _finalizedStrategies[i], _contributor, claimedAt);
             totalRewards[0] = totalRewards[0].add(tempRewards[0]);
             totalRewards[1] = totalRewards[1].add(tempRewards[1]);
             totalRewards[2] = totalRewards[2].add(tempRewards[2]);
@@ -446,20 +486,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Gets the total amount of rewards for a given strategy
-     * @param _strategy                Strategy to check
+     * Gets the baseline amount of BABL rewards for a given strategy
+     * @param _strategy     Strategy to check
      */
-    function getStrategyRewards(address _strategy) external view override returns (uint96) {
+    function getStrategyRewards(address _strategy) external view override returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
         // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
-        if ((strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) && START_TIME != 0) {
+        if (strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
-                return Safe3296.safe96(rewards, 'overflow 96 bits');
+                return rewards;
             }
             // str[0]: capitalAllocated, str[1]: capitalReturned
             uint256[] memory str = new uint256[](2);
@@ -467,7 +507,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
-
             for (uint256 i = 0; i < numQuarters; i++) {
                 // Initialization timestamp at the end of the first slot where the strategy starts its execution
                 uint256 slotEnding = START_TIME.add(startingQuarter.add(i).mul(EPOCH_DURATION));
@@ -485,80 +524,96 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 uint256 rewardsPerQuarter =
                     strategyPower
                         .preciseDiv(protocolPower)
-                        .preciseMul(uint256(_tokenSupplyPerQuarter(startingQuarter.add(i))))
+                        .preciseMul(_tokenSupplyPerQuarter(startingQuarter.add(i)))
                         .preciseMul(percentage);
                 rewards = rewards.add(rewardsPerQuarter);
             }
-            // Governance has decided to have different weights for principal and profit
-            // Profit weight must be higher than principal
-            // profitWeight + principalWeight must always sum 1e18 (100%)
-            // PercentageProfit must always have 18 decimals (capital returned by capital allocated)
-            uint256 percentageProfit = str[1].preciseDiv(str[0]);
-            // Set the max cap bonus x2
-            uint256 maxRewards = rewards.preciseMul(2e18);
-            // Apply rewards weight related to principal and profit
-            rewards = rewards.preciseMul(bablPrincipalWeight).add(
-                rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit)
-            );
-            // Check max cap
-            if (rewards >= maxRewards) {
-                rewards = maxRewards;
-            }
-            return Safe3296.safe96(rewards, 'overflow 96 bits');
+            // Apply rewards weight related to principal and profit and related to benchmark
+            return _getBenchmarkRewards(str[1], str[0], rewards, ts[0]);
         } else {
             return 0;
         }
     }
 
     /**
-     * Gets the contributor power from one timestamp to the other
-     * @param _garden      Address of the garden where the contributor belongs to
-     * @param _contributor Address of the contributor
-     * @param _time        Timestamp to check power
-     * @return uint256     Contributor power during that period
+     * Get token power at a specific block for an account
+     *
+     * @param _garden       Address of the garden
+     * @param _address      Address to get prior balance for
+     * @param _blockTime  Block timestamp to get token power at
+     * @return Token power for an account at specific block
      */
-    function getContributorPower(
+    function getPriorBalance(
         address _garden,
-        address _contributor,
-        uint256 _time
-    ) public view override returns (uint256) {
-        // Check to avoid out of bounds
-        _require(_time >= IGarden(_garden).gardenInitializedAt(), Errors.CONTRIBUTOR_POWER_CHECK_WINDOW);
-        uint256[] memory powerData = new uint256[](9);
-        // powerData[0]: lastDepositAt (contributor)
-        // powerData[1]: initialDepositAt (contributor)
-        // powerData[2]: balance (contributor)
-        // powerData[3]: power (contributor)
-        // powerData[4]: avgBalance (contributor)
-        // powerData[5]: lastDepositAt (garden)
-        // powerData[6]: accGardenPower (garden)
-        // powerData[7]: avgGardenBalance (garden)
-        // powerData[8]: totalSupply (garden)
-        powerData = _getGardenAndContributor(_garden, _contributor);
-        if (powerData[1] == 0 || powerData[1] > _time || powerData[2] == 0) {
-            return 0;
-        } else {
-            // Safe check to avoid underflow, time travel only works for a past date
-            if (_time > block.timestamp) {
-                _time = block.timestamp;
-            }
-            // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
-            uint256 updatedPower = powerData[3].add((block.timestamp.sub(powerData[0])).mul(powerData[2]));
-            uint256 updatedGardenPower = powerData[6].add((block.timestamp.sub(powerData[5])).mul(powerData[8]));
-            // We then time travel back to when the strategy exitedAt
-            // Calculate the power at "_to" timestamp
-            uint256 timeDiff = block.timestamp.sub(_time);
-            uint256 userPowerDiff = powerData[4].mul(timeDiff);
-            uint256 gardenPowerDiff = powerData[7].mul(timeDiff);
-            // Avoid underflow conditions 0 at user, 1 at garden
-            updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
-            updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
-            uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
-            if (virtualPower > 1e18) {
-                virtualPower = 1e18; // Overflow limit
-            }
-            return virtualPower;
+        address _address,
+        uint256 _blockTime
+    )
+        public
+        view
+        virtual
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        // We get the previous (prior) balance to _blockTime timestamp
+        // Actually it also acts as a flashloan protection along the time
+        _blockTime = _blockTime.sub(1);
+        uint256 nCheckpoints = numCheckpoints[_garden][_address];
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_address];
+        // beta user if initializedAt > 0
+        uint256 initializedAt = contributor.initialDepositAt;
+        uint256 balance = ERC20(_garden).balanceOf(_address);
+        if (nCheckpoints == 0 && !(initializedAt > 0)) {
+            return (0, 0, 0);
+        } else if (nCheckpoints == 0 && initializedAt > 0) {
+            // Backward compatible for beta users, initial deposit > 0 but still no checkpoints
+            // It also consider burning for bad strategist
+            return (initializedAt, balance, 0);
         }
+        // There are at least one checkpoint from this point
+        // First check most recent balance
+        if (gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime <= _blockTime) {
+            // Burning security protection at userTokens
+            // It only limit the balance in case of burnt tokens and only if using last checkpoint
+            return (
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime,
+                gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens > balance
+                    ? balance
+                    : gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens,
+                nCheckpoints - 1
+            );
+        }
+        // Next check implicit zero balance
+        if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && !(initializedAt > 0)) {
+            // backward compatible
+            return (0, 0, 0);
+        } else if (gardenCheckpoints[_garden][_address][0].fromTime > _blockTime && initializedAt > 0) {
+            // Backward compatible for beta users, initial deposit > 0 but lost initial checkpoints
+            // First checkpoint stored its previous balance so we use it to guess the user past
+            return (initializedAt, gardenCheckpoints[_garden][_address][0].prevBalance, 0);
+        }
+        // It has more checkpoints but the time is between different checkpoints, we look for it
+        uint256 lower = 0;
+        uint256 upper = nCheckpoints - 1;
+        while (upper > lower) {
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            Checkpoints memory cp = gardenCheckpoints[_garden][_address][center];
+            if (cp.fromTime == _blockTime) {
+                return (cp.fromTime, cp.tokens, center);
+            } else if (cp.fromTime < _blockTime) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return (
+            gardenCheckpoints[_garden][_address][lower].fromTime,
+            gardenCheckpoints[_garden][_address][lower].tokens,
+            lower
+        );
     }
 
     /**
@@ -566,15 +621,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _quarterNum      Number of quarter
      * @param _strategy        Address of strategy
      */
-
     function checkMining(uint256 _quarterNum, address _strategy)
         external
         view
         override
-        returns (uint256[] memory, bool[] memory)
+        returns (uint256[17] memory miningData)
     {
-        uint256[] memory miningData = new uint256[](10);
-        bool[] memory miningBool = new bool[](2);
         miningData[0] = START_TIME;
         miningData[1] = miningUpdatedAt;
         miningData[2] = miningProtocolPrincipal;
@@ -585,45 +637,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         miningData[7] = strategyPricePerTokenUnit[_strategy].pricePerTokenUnit;
         miningData[8] = strategyPerQuarter[_strategy][_quarterNum].quarterPower;
         miningData[9] = _tokenSupplyPerQuarter(_quarterNum);
-        miningBool[0] = isProtocolPerQuarter[_quarterNum];
-        miningBool[1] = strategyPerQuarter[_strategy][_quarterNum].initialized;
-        return (miningData, miningBool);
-    }
-
-    /**
-     * Get contributor data per garden
-     * @param _garden       Address of the garden
-     * @param _contributor  Address of contributor
-     */
-
-    function getContributorPerGarden(address _garden, address _contributor)
-        external
-        view
-        override
-        returns (uint256[] memory, bool[] memory)
-    {
-        uint256[] memory contributorData = new uint256[](12);
-        bool[] memory contributorBool = new bool[](2);
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        TimestampContribution storage contributorDetail = contributor.tsContributions[0];
-        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
-
-        contributorData[0] = contributor.lastDepositAt;
-        contributorData[1] = contributor.initialDepositAt;
-        contributorData[2] = contributor.pid;
-        contributorData[3] = contributorDetail.avgBalance;
-        contributorData[4] = ERC20(_garden).balanceOf(_contributor);
-        contributorData[5] = contributorDetail.power;
-        contributorData[6] = contributorDetail.timestamp;
-        contributorData[7] = contributorDetail.timePointer;
-        contributorData[8] = gardenPid[_garden];
-        contributorData[9] = garden.avgGardenBalance;
-        contributorData[10] = garden.lastDepositAt;
-        contributorData[11] = garden.accGardenPower;
-        contributorBool[0] = betaGardenMigrated[_garden];
-        contributorBool[1] = betaUserMigrated[_garden][_contributor];
-
-        return (contributorData, contributorBool);
+        miningData[10] = bablProfitWeight;
+        miningData[11] = bablPrincipalWeight;
+        miningData[12] = benchmark[0];
+        miningData[13] = benchmark[1];
+        miningData[14] = benchmark[2];
+        miningData[15] = benchmark[3];
+        miningData[16] = benchmark[4];
     }
 
     /**
@@ -640,39 +660,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Returns the percentages of BABL Mining program
-     *
-     * @return   Strategist, Stewards, Lps, creator bonus, bablProfit weight, babl principal weigth
-     *
-     */
-    function getBABLMiningParameters()
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            strategistBABLPercentage,
-            stewardsBABLPercentage,
-            lpsBABLPercentage,
-            gardenCreatorBonus,
-            bablProfitWeight,
-            bablPrincipalWeight
-        );
-    }
-
-    /**
      * Get an estimation of user rewards for active strategies
      * @param _strategy        Address of the strategy to estimate BABL rewards
      * @param _contributor     Address of the garden contributor
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
@@ -701,6 +692,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -710,19 +703,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
-            // Get the contributor power until the strategy exit timestamp
-            uint256 contributorPower =
-                getContributorPower(
-                    garden,
-                    _contributor,
-                    strategyDetails[1] == 0 ? block.timestamp : strategyDetails[1]
-                );
+            // Get the contributor share % within the strategy window out of the total garden and users
+            uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, strategyDetails);
             rewards = _getRewardsPerRole(
                 garden,
                 _strategy,
                 strategist,
                 _contributor,
-                contributorPower,
+                contributorShare,
                 strategyDetails,
                 profitData
             );
@@ -730,6 +718,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             rewards = _boostRewards(garden, _contributor, rewards, strategyDetails);
         }
         return rewards;
+    }
+
+    /**
+     * Get a safe user share position within a strategy of a garden
+     * @param _garden          Address of the garden
+     * @param _contributor     Address of the garden contributor
+     * @param _strategy        Address of the strategy
+     * @return % deserved share per user
+     */
+    function getSafeUserSharePerStrategy(
+        address _garden,
+        address _contributor,
+        address _strategy
+    ) external view returns (uint256) {
+        (, uint256[] memory strategyDetails, ) = IStrategy(_strategy).getStrategyRewardsContext();
+        return _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
     }
 
     /**
@@ -747,6 +751,41 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /* ============ Internal Functions ============ */
+
+    /**
+     * @dev internal function to write a checkpoint for contributor token power
+     * @param _garden        Address of the garden
+     * @param _address       Address for the checkpoint
+     * @param _newBalance    The new token balance
+     * @param _prevBalance   The previous user token balance
+     */
+    function _writeCheckpoint(
+        address _garden,
+        address _address,
+        uint256 _newBalance,
+        uint256 _prevBalance
+    ) internal {
+        uint256 blockTime = block.timestamp;
+        uint256 nCheckpoints = numCheckpoints[_garden][_address];
+        if (nCheckpoints > 0 && gardenCheckpoints[_garden][_address][nCheckpoints - 1].fromTime == blockTime) {
+            gardenCheckpoints[_garden][_address][nCheckpoints - 1].tokens = _newBalance;
+        } else {
+            // We only store previous Balance in case of the first checkpoint
+            // to get backward compatibility for beta addresses
+            if (nCheckpoints == 0) {
+                gardenCheckpoints[_garden][_address][nCheckpoints] = Checkpoints(
+                    blockTime,
+                    _newBalance,
+                    0,
+                    _prevBalance
+                );
+            } else {
+                gardenCheckpoints[_garden][_address][nCheckpoints] = Checkpoints(blockTime, _newBalance, 0, 0);
+            }
+            numCheckpoints[_garden][_address] = nCheckpoints + 1;
+        }
+    }
+
     /**
      * Update the protocol principal checkpoints
      * @param _strategy         Strategy which is adding/removing principal
@@ -796,133 +835,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Adding capital
             miningProtocolPrincipal = miningProtocolPrincipal.add(_capital);
             strategyPrincipal[_strategy] = strategyPrincipal[_strategy].add(_capital);
-        }
-    }
-
-    /**
-     * Update the garden power whenever there is a deposit or withdraw
-     * @param _garden           Address of the garden
-     * @param _previousSupply   Previous garden token supply before minting or burning new user tokens
-     */
-    function _updateGardenPower(
-        address _garden,
-        uint256 _previousSupply,
-        uint256 _newSupply
-    ) internal {
-        // We select timestamp [0] to persist the garden power data as we deprecated checkpoints
-        GardenPowerByTimestamp storage gardenPower = gardenPowerByTimestamp[_garden][0];
-        // The very first deposit takes 0 of power in a garden as power is principal x time and time is 0
-        // Power is updated by usign previous totalSupply (before the new mint or burn which is just done
-        // as part of deposit/withdraw op)
-        gardenPower.accGardenPower = gardenPower.lastDepositAt == 0
-            ? 0
-            : gardenPower.accGardenPower.add((block.timestamp.sub(gardenPower.lastDepositAt)).mul(_previousSupply));
-        // The following call should always go after minting new tokens
-        // The reason is that we need an updated totalSupply to update avg garden balance
-        gardenPower.avgGardenBalance = gardenPower.lastDepositAt == 0
-            ? _newSupply
-            : (
-                gardenPower.avgGardenBalance.mul(block.timestamp.sub(IGarden(_garden).gardenInitializedAt())).add(
-                    _newSupply
-                )
-            )
-                .div(block.timestamp.sub(IGarden(_garden).gardenInitializedAt()));
-
-        gardenPower.lastDepositAt = block.timestamp;
-
-        if (_newSupply == 0) {
-            // reset Garden power if all funds are removed
-            gardenPower.lastDepositAt = 0;
-            gardenPower.avgGardenBalance = 0;
-            gardenPower.accGardenPower = 0;
-        }
-    }
-
-    /**
-     * Update the contributor power whenever there is a deposit or withdraw
-     * @param _garden           Address of the garden
-     * @param _contributor      Address of the contributor
-     * @param _previousBalance  Previous balance the user had before minting or burning new tokens
-     */
-
-    function _updateContributorPower(
-        address _garden,
-        address _contributor,
-        uint256 _previousBalance,
-        uint256 _newBalance
-    ) internal {
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        // We select timestamp [0] to persist the contributor power data as we deprecated checkpoints
-        TimestampContribution storage contributorDetail = contributor.tsContributions[0];
-        // The very first deposit takes 0 of power
-        // Power is updated by usign previous balance (before the new mint or burn which is
-        // just done as part of this deposit/withdraw op)
-        // Its power is proportional to the time passed by the previous supply during that time
-        contributorDetail.power = contributor.lastDepositAt == 0
-            ? 0
-            : contributorDetail.power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(_previousBalance));
-        // The following call should always go after minting new tokens
-        // The reason is that we need an updated user balance to update avg contributor balance
-        // The new balance of the user takes care of the sharePrice so we use garden tokens count for power
-        contributorDetail.avgBalance = contributor.lastDepositAt == 0
-            ? _newBalance
-            : (contributorDetail.avgBalance.mul(block.timestamp.sub(contributor.initialDepositAt)).add(_newBalance))
-                .div(block.timestamp.sub(contributor.initialDepositAt));
-        // Initial Deposit
-        if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-            contributor.initialDepositAt = block.timestamp;
-        }
-        contributor.lastDepositAt = block.timestamp;
-
-        // Check for withdrawals of full capital
-        if (_newBalance == 0) {
-            contributor.lastDepositAt = 0;
-            contributor.initialDepositAt = 0;
-            contributorDetail.avgBalance = 0;
-            contributorDetail.power = 0;
-            delete contributor.timeListPointer; // Backward compatible
-        }
-    }
-
-    /**
-     * Get the price per token to be used in the adding or substraction normalized to DAI (supports multiple asset)
-     * @param _reserveAsset     Garden reserve asset address
-     * @param _strategy         Strategy address
-     * @param _capital          Capital in reserve asset to add or substract
-     * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy
-     * @return pricePerToken value
-     */
-    function _getStrategyPricePerTokenUnit(
-        address _reserveAsset,
-        address _strategy,
-        uint256 _capital,
-        bool _addOrSubstract
-    ) private returns (uint256) {
-        // Normalizing into DAI
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 pricePerTokenUnit = oracle.getPrice(_reserveAsset, DAI);
-        StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
-        if (strPpt.preallocated == 0) {
-            // First adding checkpoint
-            strPpt.preallocated = _capital;
-            strPpt.pricePerTokenUnit = pricePerTokenUnit;
-            return pricePerTokenUnit;
-        } else {
-            // We are controlling pair reserveAsset-DAI fluctuations along the time
-            if (_addOrSubstract) {
-                strPpt.pricePerTokenUnit = (
-                    ((strPpt.pricePerTokenUnit.mul(strPpt.preallocated)).add(_capital.mul(pricePerTokenUnit))).div(1e18)
-                )
-                    .preciseDiv(strPpt.preallocated.add(_capital));
-                strPpt.preallocated = strPpt.preallocated.add(_capital);
-            } else {
-                // We use the previous pricePerToken in a substract instead of a new price
-                // (as allocated capital used previous prices not the current one)
-                // Failsafe condition
-                uint256 amount = _capital > strPpt.preallocated ? strPpt.preallocated : _capital;
-                strPpt.preallocated = strPpt.preallocated.sub(amount);
-            }
-            return strPpt.pricePerTokenUnit;
         }
     }
 
@@ -1102,15 +1014,59 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /* ========== Internal View functions ========== */
 
     /**
+     * Get the price per token to be used in the adding or substraction normalized to DAI (supports multiple asset)
+     * @param _reserveAsset     Garden reserve asset address
+     * @param _strategy         Strategy address
+     * @param _capital          Capital in reserve asset to add or substract
+     * @param _addOrSubstract   Whether or not we are adding or unwinding capital to the strategy
+     * @return pricePerToken value
+     */
+    function _getStrategyPricePerTokenUnit(
+        address _reserveAsset,
+        address _strategy,
+        uint256 _capital,
+        bool _addOrSubstract
+    ) private returns (uint256) {
+        // Normalizing into DAI
+        IPriceOracle oracle = IPriceOracle(controller.priceOracle());
+        uint256 pricePerTokenUnit = oracle.getPrice(_reserveAsset, DAI);
+        StrategyPricePerTokenUnit storage strPpt = strategyPricePerTokenUnit[_strategy];
+        if (strPpt.preallocated == 0) {
+            // First adding checkpoint
+            strPpt.preallocated = _capital;
+            strPpt.pricePerTokenUnit = pricePerTokenUnit;
+            return pricePerTokenUnit;
+        } else {
+            // We are controlling pair reserveAsset-DAI fluctuations along the time
+            if (_addOrSubstract) {
+                strPpt.pricePerTokenUnit = (
+                    ((strPpt.pricePerTokenUnit.mul(strPpt.preallocated)).add(_capital.mul(pricePerTokenUnit))).div(1e18)
+                )
+                    .preciseDiv(strPpt.preallocated.add(_capital));
+                strPpt.preallocated = strPpt.preallocated.add(_capital);
+            } else {
+                // We use the previous pricePerToken in a substract instead of a new price
+                // (as allocated capital used previous prices not the current one)
+                // Failsafe condition
+                uint256 amount = _capital > strPpt.preallocated ? strPpt.preallocated : _capital;
+                strPpt.preallocated = strPpt.preallocated.sub(amount);
+            }
+            return strPpt.pricePerTokenUnit;
+        }
+    }
+
+    /* ========== Internal View functions ========== */
+
+    /**
      * Get an estimation of user rewards for active strategies
      * @param _garden               Address of the garden
      * @param _strategy             Address of the strategy to estimate rewards
      * @param _strategist           Address of the strategist
      * @param _contributor          Address of the garden contributor
-     * @param _contributorPower     Contributor power in a specific time
+     * @param _contributorShare     Contributor share in a specific time
      * @param _strategyDetails      Details of the strategy in that specific moment
      * @param _profitData           Array of profit Data (if profit as well distance)
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
@@ -1125,7 +1081,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategy,
         address _strategist,
         address _contributor,
-        uint256 _contributorPower,
+        uint256 _contributorShare,
         uint256[] memory _strategyDetails,
         bool[] memory _profitData
     ) internal view returns (uint256[] memory) {
@@ -1143,8 +1099,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             ? _getStrategyStewardProfits(_garden, _strategy, _contributor, _strategyDetails, _profitData)
             : 0;
         // Get LP rewards
-        // Contributor power is fluctuating along the way for each new deposit
-        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorPower);
+        // Contributor share is fluctuating along the way in each new deposit
+        rewards[4] = _getStrategyLPBabl(_strategyDetails[9], _contributorShare);
         // Total BABL including creator bonus (if any)
         rewards[5] = _getCreatorBonus(_garden, _contributor, rewards[0].add(rewards[2]).add(rewards[4]));
         // Total profit
@@ -1154,6 +1110,161 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             ? rewards[5].sub(rewards[0].add(rewards[2]).add(rewards[4]))
             : 0;
         return rewards;
+    }
+
+    /**
+     * Gets the contributor power from one timestamp to the other
+     * @param _garden       Address of the garden where the contributor belongs to
+     * @param _contributor  Address of the contributor
+     * @param _time         Timestamp to check power
+     * @return uint256      Contributor power during that period
+     */
+    function _getContributorPower(
+        address _garden,
+        address _contributor,
+        uint256 _time,
+        uint256 _gardenSupply
+    ) internal view returns (uint256) {
+        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
+        GardenPowerByTimestamp storage gardenData = gardenPowerByTimestamp[_garden][0];
+        if (contributor.initialDepositAt == 0 || contributor.initialDepositAt > _time) {
+            return 0;
+        } else {
+            (, uint256 balance, ) = getPriorBalance(_garden, _contributor, contributor.lastDepositAt);
+            uint256 supply = _gardenSupply > 0 ? _gardenSupply : ERC20(_garden).totalSupply();
+            // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
+            uint256 updatedPower =
+                contributor.tsContributions[0].power.add((block.timestamp.sub(contributor.lastDepositAt)).mul(balance));
+            uint256 updatedGardenPower =
+                gardenData.accGardenPower.add((block.timestamp.sub(gardenData.lastDepositAt)).mul(supply));
+            // We then time travel back to when the strategy exitedAt
+            // Calculate the power at "_time" timestamp
+            uint256 timeDiff = block.timestamp.sub(_time);
+            uint256 userPowerDiff = contributor.tsContributions[0].avgBalance.mul(timeDiff);
+            uint256 gardenPowerDiff = gardenData.avgGardenBalance.mul(timeDiff);
+            // Avoid underflow conditions 0 at user, 1 at garden
+            updatedPower = updatedPower > userPowerDiff ? updatedPower.sub(userPowerDiff) : 0;
+            updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower.sub(gardenPowerDiff) : 1;
+            uint256 virtualPower = updatedPower.preciseDiv(updatedGardenPower);
+            if (virtualPower > 1e18) {
+                virtualPower = 1e18; // Overflow limit
+            }
+            return virtualPower;
+        }
+    }
+
+    /**
+     * Get a safe user share position within a strategy of a garden
+     * @param _garden          Address of the garden
+     * @param _contributor     Address of the garden contributor
+     * @param _strategyDetails Strategy details rewards context
+     * @return % deserved share per user
+     */
+    function _getSafeUserSharePerStrategy(
+        address _garden,
+        address _contributor,
+        uint256[] memory _strategyDetails
+    ) internal view returns (uint256) {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
+        uint256 endTime = _strategyDetails[1] > 0 ? _strategyDetails[1] : block.timestamp;
+        uint256 cp = numCheckpoints[_garden][_contributor];
+        bool betaUser =
+            !betaAddressMigrated[_contributor][_contributor] &&
+                (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
+                contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
+        bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
+        if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
+            // Backward compatibility for old strategies
+            return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
+        }
+        // Take the closest position prior to _endTime
+        (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = getPriorBalance(_garden, _contributor, endTime);
+        if (balanceEnd < 1e10) {
+            // zero or dust balance
+            // Avoid gas consuming
+            return 0;
+        }
+        uint256 startTime = _strategyDetails[0];
+        uint256 finalSupplyEnd =
+            (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
+        // At this point, all strategies must be started or even finished startTime != 0
+        if (timestamp > startTime) {
+            if (cp > 0) {
+                // User has any checkpoint
+                // If the user balance fluctuated during the strategy duration, we take real average balance
+                uint256 avgBalance = _getAvgBalance(_garden, _contributor, startTime, cpEnd, endTime);
+                // Avoid specific malicious attacks
+                balanceEnd = avgBalance > balanceEnd ? balanceEnd : avgBalance;
+            } else {
+                // no checkpoints
+                // if deposited before endTime, take proportional
+                // if deposited after endTime, take nothing
+                balanceEnd = timestamp < endTime
+                    ? balanceEnd.mul(endTime.sub(timestamp)).div(endTime.sub(startTime))
+                    : 0;
+            }
+        }
+        return balanceEnd.preciseDiv(finalSupplyEnd);
+    }
+
+    /**
+     * Get Avg Address Balance in a garden between two points
+     * Address represents any user but it can also be the garden itself
+     * @param _garden           Garden address
+     * @param _address          Address to get avg balance
+     * @param _start            Start timestamp
+     * @param _cpEnd            End time checkpoint number
+     * @param _endTime          End timestamp
+     * @return Avg address token balance within a garden
+     */
+    function _getAvgBalance(
+        address _garden,
+        address _address,
+        uint256 _start,
+        uint256 _cpEnd,
+        uint256 _endTime
+    ) internal view returns (uint256) {
+        (, uint256 prevBalance, uint256 cpStart) = getPriorBalance(_garden, _address, _start);
+        if (_start == _endTime) {
+            // Avoid underflow
+            return prevBalance;
+        } else {
+            uint256 addressPower;
+            uint256 timeDiff;
+            // We calculate the avg balance of an address within a time range
+            // avg balance = addressPower / total period considered
+            // addressPower = sum(balance x time of each period between checkpoints)
+            // Initializing addressPower since the last known checkpoint _endTime
+            // addressPower since _cpEnd checkpoint is "balance x time difference (endTime - checkpoint timestamp)"
+            addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens.mul(
+                _endTime.sub(gardenCheckpoints[_garden][_address][_cpEnd].fromTime)
+            );
+            // Then, we add addressPower data from periods between all intermediate checkpoints (if any)
+            // periods between starting checkpoint and ending checkpoint (if any)
+            // We go from the newest checkpoint to the oldest
+            for (uint256 i = _cpEnd; i > cpStart; i--) {
+                // We only take proportional addressPower of cpStart checkpoint (from _start onwards)
+                // Usually [cpStart].fromTime <= _start except when cpStart == 0 AND beta addresses
+                // Those cases are handled below to add previous address power happening before the first checkpoint
+                Checkpoints memory userPrevCheckpoint = gardenCheckpoints[_garden][_address][i.sub(1)];
+                timeDiff = gardenCheckpoints[_garden][_address][i].fromTime.sub(
+                    userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
+                );
+                addressPower = addressPower.add(userPrevCheckpoint.tokens.mul(timeDiff));
+            }
+            // We now handle the previous addressPower of beta addresses (if applicable)
+            uint256 fromTimeCp0 = gardenCheckpoints[_garden][_address][0].fromTime;
+            if (cpStart == 0 && fromTimeCp0 > _start) {
+                // Beta address with previous balance before _start
+                addressPower = addressPower.add(prevBalance.mul(fromTimeCp0.sub(_start)));
+            }
+            // avg balance = addressPower / total period of the "strategy" considered
+            return addressPower.div(_endTime.sub(_start));
+        }
     }
 
     /**
@@ -1231,28 +1342,25 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden               Garden address responsible of the strategies to calculate rewards
      * @param _strategy             Strategy address
      * @param _contributor          Contributor address
-     * @param _initialDepositAt     User initial deposit timestamp
      * @param _claimedAt            User last claim timestamp
 
-     * @return Array of size 7 with the following distribution:
+     * @return Array of size 8 with the following distribution:
      * rewards[0]: Strategist BABL 
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
      * rewards[3]: Steward Profit
      * rewards[4]: LP BABL
-     * rewards[5]: total BABL
-     * rewards[6]: total Profits
+     * rewards[5]: Total BABL
+     * rewards[6]: Total Profits
+     * rewards[7]: Creator bonus
      */
     function _getStrategyProfitsAndBABL(
         address _garden,
         address _strategy,
         address _contributor,
-        uint256 _initialDepositAt,
         uint256 _claimedAt
     ) private view returns (uint256[] memory) {
-        _require(address(IStrategy(_strategy).garden()) == _garden, Errors.STRATEGY_GARDEN_MISMATCH);
         uint256[] memory rewards = new uint256[](8);
-
         (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
             IStrategy(_strategy).getStrategyRewardsContext();
 
@@ -1269,6 +1377,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -1276,22 +1386,21 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Positive strategies not yet claimed
         // Users might get BABL rewards if they join the garden before the strategy ends
         // Contributor power will check their exact contribution (avoiding flashloans)
-        if (strategyDetails[1] > _claimedAt && strategyDetails[1] > _initialDepositAt && _initialDepositAt != 0) {
-            // Get the contributor power until the the strategy exit timestamp
-            uint256 contributorPower = getContributorPower(_garden, _contributor, strategyDetails[1]);
+        if (strategyDetails[1] > _claimedAt) {
+            // Get the contributor share until the the strategy exit timestamp
+            uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
                 strategist,
                 _contributor,
-                contributorPower,
+                contributorShare,
                 strategyDetails,
                 profitData
             );
             // add Prophets NFT bonus if staked in the garden
             rewards = _boostRewards(_garden, _contributor, rewards, strategyDetails);
         }
-
         return rewards;
     }
 
@@ -1345,7 +1454,10 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             bablCap = babl.mul(2); // Max cap
             // We add a bonus inverse to the error of expected return vs real returns
             babl = babl.add(babl.preciseMul(_strategyDetails[11].preciseDiv(_strategyDetails[8])));
-            if (babl > bablCap) babl = bablCap; // We limit 2x by a Cap
+            if (babl > bablCap) {
+                // We limit 2x by a Cap
+                babl = bablCap;
+            }
         } else if (userVotes < 0 && _profitData[1] == true) {
             babl = 0;
         }
@@ -1418,7 +1530,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             return babl;
         } else if (_profitData[0] == true && _profitData[1] == false) {
-            //under expectations
+            // under expectations
             // The more the results are close to the expected the less penalization it might have
             return babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
         } else {
@@ -1444,53 +1556,26 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     /**
      * Get the BABL rewards (Mining program) for a LP profile
      * @param _strategyRewards      Strategy rewards
-     * @param _contributorPower     Contributor power
+     * @param _contributorShare     Contributor share in the period
      */
-    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorPower) private view returns (uint256) {
+    function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorShare) private view returns (uint256) {
         uint256 babl;
         // All params must have 18 decimals precision
-        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorPower);
+        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorShare);
         return babl;
-    }
-
-    function _getGardenAndContributor(address _garden, address _contributor) private view returns (uint256[] memory) {
-        uint256[] memory powerData = new uint256[](9);
-        ContributorPerGarden storage contributor = contributorPerGarden[_garden][_contributor];
-        GardenPowerByTimestamp storage garden = gardenPowerByTimestamp[_garden][0];
-
-        // powerData[0]: lastDepositAt (contributor)
-        // powerData[1]: initialDepositAt (contributor)
-        // powerData[2]: balance (contributor)
-        // powerData[3]: power (contributor)
-        // powerData[4]: avgBalance (contributor)
-        // powerData[5]: lastDepositAt (garden)
-        // powerData[6]: accGardenPower (garden)
-        // powerData[7]: avgGardenBalance (garden)
-        // powerData[8]: totalSupply (garden)
-        powerData[0] = contributor.lastDepositAt;
-        powerData[1] = contributor.initialDepositAt;
-        powerData[2] = ERC20(_garden).balanceOf(_contributor);
-        powerData[3] = contributor.tsContributions[0].power;
-        powerData[4] = contributor.tsContributions[0].avgBalance;
-        powerData[5] = garden.lastDepositAt;
-        powerData[6] = garden.accGardenPower;
-        powerData[7] = garden.avgGardenBalance;
-        powerData[8] = ERC20(_garden).totalSupply();
-        return powerData;
     }
 
     /**
      * Calculates the BABL rewards supply for each quarter
      * @param _quarter      Number of the epoch (quarter)
      */
-    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint96) {
+    function _tokenSupplyPerQuarter(uint256 _quarter) internal pure returns (uint256) {
         _require(_quarter >= 1, Errors.QUARTERS_MIN_1);
         if (_quarter >= 513) {
             return 0; // Avoid math overflow
         } else {
             uint256 firstFactor = (SafeDecimalMath.unit().add(DECAY_RATE)).powDecimal(_quarter.sub(1));
-            uint256 supplyForQuarter = Q1_REWARDS.divideDecimal(firstFactor);
-            return Safe3296.safe96(supplyForQuarter, 'overflow 96 bits');
+            return Q1_REWARDS.divideDecimal(firstFactor);
         }
     }
 
@@ -1588,6 +1673,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[9]: strategyRewards
         // strategyDetails[10]: profitValue
         // strategyDetails[11]: distanceValue
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -1600,14 +1687,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
         strategyDetails[7] = IStrategy(_strategy).getNAV();
-        // We apply a 0.15% rounding error margin at NAV
-        strategyDetails[7] = strategyDetails[7].sub(strategyDetails[7].multiplyDecimal(15e14));
-        // Failsafe mode in case of wrong NAV (above 300%)
-        strategyDetails[7] = strategyDetails[7].preciseDiv(strategyDetails[6]) > 3e18
-            ? strategyDetails[6]
-            : strategyDetails[7];
-        profitData[0] = strategyDetails[7] >= strategyDetails[6] ? true : false;
-        profitData[1] = strategyDetails[7] >= strategyDetails[8] ? true : false;
+        profitData[0] = strategyDetails[7] >= strategyDetails[6];
+        profitData[1] = strategyDetails[7] >= strategyDetails[8];
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
         // We consider that it potentially will have profits so the protocol will take profitFee
         // If 0 it does nothing
@@ -1618,7 +1699,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         (uint256 numQuarters, uint256 startingQuarter) =
             _getRewardsWindow(
                 (
-                    (strategyDetails[0] > START_TIME && START_TIME != 0)
+                    (strategyDetails[0] > START_TIME)
                         ? strategyDetails[0]
                         : strategyPerQuarter[_strategy][1].betaInitializedAt
                 ),
@@ -1649,12 +1730,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             miningUpdatedAt,
             miningProtocolPrincipal
         );
-        strategyDetails[9] = _harvestStrategyRewards(
-            strategyPower,
-            protocolPower,
-            startingQuarter,
-            numQuarters,
-            strategyDetails[7].preciseDiv(strategyDetails[6])
+        strategyDetails[9] = _getBenchmarkRewards(
+            strategyDetails[7],
+            strategyDetails[6],
+            _harvestStrategyRewards(strategyPower, protocolPower, startingQuarter, numQuarters),
+            strategyDetails[0]
         );
     }
 
@@ -1662,8 +1742,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory _strategyPower,
         uint256[] memory _protocolPower,
         uint256 _startingQuarter,
-        uint256 _numQuarters,
-        uint256 _percentageProfit
+        uint256 _numQuarters
     ) internal view returns (uint256) {
         uint256 strategyRewards;
         uint256 percentage = 1e18;
@@ -1679,21 +1758,72 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 rewardsPerQuarter =
                 _strategyPower[i]
                     .preciseDiv(_protocolPower[i] == 0 ? 1 : _protocolPower[i])
-                    .preciseMul(uint256(_tokenSupplyPerQuarter(_startingQuarter.add(i))))
+                    .preciseMul(_tokenSupplyPerQuarter(_startingQuarter.add(i)))
                     .preciseMul(percentage);
             strategyRewards = strategyRewards.add(rewardsPerQuarter);
         }
-        // Set the max cap bonus x2
-        uint256 maxRewards = strategyRewards.preciseMul(2e18);
-        // Apply rewards weight related to principal and profit
-        strategyRewards = strategyRewards.preciseMul(bablPrincipalWeight).add(
-            strategyRewards.preciseMul(bablProfitWeight).preciseMul(_percentageProfit)
-        );
-        // Check max cap
-        if (strategyRewards >= maxRewards) {
-            strategyRewards = maxRewards;
-        }
         return strategyRewards;
+    }
+
+    /**
+     * Apply specific BABL mining weights to baseline BABL mining rewards based on mining benchmark params
+     * @param _returned           Strategy capital returned
+     * @param _allocated          Strategy capital allocated
+     * @param _rewards            Strategy baseline BABL rewards
+     * @param _executedAt         Strategy timestamp of initial execution
+     */
+    function _getBenchmarkRewards(
+        uint256 _returned,
+        uint256 _allocated,
+        uint256 _rewards,
+        uint256 _executedAt
+    ) private view returns (uint256) {
+        // We categorize the strategy APY profits into one of the 3 segments (very bad, regular and cool strategies)
+        // Bad and regular will be penalized from bigger penalization to lower
+        // Cool strategies will be boosted
+        // As we get real time profit (returned / allocated) we need to annualize the strategy profits (APY)
+        // Real time profit
+        uint256 percentageProfit = _returned.preciseDiv(_allocated);
+        // Time weighted profit if > 1e18 duration less than 1 year, < 1e18 longer than 1 year
+        uint256 timedAPY =
+            uint256(365 days).preciseDiv(block.timestamp > _executedAt ? block.timestamp.sub(_executedAt) : 1);
+        uint256 returnedAPY; // initialization for absolute return APY (in reserve asset decimals)
+        uint256 rewardsFactor;
+        if (percentageProfit >= 1e18) {
+            // Strategy is on positive profit
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY earnings will be higher
+            // else, APY earnings will be lower than today (we need to estimate annualized earnings)
+            returnedAPY = _allocated.add(_returned.sub(_allocated).preciseMul(timedAPY));
+        } else {
+            // Strategy is in loss
+            // We calculate expected absolute returns in reserve asset decimals
+            // If strategy is less than 1 year, APY loses will be higher
+            // else, APY loses will be lower than today (we need to estimate annualized loses)
+            returnedAPY = _allocated.sub(_returned).preciseMul(timedAPY);
+            returnedAPY = returnedAPY < _allocated ? _allocated.sub(returnedAPY) : 0;
+        }
+        // Now we normalize into 18 decimals the estimated APY profit percentage using expected return APY
+        uint256 profitAPY = returnedAPY.preciseDiv(_allocated);
+        // TODO: Replace _allocated by avgCapitalAllocated to handle adding or removing capital from strategy
+        // with lower impact along the time
+        if (profitAPY < benchmark[0]) {
+            // Segment 1:
+            // Bad strategy, usually gets penalty by benchmark[2] factor
+            rewardsFactor = benchmark[2];
+        } else if (profitAPY < benchmark[1]) {
+            // Segment 2:
+            // Not a cool strategy, can get penalty by benchmark[3] factor
+            rewardsFactor = benchmark[3];
+        } else {
+            // Segment 3:
+            // A real cool strategy, can get boost by benchmark[4] factor. Must be always >= 1e18
+            rewardsFactor = benchmark[4];
+        }
+        return
+            _rewards.preciseMul(bablPrincipalWeight).add(
+                _rewards.preciseMul(bablProfitWeight).preciseMul(percentageProfit).preciseMul(rewardsFactor)
+            );
     }
 
     function _updatePendingPower(
@@ -1737,4 +1867,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV11 is RewardsDistributor {}
+contract RewardsDistributorV13 is RewardsDistributor {}

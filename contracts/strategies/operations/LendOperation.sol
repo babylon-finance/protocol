@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
@@ -204,10 +203,19 @@ contract LendOperation is Operation {
 
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
-            numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(200).div(100));
+            try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
+                numTokensToRedeem = numTokensToRedeem.sub(
+                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg).mul(105).div(100)
+                ); // add a bit extra 5% just in case
+            } catch {
+                numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(140).div(100));
+            }
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
-
+        // replace old aave
+        if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
+            _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
+        }
         ILendIntegration(_integration).redeemTokens(
             msg.sender,
             _assetToken,
@@ -232,7 +240,8 @@ contract LendOperation is Operation {
             IStrategy(_sender).trade(
                 tokenToTradeFrom,
                 IERC20(tokenToTradeFrom).balanceOf(_sender),
-                _garden.reserveAsset()
+                _garden.reserveAsset(),
+                0
             );
         }
         address rewardsToken = _getRewardToken(_integration);
@@ -240,7 +249,7 @@ contract LendOperation is Operation {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
-                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset());
+                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset(), 70e15);
             }
         }
     }

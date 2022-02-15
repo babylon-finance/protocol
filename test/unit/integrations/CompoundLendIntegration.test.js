@@ -46,6 +46,12 @@ describe('CompoundLendIntegrationTest', function () {
       expect(await compoundLendIntegration.getRewardToken()).to.equal('0xc00e94Cb662C3520282E6f5717214004A7f26888');
     });
 
+    it('gets the collateral factor of a token', async function () {
+      expect(await compoundLendIntegration.getCollateralFactor('0x0d8775f648430679a709e98d2b0cb6250d2887ef')).to.equal(
+        ethers.utils.parseEther('0.65'),
+      );
+    });
+
     it('can get the amount of rewards', async function () {
       expect(await compoundLendIntegration.getRewardsAccrued(compoundLendIntegration.address)).to.equal(0);
     });

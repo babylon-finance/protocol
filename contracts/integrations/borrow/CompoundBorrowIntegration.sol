@@ -32,6 +32,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {BorrowIntegration} from './BorrowIntegration.sol';
 
@@ -39,27 +40,18 @@ import {BorrowIntegration} from './BorrowIntegration.sol';
  * @title CompoundBorrowIntegration
  * @author Babylon Finance
  *
- * Abstract class that houses compound borring logic.
+ * Abstract class that houses Compound borrowing logic.
  */
 contract CompoundBorrowIntegration is BorrowIntegration {
     using LowGasSafeMath for uint256;
     using SafeERC20 for ERC20;
     using UniversalERC20 for IERC20;
-
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernance() {
-        require(msg.sender == controller.owner(), 'Only governance can call this');
-        _;
-    }
+    using ControllerLib for IBabController;
 
     /* ============ State Variables ============ */
 
-    address constant CompoundComptrollerAddress = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
-    address constant CEtherAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    IComptroller internal immutable comptroller;
+
     // Mapping of asset addresses to cToken addresses
     mapping(address => address) public assetToCToken;
 
@@ -68,32 +60,27 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     /**
      * Creates the integration
      *
+     * @param _name                   Name of the integration
      * @param _controller             Address of the controller
      * @param _maxCollateralFactor    Max collateral factor allowed
+     * @param _comptroller            Address of the controller
      */
-    constructor(IBabController _controller, uint256 _maxCollateralFactor)
-        BorrowIntegration('compoundborrow', _controller, _maxCollateralFactor)
-    {
-        assetToCToken[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI
-        assetToCToken[0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984] = 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI
-        assetToCToken[address(0)] = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5; // ETH
-        assetToCToken[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC
-        assetToCToken[0xdAC17F958D2ee523a2206206994597C13D831ec7] = 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT
-        assetToCToken[0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599] = 0xccF4429DB6322D5C611ee964527D42E5d685DD6a; // WBTC
-        assetToCToken[0xc00e94Cb662C3520282E6f5717214004A7f26888] = 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP
-        assetToCToken[0x0D8775F648430679A709E98d2b0Cb6250d2887EF] = 0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E; // BAT
-        assetToCToken[0x514910771AF9Ca656af840dff83E8264EcF986CA] = 0xFAce851a4921ce59e912d19329929CE6da6EB0c7; // LINK
-        assetToCToken[0x1985365e9f78359a9B6AD760e32412f4a445E862] = 0x158079Ee67Fce2f58472A96584A73C7Ab9AC95c1; // REP
-        assetToCToken[0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359] = 0xF5DCe57282A584D2746FaF1593d3121Fcac444dC; // SAI
-        assetToCToken[0x0000000000085d4780B73119b644AE5ecd22b376] = 0x12392F67bdf24faE0AF363c24aC620a2f67DAd86; // TUSD
-        assetToCToken[0xE41d2489571d322189246DaFA5ebDe1F4699F498] = 0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407; // ZRX
+    constructor(
+        string memory _name,
+        IBabController _controller,
+        uint256 _maxCollateralFactor,
+        IComptroller _comptroller
+    ) BorrowIntegration(_name, _controller, _maxCollateralFactor) {
+        comptroller = _comptroller;
+        _overrideMappings(_comptroller);
     }
 
     /* ============ External Functions ============ */
 
     // Governance function
-    function updateCTokenMapping(address _assetAddress, address _cTokenAddress) external onlyGovernance {
-        assetToCToken[_assetAddress] = _cTokenAddress;
+    function overrideMappings() external {
+        controller.onlyGovernanceOrEmergency();
+        _overrideMappings(comptroller);
     }
 
     /**
@@ -101,7 +88,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      * @param asset   The underlying asset
      *
      */
-    function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
+    function getBorrowBalance(address _strategy, address asset) public view virtual override returns (uint256) {
         address cToken = assetToCToken[asset];
         (
             ,
@@ -138,17 +125,28 @@ contract CompoundBorrowIntegration is BorrowIntegration {
      *
      */
     function getRemainingLiquidity(address _strategy) public view override returns (uint256) {
-        IComptroller comptroller = IComptroller(CompoundComptrollerAddress);
         (
             ,
             /* error */
             uint256 liquidity, /* shortfall */
 
-        ) = comptroller.getAccountLiquidity(_strategy);
+        ) = IComptroller(comptroller).getAccountLiquidity(_strategy);
         return liquidity;
     }
 
     /* ============ Overriden Functions ============ */
+
+    function _overrideMappings(IComptroller _comptroller) private {
+        address[] memory markets = _comptroller.getAllMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            address underlying = address(0);
+            // Skip cEther
+            if (markets[i] != 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
+                underlying = ICToken(markets[i]).underlying();
+            }
+            assetToCToken[underlying] = markets[i];
+        }
+    }
 
     /**
      * Return pre action calldata
@@ -180,7 +178,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
             address[] memory markets = new address[](1);
             markets[0] = assetToCToken[_asset];
             bytes memory methodData = abi.encodeWithSignature('enterMarkets(address[])', markets);
-            return (CompoundComptrollerAddress, 0, methodData);
+            return (address(comptroller), 0, methodData);
         }
         return (address(0), 0, bytes(''));
     }
@@ -243,12 +241,12 @@ contract CompoundBorrowIntegration is BorrowIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData;
-        if (assetToCToken[_asset] == CEtherAddress) {
+        if (_asset == address(0)) {
             methodData = abi.encodeWithSignature('repayBorrow()');
         } else {
             methodData = abi.encodeWithSignature('repayBorrow(uint256)', _amount);
         }
-        return (assetToCToken[_asset], assetToCToken[_asset] == CEtherAddress ? _amount : 0, methodData);
+        return (assetToCToken[_asset], _asset == address(0) ? _amount : 0, methodData);
     }
 
     /* ============ Internal Functions ============ */

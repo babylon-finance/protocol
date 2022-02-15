@@ -19,7 +19,6 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
@@ -30,6 +29,7 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {Errors, _require} from '../../lib/BabylonErrors.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -44,6 +44,7 @@ contract BorrowOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -100,11 +101,17 @@ contract BorrowOperation is Operation {
     {
         address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
+
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
+
         _onlyPositiveCollateral(msg.sender, _asset, _integration);
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
-        borrowToken = borrowToken == address(0) ? WETH : borrowToken;
-        return (borrowToken, IERC20(borrowToken).balanceOf(address(msg.sender)), 0); // borrowings are liquid
+        // if borrowToken is ETH wrap it to WETH
+        if (borrowToken == address(0)) {
+            IStrategy(msg.sender).handleWeth(true, normalizedAmount);
+            borrowToken = WETH;
+        }
+        return (borrowToken, normalizedAmount, 0); // borrowings are liquid
     }
 
     function _onlyPositiveCollateral(
@@ -137,7 +144,7 @@ contract BorrowOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
-        address, /* _asset */
+        address _asset,
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
@@ -157,8 +164,12 @@ contract BorrowOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
-        uint256 debtTokenBalance =
-            address(0) == assetToken ? address(msg.sender).balance : IERC20(assetToken).balanceOf(address(msg.sender));
+        // if debt token is different than the token received
+
+        _tradeToDebtToken(_asset, assetToken);
+
+        uint256 debtTokenBalance = IERC20(assetToken).universalBalanceOf(address(msg.sender));
+
         uint256 amountToRepay =
             debtAmount > debtTokenBalance
                 ? debtTokenBalance.preciseMul(_percentage)
@@ -193,5 +204,16 @@ contract BorrowOperation is Operation {
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
         return (NAV, false);
+    }
+
+    function _tradeToDebtToken(address _asset, address _assetToken) private {
+        uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
+        if (_asset != _assetToken && debtTokenBalance == 0) {
+            if (_assetToken != address(0)) {
+                IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
+            } else {
+                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
+            }
+        }
     }
 }

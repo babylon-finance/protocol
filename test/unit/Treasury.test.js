@@ -1,11 +1,20 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { ADDRESS_ZERO, MINUS_ONE_ETH, ONE_ETH } = require('lib/constants');
+const { ADDRESS_ZERO } = require('lib/constants');
 const { fund } = require('lib/whale');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  pick,
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+} = require('utils/test-helpers');
 
 describe('Treasury', function () {
   let signer1;
@@ -21,12 +30,12 @@ describe('Treasury', function () {
   });
 
   describe('sendTreasuryFunds', async function () {
-    [
+    pick([
       { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
       { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },
       { token: addresses.tokens.USDC, name: 'USDC', amount: from(2000 * 1e6) },
       { token: addresses.tokens.WBTC, name: 'WBTC', amount: from(0.05 * 1e8) },
-    ].forEach(({ token, name, amount }) => {
+    ]).forEach(({ token, name, amount }) => {
       it(`can send ${name}`, async function () {
         const erc20 = await getERC20(token);
         await expect(() =>
@@ -43,13 +52,13 @@ describe('Treasury', function () {
 
     it('fails to send zero address asset', async function () {
       await expect(
-        treasury.connect(owner).sendTreasuryFunds(ADDRESS_ZERO, ONE_ETH, signer1.address, { gasPrice: 0 }),
+        treasury.connect(owner).sendTreasuryFunds(ADDRESS_ZERO, eth(), signer1.address, { gasPrice: 0 }),
       ).to.be.revertedWith('Asset must exist');
     });
 
     it('fails to send funds to zero address', async function () {
       await expect(
-        treasury.connect(owner).sendTreasuryFunds(addresses.tokens.WETH, ONE_ETH, ADDRESS_ZERO, { gasPrice: 0 }),
+        treasury.connect(owner).sendTreasuryFunds(addresses.tokens.WETH, eth(), ADDRESS_ZERO, { gasPrice: 0 }),
       ).to.be.revertedWith('Target address must exist');
     });
 
@@ -58,7 +67,7 @@ describe('Treasury', function () {
         treasury
           .connect(owner)
           .sendTreasuryFunds(addresses.tokens.WETH, eth(99999999), signer1.address, { gasPrice: 0 }),
-      ).to.be.reverted;
+      ).to.be.revertedWith('SafeERC20: low-level call failed');
     });
   });
 });

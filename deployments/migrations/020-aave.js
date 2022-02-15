@@ -13,7 +13,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'AaveLendIntegration';
 
   const controller = await getController();
@@ -22,7 +21,7 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (network.live && deployment.newlyDeployed) {
@@ -30,4 +29,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['Aave'];
+module.exports.tags = ['AaveLend'];

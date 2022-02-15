@@ -8,8 +8,7 @@ const {
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
 const addresses = require('lib/addresses');
-const { ONE_ETH } = require('lib/constants');
-const { getERC20, eth } = require('utils/test-helpers');
+const { getERC20, eth, pick } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
@@ -24,6 +23,26 @@ describe('CurvePoolIntegrationTest', function () {
       pool: addresses.curve.pools.v3[key],
     };
   });
+  const cryptopools = Object.keys(addresses.curve.pools.crypto).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.crypto[key],
+    };
+  });
+
+  const factorypools = Object.keys(addresses.curve.pools.factory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.factory[key],
+    };
+  });
+
+  const cryptofactorypools = Object.keys(addresses.curve.pools.cryptofactory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.cryptofactory[key],
+    };
+  });
 
   // Used to create addresses info. do not remove
   async function logCurvePools() {
@@ -31,12 +50,36 @@ describe('CurvePoolIntegrationTest', function () {
       'ICurveAddressProvider',
       '0x0000000022d53366457f9d5e68ec105046fc4383',
     );
-    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
+    const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(0));
+    const factoryRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(3));
+    const cryptoRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(5));
+    const cryptoFactoryRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_address(6));
     const curvePoolsD = {};
-    const curvePools = await Promise.all(
+    let curvePools = await Promise.all(
       [...Array((await crvRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
         return await getCurvePoolInfo(pid, crvRegistry);
       }),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await factoryRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, factoryRegistry, true);
+        }),
+      ),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await cryptoRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, cryptoRegistry, false, true);
+        }),
+      ),
+    );
+    curvePools = curvePools.concat(
+      await Promise.all(
+        [...Array((await cryptoFactoryRegistry.pool_count()).toNumber()).keys()].map(async (pid) => {
+          return await getCurvePoolInfo(pid, cryptoFactoryRegistry, true, true);
+        }),
+      ),
     );
     curvePools
       .filter((c) => c)
@@ -46,19 +89,48 @@ describe('CurvePoolIntegrationTest', function () {
     console.log('pools', curvePoolsD);
   }
 
-  async function getCurvePoolInfo(pid, crvRegistry) {
+  async function getCurvePoolInfo(pid, crvRegistry, isFactory = false, isCrypto = false) {
+    // TODO: Need to filter by TVL
     const address = await crvRegistry.pool_list(pid);
-    const name = await crvRegistry.get_pool_name(address);
+    const name = isFactory ? `factory${isCrypto ? 'c' : ''}` + pid : await crvRegistry.get_pool_name(address);
     if (name) {
       return {
         name,
         address,
+        isFactory,
+        isCrypto,
       };
     }
     return null;
   }
 
   // logCurvePools();
+
+  async function testCurvePool(name, pool) {
+    const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
+    const reserveAsset = await getERC20(await garden1.reserveAsset());
+    const strategyContract = await createStrategy(
+      'lp',
+      'vote',
+      [signer1, signer2, signer3],
+      curvePoolIntegration.address,
+      garden1,
+      DEFAULT_STRATEGY_PARAMS,
+      [pool, 0],
+    );
+    const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
+    await executeStrategy(strategyContract, { amount: eth() });
+    expect(await strategyContract.capitalAllocated()).to.equal(eth());
+    const lpToken = await curvePoolIntegration.getLPToken(pool);
+    const poolContract = await getERC20(lpToken);
+    expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
+    expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
+    const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
+    await finalizeStrategy(strategyContract, 0);
+
+    expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
+  }
 
   beforeEach(async () => {
     ({ curvePoolIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
@@ -67,7 +139,7 @@ describe('CurvePoolIntegrationTest', function () {
   describe('Liquidity Pools', function () {
     it('check that a valid pool is valid', async function () {
       const abiCoder = ethers.utils.defaultAbiCoder;
-      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tricrypto2, 0]);
+      const data = abiCoder.encode(['address', 'uint256'], [addresses.curve.pools.v3.tripool, 0]);
       expect(await curvePoolIntegration.isPool(data)).to.equal(true);
     });
 
@@ -77,34 +149,27 @@ describe('CurvePoolIntegrationTest', function () {
       expect(await curvePoolIntegration.isPool(data)).to.equal(false);
     });
 
-    pools.forEach(({ name, pool }) => {
+    pick(pools).forEach(({ name, pool }) => {
       it(`can enter and exit the ${name} pool`, async function () {
-        const slippage = ['compound', 'susd', 'y'].includes(name) ? eth().div(4) : eth().div(20);
-        const reserveAsset = await getERC20(await garden1.reserveAsset());
-        const strategyContract = await createStrategy(
-          'lp',
-          'vote',
-          [signer1, signer2, signer3],
-          curvePoolIntegration.address,
-          garden1,
-          DEFAULT_STRATEGY_PARAMS,
-          [pool, 0],
-        );
+        await testCurvePool(name, pool);
+      });
+    });
 
-        const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
-        await executeStrategy(strategyContract, { amount: eth() });
+    pick(cryptopools).forEach(({ name, pool }) => {
+      it(`can enter and exit the crypto ${name} pool`, async function () {
+        await testCurvePool(name, pool);
+      });
+    });
 
-        expect(await strategyContract.capitalAllocated()).to.equal(eth());
-        const lpToken = await curvePoolIntegration.getLPToken(pool);
-        const poolContract = await getERC20(lpToken);
-        expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
-        expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
+    pick(factorypools).forEach(({ name, pool }) => {
+      it(`can enter and exit the factory ${name} pool`, async function () {
+        await testCurvePool(name, pool);
+      });
+    });
 
-        const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
-        await finalizeStrategy(strategyContract, 0);
-
-        expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
-        expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
+    pick(cryptofactorypools).forEach(({ name, pool }) => {
+      it(`can enter and exit the factory ${name} pool`, async function () {
+        await testCurvePool(name, pool);
       });
     });
   });

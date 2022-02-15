@@ -52,11 +52,15 @@ interface IBabController {
 
     function editTreasury(address _newTreasury) external;
 
+    function editHeart(address _newHeart) external;
+
     function editRewardsDistributor(address _rewardsDistributor) external;
 
     function editGardenFactory(address _newGardenFactory) external;
 
     function editGardenNFT(address _newGardenNFT) external;
+
+    function editCurveMetaRegistry(address _curveMetaRegistry) external;
 
     function editStrategyNFT(address _newStrategyNFT) external;
 
@@ -98,9 +102,13 @@ interface IBabController {
 
     function gardenValuer() external view returns (address);
 
+    function heart() external view returns (address);
+
     function gardenNFT() external view returns (address);
 
     function strategyNFT() external view returns (address);
+
+    function curveMetaRegistry() external view returns (address);
 
     function rewardsDistributor() external view returns (address);
 

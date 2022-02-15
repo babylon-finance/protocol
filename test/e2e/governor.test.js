@@ -279,12 +279,11 @@ describe('governor', function () {
 
       if (i !== 8) {
         // AVT Strategy i=8 has a problem finalizing possibly due to the rug pull
-        await strategyContract.connect(keeper).finalizeStrategy(0, '');
+        await strategyContract.connect(keeper).finalizeStrategy(0, '', 0);
         expect(await strategyContract.strategyRewards()).to.be.gt(0);
       }
     }
   });
-
   it('check rebalanced strategies to fix', async function () {
     const owner = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
     const timelockController = await impersonateAddress('0xe6ed0eacb79a6e457416e4df38ed778fd6c6d193');
@@ -328,7 +327,7 @@ describe('governor', function () {
       expect(miningUint2[3]).to.be.gt(0);
       expect(miningUint2[4]).to.be.gt(0);
       await increaseTime(ONE_DAY_IN_SECONDS * 60);
-      await strategyContract.connect(keeper).finalizeStrategy(0, '');
+      await strategyContract.connect(keeper).finalizeStrategy(0, '', 0);
       expect(await strategyContract.strategyRewards()).to.be.gt(0);
     }
   });

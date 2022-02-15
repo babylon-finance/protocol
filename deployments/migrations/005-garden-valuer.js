@@ -11,7 +11,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'GardenValuer';
 
   const controller = await getController();
@@ -20,12 +19,12 @@ module.exports = async ({
     from: deployer,
     args: [controller.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting garden valuer on controller ${deployment.address}`);
-    await (await controller.editGardenValuer(deployment.address, { gasPrice })).wait();
+    await (await controller.editGardenValuer(deployment.address, { ...(await getGasPrice()) })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

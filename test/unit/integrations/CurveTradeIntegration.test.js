@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
-const { getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { pick, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
@@ -23,7 +23,7 @@ describe('CurveTradeIntegration', function () {
   });
 
   describe('exchanges pegged assets directly through curve', function () {
-    [
+    pick([
       {
         token: addresses.tokens.WETH,
         name: 'WETH',
@@ -62,8 +62,8 @@ describe('CurveTradeIntegration', function () {
           // { asset: addresses.tokens.sBTC, symbol: 'sBTC' },
         ],
       },
-    ].forEach(({ token, name, pairs }) => {
-      pairs.forEach(({ asset, symbol }) => {
+    ]).forEach(({ token, name, pairs }) => {
+      pick(pairs).forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 

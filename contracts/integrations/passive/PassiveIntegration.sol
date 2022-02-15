@@ -164,6 +164,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
             _investmentAddress = _getAssetAfterExitPreAction(_investmentAddress);
+            // BUG: Does not respect _investmentTokenIn/percentage
             _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
 

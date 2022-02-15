@@ -9,9 +9,18 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const {
+  increaseTime,
+  normalizeDecimals,
+  getERC20,
+  getContract,
+  parse,
+  from,
+  eth,
+  pick,
+} = require('utils/test-helpers');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
+const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
 describe('SushiswapPoolIntegrationTest', function () {
   let sushiswapPoolIntegration;
@@ -109,13 +118,8 @@ describe('SushiswapPoolIntegrationTest', function () {
     });
   });
   describe('Liquidity Pools multi reserve asset garden and multi-pair', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(({ token, name }) => {
-      [
+    pick(GARDENS).forEach(({ token, name }) => {
+      pick([
         {
           pool: addresses.sushiswap.pairs.wethdai,
           symbol: 'WETH-DAI',
@@ -141,7 +145,7 @@ describe('SushiswapPoolIntegrationTest', function () {
           token1: addresses.tokens.USDC,
         }, //DAI-USDC pool
         //      { pool: addresses.sushiswap.pairs.daiwbtc, symbol: 'DAI-WBTC', token0: addresses.tokens.DAI, token1: addresses.tokens.WBTC}, //DAI-WBTC pool - TODO: check pair address
-      ].forEach(({ pool, symbol, token0, token1 }) => {
+      ]).forEach(({ pool, symbol, token0, token1 }) => {
         it(`can enter and exit the ${symbol} at Sushiswap pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IUniswapV2PairB', pool);
 
