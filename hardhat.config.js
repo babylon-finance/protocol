@@ -38,6 +38,8 @@ require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 
+const FORK = !!process.env.FORK;
+
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
   process.env.DEPLOYER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
@@ -71,10 +73,10 @@ module.exports = {
       chainId: CHAIN_IDS.hardhat,
       blockGasLimit: 0x1fffffffffffff,
       allowUnlimitedContractSize: true,
-      forking: {
+      forking: FORK ? {
         url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
         blockNumber: +BLOCK_NUMBER,
-      },
+      } : undefined,
       saveDeployments: true,
       gas: 9e6,
       initialBaseFeePerGas: 0,
