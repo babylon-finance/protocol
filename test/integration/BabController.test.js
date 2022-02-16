@@ -10,7 +10,7 @@ const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth
 const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
 
-describe('BabController', function () {
+describe.only('BabController', function () {
   let babController;
   let treasury;
   let bablToken;
@@ -53,113 +53,7 @@ describe('BabController', function () {
     });
   });
 
-  describe('keepers', function () {
-    it('can add new keepers', async function () {
-      await babController.connect(owner).addKeeper(addresses.users.hardhat3);
-
-      const valid = await babController.isValidKeeper(addresses.users.hardhat3);
-      expect(valid).to.equal(true);
-    });
-
-    it('can remove keepers', async function () {
-      await babController.connect(owner).addKeeper(addresses.users.hardhat3);
-      await babController.connect(owner).removeKeeper(addresses.users.hardhat3);
-
-      const valid = await babController.isValidKeeper(addresses.users.hardhat3);
-      expect(valid).to.equal(false);
-    });
-
-    it('can add keepers in bulk', async function () {
-      await babController.connect(owner).addKeepers([addresses.users.hardhat3, addresses.users.hardhat2]);
-
-      expect(await babController.isValidKeeper(addresses.users.hardhat3)).to.equal(true);
-      expect(await babController.isValidKeeper(addresses.users.hardhat2)).to.equal(true);
-    });
-  });
-
-  describe('addReserveAsset', function () {
-    it('can add a reserve asset', async function () {
-      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
-
-      expect(await babController.validReserveAsset(addresses.tokens.YFI)).to.eq(true);
-    });
-
-    it('can remove a reserve asset', async function () {
-      await babController.connect(owner).addReserveAsset(addresses.tokens.YFI);
-      expect(await babController.validReserveAsset(addresses.tokens.YFI)).to.eq(true);
-
-      await babController.connect(owner).removeReserveAsset(addresses.tokens.YFI);
-      expect(await babController.validReserveAsset(addresses.tokens.YFI)).to.eq(false);
-    });
-  });
-
-  describe('editPriceOracle', function () {
-    it('can edit a price oracle', async function () {
-      await babController.connect(owner).editPriceOracle(addresses.tokens.WETH);
-      expect(await babController.connect(owner).priceOracle()).to.equal(addresses.tokens.WETH);
-    });
-  });
-
-  describe('editGardenValuer', function () {
-    it('can edit a garden valuer', async function () {
-      await babController.connect(owner).editGardenValuer(addresses.tokens.WETH);
-
-      expect(await babController.gardenValuer()).to.equal(addresses.tokens.WETH);
-    });
-  });
-
-  describe('editTreasury', function () {
-    it('can edit the protocol fee recipient', async function () {
-      await babController.connect(owner).editTreasury(addresses.tokens.WETH);
-
-      expect(await babController.treasury()).to.equal(addresses.tokens.WETH);
-    });
-  });
-
-  describe('enableGardenTokensTransfers', function () {
-    it('can enable token transfers after 2021', async function () {
-      await babController.connect(owner).enableGardenTokensTransfers();
-      expect(await babController.gardenTokensTransfersEnabled()).to.equal(true);
-    });
-  });
-
   describe('setPauseGuardian', function () {
-    it('can set a pause guardian from owner', async function () {
-      await babController.connect(owner).setPauseGuardian(signer1.address);
-      expect(await babController.guardian()).to.equal(signer1.address);
-    });
-
-    it('can set a new pause guardian from current pause guardian', async function () {
-      await babController.connect(owner).setPauseGuardian(signer1.address);
-      await babController.connect(signer1).setPauseGuardian(signer2.address);
-
-      expect(await babController.guardian()).to.equal(signer2.address);
-    });
-
-    it('can NOT set zero address as pause guardian from current pause guardian', async function () {
-      await babController.connect(owner).setPauseGuardian(signer1.address);
-      await expect(babController.connect(signer1).setPauseGuardian(ADDRESS_ZERO)).to.be.revertedWith(
-        'Guardian cannot remove himself',
-      );
-      expect(await babController.guardian()).to.equal(signer1.address);
-    });
-
-    it('can set zero address as pause guardian from the owner', async function () {
-      await babController.connect(owner).setPauseGuardian(signer1.address);
-      const guardian = await babController.guardian();
-
-      expect(guardian).to.equal(signer1.address);
-
-      await babController.connect(owner).setPauseGuardian(ADDRESS_ZERO);
-      expect(await babController.guardian()).to.equal(ADDRESS_ZERO);
-    });
-
-    it('should fail if trying to set a pause a user without enough rights', async function () {
-      await expect(babController.connect(signer2).setPauseGuardian(signer2.address)).to.be.revertedWith(
-        'only pause guardian and owner can update pause guardian',
-      );
-    });
-
     it('should pause globally the protocol principal functions', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setGlobalPause(true);
