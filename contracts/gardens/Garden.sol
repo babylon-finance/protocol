@@ -902,9 +902,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(extraCreators[_index] == address(0), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         extraCreators[_index] = _newCreator;
     }
-
-    // solhint-disable-next-line
-    receive() external payable {}
 }
 
 contract GardenV17 is Garden {
