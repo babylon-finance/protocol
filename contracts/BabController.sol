@@ -342,7 +342,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) external override onlyOwner {
+    function addReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
         require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
@@ -355,7 +355,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset               Address of the reserve asset to remove
      */
-    function removeReserveAsset(address _reserveAsset) external override onlyOwner {
+    function removeReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
@@ -694,4 +694,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV13 is BabController {}
+contract BabControllerV14 is BabController {}
