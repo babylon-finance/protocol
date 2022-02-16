@@ -41,20 +41,7 @@ contract Treasury is Ownable, ReentrancyGuard {
 
     /* ============ State Variables ============ */
 
-    // Address of the Controller contract
-    IBabController public controller;
-
     /* ============ Constructor ============ */
-
-    /**
-     * Sets the protocol controller
-     *
-     * @param _controller         Address of controller contract
-     */
-    constructor(IBabController _controller) {
-        require(address(_controller) != address(0), 'Controller must exist');
-        controller = _controller;
-    }
 
     /* ============ External Functions ============ */
 

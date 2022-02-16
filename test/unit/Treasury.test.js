@@ -24,10 +24,17 @@ describe('Treasury', function () {
     [, , owner, signer1] = await ethers.getSigners();
     const treasuryFactory = await ethers.getContractFactory('Treasury');
     treasury = await treasuryFactory.deploy();
+    //TODO: Figure out how to deploy from a specific signer
     await treasury.transferOwnership(owner.address);
 
     const erc20Fatory = await ethers.getContractFactory('ERC20Mock');
-    erc20 = await erc20Fatory.deploy('Babylon Finance', 'BABL', treasury.address, 1e6);
+    erc20 = await erc20Fatory.deploy('Babylon Finance', 'BABL', treasury.address, eth(1e6));
+
+    //TODO: Use Hardhhat set_balance to give ETH
+    await owner.sendTransaction({
+      to: treasury.address,
+      value: eth(),
+    });
   });
 
   describe('sendTreasuryFunds', async function () {
