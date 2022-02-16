@@ -160,19 +160,23 @@ contract StakewiseIntegration is PassiveIntegration {
         // Sell rETH2 on exit
         if (_op == 1) {
             bytes memory path = abi.encodePacked(address(rETH2), FEE_LOW, address(sETH2));
-            ISwapRouter.ExactInputParams memory params =
-                ISwapRouter.ExactInputParams(
-                    path,
-                    _strategy,
-                    block.timestamp,
-                    _amount,
-                    _amount.preciseMul(98e16) // 2% slippage
-                );
+            uint256 rewardsBalance = rETH2.balanceOf(_strategy);
+            // Enough rewards
+            if (rewardsBalance > 2e16) {
+                ISwapRouter.ExactInputParams memory params =
+                    ISwapRouter.ExactInputParams(
+                        path,
+                        _strategy,
+                        block.timestamp,
+                        rewardsBalance,
+                        rewardsBalance.preciseMul(98e16) // 2% slippage
+                    );
 
-            // Sell rETH2 on univ3
-            bytes memory methodData =
-                abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
-            return (swapRouter, 0, methodData);
+                // Sell rETH2 on univ3
+                bytes memory methodData =
+                    abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
+                return (swapRouter, 0, methodData);
+            }
         }
         return (address(0), 0, bytes(''));
     }
