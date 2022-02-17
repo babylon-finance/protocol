@@ -187,7 +187,7 @@ async function setUpFixture(
       5,
       BABL_GARDEN_PARAMS,
       eth('20'),
-      [false, false, false],
+      [true, false, false],
       [0, 0, 0],
       {},
     );
@@ -202,7 +202,7 @@ async function setUpFixture(
       5,
       BABL_GARDEN_PARAMS,
       eth('200'),
-      [false, false, false],
+      [true, false, false],
       [0, 0, 0],
       {},
     );

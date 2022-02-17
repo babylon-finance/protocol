@@ -43,7 +43,9 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 describe('rewards', function () {
   let babController;
+  let bablToken;
   let rewardsDistributor;
+  let rewardsAssistant;
   let owner;
   let keeper;
   let garden1;
@@ -56,25 +58,35 @@ describe('rewards', function () {
   let gardenValuer;
   let babViewer;
   let users;
+  let heartTestGarden;
 
   let usdc;
   let weth;
   let dai;
   let wbtc;
 
-  const gardenNum = 3;
+  const gardenNum = 1;
   const strategyNum = 1;
   const depositNum = 1;
-  const userNum = 30;
+  const userNum = 2;
+
+  let stakeInHeart = false; // Default value
+  const stakeMinAmountOut = eth(0.9);
+  const mintNft = false;
+  const maxFee = 1;
+  const fee = 1;
 
   beforeEach(async () => {
     ({
       babController,
+      bablToken,
       rewardsDistributor,
+      rewardsAssistant,
       gardenNFT,
       keeper,
       owner,
       garden1,
+      heartTestGarden,
       ishtarGate,
       balancerIntegration,
       uniswapV3TradeIntegration,
@@ -108,33 +120,146 @@ describe('rewards', function () {
       }
     }
   }
-  async function claim(gardens) {
+  async function claim(gardens, stake) {
+    stakeInHeart = stake || stakeInHeart;
     for (const garden of gardens) {
       for (let signer of users) {
-        await garden.connect(signer).claimReturns(await garden.getFinalizedStrategies());
+        await rewardsDistributor
+          .connect(signer)
+          .claimRewards([garden.address], stakeInHeart, stakeMinAmountOut, mintNft);
         await increaseTime(3600);
       }
     }
   }
 
-  async function claimBySig(gardens) {
+  async function claimAll(gardens, stake) {
+    stakeInHeart = stake || stakeInHeart;
+    const gardenAddresses = gardens.map((gardens) => gardens.address);
+    for (let signer of users) {
+      await rewardsDistributor.connect(signer).claimRewards(gardenAddresses, stakeInHeart, stakeMinAmountOut, mintNft);
+      await increaseTime(3600);
+    }
+  }
+
+  async function claimAllBySig(gardens, stake) {
+    stakeInHeart = stake || stakeInHeart;
+    const gardenAddresses = gardens.map((gardens) => gardens.address);
+    for (const signer of users) {
+      const rewardsAll = await rewardsAssistant.getAllUserRewards(signer.address, gardenAddresses, {
+        gasPrice: 0,
+      });
+
+      const gardensAddr = rewardsAll[0];
+      const bablPerGarden = rewardsAll[1];
+      const profitsPerGarden = rewardsAll[2];
+      const totalBabl = rewardsAll[3];
+      const totalProfits = rewardsAll[4];
+      // Rewards nonce
+      const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer.address);
+      const contributorData = await heartTestGarden.getContributor(signer.address);
+      // Heart Garden nonce
+      const heartGardenUserNonce = contributorData[9];
+      const boolSignatureData = [mintNft, stakeInHeart];
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+      // We create the signature
+      const sig = await getRewardsSig(
+        signer,
+        rewardsDistributor.address,
+        totalBabl,
+        totalProfits,
+        userRewardsNonce,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        mintNft,
+        stakeInHeart,
+      );
+      // We prepare the call data
+      const signatureData = [
+        totalBabl,
+        totalProfits,
+        userRewardsNonce,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        fee,
+        pricePerShare,
+      ];
+
+      await rewardsDistributor
+        .connect(keeper)
+        .claimRewardsBySig(
+          gardensAddr,
+          bablPerGarden,
+          profitsPerGarden,
+          signatureData,
+          boolSignatureData,
+          sig.v,
+          sig.r,
+          sig.s,
+          { gasPrice: 0 },
+        );
+    }
+  }
+
+  async function claimBySig(gardens, stake) {
+    stakeInHeart = stake || stakeInHeart;
     for (const garden of gardens) {
       for (const signer of users) {
-        const rewards = await rewardsDistributor.getRewards(
-          garden.address,
-          signer.address,
-          await garden.getFinalizedStrategies(),
+        const rewardsAll = await rewardsAssistant.getAllUserRewards(signer.address, [garden.address], {
+          gasPrice: 0,
+        });
+
+        const gardens = rewardsAll[0];
+        const bablPerGarden = rewardsAll[1];
+        const profitsPerGarden = rewardsAll[2];
+        const totalBabl = rewardsAll[3];
+        const totalProfits = rewardsAll[4];
+        // Rewards nonce
+        const userRewardsNonce = await rewardsDistributor.getUserRewardsNonce(signer.address);
+        const contributorData = await heartTestGarden.getContributor(signer.address);
+        // Heart Garden nonce
+        const heartGardenUserNonce = contributorData[9];
+        const boolSignatureData = [mintNft, stakeInHeart];
+        const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+        // We create the signature
+        const sig = await getRewardsSig(
+          signer,
+          rewardsDistributor.address,
+          totalBabl,
+          totalProfits,
+          userRewardsNonce,
+          stakeMinAmountOut,
+          heartGardenUserNonce,
+          maxFee,
+          mintNft,
+          stakeInHeart,
         );
-        const babl = rewards[5];
-        const profits = rewards[6];
-        // const nonce = depositNum + 2;
-        const nonce = (await garden.getContributor(signer.address))[9];
-        const maxFee = 1;
-        const fee = 1;
-        const sig = await getRewardsSig(garden.address, signer, babl, profits, nonce, maxFee);
-        await garden
+        // We prepare the call data
+        const signatureData = [
+          totalBabl,
+          totalProfits,
+          userRewardsNonce,
+          stakeMinAmountOut,
+          heartGardenUserNonce,
+          maxFee,
+          fee,
+          pricePerShare,
+        ];
+
+        await rewardsDistributor
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+          .claimRewardsBySig(
+            gardens,
+            bablPerGarden,
+            profitsPerGarden,
+            signatureData,
+            boolSignatureData,
+            sig.v,
+            sig.r,
+            sig.s,
+            { gasPrice: 0 },
+          );
       }
     }
   }
@@ -212,8 +337,14 @@ describe('rewards', function () {
     await finalize(strategies);
 
     await increaseTime(ONE_DAY_IN_SECONDS);
-    // await claim(gardens);
-    await claimBySig(gardens);
+    // Options
+    // a) normal claim vs. by sig
+    // b) claim only or claim and stake
+    // c) claim 1 by one or claim all
+    await claim(gardens, false);
+    // await claimBySig(gardens, false);
+    // await claimAll(gardens, false);
+    // await claimAllBySig(gardens, true);
 
     await increaseTime(ONE_DAY_IN_SECONDS);
     await withdraw(gardens);
