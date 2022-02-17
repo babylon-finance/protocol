@@ -6,7 +6,7 @@ const addresses = require('lib/addresses');
 const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 const { getERC20, eth, pick, increaseTime } = require('utils/test-helpers');
 
-describe('LidoIntegrationTest', function () {
+describe('StakewiseIntegrationTest', function () {
   let stakewiseIntegration;
   let sETH2;
   let rETH2;
