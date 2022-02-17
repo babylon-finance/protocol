@@ -20,7 +20,7 @@ const SIGS = ['0xaaaaaaaa', '0xbbbbbbbb', '0xcccccccc'];
 const IMPL = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 const NEW_IMPL = '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF';
 
-describe.only('VTableBeacon', function () {
+describe('VTableBeacon', function () {
   let vTableBeacon;
   let owner;
 
