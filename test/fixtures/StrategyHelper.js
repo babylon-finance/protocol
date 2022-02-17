@@ -48,12 +48,20 @@ const BABL_STRATEGY_PARAMS = [
   ...STRATEGY_PARAMS,
 ];
 
+const AAVE_STRATEGY_PARAMS = [
+  eth(1e3), // _maxCapitalRequested
+  eth(1), // _stake
+  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ...STRATEGY_PARAMS,
+];
+
 const GARDEN_PARAMS_MAP = {
   [addresses.tokens.WETH]: DEFAULT_STRATEGY_PARAMS,
   [addresses.tokens.DAI]: DAI_STRATEGY_PARAMS,
   [addresses.tokens.USDC]: USDC_STRATEGY_PARAMS,
   [addresses.tokens.WBTC]: WBTC_STRATEGY_PARAMS,
   [addresses.tokens.BABL]: BABL_STRATEGY_PARAMS,
+  [addresses.tokens.AAVE]: AAVE_STRATEGY_PARAMS,
 };
 
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
@@ -198,6 +206,9 @@ async function deposit(garden, signers) {
       amount = ethers.BigNumber.from(2000 * 1e6);
       break;
     case addresses.tokens.BABL.toLowerCase():
+      amount = STRATEGY_EXECUTE_MAP[reserveAsset];
+      break;
+    case addresses.tokens.AAVE.toLowerCase():
       amount = STRATEGY_EXECUTE_MAP[reserveAsset];
       break;
     case addresses.tokens.DAI.toLowerCase():
