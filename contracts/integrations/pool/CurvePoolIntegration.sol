@@ -124,7 +124,7 @@ contract CurvePoolIntegration is PoolIntegration {
             return result;
         }
         // cvxCRV
-        if (poolAddress == cvxCRVPool || poolAddress == palstkaave) {
+        if (poolAddress == cvxCRVPool) {
             result[0] = uint256(1e18);
             result[1] = 0;
             return result;
