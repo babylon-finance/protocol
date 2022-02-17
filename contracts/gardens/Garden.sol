@@ -40,7 +40,6 @@ import {IGarden, ICoreGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
@@ -384,19 +383,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * PRIVILEGE FUNCTION to delegate Garden voting power itself into a delegatee
-     * To be used by Garden Creator only.
-     * Compatible with BABL and COMP and few others ERC20Comp related tokens
-     * @param _token         Address of BABL or any other ERC20Comp related governance token
-     * @param _delegatee     Address to delegate token voting power into
-     */
-    function delegateGardenVote(address _token, address _delegatee) external override {
-        _onlyCreator(msg.sender);
-        _require(_token != address(0) && _delegatee != address(0), Errors.ADDRESS_IS_ZERO);
-        IVoteToken(_token).delegate(_delegatee);
-    }
-
-    /**
      * @notice
      *  This method allows to Rewards Distributor to claim on users behalf
      *   their profits rewards (in reserveAsset) and make BABL sent by RD accounted.
@@ -467,10 +453,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         } else {
             _require(_to != address(0), Errors.ADDRESS_IS_ZERO);
             // Direct user tx, needs to calculate pricePerShare for staking (gas intensive)
-            _pricePerShare = _getPricePershare();
+            _pricePerShare = _getPricePerShare();
         }
-        // Staking is in reserveAsset (amountToStake == _amountIn)
-        // uint256 amountToStake = _amountIn;
+        // Staking is in reserveAsset
         _internalDeposit(_amountIn, _minAmountOut, _to, _to, _mintNft, _pricePerShare, minContribution, _amountIn);
     }
 
