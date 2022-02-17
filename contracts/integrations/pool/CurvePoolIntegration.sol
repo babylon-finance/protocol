@@ -402,7 +402,7 @@ contract CurvePoolIntegration is PoolIntegration {
                         abi.encodeWithSignature(
                             'remove_liquidity_one_coin(uint256,uint256,uint256)',
                             _poolTokensIn,
-                            uint256(0),
+                            uint256(1),
                             _minAmountsOut[0]
                         );
                 }
