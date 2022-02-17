@@ -21,9 +21,10 @@ describe('CompoundLendIntegrationTest', function () {
   let WETH;
   let CETH;
   let CUSDC;
+  let keeper;
 
   beforeEach(async () => {
-    ({ garden1, compoundLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ garden1, compoundLendIntegration, signer1, signer2, signer3, keeper } = await setupTests()());
     CETH = await getERC20(addresses.tokens.CETH);
     USDC = await getERC20(addresses.tokens.USDC);
     CUSDC = await getERC20(addresses.tokens.CUSDC);
@@ -86,6 +87,7 @@ describe('CompoundLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         compoundLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0], // ETH
       );
@@ -106,6 +108,7 @@ describe('CompoundLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         compoundLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0], // ETH
       );

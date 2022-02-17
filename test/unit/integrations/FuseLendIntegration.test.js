@@ -21,9 +21,10 @@ describe('FuseLendIntegrationTest', function () {
   let BABL;
   let cDAI;
   let cWETH;
+  let keeper;
 
   beforeEach(async () => {
-    ({ garden1, fuseLendIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ garden1, fuseLendIntegration, signer1, signer2, signer3, keeper } = await setupTests()());
     DAI = await getERC20(addresses.tokens.DAI);
     WETH = await getERC20(addresses.tokens.WETH);
     BABL = await getERC20(addresses.tokens.BABL);
@@ -64,6 +65,7 @@ describe('FuseLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         fuseLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [addresses.tokens.DAI, 0],
       );
@@ -86,6 +88,7 @@ describe('FuseLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         fuseLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0], // ETH
       );
@@ -108,6 +111,7 @@ describe('FuseLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         fuseLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0], // ETH
       );

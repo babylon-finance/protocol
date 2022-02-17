@@ -23,6 +23,7 @@ describe('FuseBorrowIntegrationTest', function () {
   let cFRAX;
   let cFEI;
   let cBABL;
+  let keeper;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -39,6 +40,7 @@ describe('FuseBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [fuseLendIntegration.address, fuseBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1Address, 0, asset2Address, 0],
     );
@@ -73,6 +75,7 @@ describe('FuseBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [fuseLendIntegration.address, fuseBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1Address, 0, asset2Address, 0],
     );
@@ -82,7 +85,7 @@ describe('FuseBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3, owner } = await setupTests()());
+    ({ fuseLendIntegration, fuseBorrowIntegration, signer1, signer2, signer3, owner, keeper } = await setupTests()());
     FRAX = await getERC20(addresses.tokens.FRAX);
     WETH = await getERC20(addresses.tokens.WETH);
     FEI = await getERC20(addresses.tokens.FEI);

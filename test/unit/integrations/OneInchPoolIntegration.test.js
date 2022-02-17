@@ -23,6 +23,7 @@ describe('OneInchPoolIntegrationTest', function () {
   let owner;
   let priceOracle;
   let babController;
+  let keeper;
 
   async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
@@ -83,6 +84,7 @@ describe('OneInchPoolIntegrationTest', function () {
       signer2,
       signer3,
       owner,
+      keeper,
     } = await setupTests()());
   });
 
@@ -133,6 +135,7 @@ describe('OneInchPoolIntegrationTest', function () {
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address, 0],
       );

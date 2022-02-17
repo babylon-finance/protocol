@@ -31,6 +31,7 @@ describe('SushiswapPoolIntegrationTest', function () {
   let priceOracle;
   let babController;
   let owner;
+  let keeper;
 
   async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
@@ -78,6 +79,7 @@ describe('SushiswapPoolIntegrationTest', function () {
       signer2,
       signer3,
       priceOracle,
+      keeper,
     } = await setupTests()());
   });
 
@@ -107,6 +109,7 @@ describe('SushiswapPoolIntegrationTest', function () {
         [signer1, signer2, signer3],
         sushiswapPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address, 0],
       );

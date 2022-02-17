@@ -30,6 +30,7 @@ describe('AaveBorrowIntegrationTest', function () {
   let USDC;
   let DAI;
   let WETH;
+  let keeper;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -43,6 +44,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1.address, 0, asset2.address, 0],
     );
@@ -72,6 +74,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1.address, 0, asset2.address, 0],
     );
@@ -90,6 +93,7 @@ describe('AaveBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [aaveLendIntegration.address, aaveBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1.address, 0, asset2.address, 0],
     );
@@ -99,7 +103,7 @@ describe('AaveBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ aaveLendIntegration, aaveBorrowIntegration, signer1, signer2, signer3, keeper } = await setupTests()());
     USDC = await getERC20(addresses.tokens.USDC);
     DAI = await getERC20(addresses.tokens.DAI);
     WETH = await getERC20(addresses.tokens.WETH);
@@ -114,6 +118,7 @@ describe('AaveBorrowIntegrationTest', function () {
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address],
         garden,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, 0, USDC.address, 0],
       );

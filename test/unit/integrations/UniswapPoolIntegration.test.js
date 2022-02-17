@@ -24,6 +24,7 @@ describe('UniswapPoolIntegrationTest', function () {
   let babController;
   let WETH;
   let DAI;
+  let keeper;
 
   async function getExpectedLPTokens(token, amount, poolAddress, token0, token1) {
     const reservePriceInAsset0 = await priceOracle.connect(owner).getPrice(token, token0);
@@ -69,6 +70,7 @@ describe('UniswapPoolIntegrationTest', function () {
       signer2,
       signer3,
       priceOracle,
+      keeper,
     } = await setupTests()());
 
     WETH = await getERC20(addresses.tokens.WETH);
@@ -100,6 +102,7 @@ describe('UniswapPoolIntegrationTest', function () {
         [signer1, signer2, signer3],
         uniswapPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [daiWethPair.address, 0],
       );

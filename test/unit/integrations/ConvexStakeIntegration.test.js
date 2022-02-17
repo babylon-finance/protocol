@@ -14,6 +14,7 @@ describe('ConvexStakeIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
+  let keeper;
 
   // Used to create addresses info. do not remove
   async function logConvexPools() {
@@ -56,6 +57,7 @@ describe('ConvexStakeIntegrationTest', function () {
       signer1,
       signer2,
       signer3,
+      keeper,
     } = await setupTests()());
     // logConvexPools();
   });
@@ -95,6 +97,7 @@ describe('ConvexStakeIntegrationTest', function () {
       [signer1, signer2, signer3],
       [curvePoolIntegration.address, convexStakeIntegration.address],
       garden,
+      keeper,
       false,
       [crvpool, 0, cvxpool, 0],
     );
@@ -134,6 +137,7 @@ describe('ConvexStakeIntegrationTest', function () {
       [signer1, signer2, signer3],
       [curvePoolIntegration.address, convexStakeIntegration.address],
       garden,
+      keeper,
       false,
       [crvpool, 0, cvxpool, 0],
     );

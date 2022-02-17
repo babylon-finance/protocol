@@ -16,6 +16,7 @@ describe('CurvePoolIntegrationTest', function () {
   let signer2;
   let signer3;
   let garden1;
+  let keeper;
 
   const pools = Object.keys(addresses.curve.pools.v3).map((key) => {
     return {
@@ -115,6 +116,7 @@ describe('CurvePoolIntegrationTest', function () {
       [signer1, signer2, signer3],
       curvePoolIntegration.address,
       garden1,
+      keeper,
       DEFAULT_STRATEGY_PARAMS,
       [pool, 0],
     );
@@ -133,7 +135,7 @@ describe('CurvePoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ curvePoolIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
+    ({ curvePoolIntegration, garden1, signer1, signer2, signer3, keeper } = await setupTests()());
   });
 
   describe('Liquidity Pools', function () {

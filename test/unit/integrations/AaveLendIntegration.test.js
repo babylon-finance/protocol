@@ -31,6 +31,7 @@ describe('AaveLendIntegrationTest', function () {
   let babController;
   let USDC;
   let WETH;
+  let keeper;
 
   beforeEach(async () => {
     ({
@@ -41,6 +42,7 @@ describe('AaveLendIntegrationTest', function () {
       signer1,
       signer2,
       signer3,
+      keeper,
     } = await setupTests()());
     USDC = await getERC20(addresses.tokens.USDC);
     WETH = await getERC20(addresses.tokens.WETH);
@@ -83,6 +85,7 @@ describe('AaveLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         aaveLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [WETH.address, 0],
       );
@@ -103,6 +106,7 @@ describe('AaveLendIntegrationTest', function () {
         [signer1, signer2, signer3],
         aaveLendIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [WETH.address, 0],
       );

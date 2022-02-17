@@ -31,6 +31,7 @@ describe('CompoundBorrowIntegrationTest', function () {
   let DAI;
   let WETH;
   let WBTC;
+  let keeper;
 
   async function supplyBorrowStrategy(asset1, asset2, token) {
     await transferFunds(token);
@@ -47,6 +48,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1Address, 0, asset2Address, 0],
     );
@@ -82,6 +84,7 @@ describe('CompoundBorrowIntegrationTest', function () {
       [signer1, signer2, signer3],
       [compoundLendIntegration.address, compoundBorrowIntegration.address],
       garden,
+      keeper,
       false,
       [asset1Address, 0, asset2Address, 0],
     );
@@ -91,7 +94,15 @@ describe('CompoundBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ garden1, compoundLendIntegration, compoundBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      garden1,
+      compoundLendIntegration,
+      compoundBorrowIntegration,
+      signer1,
+      signer2,
+      signer3,
+      keeper,
+    } = await setupTests()());
     USDC = await getERC20(addresses.tokens.USDC);
     DAI = await getERC20(addresses.tokens.DAI);
     WETH = await getERC20(addresses.tokens.WETH);
@@ -106,6 +117,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, 0, USDC.address, 0],
       );
@@ -133,6 +145,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [USDC.address, 0, DAI.address, 0],
       );
@@ -157,6 +170,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
       );
@@ -183,6 +197,7 @@ describe('CompoundBorrowIntegrationTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address],
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, 0, ADDRESS_ZERO, 0],
       );

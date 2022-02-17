@@ -17,6 +17,7 @@ describe('YearnVaultIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
+  let keeper;
 
   beforeEach(async () => {
     ({
@@ -28,6 +29,7 @@ describe('YearnVaultIntegrationTest', function () {
       signer1,
       signer2,
       signer3,
+      keeper,
     } = await setupTests()());
     daiVault = await ethers.getContractAt('IYearnVault', addresses.yearn.daiVault);
   });
@@ -92,6 +94,7 @@ describe('YearnVaultIntegrationTest', function () {
         [signer1, signer2, signer3],
         [curvePoolIntegration.address, yearnVaultIntegration.address],
         garden,
+        keeper,
         false,
         [crvpool, 0, yvault.vault, 0],
       );

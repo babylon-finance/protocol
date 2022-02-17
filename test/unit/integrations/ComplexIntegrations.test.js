@@ -17,6 +17,7 @@ describe('ComplexIntegrationsTest', function () {
   let usdc;
   let dai;
   let weth;
+  let keeper;
 
   const DPI = '0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b';
 
@@ -30,6 +31,7 @@ describe('ComplexIntegrationsTest', function () {
       signer1,
       signer2,
       signer3,
+      keeper,
 
       usdc,
       dai,
@@ -51,6 +53,7 @@ describe('ComplexIntegrationsTest', function () {
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address, masterSwapper.address],
         garden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [weth.address, 0, dai.address, 0, weth.address, 0],
         [3, 4, 0],
@@ -73,6 +76,7 @@ describe('ComplexIntegrationsTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address, masterSwapper.address],
         garden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0, dai.address, 0, DPI, 0],
         [3, 4, 0],
@@ -96,6 +100,7 @@ describe('ComplexIntegrationsTest', function () {
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address, masterSwapper.address],
         garden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [weth.address, 0, dai.address, 0, DPI, 0],
         [3, 4, 0],
@@ -119,6 +124,7 @@ describe('ComplexIntegrationsTest', function () {
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address, masterSwapper.address],
         garden,
+        keeper,
         DAI_STRATEGY_PARAMS,
         [ADDRESS_ZERO, 0, usdc.address, 0, DPI, 0],
         [3, 4, 0],
