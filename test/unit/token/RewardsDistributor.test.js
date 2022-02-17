@@ -102,7 +102,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-(!!process.env.FAST ? describe.skip : describe)('RewardsDistributor', function () {
+describe.skip('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -3371,7 +3371,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens[6]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3450,7 +3450,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3545,7 +3545,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3563,7 +3563,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3683,7 +3683,7 @@ async function getStrategyState(strategy) {
         {},
       );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       // DAI Garden
       await babController.connect(signer1).createGarden(
@@ -3700,7 +3700,7 @@ async function getStrategyState(strategy) {
         {},
       );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3822,7 +3822,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3840,7 +3840,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3963,7 +3963,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
       // DAI Garden
       await babController
@@ -3981,7 +3981,7 @@ async function getStrategyState(strategy) {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });

@@ -736,12 +736,12 @@ describe('Strategy', function () {
       await injectFakeProfits(long4, eth(200));
       await finalizeStrategy(long4);
       const treasuryBalance4 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance4).to.be.closeTo(from('33737903640157303'), treasuryBalance4.div(20));
+      expect(treasuryBalance4).to.be.closeTo(from('34274913096817798'), treasuryBalance4.div(20));
 
       await injectFakeProfits(long5, eth(222));
       await finalizeStrategy(long5);
       const treasuryBalance5 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance5).to.be.closeTo(from('36998685764437278'), treasuryBalance5.div(20));
+      expect(treasuryBalance5).to.be.closeTo(from('37725670567317321'), treasuryBalance5.div(20));
     });
 
     it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {

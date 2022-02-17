@@ -17,6 +17,7 @@
 */
 
 pragma solidity 0.7.6;
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -31,10 +32,9 @@ import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
-import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
-import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
+import {ICurvePoolV3DY} from './interfaces/external/curve/ICurvePoolV3DY.sol';
 import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
@@ -47,6 +47,7 @@ import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
+import {ControllerLib} from './lib/ControllerLib.sol';
 
 /**
  * @title PriceOracle
@@ -59,15 +60,13 @@ contract PriceOracle is Ownable, IPriceOracle {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
+    using ControllerLib for IBabController;
 
     /* ============ Constants ============ */
 
     // Address of Uniswap factory
     IUniswapV3Factory internal constant factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
-    // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider =
-        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     IUniswapV2Router internal constant uniRouterV2 = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     IYearnRegistry private constant yearnRegistry = IYearnRegistry(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
 
@@ -79,7 +78,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    address private constant TRI_CURVE_POOL_2_LP = 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -101,17 +99,6 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     /* ============ Modifiers ============ */
 
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
-
     /* ============ Constructor ============ */
 
     constructor(ITokenIdentifier _tokenIdentifier, IBabController _controller) {
@@ -124,17 +111,20 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     /* ============ External Functions ============ */
 
-    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override onlyGovernanceOrEmergency {
+    function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) public override {
+        controller.onlyGovernanceOrEmergency();
         require(address(_tokenIdentifier) != address(0), 'Address needs to exist');
         tokenIdentifier = _tokenIdentifier;
     }
 
-    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override onlyGovernanceOrEmergency {
+    function updateMaxTwapDeviation(int24 _maxTwapDeviation) public override {
+        controller.onlyGovernanceOrEmergency();
         require(_maxTwapDeviation < 1500, 'Max twap deviation must be within range');
         maxTwapDeviation = _maxTwapDeviation;
     }
 
-    function updateReserves(address[] memory list) public override onlyGovernanceOrEmergency {
+    function updateReserves(address[] memory list) public override {
+        controller.onlyGovernanceOrEmergency();
         _updateReserves(list);
     }
 
@@ -204,11 +194,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
         _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
 
-        uint256 exchangeRate;
+        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
-            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
+            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut, curveMetaRegistry);
 
         // Comp assets
+        uint256 exchangeRate;
         if (tokenInType == 1) {
             exchangeRate = getCompoundExchangeRate(_tokenIn, _finalAssetIn);
             return getPrice(_finalAssetIn, _tokenOut).preciseMul(exchangeRate);
@@ -251,47 +242,24 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        // Curve LP tokens
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         if (tokenInType == 5) {
-            if (_tokenIn != TRI_CURVE_POOL_2_LP) {
-                address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
-                if (crvPool != address(0)) {
-                    address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                    return
-                        curveRegistry.get_virtual_price_from_lp_token(_tokenIn).preciseMul(
-                            getPrice(denominator, _tokenOut)
-                        );
-                }
-            } else {
-                // TRI2
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price().preciseMul(
-                        getPrice(DAI, _tokenOut)
-                    );
+                    curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(getPrice(denominator, _tokenOut));
             }
         }
 
         if (tokenOutType == 5) {
             // Token out is a curve lp
-            if (_tokenOut != TRI_CURVE_POOL_2_LP) {
-                address crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
-                if (crvPool != address(0)) {
-                    address denominator = _cleanCurvePoolDenominator(crvPool, curveRegistry);
-                    return
-                        getPrice(_tokenIn, denominator).preciseDiv(
-                            curveRegistry.get_virtual_price_from_lp_token(_tokenOut)
-                        );
-                }
-            } else {
-                // TRI2
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            if (crvPool != address(0)) {
+                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
                 return
-                    getPrice(_tokenIn, DAI).preciseDiv(
-                        IPriceTri(0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950).lp_price()
-                    );
+                    getPrice(_tokenIn, denominator).preciseDiv(curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut));
             }
         }
-
         // Yearn vaults
         if (tokenInType == 6) {
             price = IYearnVault(_tokenIn).pricePerShare().preciseMul(
@@ -316,7 +284,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut, curveMetaRegistry);
         if (price != 0) {
             return price;
         }
@@ -331,11 +299,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < hopTokensList.length; i++) {
             address reserve = hopTokensList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
-                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
+                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve, curveMetaRegistry);
                 if (tokenInPrice != 0) {
                     return tokenInPrice.preciseMul(_getBestPriceUniV3(reserve, _tokenOut));
                 }
-                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
+                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut, curveMetaRegistry);
                 if (tokenOutPrice != 0) {
                     return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, reserve));
                 }
@@ -350,8 +318,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         return price;
     }
 
-    function _cleanCurvePoolDenominator(address _pool, ICurveRegistry _curveRegistry) internal view returns (address) {
-        address[8] memory coins = _curveRegistry.get_underlying_coins(_pool);
+    function _cleanCurvePoolDenominator(address _pool, ICurveMetaRegistry _curveMetaRegistry)
+        internal
+        view
+        returns (address)
+    {
+        address[8] memory coins = _curveMetaRegistry.getCoinAddresses(_pool, true);
         if (coins[0] != address(0)) {
             return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
         }
@@ -565,34 +537,16 @@ contract PriceOracle is Ownable, IPriceOracle {
     function _getPriceThroughCurve(
         address _curvePool,
         address _tokenIn,
-        address _tokenOut
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
     ) private view returns (uint256) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        (int128 i, int128 j, bool underlying) = curveRegistry.get_coin_indices(_curvePool, _tokenIn, _tokenOut);
+        (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        if (
-            _curvePool == 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 ||
-            _curvePool == 0x80466c64868E1ab14a1Ddf27A676C3fcBE638Fe5
-        ) {
-            price = ICurvePoolV3(_curvePool).get_dy(
-                uint256(i),
-                uint256(j),
-                10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-            );
+        uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
+        if (underlying) {
+            price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
         } else {
-            if (underlying) {
-                price = ICurvePoolV3(_curvePool).get_dy_underlying(
-                    i,
-                    j,
-                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-                );
-            } else {
-                price = ICurvePoolV3(_curvePool).get_dy(
-                    i,
-                    j,
-                    10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals())
-                );
-            }
+            price = _getCurveDY(_curvePool, i, j, decimalsIn);
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
@@ -602,19 +556,60 @@ contract PriceOracle is Ownable, IPriceOracle {
         return 0;
     }
 
-    function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-        address curvePool = curveRegistry.find_pool_for_coins(_tokenIn, _tokenOut);
+    function _getCurveDY(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        try ICurvePoolV3DY(_curvePool).get_dy(i, j, decimals) returns (uint256 price) {
+            return price;
+        } catch {
+            try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price2) {
+                return price2;
+            } catch {
+                revert('get dy failed');
+            }
+        }
+    }
+
+    function _getCurveDYUnderlying(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        try ICurvePoolV3DY(_curvePool).get_dy_underlying(i, j, decimals) returns (uint256 price) {
+            return price;
+        } catch {
+            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
+                return price2;
+            } catch {
+                try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
+                    return price3;
+                } catch {
+                    revert('get dy underlying failed');
+                }
+            }
+        }
+    }
+
+    function _checkPairThroughCurve(
+        address _tokenIn,
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
+    ) private view returns (uint256) {
+        address curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
         if (_tokenIn == WETH && curvePool == address(0)) {
             _tokenIn = ETH_ADD_CURVE;
-            curvePool = curveRegistry.find_pool_for_coins(ETH_ADD_CURVE, _tokenOut);
+            curvePool = _curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _tokenOut, 0);
         }
         if (_tokenOut == WETH && curvePool == address(0)) {
             _tokenOut = ETH_ADD_CURVE;
-            curvePool = curveRegistry.find_pool_for_coins(_tokenIn, ETH_ADD_CURVE);
+            curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
         }
         if (curvePool != address(0)) {
-            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
+            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut, _curveMetaRegistry);
             return price;
         }
         return 0;

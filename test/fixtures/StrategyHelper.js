@@ -80,9 +80,7 @@ async function createStrategyWithPoolOperation(garden, signer, params, integrati
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-
   const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
   return strategy;
 }
 
@@ -232,7 +230,7 @@ async function deposit(garden, signers) {
 
 async function vote(strategy, signers, keeper) {
   const garden = await strategy.garden();
-  const gardenContract = await ethers.getContractAt('Garden', garden);
+  const gardenContract = await ethers.getContractAt('IGarden', garden);
 
   const [signer1, signer2] = signers;
 
@@ -264,7 +262,7 @@ async function executeStrategy(
   } = {},
 ) {
   const garden = await strategy.garden();
-  const gardenContract = await ethers.getContractAt('Garden', garden);
+  const gardenContract = await ethers.getContractAt('IGarden', garden);
   amount = amount || STRATEGY_EXECUTE_MAP[await gardenContract.reserveAsset()];
   const signers = await ethers.getSigners();
   if (time > 0) {
@@ -537,7 +535,7 @@ async function getStrategy({
     state,
     signers || [signer1, signer2, signer3],
     integrations || uniswapV3TradeIntegration.address,
-    garden || (await ethers.getContractAt('Garden', gardens.slice(-1)[0])),
+    garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0])),
     executedBy || (await ethers.getSigners())[1],
     params,
     specificParams,

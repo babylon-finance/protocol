@@ -334,7 +334,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
-
         // set votes to zero expecting keeper to provide correct values
         totalPositiveVotes = 0;
         totalNegativeVotes = 0;
@@ -348,12 +347,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
             }
         }
-
         _require(totalPositiveVotes.sub(totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
 
         // Keeper will account for strategist vote/stake
         voters = _voters;
-
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
         emit StrategyVoted(address(garden), totalPositiveVotes, totalNegativeVotes, block.timestamp);

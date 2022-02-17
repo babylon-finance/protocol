@@ -174,8 +174,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public guardian;
     mapping(address => bool) public override guardianPaused;
     bool public override guardianGlobalPaused;
+
     address public override mardukGate;
     address public override heart;
+    address public override curveMetaRegistry;
 
     /* ============ Constants ============ */
 
@@ -340,7 +342,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) external override onlyOwner {
+    function addReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
         require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
@@ -353,7 +355,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset               Address of the reserve asset to remove
      */
-    function removeReserveAsset(address _reserveAsset) external override onlyOwner {
+    function removeReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
@@ -411,6 +413,17 @@ contract BabController is OwnableUpgradeable, IBabController {
         heart = _newHeart;
 
         emit HeartChanged(_newHeart, oldHeart);
+    }
+
+    /**
+     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the curve meta registry
+     *
+     * @param _curveMetaRegistry      Address of the new curve meta registry
+     */
+    function editCurveMetaRegistry(address _curveMetaRegistry) external override onlyGovernanceOrEmergency {
+        require(_curveMetaRegistry != address(0), 'Address must not be 0');
+
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /**
@@ -681,4 +694,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV12 is BabController {}
+contract BabControllerV14 is BabController {}

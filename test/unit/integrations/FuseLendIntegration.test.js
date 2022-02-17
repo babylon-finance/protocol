@@ -7,7 +7,7 @@ const {
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { increaseTime, getERC20, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20, eth, from } = require('utils/test-helpers');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('FuseLendIntegrationTest', function () {
@@ -65,22 +65,21 @@ describe('FuseLendIntegrationTest', function () {
         fuseLendIntegration.address,
         garden1,
         DEFAULT_STRATEGY_PARAMS,
-        [addresses.tokens.DAI, 0], // ETH
+        [addresses.tokens.DAI, 0],
       );
 
       await executeStrategy(strategyContract);
+
       expect(await DAI.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await cDAI.balanceOf(strategyContract.address)).to.be.gte(0);
-      const beforeCdai = await cDAI.balanceOf(strategyContract.address);
-      await executeStrategy(strategyContract);
-      await executeStrategy(strategyContract);
+
       await finalizeStrategy(strategyContract);
-      expect(await cDAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await cDAI.balanceOf(strategyContract.address)).to.be.lt(beforeCdai.div(1000));
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
+
+      expect(await cDAI.balanceOf(strategyContract.address)).to.be.closeTo(from(0), eth(0.001));
+      expect(await WETH.balanceOf(strategyContract.address)).to.eq(0);
     });
 
-    it('can supply and redeem eth from Fuse', async function () {
+    it('can supply and redeem ETH from Fuse', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',
@@ -94,10 +93,12 @@ describe('FuseLendIntegrationTest', function () {
       await executeStrategy(strategyContract);
       expect(await WETH.balanceOf(strategyContract.address)).to.be.equal(0);
       expect(await cWETH.balanceOf(strategyContract.address)).to.be.gt(0);
+
       await finalizeStrategy(strategyContract);
-      expect(await cWETH.balanceOf(strategyContract.address)).to.be.closeTo(eth('0'), eth('0.01'));
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await strategyContract.capitalReturned()).to.be.closeTo(eth('1'), eth('0.01'));
+
+      expect(await cWETH.balanceOf(strategyContract.address)).to.be.closeTo(from(0), eth(0.001));
+      expect(await WETH.balanceOf(strategyContract.address)).to.eq(0);
+      expect(await strategyContract.capitalReturned()).to.be.closeTo(eth(1), eth(0.01));
     });
 
     it('can supply and get NAV including rewards', async function () {

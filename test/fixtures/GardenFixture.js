@@ -11,8 +11,7 @@ async function setUpFixture(
   options,
   { gardenParams = GARDEN_PARAMS },
 ) {
-  const signers = await ethers.getSigners();
-  const [deployer, keeper, , signer1, signer2, signer3, signer4] = signers;
+  const [deployer, keeper, , signer1, signer2, signer3, signer4] = await ethers.getSigners();
 
   await deployments.fixture();
 
@@ -23,6 +22,7 @@ async function setUpFixture(
   const ishtarGate = await getContract('IshtarGate');
   const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
+  const curveMetaRegistry = await getContract('CurveMetaRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -209,15 +209,15 @@ async function setUpFixture(
 
   const gardens = await babController.getGardens();
 
-  const garden1 = await ethers.getContractAt('Garden', gardens[0]);
+  const garden1 = await ethers.getContractAt('IGarden', gardens[0]);
 
-  const garden2 = await ethers.getContractAt('Garden', gardens[1]);
+  const garden2 = await ethers.getContractAt('IGarden', gardens[1]);
 
-  const garden3 = await ethers.getContractAt('Garden', gardens[2]);
+  const garden3 = await ethers.getContractAt('IGarden', gardens[2]);
 
-  const garden4 = await ethers.getContractAt('Garden', gardens[3]);
+  const garden4 = await ethers.getContractAt('IGarden', gardens[3]);
 
-  const heartGarden = await ethers.getContractAt('Garden', gardens[4]);
+  const heartGarden = await ethers.getContractAt('IGarden', gardens[4]);
 
   const heartTestGarden = await ethers.getContractAt('Garden', gardens[5]);
 
@@ -282,6 +282,7 @@ async function setUpFixture(
     oneInchPoolIntegration,
     compoundLendIntegration,
     compoundBorrowIntegration,
+    curveMetaRegistry,
     synthetixTradeIntegration,
     univ2TradeIntegration,
     aaveLendIntegration,

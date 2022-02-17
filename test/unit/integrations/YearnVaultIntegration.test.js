@@ -11,6 +11,7 @@ describe('YearnVaultIntegrationTest', function () {
   let yearnVaultIntegration;
   let curvePoolIntegration;
   let priceOracle;
+  let curveMetaRegistry;
   let owner;
   let daiVault;
   let signer1;
@@ -22,6 +23,7 @@ describe('YearnVaultIntegrationTest', function () {
       priceOracle,
       curvePoolIntegration,
       yearnVaultIntegration,
+      curveMetaRegistry,
       owner,
       signer1,
       signer2,
@@ -43,18 +45,16 @@ describe('YearnVaultIntegrationTest', function () {
     const yvault = await ethers.getContractAt('IYearnVault', vault.vault);
     vault.needs = await yvault.token();
     if (vault.curve) {
-      const crvAddressProvider = await ethers.getContractAt(
-        'ICurveAddressProvider',
-        '0x0000000022d53366457f9d5e68ec105046fc4383',
-      );
-      const crvRegistry = await ethers.getContractAt('ICurveRegistry', await crvAddressProvider.get_registry());
-      vault.crvpool = await crvRegistry.get_pool_from_lp_token(vault.needs);
+      vault.crvpool = await curveMetaRegistry.getPoolFromLpToken(vault.needs);
     }
-    console.log(JSON.stringify(vault), ',');
+    // console.log(JSON.stringify(vault), ',');
   }
 
-  // logYearnVaults();
-
+  describe('logs vaults', function () {
+    it.skip('logs all vaults', async function () {
+      await logYearnVaults();
+    });
+  });
   describe('getPricePerShare', function () {
     it('get price per share', async function () {
       expect(await yearnVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
@@ -132,7 +132,7 @@ describe('YearnVaultIntegrationTest', function () {
     const executionTokenBalance = await tokenContract.balanceOf(garden.address);
     expect(await vaultContract.balanceOf(strategyContract.address)).to.be.closeTo(
       expectedShares,
-      expectedShares.div(33), // 3% precision
+      expectedShares.div(25), // 4% precision
     );
 
     await finalizeStrategy(strategyContract, 0);
@@ -152,7 +152,9 @@ describe('YearnVaultIntegrationTest', function () {
   describe('enter and exits curve vaults', function () {
     pick(GARDENS).forEach(({ token, name }) => {
       pick(
-        addresses.yearn.vaults.filter((y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000'),
+        addresses.yearn.vaults.filter(
+          (y) => y.curve && y.crvpool !== '0x0000000000000000000000000000000000000000' && !y.skipTest,
+        ),
       ).forEach((yvault) => {
         it(`can enter and exit the ${yvault.name} at Yearn Vault from a ${name} garden`, async function () {
           await testVault(yvault, token, name, yvault.crvpool);

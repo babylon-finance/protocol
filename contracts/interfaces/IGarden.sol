@@ -17,16 +17,47 @@
 */
 pragma solidity 0.7.6;
 
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {IBabController} from './IBabController.sol';
 
 /**
- * @title IGarden
- * @author Babylon Finance
+ * @title IStrategyGarden
  *
- * Interface for operating with a Garden.
+ * Interface for functions of the garden
  */
-interface IGarden {
-    /* ============ Functions ============ */
+interface IStrategyGarden {
+    /* ============ Write ============ */
+
+    function finalizeStrategy(
+        uint256 _profits,
+        int256 _returns,
+        uint256 _burningAmount
+    ) external;
+
+    function allocateCapitalToStrategy(uint256 _capital) external;
+
+    function expireCandidateStrategy(address _strategy) external;
+
+    function addStrategy(
+        string memory _name,
+        string memory _symbol,
+        uint256[] calldata _stratParams,
+        uint8[] calldata _opTypes,
+        address[] calldata _opIntegrations,
+        bytes calldata _opEncodedDatas
+    ) external;
+
+    function payKeeper(address payable _keeper, uint256 _fee) external;
+}
+
+/**
+ * @title IAdminGarden
+ *
+ * Interface for functions of the garden
+ */
+interface IAdminGarden {
+    /* ============ Write ============ */
     function initialize(
         address _reserveAsset,
         IBabController _controller,
@@ -47,6 +78,19 @@ interface IGarden {
     function addExtraCreators(address[4] memory _newCreators) external;
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
+
+    function updateGardenParams(uint256[9] memory _newParams) external;
+}
+
+/**
+ * @title IGarden
+ *
+ * Interface for operating with a Garden.
+ */
+interface ICoreGarden {
+    /* ============ Constructor ============ */
+
+    /* ============ View ============ */
 
     function privateGarden() external view returns (bool);
 
@@ -114,22 +158,13 @@ interface IGarden {
 
     function strategyMapping(address _strategy) external view returns (bool);
 
-    function finalizeStrategy(
-        uint256 _profits,
-        int256 _returns,
-        uint256 _burningAmount
-    ) external;
+    function getLockedBalance(address _contributor) external view returns (uint256);
 
-    function allocateCapitalToStrategy(uint256 _capital) external;
+    function keeperDebt() external view returns (uint256);
 
-    function addStrategy(
-        string memory _name,
-        string memory _symbol,
-        uint256[] calldata _stratParams,
-        uint8[] calldata _opTypes,
-        address[] calldata _opIntegrations,
-        bytes calldata _opEncodedDatas
-    ) external;
+    function totalKeeperFees() external view returns (uint256);
+
+    /* ============ Write ============ */
 
     function deposit(
         uint256 _reserveAssetQuantity,
@@ -193,16 +228,10 @@ interface IGarden {
         uint256 _pricePerShare,
         bool _bySig
     ) external;
-
-    function getLockedBalance(address _contributor) external view returns (uint256);
-
-    function updateGardenParams(uint256[9] memory _newParams) external;
-
-    function expireCandidateStrategy(address _strategy) external;
-
-    function payKeeper(address payable _keeper, uint256 _fee) external;
-
-    function keeperDebt() external view returns (uint256);
-
-    function totalKeeperFees() external view returns (uint256);
 }
+
+interface IERC20Metadata {
+    function name() external view returns (string memory);
+}
+
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {}

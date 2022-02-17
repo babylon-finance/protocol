@@ -41,6 +41,7 @@ import {DeFiUtils} from '../../lib/DeFiUtils.sol';
 import {AddressArrayUtils} from '../../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 /**
  * @title MasterSwapper
@@ -62,21 +63,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     using String for address;
     using String for bytes;
     using DeFiUtils for address[];
+    using ControllerLib for IBabController;
 
     /* ============ Struct ============ */
-
-    /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
 
     /* ============ Events ============ */
 
@@ -159,7 +148,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * @param _index                   Index to update
      * @param _newAddress              New address
      */
-    function updateTradeAddress(uint256 _index, address _newAddress) external onlyGovernanceOrEmergency {
+    function updateTradeAddress(uint256 _index, address _newAddress) external {
+        controller.onlyGovernanceOrEmergency();
         require(_newAddress != address(0), 'New address i not valid');
         if (_index == 0) {
             curve = ITradeIntegration(_newAddress);
