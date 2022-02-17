@@ -182,17 +182,11 @@ async function createStrategyWithManyOperations(
   const passedParams = [ops, integrations];
   const AbiCoder = ethers.utils.AbiCoder;
   const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(
-    ['address', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-    [data[0], data[1], data[2], data[3], data[4], data[5]],
-  );
-
+  const encoded = abiCoder.encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-
   const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
   return strategy;
 }
 

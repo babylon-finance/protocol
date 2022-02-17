@@ -74,7 +74,7 @@ async function setUpFixture(
   const owner = await impersonateAddress(timelockController.address);
   await signer4.sendTransaction({ to: owner.address, value: ethers.utils.parseEther('5') });
 
-  await fund([owner.address, signer1.address], {
+  await fund([owner.address, signer1.address, signer2.address, signer3.address], {
     tokens: [
       addresses.tokens.USDC,
       addresses.tokens.DAI,
