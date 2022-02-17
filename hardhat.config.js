@@ -114,8 +114,14 @@ module.exports = {
         version: '0.7.6',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: false,
             runs: 999,
+            details: {
+              yul: true,
+              yulDetails: {
+                stackAllocation: true,
+              },
+            },
           },
         },
       },
@@ -123,8 +129,14 @@ module.exports = {
         version: '0.8.2',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: false,
             runs: 999,
+            details: {
+              yul: true,
+              yulDetails: {
+                stackAllocation: true,
+              },
+            },
           },
         },
       },
