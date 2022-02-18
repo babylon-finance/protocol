@@ -76,16 +76,6 @@ describe('Garden', function () {
   let dai;
   let wbtc;
 
-  async function deleteCandidateStrategies(community) {
-    const garden = await ethers.getContractAt('IGarden', community);
-    // As the disabled garden has still 2 candidate strategies, we need to expire them before removing the garden
-    const strategies = await garden.getStrategies();
-    for (let i = 0; i < strategies.length; i++) {
-      const strategy = await ethers.getContractAt('Strategy', strategies[i]);
-      await strategy.connect(owner).deleteCandidateStrategy();
-    }
-  }
-
   beforeEach(async () => {
     ({
       babController,
@@ -1438,6 +1428,168 @@ describe('Garden', function () {
       await expect(
         garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
       ).to.be.reverted;
+    });
+  });
+
+  describe('checkLastPricePerShare', async function () {
+    it('can deposit and withdraw if pricePerShare within slippage', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      let nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn.mul(4), {
+        gasPrice: 0,
+      });
+
+      let sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+
+      nonce += 1;
+      sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      // deposit is accepted with the same price per share
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+
+      nonce += 1;
+      sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut.div(2), false, nonce, maxFee);
+
+      // deposit is accepted with the price per share max up
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut.div(2), false, nonce, maxFee, eth(2), fee, sig.v, sig.r, sig.s);
+
+      nonce += 1;
+      sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      // deposit is accepted with the price per share max down
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+    });
+
+    it('decay grows slippage up in one year', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      let nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await increaseTime(ONE_YEAR_IN_SECONDS);
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, from(0), false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, from(0), false, nonce, maxFee, eth(3), fee, sig.v, sig.r, sig.s);
+    });
+
+    it('decay grows slippage down in one year', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      let nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await increaseTime(ONE_YEAR_IN_SECONDS);
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, from(0), false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, from(0), false, nonce, maxFee, eth().div(3), fee, sig.v, sig.r, sig.s);
+    });
+
+    it('revert if change is higher than allowed by slippage', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      let nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await garden.connect(signer1).updateDecayAndSlippage(1, eth());
+
+      await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      let sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+
+      nonce += 1;
+      sig = await getDepositSig(garden.address, signer3, amountIn, from(0), false, nonce, maxFee);
+
+      await expect(
+        garden
+          .connect(keeper)
+          .depositBySig(amountIn, from(0), false, nonce, maxFee, eth(2).add(1), fee, sig.v, sig.r, sig.s),
+      ).to.be.revertedWith('BAB#118');
+    });
+
+    it('revert if change is lower than allowed by slippage', async function () {
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      let nonce = 0;
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await garden.connect(signer1).updateDecayAndSlippage(1, eth());
+
+      await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      let sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, sig.v, sig.r, sig.s);
+
+      nonce += 1;
+      sig = await getDepositSig(garden.address, signer3, amountIn, from(0), false, nonce, maxFee);
+
+      await expect(
+        garden
+          .connect(keeper)
+          .depositBySig(amountIn, from(0), false, nonce, maxFee, eth(0.5).sub(1), fee, sig.v, sig.r, sig.s),
+      ).to.be.revertedWith('BAB#118');
     });
   });
 

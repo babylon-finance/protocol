@@ -874,7 +874,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         9e17 and 11e17 allowed immediately. After one year (100% change in time) and with a decay rate 1x;
         deposits between 5e17 and 2e18 are possible. Different gardens should have different settings for
         slippage and decay rate due to various volatility of the strategies. For example, stable gardens
-        would have low slippage and decay rate while some moonshot garden may have both of them
+        would have low slippage and decay rate while some moonshot gardens may have both of them
         as high as 100% and 10x.
       @param _pricePerShare  Price of the graden share to validate against historical data
     */
@@ -884,13 +884,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
             slippage = slippage.add(block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
-            _require(
-                _pricePerShare > lastPricePerShare
-                    ? _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage)
-                    : lastPricePerShare.sub(_pricePerShare) <=
+            if (_pricePerShare > lastPricePerShare) {
+                _require(
+                    _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
+                    Errors.PRICE_PER_SHARE_WRONG
+                );
+            } else {
+                _require(
+                    lastPricePerShare.sub(_pricePerShare) <=
                         lastPricePerShare.sub(lastPricePerShare.preciseDiv(slippage.add(1e18))),
-                Errors.PRICE_PER_SHARE_WRONG
-            );
+                    Errors.PRICE_PER_SHARE_WRONG
+                );
+            }
         }
         lastPricePerShare = _pricePerShare;
         lastPricePerShareTS = block.timestamp;

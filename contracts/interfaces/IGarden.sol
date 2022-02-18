@@ -54,7 +54,7 @@ interface IStrategyGarden {
 /**
  * @title IAdminGarden
  *
- * Interface for functions of the garden
+ * Interface for amdin functions of the Garden
  */
 interface IAdminGarden {
     /* ============ Write ============ */
@@ -77,7 +77,9 @@ interface IAdminGarden {
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
-    function updateGardenParams(uint256[9] memory _newParams) external;
+    function updateGardenParams(uint256[11] memory _newParams) external;
+
+    function updateDecayAndSlippage(uint256 _pricePerShareDecayRate, uint256 _pricePerShareSlippage) external;
 }
 
 /**
