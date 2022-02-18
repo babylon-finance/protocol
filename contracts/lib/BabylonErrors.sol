@@ -323,5 +323,5 @@ library Errors {
     // Heart invalid ctoken
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
     // Heart asset to purchase is same
-    uint256 internal constant HEART_ASSET_PURCHASE_SAME = 118;
+    uint256 internal constant HEART_ASSET_PURCHASE_INVALID = 118;
 }

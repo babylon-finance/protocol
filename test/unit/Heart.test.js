@@ -12,7 +12,7 @@ const {
 } = require('utils/gov-helpers');
 const { getContractFactory } = require('@nomiclabs/hardhat-ethers/types');
 const { impersonateAddress } = require('lib/rpc');
-const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
+const { ONE_YEAR_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 
 describe('Heart Unit Test', function () {
   let heartGarden;
@@ -101,6 +101,16 @@ describe('Heart Unit Test', function () {
       await heart.connect(owner).updateAssetToLend(addresses.tokens.FEI);
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.FEI);
     });
+
+    it('cannot update the asset to purchase to an invalid asset', async function () {
+      await expect(heart.connect(owner).updateAssetToPurchase(ADDRESS_ZERO)).to.be.reverted;
+    });
+
+    it('can update the asset to purchase to a valid asset', async function () {
+      await heart.connect(owner).updateAssetToPurchase(addresses.tokens.FRAX);
+      expect(await heart.connect(owner).assetForPurchases()).to.equal(addresses.tokens.FRAX);
+    });
+
     it('can update the fee weights', async function () {
       await heart.connect(owner).updateFeeWeights([eth(0.11), eth(0.51), eth(0.16), eth(0.17), eth(0.18)]);
       expect(await heart.connect(owner).feeDistributionWeights(0)).to.equal(eth(0.11));
