@@ -94,8 +94,7 @@ contract CurveTradeIntegration is TradeIntegration {
         // Palstakeaave. TODO: Add others
         bytes memory methodData;
         if (curvePool == 0x48536EC5233297C367fd0b6979B75d9270bB6B15) {
-            methodData =
-                abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
+            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
             if (underlying) {
                 methodData = abi.encodeWithSignature(
                     'exchange_underlying(uin256,uint256,uint256,uint256)',
@@ -106,8 +105,13 @@ contract CurveTradeIntegration is TradeIntegration {
                 );
             }
         } else {
-            methodData =
-                abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', int128(i), int128(j), _sendQuantity, 1);
+            methodData = abi.encodeWithSignature(
+                'exchange(int128,int128,uint256,uint256)',
+                int128(i),
+                int128(j),
+                _sendQuantity,
+                1
+            );
             if (underlying) {
                 methodData = abi.encodeWithSignature(
                     'exchange_underlying(int128,int128,uint256,uint256)',
