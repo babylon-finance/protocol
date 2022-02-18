@@ -395,9 +395,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
         controller.onlyGovernanceOrEmergency();
         address cToken = assetToCToken[_assetToBorrow];
-        (, uint256 liquidity, ) = IComptroller(BABYLON_FUSE_POOL_ADDRESS).getAccountLiquidity(address(this));
-        require(liquidity >= 3 * _borrowAmount, 'Liquidity available needs to be at least triple the borrow amount');
-        ICToken(cToken).borrow(_borrowAmount);
+        require(cToken != address(0), 'Not a valid cToken');
+        require(ICToken(cToken).borrow(_borrowAmount) == 0, 'Not enough collateral');
     }
 
     /**
@@ -550,36 +549,36 @@ contract Heart is OwnableUpgradeable, IHeart {
      *
      * @param _fromAsset             Which asset to convert
      * @param _fromAmount             Total amount of weth to lend
-     * @param _assetToLend            Address of the asset to lend
+     * @param _lendAsset            Address of the asset to lend
      */
     function _lendFusePool(
         address _fromAsset,
         uint256 _fromAmount,
-        address _assetToLend
+        address _lendAsset
     ) private {
-        address cToken = assetToCToken[_assetToLend];
+        address cToken = assetToCToken[_lendAsset];
         _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
-        uint256 assetToLendBalance;
+        uint256 assetToLendBalance = _fromAmount;
         // Trade to asset to lend if needed
-        if (_fromAsset != _assetToLend) {
+        if (_fromAsset != _lendAsset) {
             assetToLendBalance = _trade(
                 address(_fromAsset),
-                assetToLend == address(0) ? address(WETH) : assetToLend,
+                _lendAsset == address(0) ? address(WETH) : _lendAsset,
                 _fromAmount
             );
         }
-        if (assetToLend == address(0)) {
+        if (_lendAsset == address(0)) {
             // Convert WETH to ETH
             IWETH(WETH).withdraw(_fromAmount);
             ICEther(cToken).mint{value: _fromAmount}();
         } else {
-            IERC20(assetToLend).approve(cToken, assetToLendBalance);
+            IERC20(_lendAsset).approve(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
-        uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_assetToLend, address(WETH));
+        uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
         uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
         totalStats[5] = totalStats[5].add(assettoLendBalanceInWeth);
-        emit FuseLentAsset(block.timestamp, assetToLend, assettoLendBalanceInWeth);
+        emit FuseLentAsset(block.timestamp, _lendAsset, assettoLendBalanceInWeth);
     }
 
     /**

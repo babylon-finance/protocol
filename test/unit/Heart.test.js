@@ -24,6 +24,9 @@ describe('Heart Unit Test', function () {
   let keeper;
   let owner;
   let BABL;
+  let FRAX;
+  let DAI;
+  let CBABL;
   let deployer;
   let voters;
   let token;
@@ -33,6 +36,9 @@ describe('Heart Unit Test', function () {
   beforeEach(async () => {
     ({ heartGarden, heart, signer1, garden1, garden2, garden3, owner, keeper, deployer } = await setupTests()());
     BABL = await getERC20(addresses.tokens.BABL);
+    FRAX = await getERC20(addresses.tokens.FRAX);
+    DAI = await getERC20(addresses.tokens.DAI);
+    CBABL = await getERC20('0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
     token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
     governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
     voters = await getVoters();
@@ -230,6 +236,58 @@ describe('Heart Unit Test', function () {
       expect(heartVotingPower4).to.eq(voterBalance);
       expect(heartVotingPower5).to.eq(0);
       expect(heartVotingPower6).to.eq(voterBalance);
+    });
+  });
+
+  describe('lend fuse pool', async function () {
+    it('will lend an asset that is already owned', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      const bablBalanceBefore = await BABL.connect(owner).balanceOf(heart.address);
+      await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
+      const bablBalanceAfter = await BABL.connect(owner).balanceOf(heart.address);
+      await expect(bablBalanceAfter).to.equal(bablBalanceBefore.sub(amountToLend));
+      await expect(await CBABL.connect(owner).balanceOf(heart.address)).to.be.gt(0);
+    });
+
+    it('will revert if called by non owner', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      await expect(heart.connect(signer1).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 })).to.be
+        .reverted;
+    });
+  });
+
+  describe('borrow fuse pool', async function () {
+    it('will borrow DAI after lending BABL', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const amountToBorrow = ethers.utils.parseEther('50000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).borrowFusePool(addresses.tokens.DAI, amountToBorrow);
+      expect(await DAI.balanceOf(heart.address)).to.equal(amountToBorrow);
+    });
+
+    it('will revert if trying to borrow too much', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const amountToBorrow = ethers.utils.parseEther('250000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
+      await expect(heart.connect(owner).borrowFusePool(addresses.tokens.DAI, amountToBorrow)).to.be.reverted;
+    });
+
+    it('will revert if called by non owner', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
+      await expect(
+        heart.connect(signer1).borrowFusePool(addresses.tokens.FRAX, ethers.utils.parseEther('50000'), { gasPrice: 0 }),
+      ).to.be.reverted;
     });
   });
 
