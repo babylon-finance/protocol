@@ -31,6 +31,7 @@ import {ControllerLib} from '../lib/ControllerLib.sol';
 
 contract Assistant is OwnableUpgradeable {
     using SafeERC20 for IERC20;
+    using ControllerLib for IBabController;
 
     /* ============ Events ============ */
     /* ============ Modifiers ============ */
