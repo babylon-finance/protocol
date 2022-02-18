@@ -191,16 +191,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     address[MAX_EXTRA_CREATORS] public override extraCreators;
 
     // last recorded price per share of the garden during deposit or withdrawal operation
-    uint256 public lastPricePerShare;
+    uint256 public override lastPricePerShare;
 
     // last recorded time of the deposit or withdraw in seconds
-    uint256 public lastPricePerShareTS;
+    uint256 public override lastPricePerShareTS;
 
     // Decay rate of the slippage for pricePerShare over time
-    uint256 public pricePerShareDecayRate;
+    uint256 public override pricePerShareDecayRate;
 
     // Base slippage for pricePerShare of the garden
-    uint256 public pricePerShareSlippage;
+    uint256 public override pricePerShareSlippage;
 
     /* ============ Modifiers ============ */
 

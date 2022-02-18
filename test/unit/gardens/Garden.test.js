@@ -1593,6 +1593,19 @@ describe('Garden', function () {
     });
   });
 
+  describe('updateDecayAndSlippage', async function () {
+    it('can update NAV decay and slippage', async function () {
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+
+      await garden.connect(signer1).updateDecayAndSlippage(1, 2);
+
+      expect(await garden.pricePerShareDecayRate()).to.eq(1);
+      expect(await garden.pricePerShareSlippage()).to.eq(2);
+    });
+  });
+
   describe('avg share price per user', async function () {
     pick(GARDENS).forEach(({ token, name }) => {
       it(`should get the avg share price of a user in ${name} garden`, async function () {

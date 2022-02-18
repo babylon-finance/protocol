@@ -164,6 +164,11 @@ interface ICoreGarden {
 
     function totalKeeperFees() external view returns (uint256);
 
+    function lastPricePerShare() external view returns (uint256);
+    function lastPricePerShareTS() external view returns (uint256);
+    function pricePerShareDecayRate() external view returns (uint256);
+    function pricePerShareSlippage() external view returns (uint256);
+
     /* ============ Write ============ */
 
     function deposit(
