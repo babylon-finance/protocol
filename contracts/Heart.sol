@@ -321,7 +321,10 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function updateAssetToPurchase(address _purchaseAsset) public override {
         controller.onlyGovernanceOrEmergency();
-        _require(_purchaseAsset != assetForPurchases && _purchaseAsset != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
+        _require(
+            _purchaseAsset != assetForPurchases && _purchaseAsset != address(0),
+            Errors.HEART_ASSET_PURCHASE_INVALID
+        );
         assetForPurchases = _purchaseAsset;
     }
 
