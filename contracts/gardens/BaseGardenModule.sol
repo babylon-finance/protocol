@@ -143,6 +143,17 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     // Addresses for extra creators
     address[MAX_EXTRA_CREATORS] internal extraCreators;
 
+    // last recorded price per share of the garden during deposit or withdrawal operation
+    uint256 internal lastPricePerShare;
+
+    // last recorded time of the deposit or withdraw in seconds
+    uint256 internal lastPricePerShareTS;
+
+    // Decay rate of the slippage for pricePerShare over time
+    uint256 internal pricePerShareDecayRate;
+
+    // Base slippage for pricePerShare of the garden
+    uint256 internal pricePerShareSlippage;
     /* ============ Modifiers ============ */
 
     /* ============ Constructor ============ */
