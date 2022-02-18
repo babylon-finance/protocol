@@ -36,6 +36,8 @@ interface IHeart {
 
     function assetToLend() external view returns (address);
 
+    function assetForPurchases() external view returns (address);
+
     function lastPumpAt() external view returns (uint256);
 
     function lastVotesAt() external view returns (uint256);
@@ -76,7 +78,9 @@ interface IHeart {
 
     function updateAssetToLend(address _assetToLend) external;
 
-    function lendFusePool(address _assetToTransfer, uint256 _transferAmount, address _assetToLend) external;
+    function updateAssetToPurchase(address _purchaseAsset) external;
+
+    function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
 
     function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
 

@@ -58,15 +58,15 @@ contract HeartTradeIntegration is TradeIntegration {
     /* ============ Internal Functions ============ */
 
     /**
-     * Executes the trade through UniswapV3.
+     * Executes the trade through the heart.
      *
-     * @param _strategy             Address of the strategy
-     * @param _sendToken            Address of the token to be sent to the exchange
-     * @param _sendQuantity         Units of reserve asset token sent to the exchange
-     * @param _receiveToken         Address of the token that will be received from the exchange
+     * hparam _strategy             Address of the strategy
+     * @param _sendToken            Address of the token to be sent to the heart
+     * @param _sendQuantity         Units of reserve asset token sent to the heart
+     * hparam _receiveToken         Address of the token that will be received from the heart
      */
     function _getTradeCallData(
-        address _strategy,
+        address, /* _strategy */
         address _sendToken,
         uint256 _sendQuantity,
         address /* _receiveToken */
@@ -80,9 +80,8 @@ contract HeartTradeIntegration is TradeIntegration {
             bytes memory
         )
     {
-        bytes memory path;
-
-        bytes memory callData = abi.encodeWithSignature('sellWantedAssetToHeart(address,uint256)', _sendToken, _sendQuantity);
+        bytes memory callData =
+            abi.encodeWithSignature('sellWantedAssetToHeart(address,uint256)', _sendToken, _sendQuantity);
         return (controller.heart(), 0, callData);
     }
 
@@ -93,8 +92,7 @@ contract HeartTradeIntegration is TradeIntegration {
      */
     function _getSpender(
         address /* _asset */
-    ) internal pure override returns (address) {
+    ) internal view override returns (address) {
         return address(controller.heart());
     }
-
 }

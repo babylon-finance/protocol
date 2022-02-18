@@ -57,8 +57,9 @@ contract Assistant is OwnableUpgradeable {
 
     function startBondingProgram() external {
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
-        BABL.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 11000e18);
+        BABL.safeTransfer(controller.heart(), 11000e18);
     }
+
     /* ============ External Getter Functions ============ */
     /* ============ Internal Only Function ============ */
 

@@ -193,12 +193,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
         // Heart Direct
         if (controller.protocolWantedAssets(_sendToken)) {
-          uint256 wethBalance = IERC20(WETH).balanceOf(_strategy);
-          // If the heart wants it go through the heart and get WETH
-          try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
-            _sendToken = WETH;
-            _sendQuantity = IERC20(WETH).balanceOf(_strategy).sub(wethBalance);
-          } catch {}
+            uint256 wethBalance = ERC20(WETH).balanceOf(_strategy);
+            // If the heart wants it go through the heart and get WETH
+            try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+                _sendToken = WETH;
+                _sendQuantity = ERC20(WETH).balanceOf(_strategy).sub(wethBalance);
+            } catch {}
         }
 
         // Synthetix Direct
