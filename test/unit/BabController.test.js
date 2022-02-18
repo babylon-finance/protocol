@@ -93,6 +93,22 @@ describe('BabController', function () {
     });
   });
 
+  describe('protocolWantedAssets', function () {
+    it('can add a protocol wanted asset', async function () {
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, true);
+
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(true);
+    });
+
+    it('can remove a protocol wanted asset', async function () {
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, true);
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(true);
+
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, false);
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(false);
+    });
+  });
+
   describe('editPriceOracle', function () {
     it('can edit a price oracle', async function () {
       await babController.connect(owner).editPriceOracle(addresses.tokens.WETH);

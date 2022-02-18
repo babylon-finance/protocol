@@ -372,7 +372,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external override onlyGovernanceOrEmergency {
         require(_wantedAsset != address(0) && ERC20(_wantedAsset).decimals() <= 18, 'Incorrect address');
-        require(!protocolWantedAssets[_wantedAsset], 'Wanted asset already added');
+        require(protocolWantedAssets[_wantedAsset] != _wanted, 'Wanted asset already added');
         protocolWantedAssets[_wantedAsset] = _wanted;
         emit ProtocolWantedAssetUpdated(_wantedAsset, _wanted);
     }
