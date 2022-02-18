@@ -168,7 +168,6 @@ contract DepositVaultOperation is Operation {
                     10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                 )
             );
-        console.log('before exit', vaultAsset, amountVault, minAmount);
         if (amountVault > 0) {
             IPassiveIntegration(_integration).exitInvestment(
                 msg.sender,
