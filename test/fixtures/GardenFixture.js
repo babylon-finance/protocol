@@ -4,7 +4,7 @@ const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { fund } = require('lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { getERC20, getContract, eth } = require('utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
@@ -45,6 +45,7 @@ async function setUpFixture(
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
   const paladinStakeIntegration = await getContract('PaladinStakeIntegration');
+  const stakewiseIntegration = await getContract('StakewiseIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const fuseLendIntegration = await getContract('FuseLendIntegration');
@@ -282,6 +283,7 @@ async function setUpFixture(
     fuseLendIntegration,
     fuseBorrowIntegration,
     lidoIntegration,
+    stakewiseIntegration,
     babViewer,
     timelockController,
     babGovernor,
