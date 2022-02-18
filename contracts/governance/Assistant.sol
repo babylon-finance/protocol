@@ -35,13 +35,6 @@ contract Assistant is OwnableUpgradeable {
     /* ============ Events ============ */
     /* ============ Modifiers ============ */
 
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
 
@@ -56,6 +49,7 @@ contract Assistant is OwnableUpgradeable {
     /* ============ External Functions ============ */
 
     function startBondingProgram() external {
+        controller.onlyGovernanceOrEmergency();
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
         BABL.safeTransfer(controller.heart(), 11000e18);
     }
