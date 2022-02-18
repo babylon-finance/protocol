@@ -172,5 +172,31 @@ describe('CurvePoolIntegrationTest', function () {
         await testCurvePool(name, pool);
       });
     });
+
+    it('can enter the palstake aave pool after staking in an aave garden', async function () {
+      const reserveAsset = await getERC20(addresses.tokens.AAVE);
+      const aaveGarden = await createGarden({ reserveAsset: reserveAsset.address });
+      const pool = addresses.curve.pools.cryptofactory.palstkaave;
+      const strategyContract = await createStrategy(
+        'custom',
+        'vote',
+        [signer1, signer2, signer3],
+        [paladinStakeIntegration.address, curvePoolIntegration.address],
+        aaveGarden,
+        DEFAULT_STRATEGY_PARAMS,
+        [addresses.paladin.palStkAAVE, 0, pool, 0],
+        [2, 1],
+      );
+      const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
+      await executeStrategy(strategyContract, { amount: eth() });
+      expect(await strategyContract.capitalAllocated()).to.equal(eth());
+      const lpToken = await curvePoolIntegration.getLPToken(pool);
+      const poolContract = await getERC20(lpToken);
+      expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(20));
+      await finalizeStrategy(strategyContract, 0);
+      expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, eth().div(20));
+    });
   });
 });
