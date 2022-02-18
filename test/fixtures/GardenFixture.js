@@ -44,6 +44,7 @@ async function setUpFixture(
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
+  const stakewiseIntegration = await getContract('StakewiseIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const fuseLendIntegration = await getContract('FuseLendIntegration');
@@ -261,6 +262,7 @@ async function setUpFixture(
     fuseLendIntegration,
     fuseBorrowIntegration,
     lidoIntegration,
+    stakewiseIntegration,
     babViewer,
     timelockController,
     babGovernor,
