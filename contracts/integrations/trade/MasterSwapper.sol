@@ -81,6 +81,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ITradeIntegration public univ3;
     ITradeIntegration public curve;
     ITradeIntegration public synthetix;
+    ITradeIntegration public heartTradeIntegration;
 
     /* ============ Constructor ============ */
 
@@ -170,7 +171,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             _integration == address(curve) ||
             _integration == address(univ3) ||
             _integration == address(synthetix) ||
-            _integration == address(univ2);
+            _integration == address(univ2) ||
+            _integration == address(heartTradeIntegration);
     }
 
     /* ============ Internal Functions ============ */
@@ -188,6 +190,16 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
         string memory error;
         bool success;
+
+        // Heart Direct
+        if (controller.protocolWantedAssets(_sendToken)) {
+          uint256 wethBalance = IERC20(WETH).balanceOf(_strategy);
+          // If the heart wants it go through the heart and get WETH
+          try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+            _sendToken = WETH;
+            _sendQuantity = IERC20(WETH).balanceOf(_strategy).sub(wethBalance);
+          } catch {}
+        }
 
         // Synthetix Direct
         (error, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);

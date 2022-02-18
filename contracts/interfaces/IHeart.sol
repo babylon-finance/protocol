@@ -76,6 +76,12 @@ interface IHeart {
 
     function updateAssetToLend(address _assetToLend) external;
 
+    function lendFusePool(address _assetToTransfer, uint256 _transferAmount, address _assetToLend) external;
+
+    function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
+
+    function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external;
+
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) external;
 
     function setMinTradeAmount(address _asset, uint256 _minAmount) external;

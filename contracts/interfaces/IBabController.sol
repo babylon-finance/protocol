@@ -44,6 +44,8 @@ interface IBabController {
 
     function removeReserveAsset(address _reserveAsset) external;
 
+    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;
+
     function editPriceOracle(address _priceOracle) external;
 
     function editMardukGate(address _mardukGate) external;
@@ -139,6 +141,8 @@ interface IBabController {
     function getOperations() external view returns (address[20] memory);
 
     function isGarden(address _garden) external view returns (bool);
+
+    function protocolWantedAssets(address _wantedAsset) external view returns (bool);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
