@@ -403,7 +403,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Strategies can sell wanted assets by the protocol to the heart.
      * Heart will buy them using borrowings in stables.
      * Heart returns WETH so master swapper will take it from there.
-     * Note: Sgtrategy needs to have approved the heart.
+     * Note: Strategy needs to have approved the heart.
      *
      * @param _assetToSell                  Asset that the heart is receiving from strategy to sell
      * @param _amountToSell                 Amount of asset to sell
