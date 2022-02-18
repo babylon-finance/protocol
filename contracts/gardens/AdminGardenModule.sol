@@ -129,20 +129,28 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
+
         rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
+
         _onlyNonZero(address(rewardsDistributor));
+
         privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
         publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
-
         publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
+
         _require(
             _gardenParams[3] > 0 &&
                 _initialContribution >= _gardenParams[3] &&
                 _initialContribution <= _gardenParams[0],
             Errors.MIN_CONTRIBUTION
         );
+
         gardenInitializedAt = block.timestamp;
-        _start(
+
+        pricePerShareDecayRate = _gardenParams[9];
+        pricePerShareSlippage = _gardenParams[10];
+
+        _updateGardenParams(
             _gardenParams[0],
             _gardenParams[1],
             _gardenParams[2],
@@ -196,6 +204,18 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         publicStewards = _publicStewards;
     }
 
+    /**
+     *  Updates NAV protection params
+     *
+     * @param _pricePerShareDecayRate      Decay rate of price per share
+     * @param _pricePerShareSlippage       Base slippage for price per share
+     */
+    function updateDecayAndSlippage(uint256 _pricePerShareDecayRate, uint256 _pricePerShareSlippage) external override {
+        _onlyCreator(msg.sender);
+        pricePerShareDecayRate = _pricePerShareDecayRate;
+        pricePerShareSlippage = _pricePerShareSlippage;
+    }
+
     /*
      * Adds extra creators. Only the original creator can call this.
      * Can only be called if all the addresses are zero
@@ -214,9 +234,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[9] memory _newParams) external override {
+    function updateGardenParams(uint256[11] memory _newParams) external override {
         _onlyCreator(msg.sender);
-        _start(
+        _updateGardenParams(
             _newParams[0], // uint256 _maxDepositLimit
             _newParams[1], // uint256 _minLiquidityAsset,
             _newParams[2], // uint256 _depositHardlock,
@@ -234,8 +254,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     /* ============ Internal Functions ============ */
 
     /**
-     * Starts the Garden with allowed reserve assets,
-     * fees and issuance premium. Only callable by the Garden's creator
+     *  Updates Garden params
      *
      * @param _maxDepositLimit             Max deposit limit
      * @param _minLiquidityAsset           Number that represents min amount of liquidity denominated in ETH
@@ -249,7 +268,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _maxStrategyDuration         Max duration of an strategy
      * @param _minVoters                   The minimum amount of voters needed for quorum
      */
-    function _start(
+    function _updateGardenParams(
         uint256 _maxDepositLimit,
         uint256 _minLiquidityAsset,
         uint256 _depositHardlock,
