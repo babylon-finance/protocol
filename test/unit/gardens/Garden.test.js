@@ -1537,7 +1537,21 @@ describe('Garden', function () {
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
-      await garden.connect(signer1).updateDecayAndSlippage(1, eth());
+      await garden
+        .connect(signer1)
+        .updateGardenParams(
+          await garden.maxDepositLimit(),
+          await garden.minLiquidityAsset(),
+          await garden.depositHardlock(),
+          await garden.minContribution(),
+          await garden.strategyCooldownPeriod(),
+          await garden.minVotesQuorum(),
+          await garden.minStrategyDuration(),
+          await garden.maxStrategyDuration(),
+          await garden.minVoters(),
+          1,
+          eth(),
+        );
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
         gasPrice: 0,
@@ -1570,7 +1584,21 @@ describe('Garden', function () {
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
-      await garden.connect(signer1).updateDecayAndSlippage(1, eth());
+      await garden
+        .connect(signer1)
+        .updateGardenParams(
+          await garden.maxDepositLimit(),
+          await garden.minLiquidityAsset(),
+          await garden.depositHardlock(),
+          await garden.minContribution(),
+          await garden.strategyCooldownPeriod(),
+          await garden.minVotesQuorum(),
+          await garden.minStrategyDuration(),
+          await garden.maxStrategyDuration(),
+          await garden.minVoters(),
+          1,
+          eth(),
+        );
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
         gasPrice: 0,
@@ -1593,16 +1621,39 @@ describe('Garden', function () {
     });
   });
 
-  describe('updateDecayAndSlippage', async function () {
-    it('can update NAV decay and slippage', async function () {
+  describe('updateGardenParams', async function () {
+    it('can update', async function () {
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
 
-      await garden.connect(signer1).updateDecayAndSlippage(1, 2);
+      await garden
+        .connect(signer1)
+        .updateGardenParams(
+          from(1),
+          from(2),
+          from(3),
+          from(4),
+          from(5),
+          from(6),
+          from(7),
+          from(8),
+          from(9),
+          from(10),
+          from(11),
+        );
 
-      expect(await garden.pricePerShareDecayRate()).to.eq(1);
-      expect(await garden.pricePerShareSlippage()).to.eq(2);
+      expect(await garden.maxDepositLimit()).to.eq(1);
+      expect(await garden.minLiquidityAsset()).to.eq(2);
+      expect(await garden.depositHardlock()).to.eq(3);
+      expect(await garden.minContribution()).to.eq(4);
+      expect(await garden.strategyCooldownPeriod()).to.eq(5);
+      expect(await garden.minVotesQuorum()).to.eq(6);
+      expect(await garden.minStrategyDuration()).to.eq(7);
+      expect(await garden.maxStrategyDuration()).to.eq(8);
+      expect(await garden.minVoters()).to.eq(9);
+      expect(await garden.pricePerShareDecayRate()).to.eq(10);
+      expect(await garden.pricePerShareSlippage()).to.eq(11);
     });
   });
 

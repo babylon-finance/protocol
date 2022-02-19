@@ -879,7 +879,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
       @param _pricePerShare  Price of the graden share to validate against historical data
     */
     function _checkLastPricePerShare(uint256 _pricePerShare) private {
-        uint256 slippage = pricePerShareDelta > 0 ? pricePerShareDelta : 1e18;
+        uint256 slippage = pricePerShareDelta > 0 ? pricePerShareDelta : 25e16;
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {

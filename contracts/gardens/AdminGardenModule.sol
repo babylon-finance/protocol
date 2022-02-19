@@ -147,9 +147,6 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
 
         gardenInitializedAt = block.timestamp;
 
-        pricePerShareDecayRate = _gardenParams[9];
-        pricePerShareDelta = _gardenParams[10];
-
         _updateGardenParams(
             _gardenParams[0],
             _gardenParams[1],
@@ -159,7 +156,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8]
+            _gardenParams[8],
+            _gardenParams[9],
+            _gardenParams[10]
         );
     }
 
@@ -204,18 +203,6 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         publicStewards = _publicStewards;
     }
 
-    /**
-     *  Updates NAV protection params
-     *
-     * @param _pricePerShareDecayRate      Decay rate of price per share
-     * @param _pricePerShareDelta       Base slippage for price per share
-     */
-    function updateDecayAndDelta(uint256 _pricePerShareDecayRate, uint256 _pricePerShareDelta) external override {
-        _onlyCreator(msg.sender);
-        pricePerShareDecayRate = _pricePerShareDecayRate;
-        pricePerShareDelta = _pricePerShareDelta;
-    }
-
     /*
      * Adds extra creators. Only the original creator can call this.
      * Can only be called if all the addresses are zero
@@ -245,7 +232,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _newParams[5], // uint256 _minVotesQuorum,
             _newParams[6], // uint256 _minStrategyDuration,
             _newParams[7], // uint256 _maxStrategyDuration,
-            _newParams[8] // uint256 _minVoters
+            _newParams[8], // uint256 _minVoters
+            _newParams[9], // uint256 _pricePerShareDecayRate
+            _newParams[10] // uint256 _pricePerShareDelta
         );
     }
 
@@ -267,6 +256,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _minStrategyDuration         Min duration of an strategy
      * @param _maxStrategyDuration         Max duration of an strategy
      * @param _minVoters                   The minimum amount of voters needed for quorum
+     * @param _pricePerShareDecayRate      Decay rate of price per share
+     * @param _pricePerShareDelta          Base slippage for price per share
      */
     function _updateGardenParams(
         uint256 _maxDepositLimit,
@@ -277,7 +268,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
-        uint256 _minVoters
+        uint256 _minVoters,
+        uint256 _pricePerShareDecayRate,
+        uint256 _pricePerShareDelta
     ) private {
         _require(
             _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
@@ -297,15 +290,17 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
 
+        maxDepositLimit = _maxDepositLimit;
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;
         minVoters = _minVoters;
         minStrategyDuration = _minStrategyDuration;
         maxStrategyDuration = _maxStrategyDuration;
-        maxDepositLimit = _maxDepositLimit;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
+        pricePerShareDecayRate = _pricePerShareDecayRate;
+        pricePerShareDelta = _pricePerShareDelta;
     }
 
     // Checks if an address is a creator

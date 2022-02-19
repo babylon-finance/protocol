@@ -78,8 +78,6 @@ interface IAdminGarden {
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function updateGardenParams(uint256[11] memory _newParams) external;
-
-    function updateDecayAndDelta(uint256 _pricePerShareDecayRate, uint256 _pricePerShareDelta) external;
 }
 
 /**
