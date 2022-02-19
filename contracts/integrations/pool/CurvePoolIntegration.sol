@@ -124,7 +124,7 @@ contract CurvePoolIntegration is PoolIntegration {
             return result;
         }
         // cvxCRV
-        if (poolAddress == cvxCRVPool || poolAddress == palstkaave) {
+        if (poolAddress == cvxCRVPool) {
             result[0] = uint256(1e18);
             result[1] = 0;
             return result;
@@ -402,7 +402,7 @@ contract CurvePoolIntegration is PoolIntegration {
                         abi.encodeWithSignature(
                             'remove_liquidity_one_coin(uint256,uint256,uint256)',
                             _poolTokensIn,
-                            uint256(0),
+                            uint256(1),
                             _minAmountsOut[0]
                         );
                 }
