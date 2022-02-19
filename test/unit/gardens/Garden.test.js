@@ -1539,7 +1539,7 @@ describe('Garden', function () {
 
       await garden
         .connect(signer1)
-        .updateGardenParams(
+        .updateGardenParams([
           await garden.maxDepositLimit(),
           await garden.minLiquidityAsset(),
           await garden.depositHardlock(),
@@ -1551,7 +1551,7 @@ describe('Garden', function () {
           await garden.minVoters(),
           1,
           eth(),
-        );
+        ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
         gasPrice: 0,
@@ -1586,7 +1586,7 @@ describe('Garden', function () {
 
       await garden
         .connect(signer1)
-        .updateGardenParams(
+        .updateGardenParams([
           await garden.maxDepositLimit(),
           await garden.minLiquidityAsset(),
           await garden.depositHardlock(),
@@ -1598,7 +1598,7 @@ describe('Garden', function () {
           await garden.minVoters(),
           1,
           eth(),
-        );
+        ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
         gasPrice: 0,
@@ -1629,7 +1629,7 @@ describe('Garden', function () {
 
       await garden
         .connect(signer1)
-        .updateGardenParams(
+        .updateGardenParams([
           from(1),
           from(2),
           from(3),
@@ -1641,7 +1641,7 @@ describe('Garden', function () {
           from(9),
           from(10),
           from(11),
-        );
+        ]);
 
       expect(await garden.maxDepositLimit()).to.eq(1);
       expect(await garden.minLiquidityAsset()).to.eq(2);
