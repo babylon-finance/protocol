@@ -64,12 +64,19 @@ const GARDEN_PARAMS_MAP = {
   [addresses.tokens.AAVE]: AAVE_STRATEGY_PARAMS,
 };
 
+function encodeData(data) {
+  return new ethers.utils.AbiCoder().encode(
+    data.map((int, i) => (i % 2 === 0 ? 'address' : 'uint256')),
+    data,
+  );
+}
+
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
 async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
   const passedLongParams = [[0], [integration]];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256'], data || [addresses.tokens.DAI, 0]);
+  const encoded = encodeData(data || [addresses.tokens.DAI, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -79,10 +86,7 @@ async function createStrategyWithBuyOperation(garden, signer, params, integratio
 
 async function createStrategyWithPoolOperation(garden, signer, params, integration, data) {
   const passedPoolParams = [[1], [integration]];
-  const encoded = new ethers.utils.AbiCoder().encode(
-    ['address', 'uint256'],
-    data || [addresses.oneinch.pools.wethdai, 0],
-  );
+  const encoded = encodeData(data || [addresses.oneinch.pools.wethdai, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -91,7 +95,7 @@ async function createStrategyWithPoolOperation(garden, signer, params, integrati
 
 async function createStrategyWithVaultOperation(garden, signer, params, integration, data) {
   const passedYieldParams = [[2], [integration]];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256'], data || [addresses.yearn.daiVault, 0]);
+  const encoded = encodeData(data || [addresses.yearn.daiVault, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -101,8 +105,7 @@ async function createStrategyWithVaultOperation(garden, signer, params, integrat
 
 async function createStrategyWithLendOperation(garden, signer, params, integration, data) {
   const passedLendParams = [[3], [integration]];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256'], data || [addresses.tokens.USDC, 0]);
-
+  const encoded = encodeData(data || [addresses.tokens.USDC, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -121,10 +124,7 @@ async function createStrategyWithLendAndBorrowOperation(
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedLendBorrowParams = [[3, 4], integrations];
-  const encoded = new ethers.utils.AbiCoder().encode(
-    ['address', 'uint256', 'address', 'uint256'],
-    [data[0], data[1], data[2], data[3]],
-  );
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -143,10 +143,7 @@ async function createStrategyWithAddAndDepositOperation(
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedAddandDepositParams = [[1, 2], integrations];
-  const encoded = new ethers.utils.AbiCoder().encode(
-    ['address', 'uint256', 'address', 'uint256'],
-    [data[0], data[1], data[2], data[3]],
-  );
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedAddandDepositParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -166,10 +163,7 @@ async function createStrategyWithManyOperations(
     throw new Error('Need data and integrations to match');
   }
   const passedParams = [ops, integrations];
-  const encoded = new ethers.utils.AbiCoder().encode(
-    data.map((int, i) => (i % 2 === 0 ? 'address' : 'uint256')),
-    data,
-  );
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
