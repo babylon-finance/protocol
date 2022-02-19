@@ -10,7 +10,7 @@ const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth
 const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
 
-const EMERGENCY = '0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9';
+const EMERGENCY = '0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e';
 
 describe('BabController', function () {
   let babController;
