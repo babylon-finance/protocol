@@ -200,7 +200,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 public override pricePerShareDecayRate;
 
     // Base slippage for pricePerShare of the garden
-    uint256 public override pricePerShareSlippage;
+    uint256 public override pricePerShareDelta;
 
     /* ============ Modifiers ============ */
 
@@ -868,7 +868,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
       @dev
         Allowed slippage between deposits and withdrawals in terms of the garden price per share is:
 
-        slippage = lastPricePerShare % (pricePerShareSlippage + timePast * pricePerShareDecayRate);
+        slippage = lastPricePerShare % (pricePerShareDelta + timePast * pricePerShareDecayRate);
 
         For example, if lastPricePerShare is 1e18 and slippage is 10% then deposits with pricePerShare between
         9e17 and 11e17 allowed immediately. After one year (100% change in time) and with a decay rate 1x;
@@ -879,7 +879,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
       @param _pricePerShare  Price of the graden share to validate against historical data
     */
     function _checkLastPricePerShare(uint256 _pricePerShare) private {
-        uint256 slippage = pricePerShareSlippage > 0 ? pricePerShareSlippage : 1e18;
+        uint256 slippage = pricePerShareDelta > 0 ? pricePerShareDelta : 1e18;
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {

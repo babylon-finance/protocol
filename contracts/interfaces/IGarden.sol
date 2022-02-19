@@ -79,7 +79,7 @@ interface IAdminGarden {
 
     function updateGardenParams(uint256[11] memory _newParams) external;
 
-    function updateDecayAndSlippage(uint256 _pricePerShareDecayRate, uint256 _pricePerShareSlippage) external;
+    function updateDecayAndDelta(uint256 _pricePerShareDecayRate, uint256 _pricePerShareDelta) external;
 }
 
 /**
@@ -170,7 +170,7 @@ interface ICoreGarden {
 
     function pricePerShareDecayRate() external view returns (uint256);
 
-    function pricePerShareSlippage() external view returns (uint256);
+    function pricePerShareDelta() external view returns (uint256);
 
     /* ============ Write ============ */
 

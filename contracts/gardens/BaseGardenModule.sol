@@ -153,7 +153,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     uint256 internal pricePerShareDecayRate;
 
     // Base slippage for pricePerShare of the garden
-    uint256 internal pricePerShareSlippage;
+    uint256 internal pricePerShareDelta;
 
     /* ============ Modifiers ============ */
 

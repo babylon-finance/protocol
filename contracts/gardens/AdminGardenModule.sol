@@ -148,7 +148,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         gardenInitializedAt = block.timestamp;
 
         pricePerShareDecayRate = _gardenParams[9];
-        pricePerShareSlippage = _gardenParams[10];
+        pricePerShareDelta = _gardenParams[10];
 
         _updateGardenParams(
             _gardenParams[0],
@@ -208,12 +208,12 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      *  Updates NAV protection params
      *
      * @param _pricePerShareDecayRate      Decay rate of price per share
-     * @param _pricePerShareSlippage       Base slippage for price per share
+     * @param _pricePerShareDelta       Base slippage for price per share
      */
-    function updateDecayAndSlippage(uint256 _pricePerShareDecayRate, uint256 _pricePerShareSlippage) external override {
+    function updateDecayAndDelta(uint256 _pricePerShareDecayRate, uint256 _pricePerShareDelta) external override {
         _onlyCreator(msg.sender);
         pricePerShareDecayRate = _pricePerShareDecayRate;
-        pricePerShareSlippage = _pricePerShareSlippage;
+        pricePerShareDelta = _pricePerShareDelta;
     }
 
     /*
