@@ -79,7 +79,10 @@ async function createStrategyWithBuyOperation(garden, signer, params, integratio
 
 async function createStrategyWithPoolOperation(garden, signer, params, integration, data) {
   const passedPoolParams = [[1], [integration]];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256'], data || [addresses.oneinch.pools.wethdai, 0]);
+  const encoded = new ethers.utils.AbiCoder().encode(
+    ['address', 'uint256'],
+    data || [addresses.oneinch.pools.wethdai, 0],
+  );
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -118,7 +121,10 @@ async function createStrategyWithLendAndBorrowOperation(
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedLendBorrowParams = [[3, 4], integrations];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  const encoded = new ethers.utils.AbiCoder().encode(
+    ['address', 'uint256', 'address', 'uint256'],
+    [data[0], data[1], data[2], data[3]],
+  );
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
@@ -137,7 +143,10 @@ async function createStrategyWithAddAndDepositOperation(
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedAddandDepositParams = [[1, 2], integrations];
-  const encoded = new ethers.utils.AbiCoder().encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  const encoded = new ethers.utils.AbiCoder().encode(
+    ['address', 'uint256', 'address', 'uint256'],
+    [data[0], data[1], data[2], data[3]],
+  );
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedAddandDepositParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
