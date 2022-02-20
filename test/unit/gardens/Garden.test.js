@@ -171,6 +171,50 @@ describe('Garden', function () {
       expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
     });
 
+    it('should only allow transfering creator rights by a creator', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await expect(garden1.connect(signer2).transferCreatorRights(await signer2.getAddress(), 0)).to.be.revertedWith(
+        'BAB#017',
+      );
+    });
+
+    it('should allow changing an extra creator as well', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
+      await garden1.connect(signer2).transferCreatorRights(await signer3.getAddress(), 0);
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      expect(await garden1.extraCreators(0)).to.equal(await signer3.getAddress());
+    });
+
+    it('should not allow changing an extra creator with wrong index', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
+      await expect(garden1.connect(signer2).transferCreatorRights(await signer3.getAddress(), 1)).to.be.revertedWith(
+        'BAB#017',
+      );
+    });
+
+    it('should not allow changing an extra creator by the wrong sender', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
+      await expect(garden1.connect(signer3).transferCreatorRights(await signer3.getAddress(), 0)).to.be.revertedWith(
+        'BAB#017',
+      );
+    });
+
+    it('should not allow changing a creator to an address that it is already one', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
+      await expect(garden1.connect(signer2).transferCreatorRights(await signer1.getAddress(), 0)).to.be.revertedWith(
+        'BAB#094',
+      );
+    });
+  });
+  describe.only('Recover original creator position', async function () {
     it('should allow recovering of creator rights by emergency', async function () {
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
       await garden1.connect(signer1).makeGardenPublic();
@@ -217,51 +261,7 @@ describe('Garden', function () {
       expect(await garden1.extraCreators(1)).to.equal(await signer3.getAddress());
       expect(await garden1.creator()).to.equal(signer1.address);
     });
-
-    it('should only allow transfering creator rights by a creator', async function () {
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await expect(garden1.connect(signer2).transferCreatorRights(await signer2.getAddress(), 0)).to.be.revertedWith(
-        'BAB#017',
-      );
-    });
-
-    it('should allow changing an extra creator as well', async function () {
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
-      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
-      await garden1.connect(signer2).transferCreatorRights(await signer3.getAddress(), 0);
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      expect(await garden1.extraCreators(0)).to.equal(await signer3.getAddress());
-    });
-
-    it('should not allow changing an extra creator with wrong index', async function () {
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
-      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
-      await expect(garden1.connect(signer2).transferCreatorRights(await signer3.getAddress(), 1)).to.be.revertedWith(
-        'BAB#017',
-      );
-    });
-
-    it('should not allow changing an extra creator by the wrong sender', async function () {
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
-      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
-      await expect(garden1.connect(signer3).transferCreatorRights(await signer3.getAddress(), 0)).to.be.revertedWith(
-        'BAB#017',
-      );
-    });
-
-    it('should not allow changing a creator to an address that it is already one', async function () {
-      expect(await garden1.creator()).to.equal(await signer1.getAddress());
-      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
-      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
-      await expect(garden1.connect(signer2).transferCreatorRights(await signer1.getAddress(), 0)).to.be.revertedWith(
-        'BAB#094',
-      );
-    });
   });
-
   describe('pseudo-public rights by gardener', async function () {
     it('should allow deposits to a Ishar gate owner despite its individual permission is set to 0 but general deposit permission is allowed', async function () {
       expect(await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);
