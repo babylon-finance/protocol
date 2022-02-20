@@ -102,7 +102,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe.skip('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -846,7 +846,7 @@ describe.skip('RewardsDistributor', function () {
       expect(rewards).to.be.closeTo(value, eth('50'));
     });
 
-    it('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
+    it.skip('should calculate correct BABL in case of 2 strategies with total duration of 1 quarter', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
       const block = await ethers.provider.getBlock();
@@ -2940,7 +2940,7 @@ describe.skip('RewardsDistributor', function () {
           ),
       ).to.be.revertedWith('BAB#089');
     });
-    it('can claimRewardsBySig all BABL and profit rewards from two different Gardens in only 1 claim tx by sig', async function () {
+    it.only('can claimRewardsBySig all BABL and profit rewards from two different Gardens in only 1 claim tx by sig', async function () {
       const whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'; // Has DAI
       const whaleSigner = await impersonateAddress(whaleAddress);
       await dai.connect(whaleSigner).transfer(signer1.address, eth('5000'), {
@@ -2984,7 +2984,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('Garden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       // DAI Garden
       await babController
@@ -3002,7 +3002,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('Garden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[8]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3371,7 +3371,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3450,7 +3450,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3545,7 +3545,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       // DAI Garden
       await babController
@@ -3563,7 +3563,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[8]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3683,7 +3683,7 @@ describe.skip('RewardsDistributor', function () {
         {},
       );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       // DAI Garden
       await babController.connect(signer1).createGarden(
@@ -3700,7 +3700,7 @@ describe.skip('RewardsDistributor', function () {
         {},
       );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[8]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3822,7 +3822,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       // DAI Garden
       await babController
@@ -3840,7 +3840,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[8]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
@@ -3963,7 +3963,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens = await babController.getGardens();
-      usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
+      usdcGarden = await ethers.getContractAt('IGarden', gardens[7]);
 
       // DAI Garden
       await babController
@@ -3981,7 +3981,7 @@ describe.skip('RewardsDistributor', function () {
           {},
         );
       const gardens2 = await babController.getGardens();
-      daiGarden = await ethers.getContractAt('IGarden', gardens2[7]);
+      daiGarden = await ethers.getContractAt('IGarden', gardens2[8]);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });

@@ -135,7 +135,15 @@ describe('CurvePoolIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ curvePoolIntegration, paladinStakeIntegration, garden1, signer1, signer2, signer3, keeper } = await setupTests()());
+    ({
+      curvePoolIntegration,
+      paladinStakeIntegration,
+      garden1,
+      signer1,
+      signer2,
+      signer3,
+      keeper,
+    } = await setupTests()());
   });
 
   describe('Liquidity Pools', function () {
