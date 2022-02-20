@@ -69,11 +69,16 @@ contract PaladinStakeIntegration is PassiveIntegration {
         return address(curvePalStkAave);
     }
 
-    function _getExpectedShares(address /* _asset */, uint256 /* _amount */) internal pure override returns (uint256) {
+    function _getExpectedShares(
+        address, /* _asset */
+        uint256 /* _amount */
+    ) internal pure override returns (uint256) {
         return 1e18;
     }
 
-    function _getPricePerShare(address /* _asset */) internal pure override returns (uint256) {
+    function _getPricePerShare(
+        address /* _asset */
+    ) internal pure override returns (uint256) {
         // Will fetch it from price oracle
         return 1e18;
     }
@@ -99,7 +104,7 @@ contract PaladinStakeIntegration is PassiveIntegration {
      */
     function _getEnterInvestmentCalldata(
         address, /* _strategy */
-        address /* _asset */,
+        address, /* _asset */
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
         uint256 _maxAmountIn
