@@ -74,13 +74,13 @@ contract StakewiseIntegration is PassiveIntegration {
     function _getExpectedShares(
         address, /* _asset */
         uint256 _amount
-    ) internal view override returns (uint256) {
+    ) internal pure override returns (uint256) {
         return _amount;
     }
 
     function _getPricePerShare(
         address /* _asset */
-    ) internal view override returns (uint256) {
+    ) internal pure override returns (uint256) {
         return 1e18;
     }
 
@@ -134,7 +134,7 @@ contract StakewiseIntegration is PassiveIntegration {
      * Return pre action calldata
      *
      * hparam  _asset                    Address of the asset to deposit
-     * @param  _amount                   Amount of the token to deposit
+     * hparam  _amount                   Amount of the token to deposit
      * @param  _op                       Type of op
      * @param  _strategy                 Address of the strategy
      *
@@ -144,7 +144,7 @@ contract StakewiseIntegration is PassiveIntegration {
      */
     function _getPreActionCallData(
         address, /* _asset */
-        uint256 _amount,
+        uint256 /* _amount */,
         uint256 _op,
         address _strategy
     )

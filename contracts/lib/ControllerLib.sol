@@ -20,7 +20,7 @@ library ControllerLib {
     /**
      * Throws if the sender is not the protocol
      */
-    function onlyGovernanceOrEmergency(IBabController _controller) internal {
+    function onlyGovernanceOrEmergency(IBabController _controller) internal view {
         require(
             msg.sender == _controller.owner() || msg.sender == _controller.EMERGENCY_OWNER(),
             'Only governance or emergency can call this'

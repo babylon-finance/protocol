@@ -19,7 +19,7 @@ import {Errors, _require, _revert} from './BabylonErrors.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
 library Protocol {
-    function onlyGovernanceOrEmergency(IBabController controller) internal {
+    function onlyGovernanceOrEmergency(IBabController controller) internal view {
         _require(
             msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
             Errors.ONLY_GOVERNANCE_OR_EMERGENCY
