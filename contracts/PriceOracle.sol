@@ -289,20 +289,14 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
         if (_tokenIn == palStkAAVE) {
-            console.log('get pair through curve for palstk 1');
             uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE, curveMetaRegistry);
-            console.log('token price', tokenInPrice);
             if (tokenInPrice != 0) {
                 return tokenInPrice.preciseMul(_getBestPriceUniV3(AAVE, _tokenOut));
             }
         }
 
-        console.log('token out', _tokenOut);
-
         if (_tokenOut == palStkAAVE) {
-          console.log('get pair through curve for palstk');
             uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE, curveMetaRegistry);
-            console.log('token price', tokenOutPrice);
             if (tokenOutPrice != 0) {
                 return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
             }
