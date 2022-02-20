@@ -56,6 +56,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 describe('Garden', function () {
   let babController;
   let rewardsDistributor;
+  let heart;
   let owner;
   let keeper;
   let signer1;
@@ -67,6 +68,7 @@ describe('Garden', function () {
   let uniswapV3TradeIntegration;
   let daiGarden;
   let usdcGarden;
+  let heartGarden;
   let gardenNFT;
   let gardenValuer;
   let babViewer;
@@ -90,6 +92,7 @@ describe('Garden', function () {
     ({
       babController,
       rewardsDistributor,
+      heart,
       gardenNFT,
       keeper,
       owner,
@@ -97,6 +100,7 @@ describe('Garden', function () {
       signer2,
       signer3,
       garden1,
+      heartGarden,
       mardukGate,
       balancerIntegration,
       uniswapV3TradeIntegration,
@@ -206,6 +210,18 @@ describe('Garden', function () {
       await expect(garden1.connect(signer2).transferCreatorRights(await signer1.getAddress(), 0)).to.be.revertedWith(
         'BAB#094',
       );
+    });
+  });
+
+  describe('delegate votes into heart', async function () {
+    it('heart garden can delegate into heart', async function () {
+      const token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74', owner);
+      const heartDelegatee1 = await token.delegates(heartGarden.address);
+      expect(heartDelegatee1).to.eq(ADDRESS_ZERO); // No delegation yet
+      const creator = await impersonateAddress(await heartGarden.creator());
+      await heartGarden.connect(creator).delegateGardenVote(token.address, heart.address);
+      const heartDelegatee2 = await token.delegates(heartGarden.address);
+      expect(heartDelegatee2).to.eq(heart.address);
     });
   });
 

@@ -78,6 +78,8 @@ interface IAdminGarden {
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function updateGardenParams(uint256[9] memory _newParams) external;
+
+    function delegateGardenVote(address _token, address _address) external;
 }
 
 /**
