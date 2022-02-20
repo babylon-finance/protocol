@@ -4,7 +4,7 @@ const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { fund } = require('lib/whale');
 const { createStrategy } = require('./StrategyHelper.js');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { getERC20, getContract, eth } = require('utils/test-helpers');
 
 async function setUpFixture(
   { upgradesDeployer, deployments, getNamedAccounts, ethers },
@@ -45,6 +45,8 @@ async function setUpFixture(
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
+  const paladinStakeIntegration = await getContract('PaladinStakeIntegration');
+  const stakewiseIntegration = await getContract('StakewiseIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
   const fuseLendIntegration = await getContract('FuseLendIntegration');
@@ -70,10 +72,12 @@ async function setUpFixture(
   const wbtc = await getERC20(addresses.tokens.WBTC);
   const babl = await getERC20(addresses.tokens.BABL);
   const bablTest = await getERC20(bablToken.address);
+  const aave = await getERC20(addresses.tokens.AAVE);
 
   const owner = await impersonateAddress(timelockController.address);
   await signer4.sendTransaction({ to: owner.address, value: ethers.utils.parseEther('5') });
-  await fund([owner.address, signer1.address], {
+
+  await fund([owner.address, signer1.address, signer2.address, signer3.address], {
     tokens: [
       addresses.tokens.USDC,
       addresses.tokens.DAI,
@@ -82,6 +86,7 @@ async function setUpFixture(
       addresses.tokens.WBTC,
       addresses.tokens.FEI,
       addresses.tokens.FRAX,
+      addresses.tokens.AAVE,
     ],
   });
   // fund with local hardhat BABL Token created to create a Test Heart Garden of local BABL reserveAsset
@@ -97,10 +102,11 @@ async function setUpFixture(
     [addresses.tokens.USDC]: usdc,
     [addresses.tokens.WBTC]: wbtc,
     [addresses.tokens.BABL]: babl,
+    [addresses.tokens.AAVE]: aave,
   };
 
   console.log('creating gardens');
-  [dai, weth, wbtc, babl, usdc].forEach(async (erc20) => {
+  [dai, weth, wbtc, babl, usdc, aave].forEach(async (erc20) => {
     await erc20.connect(signer1).approve(babController.address, eth('20'), {
       gasPrice: 0,
     });
@@ -207,6 +213,21 @@ async function setUpFixture(
       {},
     );
 
+  await babController
+    .connect(signer1)
+    .createGarden(
+      addresses.tokens.AAVE,
+      'AAVE Paladin Garden',
+      'PALA',
+      'http...',
+      5,
+      BABL_GARDEN_PARAMS,
+      eth('20'),
+      [false, false, false],
+      [0, 0, 0],
+      {},
+    );
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('IGarden', gardens[0]);
@@ -218,8 +239,10 @@ async function setUpFixture(
   const garden4 = await ethers.getContractAt('IGarden', gardens[3]);
 
   const heartGarden = await ethers.getContractAt('IGarden', gardens[4]);
-
-  const heartTestGarden = await ethers.getContractAt('Garden', gardens[5]);
+    
+  const heartTestGarden = await ethers.getContractAt('IGarden', gardens[5]);
+  
+  const aaveGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
   // Set the heart
   await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
@@ -251,9 +274,7 @@ async function setUpFixture(
   console.log('Created manual testing garden', garden3.address);
 
   const daiWhaleSigner = await impersonateAddress('0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7');
-  const usdcWhaleSigner = await impersonateAddress('0x0a59649758aa4d66e25f08dd01271e891fe52199');
   const wethWhaleSigner = await impersonateAddress('0xC8dDA504356195ba5344E5a9826Ce07DfEaA97b6');
-  const wbtcWhaleSigner = await impersonateAddress('0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656');
   const nft = await impersonateAddress('0x26231A65EF80706307BbE71F032dc1e5Bf28ce43');
 
   // For rewards we need a heart garden using the same BABL Token than RD in tests
@@ -289,9 +310,11 @@ async function setUpFixture(
     aaveBorrowIntegration,
     harvestV3VaultIntegration,
     harvestV3StakeIntegration,
+    paladinStakeIntegration,
     fuseLendIntegration,
     fuseBorrowIntegration,
     lidoIntegration,
+    stakewiseIntegration,
     babViewer,
     timelockController,
     babGovernor,
@@ -303,6 +326,7 @@ async function setUpFixture(
     garden4,
     heartGarden,
     heartTestGarden,
+    aaveGarden,
 
     strategy11,
     strategy21,

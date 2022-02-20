@@ -168,7 +168,15 @@ contract DepositVaultOperation is Operation {
                     10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                 )
             );
-        IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        if (amountVault > 0) {
+            IPassiveIntegration(_integration).exitInvestment(
+                msg.sender,
+                yieldVault,
+                amountVault,
+                vaultAsset,
+                minAmount
+            );
+        }
         return (
             vaultAsset,
             vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,

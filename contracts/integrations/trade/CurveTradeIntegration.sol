@@ -91,17 +91,38 @@ contract CurveTradeIntegration is TradeIntegration {
         require(curvePool != address(0), 'No curve pool');
         (uint256 i, uint256 j, bool underlying) =
             curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
-        bytes memory methodData =
-            abi.encodeWithSignature('exchange(int128,int128,uint256,uint256)', int128(i), int128(j), _sendQuantity, 1);
-        if (underlying) {
+        // Palstakeaave. TODO: Add others
+        bytes memory methodData;
+        if (curvePool == 0x48536EC5233297C367fd0b6979B75d9270bB6B15) {
+            methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
+            if (underlying) {
+                methodData = abi.encodeWithSignature(
+                    'exchange_underlying(uin256,uint256,uint256,uint256)',
+                    i,
+                    j,
+                    _sendQuantity,
+                    1
+                );
+            }
+        } else {
             methodData = abi.encodeWithSignature(
-                'exchange_underlying(int128,int128,uint256,uint256)',
+                'exchange(int128,int128,uint256,uint256)',
                 int128(i),
                 int128(j),
                 _sendQuantity,
                 1
             );
+            if (underlying) {
+                methodData = abi.encodeWithSignature(
+                    'exchange_underlying(int128,int128,uint256,uint256)',
+                    int128(i),
+                    int128(j),
+                    _sendQuantity,
+                    1
+                );
+            }
         }
+
         return (curvePool, realSendToken == ETH_ADD_CURVE ? _sendQuantity : 0, methodData);
     }
 
