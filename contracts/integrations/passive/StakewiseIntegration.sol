@@ -144,7 +144,7 @@ contract StakewiseIntegration is PassiveIntegration {
      */
     function _getPreActionCallData(
         address, /* _asset */
-        uint256 /* _amount */,
+        uint256, /* _amount */
         uint256 _op,
         address _strategy
     )

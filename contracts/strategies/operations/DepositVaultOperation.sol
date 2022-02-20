@@ -164,11 +164,11 @@ contract DepositVaultOperation is Operation {
             IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
-            amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
-              IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
-                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-              )
-            );
+                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                    IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                        10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                    )
+                );
             IPassiveIntegration(_integration).exitInvestment(
                 msg.sender,
                 yieldVault,
