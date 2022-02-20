@@ -79,6 +79,10 @@ contract PriceOracle is Ownable, IPriceOracle {
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
+    address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
+    address private constant curvePalStkAave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15;
+
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
     uint256 private constant CURVE_SLIPPAGE = 6e16;
@@ -281,6 +285,27 @@ contract PriceOracle is Ownable, IPriceOracle {
                 price = price.div(10**(18 - yvDecimals));
             }
             return price;
+        }
+
+        // palstkaave (Curve cannot find otherwise weth-palstk)
+        if (_tokenIn == palStkAAVE) {
+            console.log('get pair through curve for palstk 1');
+            uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE, curveMetaRegistry);
+            console.log('token price', tokenInPrice);
+            if (tokenInPrice != 0) {
+                return tokenInPrice.preciseMul(_getBestPriceUniV3(AAVE, _tokenOut));
+            }
+        }
+
+        console.log('token out', _tokenOut);
+
+        if (_tokenOut == palStkAAVE) {
+          console.log('get pair through curve for palstk');
+            uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE, curveMetaRegistry);
+            console.log('token price', tokenOutPrice);
+            if (tokenOutPrice != 0) {
+                return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
+            }
         }
 
         // Direct curve pair
