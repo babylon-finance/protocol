@@ -366,7 +366,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity,
         string memory error
     ) internal returns (string memory, bool) {
-        address[3] memory reserves = [DAI, WETH, WBTC];
+        address[4] memory reserves = [DAI, WETH, WBTC, AAVE];
         for (uint256 i = 0; i < reserves.length; i++) {
             if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
                 // Going through Curve but switching first to reserve
