@@ -61,6 +61,9 @@ describe('Garden', function () {
   let signer1;
   let signer2;
   let signer3;
+  let emergency;
+  let gov;
+  let timelockController;
   let garden1;
   let mardukGate;
   let balancerIntegration;
@@ -96,6 +99,7 @@ describe('Garden', function () {
       signer1,
       signer2,
       signer3,
+      timelockController,
       garden1,
       mardukGate,
       balancerIntegration,
@@ -108,6 +112,8 @@ describe('Garden', function () {
       weth,
       wbtc,
     } = await setupTests()());
+    emergency = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
+    gov = await impersonateAddress(timelockController.address);
   });
 
   describe('construction', async function () {
@@ -163,6 +169,53 @@ describe('Garden', function () {
       await garden1.connect(signer1).makeGardenPublic();
       await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
       expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+    });
+
+    it('should allow recovering of creator rights by emergency', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await garden1.connect(emergency).recoverCreatorByGov(signer1.address);
+      expect(await garden1.creator()).to.eq(signer1.address);
+    });
+    it('should allow recovering of creator rights by governance', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await garden1.connect(gov).recoverCreatorByGov(signer1.address);
+      expect(await garden1.creator()).to.eq(signer1.address);
+    });
+    it('should allow recovering of creator rights by an extra creator if original creator renounced before', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await garden1.connect(signer1).addExtraCreators([signer2.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      // Renounced
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      // Extra creator can bring him back
+      await expect(garden1.connect(signer2).transferCreatorRights(signer1.address, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(signer1.address);
+    });
+    it('should NOT allow recovering creator rights by a non authorized user', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await expect(garden1.connect(signer1).recoverCreatorByGov(signer1.address)).to.be.revertedWith('BAB#107');
+      expect(await garden1.creator()).to.eq(ADDRESS_ZERO);
+    });
+    it('should NOT allow recovering of creator rights by an extra creator if original creator has not renounced before', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await garden1
+        .connect(signer1)
+        .addExtraCreators([signer2.getAddress(), signer3.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO]);
+      // Extra creator cannot replace original creator or any other creator except itself
+      await expect(garden1.connect(signer3).transferCreatorRights(gov.address, 0)).to.be.revertedWith('BAB#017');
+      expect(await garden1.extraCreators(0)).to.equal(await signer2.getAddress());
+      expect(await garden1.extraCreators(1)).to.equal(await signer3.getAddress());
+      expect(await garden1.creator()).to.equal(signer1.address);
     });
 
     it('should only allow transfering creator rights by a creator', async function () {

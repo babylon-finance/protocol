@@ -13,7 +13,6 @@
 */
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -169,12 +168,28 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         // Make sure creator can still have normal permissions after renouncing
         // Creator can only renounce to 0x in public gardens
         _require(_newCreator != address(0) || !privateGarden, Errors.CREATOR_CANNOT_RENOUNCE);
-        if (msg.sender == creator) {
+        if (msg.sender == creator || creator == address(0)) {
+            // If creator renounced, an extra creator can return back an original creator position
             creator = _newCreator;
             return;
         }
         _require(extraCreators[_index] == msg.sender, Errors.ONLY_CREATOR);
         extraCreators[_index] = _newCreator;
+    }
+
+    /*
+     * PRIVILEGE FUNCTION to recover creator rights in case of renouncing.
+     * Caller must be a governance or emergency
+     * @param _newCreator  New creator address
+     */
+    function recoverCreatorByGov(address _newCreator) external override {
+        _require(
+            msg.sender == IBabController(controller).owner() ||
+                msg.sender == IBabController(controller).EMERGENCY_OWNER(),
+            Errors.ONLY_GOVERNANCE_OR_EMERGENCY
+        );
+        _require(_newCreator != address(0) && creator == address(0), Errors.ADDRESS_IS_ZERO);
+        creator = _newCreator;
     }
 
     /**

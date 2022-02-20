@@ -73,6 +73,8 @@ interface IAdminGarden {
 
     function transferCreatorRights(address _newCreator, uint8 _index) external;
 
+    function recoverCreatorByGov(address _newCreator) external;
+
     function addExtraCreators(address[4] memory _newCreators) external;
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
