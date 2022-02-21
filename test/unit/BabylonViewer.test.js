@@ -57,7 +57,7 @@ describe('Babylon Viewer', function () {
       expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
       expect(paramsCreation[9]).to.equal(0); // Keeper fees
       expect(paramsCreation[10]).to.equal(eth()); // Price per share decay rate
-      expect(paramsCreation[11]).to.equal(eth(0.25)); // Price per share delta
+      expect(paramsCreation[11]).to.equal(eth()); // Price per share delta
 
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
