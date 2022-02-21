@@ -45,6 +45,7 @@ describe('Babylon Viewer', function () {
       expect(gardenDetails[5].length).to.equal(2); // Active Strategies Note: there are 2 not 1 in fixture for garden 1
       expect(gardenDetails[6].length).to.equal(0); // Finalized strategies
       const paramsCreation = gardenDetails[7];
+
       expect(paramsCreation[0]).to.equal(GARDEN_PARAMS[2]); // Hardlock
       expect(paramsCreation[1]).to.equal(GARDEN_PARAMS[5]); // Min Votes Quorum
       expect(paramsCreation[2]).to.equal(GARDEN_PARAMS[0]); // Max deposit limit
@@ -55,6 +56,9 @@ describe('Babylon Viewer', function () {
       expect(paramsCreation[7]).to.equal(GARDEN_PARAMS[3]); // Min contribution
       expect(paramsCreation[8]).to.equal(GARDEN_PARAMS[1]); // Min liquidity asset
       expect(paramsCreation[9]).to.equal(0); // Keeper fees
+      expect(paramsCreation[10]).to.equal(eth()); // Price per share decay rate
+      expect(paramsCreation[11]).to.equal(eth(0.25)); // Price per share delta
+
       const status = gardenDetails[8];
       expect(status[0]).to.be.gt(0); // Principal
       expect(status[1]).to.equal(0); // Reserve rewards set aside
