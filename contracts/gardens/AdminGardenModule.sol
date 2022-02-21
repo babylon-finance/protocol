@@ -42,6 +42,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IAdminGarden} from '../interfaces/IGarden.sol';
+import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
@@ -256,6 +257,19 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _newParams[9], // uint256 _pricePerShareDecayRate
             _newParams[10] // uint256 _pricePerShareDelta
         );
+    }
+
+    /**
+     * PRIVILEGE FUNCTION to delegate Garden voting power itself into a delegatee
+     * To be used by Garden Creator only.
+     * Compatible with BABL and COMP and few others ERC20Comp related tokens
+     * @param _token         Address of BABL or any other ERC20Comp related governance token
+     * @param _delegatee     Address to delegate token voting power into
+     */
+    function delegateVotes(address _token, address _delegatee) external override {
+        _onlyCreator(msg.sender);
+        _require(_token != address(0) && _delegatee != address(0), Errors.ADDRESS_IS_ZERO);
+        IVoteToken(_token).delegate(_delegatee);
     }
 
     /* ============ External Getter Functions ============ */
