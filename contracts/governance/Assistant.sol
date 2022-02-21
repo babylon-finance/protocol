@@ -18,12 +18,14 @@
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
-import 'hardhat/console.sol';
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+
+import 'hardhat/console.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IHypervisor} from '../interfaces/IHypervisor.sol';
