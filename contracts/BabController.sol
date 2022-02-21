@@ -341,7 +341,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
+    function addReserveAsset(address _reserveAsset) external override {
+        _onlyGovernanceOrEmergency();
         require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
@@ -354,7 +355,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset               Address of the reserve asset to remove
      */
-    function removeReserveAsset(address _reserveAsset) external override onlyGovernanceOrEmergency {
+    function removeReserveAsset(address _reserveAsset) external override {
+        _onlyGovernanceOrEmergency();
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
@@ -420,7 +422,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _curveMetaRegistry      Address of the new curve meta registry
      */
-    function editCurveMetaRegistry(address _curveMetaRegistry) external override onlyGovernanceOrEmergency {
+    function editCurveMetaRegistry(address _curveMetaRegistry) external override {
+        _onlyGovernanceOrEmergency();
         require(_curveMetaRegistry != address(0), 'Address must not be 0');
 
         curveMetaRegistry = _curveMetaRegistry;
