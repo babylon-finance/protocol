@@ -164,6 +164,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_index == 3) {
             univ2 = ITradeIntegration(_newAddress);
         }
+        if (_index == 4) {
+            univ2 = ITradeIntegration(_newAddress);
+        }
     }
 
     function isTradeIntegration(address _integration) external view returns (bool) {
