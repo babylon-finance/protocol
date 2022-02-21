@@ -166,6 +166,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Trade slippage to apply in trades
     uint256 public override tradeSlippage;
 
+    // Asset to use to buy protocol wanted assets
+    address public override assetForPurchases;
+
     /* ============ Initializer ============ */
 
     /**
@@ -227,7 +230,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // 15% to Garden Investments
         _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]));
         // 20% lend in fuse pool
-        _lendFusePool(wethBalance.preciseMul(feeDistributionWeights[4]));
+        _lendFusePool(address(WETH), wethBalance.preciseMul(feeDistributionWeights[4]), address(assetToLend));
         // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
         lastPumpAt = block.timestamp;
@@ -312,6 +315,20 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
+     * Updates the next asset to purchase assets from strategies at a premium
+     *
+     * @param _purchaseAsset             New asset to purchase
+     */
+    function updateAssetToPurchase(address _purchaseAsset) public override {
+        controller.onlyGovernanceOrEmergency();
+        _require(
+            _purchaseAsset != assetForPurchases && _purchaseAsset != address(0),
+            Errors.HEART_ASSET_PURCHASE_INVALID
+        );
+        assetForPurchases = _purchaseAsset;
+    }
+
+    /**
      * Adds a BABL reward to be distributed weekly back to the heart garden
      *
      * @param _bablAmount             Total amount to distribute
@@ -354,6 +371,59 @@ contract Heart is OwnableUpgradeable, IHeart {
     function setTradeSlippage(uint256 _tradeSlippage) external override {
         controller.onlyGovernanceOrEmergency();
         tradeSlippage = _tradeSlippage;
+    }
+
+    /**
+     * Tell the heart to lend an asset on Fuse
+     *
+     * @param _assetToLend                  Address of the asset to lend
+     * @param _lendAmount                   Amount of the asset to lend
+     */
+    function lendFusePool(address _assetToLend, uint256 _lendAmount) external override {
+        controller.onlyGovernanceOrEmergency();
+        // Lend into fuse
+        _lendFusePool(_assetToLend, _lendAmount, _assetToLend);
+    }
+
+    /**
+     * Heart borrows using its liquidity
+     * Note: Heart must have enough liquidity
+     *
+     * @param _assetToBorrow              Asset that the heart is receiving from sender
+     * @param _borrowAmount               Amount of asset to transfet
+     */
+    function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
+        controller.onlyGovernanceOrEmergency();
+        address cToken = assetToCToken[_assetToBorrow];
+        require(cToken != address(0), 'Not a valid cToken');
+        require(ICToken(cToken).borrow(_borrowAmount) == 0, 'Not enough collateral');
+    }
+
+    /**
+     * Strategies can sell wanted assets by the protocol to the heart.
+     * Heart will buy them using borrowings in stables.
+     * Heart returns WETH so master swapper will take it from there.
+     * Note: Strategy needs to have approved the heart.
+     *
+     * @param _assetToSell                  Asset that the heart is receiving from strategy to sell
+     * @param _amountToSell                 Amount of asset to sell
+     */
+    function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
+        controller.isSystemContract(msg.sender);
+        require(controller.protocolWantedAssets(_assetToSell), 'Must be a wanted asset');
+        require(assetForPurchases != address(0), 'Asset for purchases not set');
+        // Uses on chain oracle to fetch prices
+        uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
+        require(pricePerTokenUnit != 0, 'No price found');
+        uint256 amountinPurchaseAssethOffered = pricePerTokenUnit.preciseMul(_amountToSell);
+        require(
+            IERC20(assetForPurchases).balanceOf(address(this)) >= amountinPurchaseAssethOffered,
+            'Not enough balance to buy wanted asset'
+        );
+        // Buy it from the strategy plus 1% premium
+        uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountinPurchaseAssethOffered.preciseMul(101e16));
+        // Send weth back to the strategy
+        IERC20(WETH).safeTransfer(msg.sender, wethTraded);
     }
 
     // solhint-disable-next-line
@@ -477,23 +547,38 @@ contract Heart is OwnableUpgradeable, IHeart {
     /**
      * Lends an amount of WETH converting it first to the pool asset that is the lowest (except BABL)
      *
-     * @param _wethAmount             Total amount of weth to lend
+     * @param _fromAsset             Which asset to convert
+     * @param _fromAmount             Total amount of weth to lend
+     * @param _lendAsset            Address of the asset to lend
      */
-    function _lendFusePool(uint256 _wethAmount) private {
-        address cToken = assetToCToken[assetToLend];
+    function _lendFusePool(
+        address _fromAsset,
+        uint256 _fromAmount,
+        address _lendAsset
+    ) private {
+        address cToken = assetToCToken[_lendAsset];
         _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
-        if (assetToLend == address(0)) {
+        uint256 assetToLendBalance = _fromAmount;
+        // Trade to asset to lend if needed
+        if (_fromAsset != _lendAsset) {
+            assetToLendBalance = _trade(
+                address(_fromAsset),
+                _lendAsset == address(0) ? address(WETH) : _lendAsset,
+                _fromAmount
+            );
+        }
+        if (_lendAsset == address(0)) {
             // Convert WETH to ETH
-            IWETH(WETH).withdraw(_wethAmount);
-            ICEther(cToken).mint{value: _wethAmount}();
+            IWETH(WETH).withdraw(_fromAmount);
+            ICEther(cToken).mint{value: _fromAmount}();
         } else {
-            // Trade to asset to lend from WETH
-            uint256 assetToLendBalance = _trade(address(WETH), assetToLend, _wethAmount);
-            IERC20(assetToLend).approve(cToken, assetToLendBalance);
+            IERC20(_lendAsset).approve(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
-        totalStats[5] = totalStats[5].add(_wethAmount);
-        emit FuseLentAsset(block.timestamp, assetToLend, _wethAmount);
+        uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
+        uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
+        totalStats[5] = totalStats[5].add(assettoLendBalanceInWeth);
+        emit FuseLentAsset(block.timestamp, _lendAsset, assettoLendBalanceInWeth);
     }
 
     /**
