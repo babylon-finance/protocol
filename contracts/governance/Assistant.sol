@@ -18,7 +18,7 @@
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
-
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -41,7 +41,7 @@ contract Assistant is OwnableUpgradeable {
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
 
-    IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
+    IBabController private constant controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
 
     /* ============ Constructor ============ */
 
@@ -52,6 +52,7 @@ contract Assistant is OwnableUpgradeable {
     /* ============ External Functions ============ */
 
     function startBondingProgram() external {
+        require(msg.sender == controller.owner(), 'not valid sender');
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
         BABL.safeTransfer(controller.heart(), 11000e18);
     }
