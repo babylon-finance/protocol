@@ -57,6 +57,9 @@ describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let owner;
+  let emergency;
+  let gov;
+  let timelockController;
   let keeper;
   let signer1;
   let signer2;
@@ -93,6 +96,7 @@ describe('Garden', function () {
       gardenNFT,
       keeper,
       owner,
+      timelockController,
       signer1,
       signer2,
       signer3,
@@ -108,6 +112,8 @@ describe('Garden', function () {
       weth,
       wbtc,
     } = await setupTests()());
+    emergency = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
+    gov = await impersonateAddress(timelockController.address);
   });
 
   describe('construction', async function () {
@@ -208,7 +214,51 @@ describe('Garden', function () {
       );
     });
   });
-
+  describe('Recover original creator position', async function () {
+    it('should allow recovering of creator rights by emergency', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await garden1
+        .connect(emergency)
+        .updateCreators(signer1.address, [ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.creator()).to.eq(signer1.address);
+    });
+    it('should allow recovering of creator rights by governance', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await garden1
+        .connect(gov)
+        .updateCreators(signer1.address, [ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]);
+      expect(await garden1.creator()).to.eq(signer1.address);
+    });
+    it('should NOT allow recovering creator rights by a non authorized user', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      await expect(garden1.connect(signer1).transferCreatorRights(ADDRESS_ZERO, 0)).to.not.be.reverted;
+      expect(await garden1.creator()).to.equal(ADDRESS_ZERO);
+      await expect(
+        garden1
+          .connect(signer1)
+          .updateCreators(signer1.address, [ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]),
+      ).to.be.revertedWith('Only governance or emergency can call this');
+      expect(await garden1.creator()).to.eq(ADDRESS_ZERO);
+    });
+    it('should NOT allow recovering of creator rights by governance if original creator has not renounced before', async function () {
+      expect(await garden1.creator()).to.equal(await signer1.getAddress());
+      await garden1.connect(signer1).makeGardenPublic();
+      // Extra creator cannot replace original creator or any other creator except itself
+      await expect(
+        garden1
+          .connect(emergency)
+          .updateCreators(signer2.address, [ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]),
+      ).to.be.revertedWith('BAB#097');
+      expect(await garden1.creator()).to.equal(signer1.address);
+    });
+  });
   describe('pseudo-public rights by gardener', async function () {
     it('should allow deposits to a Ishar gate owner despite its individual permission is set to 0 but general deposit permission is allowed', async function () {
       expect(await mardukGate.connect(signer1).canJoinAGarden(garden1.address, signer3.address)).to.equal(true);

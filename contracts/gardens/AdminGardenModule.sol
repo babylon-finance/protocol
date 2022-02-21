@@ -180,7 +180,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     }
 
     /*
-     * Governane can transfer garden owners to a different owner
+     * Governance can transfer garden owners to a different owner if original creator renounced
      * Must be a creator or an aux creator
      * @param _newCreator   New creator address
      * @param _newCreators  Addresses of the new creators
@@ -189,7 +189,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         controller.onlyGovernanceOrEmergency();
         // Make sure creator can still have normal permissions after renouncing
         // Creator can only renounce to 0x in public gardens
-        _require(_newCreator != address(0), Errors.CREATOR_CANNOT_RENOUNCE);
+        _require(_newCreator != address(0) && creator == address(0), Errors.CREATOR_CANNOT_RENOUNCE);
         creator = _newCreator;
         extraCreators[0] = _newCreators[0];
         extraCreators[1] = _newCreators[1];
