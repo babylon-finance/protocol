@@ -30,7 +30,6 @@ describe('BIP11', function () {
 
       const governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
       const timelock = await impersonateAddress('0xe6Ed0eAcB79a6e457416E4df38ed778fd6C6D193');
-      const ownerV2 = await impersonateAddress('0x0B892EbC6a4bF484CDDb7253c6BD5261490163b9');
       const gnosis = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
       const assistant = await ethers.getContractAt('Assistant', '0x90F3923427768d6dC7970417B0F413B7DD059011', ownerV3);
       const ownerV3 = await impersonateAddress('0xaec6233a45a3866e9f1c64ab121e4ee9dbeafbff');
