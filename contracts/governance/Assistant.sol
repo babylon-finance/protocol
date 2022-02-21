@@ -41,8 +41,6 @@ contract Assistant is OwnableUpgradeable {
     /* ============ State Variables ============ */
     /* ============ Constants ============ */
 
-    IBabController private constant controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
-
     /* ============ Constructor ============ */
 
     function initialize() public {
@@ -52,7 +50,10 @@ contract Assistant is OwnableUpgradeable {
     /* ============ External Functions ============ */
 
     function startBondingProgram() external {
+        IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
+
         require(msg.sender == controller.owner(), 'not valid sender');
+
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
         BABL.safeTransfer(controller.heart(), 11000e18);
     }
