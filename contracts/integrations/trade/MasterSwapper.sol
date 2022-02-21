@@ -165,7 +165,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             univ2 = ITradeIntegration(_newAddress);
         }
         if (_index == 4) {
-            univ2 = ITradeIntegration(_newAddress);
+            heartTradeIntegration = ITradeIntegration(_newAddress);
         }
     }
 
