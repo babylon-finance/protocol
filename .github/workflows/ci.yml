@@ -35,9 +35,9 @@ jobs:
         id: hardhat-cache
         with:
           path: ./cache
-          key: ${{ runner.os }}-hardhat-v2-${{ hashFiles('hardhat.config.js') }}
+          key: ${{ runner.os }}-hardhat-v3-${{ hashFiles('hardhat.config.js') }}
           restore-keys: |
-            ${{ runner.os }}-hardhat-v2
+            ${{ runner.os }}-hardhat-v3
 
       - name: Run fast tests
         env:
