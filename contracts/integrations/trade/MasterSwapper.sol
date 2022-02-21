@@ -93,18 +93,21 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * @param _univ3                  Address of univ3 trade integration
      * @param _synthetix              Address of synthetix trade integration
      * @param _univ2                  Address of univ2 trade integration
+     * @param _hearttrade             Address of heart trade integration
      */
     constructor(
         IBabController _controller,
         ITradeIntegration _curve,
         ITradeIntegration _univ3,
         ITradeIntegration _synthetix,
-        ITradeIntegration _univ2
+        ITradeIntegration _univ2,
+        ITradeIntegration _hearttrade
     ) BaseIntegration('master_swapper_v3', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
         univ2 = _univ2;
+        heartTradeIntegration = _hearttrade;
     }
 
     /* ============ External Functions ============ */
