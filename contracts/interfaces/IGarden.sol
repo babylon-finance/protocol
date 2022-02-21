@@ -78,7 +78,7 @@ interface IAdminGarden {
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
-    
+
     function updateGardenParams(uint256[11] memory _newParams) external;
 }
 
