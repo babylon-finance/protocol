@@ -52,7 +52,6 @@ contract Assistant is OwnableUpgradeable {
     /* ============ External Functions ============ */
 
     function startBondingProgram() external {
-        controller.onlyGovernanceOrEmergency();
         IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
         BABL.safeTransfer(controller.heart(), 11000e18);
     }
@@ -65,4 +64,4 @@ contract Assistant is OwnableUpgradeable {
     receive() external payable {}
 }
 
-contract AssistantV5 is Assistant {}
+contract AssistantV6 is Assistant {}
