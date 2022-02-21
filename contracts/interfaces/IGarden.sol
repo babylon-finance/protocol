@@ -77,7 +77,7 @@ interface IAdminGarden {
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
-    function delegateGardenVote(address _token, address _address) external;
+    function delegateVotes(address _token, address _address) external;
 
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
 

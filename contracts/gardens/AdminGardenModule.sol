@@ -266,7 +266,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _token         Address of BABL or any other ERC20Comp related governance token
      * @param _delegatee     Address to delegate token voting power into
      */
-    function delegateGardenVote(address _token, address _delegatee) external override {
+    function delegateVotes(address _token, address _delegatee) external override {
         _onlyCreator(msg.sender);
         _require(_token != address(0) && _delegatee != address(0), Errors.ADDRESS_IS_ZERO);
         IVoteToken(_token).delegate(_delegatee);

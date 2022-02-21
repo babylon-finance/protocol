@@ -215,7 +215,7 @@ describe('Garden', function () {
       const heartDelegatee1 = await token.delegates(heartGarden.address);
       expect(heartDelegatee1).to.eq(ADDRESS_ZERO); // No delegation yet
       const creator = await impersonateAddress(await heartGarden.creator());
-      await heartGarden.connect(creator).delegateGardenVote(token.address, heart.address);
+      await heartGarden.connect(creator).delegateVotes(token.address, heart.address);
       const heartDelegatee2 = await token.delegates(heartGarden.address);
       expect(heartDelegatee2).to.eq(heart.address);
     });
