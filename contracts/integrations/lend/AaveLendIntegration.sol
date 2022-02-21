@@ -51,7 +51,6 @@ contract AaveLendIntegration is LendIntegration {
     IProtocolDataProvider constant dataProvider =
         IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
 
-    address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
     address private constant stkAAVE = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
 
     /* ============ Struct ============ */

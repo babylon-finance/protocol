@@ -60,6 +60,7 @@ abstract contract BaseIntegration is IBaseIntegration {
     address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
     address internal constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
     address internal constant sUSD = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
+    address internal constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
 
     /* ============ State Variables ============ */
 

@@ -54,7 +54,7 @@ interface IStrategyGarden {
 /**
  * @title IAdminGarden
  *
- * Interface for functions of the garden
+ * Interface for amdin functions of the Garden
  */
 interface IAdminGarden {
     /* ============ Write ============ */
@@ -77,9 +77,9 @@ interface IAdminGarden {
 
     function setPublicRights(bool _publicStrategist, bool _publicStewards) external;
 
-    function updateGardenParams(uint256[9] memory _newParams) external;
-
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
+    
+    function updateGardenParams(uint256[11] memory _newParams) external;
 }
 
 /**
@@ -163,6 +163,14 @@ interface ICoreGarden {
     function keeperDebt() external view returns (uint256);
 
     function totalKeeperFees() external view returns (uint256);
+
+    function lastPricePerShare() external view returns (uint256);
+
+    function lastPricePerShareTS() external view returns (uint256);
+
+    function pricePerShareDecayRate() external view returns (uint256);
+
+    function pricePerShareDelta() external view returns (uint256);
 
     /* ============ Write ============ */
 

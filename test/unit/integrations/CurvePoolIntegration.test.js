@@ -1,6 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('fixtures/GardenFixture');
+const { createGarden } = require('fixtures/GardenHelper');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -12,6 +13,7 @@ const { getERC20, eth, pick } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
+  let paladinStakeIntegration;
   let signer1;
   let signer2;
   let signer3;
@@ -125,15 +127,13 @@ describe('CurvePoolIntegrationTest', function () {
     const poolContract = await getERC20(lpToken);
     expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
     expect(await strategyContract.getNAV()).to.be.closeTo(eth(), slippage);
-    const gardenBeforeFinalizeBalance = await reserveAsset.balanceOf(garden1.address);
     await finalizeStrategy(strategyContract, 0);
-
     expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
     expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, slippage);
   }
 
   beforeEach(async () => {
-    ({ curvePoolIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
+    ({ curvePoolIntegration, paladinStakeIntegration, garden1, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Liquidity Pools', function () {
@@ -171,6 +171,32 @@ describe('CurvePoolIntegrationTest', function () {
       it(`can enter and exit the factory ${name} pool`, async function () {
         await testCurvePool(name, pool);
       });
+    });
+
+    it('can enter the palstake aave pool after staking in an aave garden', async function () {
+      const reserveAsset = await getERC20(addresses.tokens.AAVE);
+      const aaveGarden = await createGarden({ reserveAsset: reserveAsset.address });
+      const pool = addresses.curve.pools.cryptofactory.palstkaave;
+      const strategyContract = await createStrategy(
+        'custom',
+        'vote',
+        [signer1, signer2, signer3],
+        [paladinStakeIntegration.address, curvePoolIntegration.address],
+        aaveGarden,
+        DEFAULT_STRATEGY_PARAMS,
+        [addresses.paladin.palStkAAVE, 0, pool, 0],
+        [2, 1],
+      );
+      const gardenBeforeExecuteBalance = await reserveAsset.balanceOf(garden1.address);
+      await executeStrategy(strategyContract, { amount: eth() });
+      expect(await strategyContract.capitalAllocated()).to.equal(eth());
+      const lpToken = await curvePoolIntegration.getLPToken(pool);
+      const poolContract = await getERC20(lpToken);
+      expect(await poolContract.balanceOf(strategyContract.address)).to.be.gt(0);
+      expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(20));
+      await finalizeStrategy(strategyContract, 0);
+      expect(await poolContract.balanceOf(strategyContract.address)).to.equal(0);
+      expect(await reserveAsset.balanceOf(garden1.address)).to.be.closeTo(gardenBeforeExecuteBalance, eth().div(20));
     });
   });
 });
