@@ -322,4 +322,6 @@ library Errors {
     uint256 internal constant HEART_ASSET_LEND_SAME = 116;
     // Heart invalid ctoken
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
+    // Price per share is wrong
+    uint256 internal constant PRICE_PER_SHARE_WRONG = 118;
 }
