@@ -57,6 +57,7 @@ async function setUpFixture(
   const curveTradeIntegration = await getContract('CurveTradeIntegration');
   const synthetixTradeIntegration = await getContract('SynthetixTradeIntegration');
   const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
+  const heartTradeIntegration = await getContract('HeartTradeIntegration');
   const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
@@ -277,6 +278,7 @@ async function setUpFixture(
     univ2TradeIntegration,
     aaveLendIntegration,
     aaveBorrowIntegration,
+    heartTradeIntegration,
     harvestV3VaultIntegration,
     harvestV3StakeIntegration,
     paladinStakeIntegration,
