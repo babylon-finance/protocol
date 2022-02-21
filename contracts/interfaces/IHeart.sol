@@ -36,6 +36,8 @@ interface IHeart {
 
     function assetToLend() external view returns (address);
 
+    function assetForPurchases() external view returns (address);
+
     function lastPumpAt() external view returns (uint256);
 
     function lastVotesAt() external view returns (uint256);
@@ -75,6 +77,14 @@ interface IHeart {
     function updateFeeWeights(uint256[] calldata _feeWeights) external;
 
     function updateAssetToLend(address _assetToLend) external;
+
+    function updateAssetToPurchase(address _purchaseAsset) external;
+
+    function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
+
+    function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
+
+    function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external;
 
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) external;
 

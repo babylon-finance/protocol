@@ -79,6 +79,8 @@ interface IAdminGarden {
 
     function delegateGardenVote(address _token, address _address) external;
 
+    function updateCreators(address _newCreator, address[4] memory _newCreators) external;
+
     function updateGardenParams(uint256[11] memory _newParams) external;
 }
 

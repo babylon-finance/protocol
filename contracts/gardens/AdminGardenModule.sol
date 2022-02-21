@@ -46,7 +46,7 @@ import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
-
+import {ControllerLib} from '../lib/ControllerLib.sol';
 import {BaseGardenModule} from './BaseGardenModule.sol';
 
 /**
@@ -70,6 +70,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
 
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+
+    using ControllerLib for IBabController;
 
     /* ============ Events ============ */
 
@@ -183,6 +185,24 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         }
         _require(extraCreators[_index] == msg.sender, Errors.ONLY_CREATOR);
         extraCreators[_index] = _newCreator;
+    }
+
+    /*
+     * Governance can transfer garden owners to a different owner if original creator renounced
+     * Must be a creator or an aux creator
+     * @param _newCreator   New creator address
+     * @param _newCreators  Addresses of the new creators
+     */
+    function updateCreators(address _newCreator, address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
+        controller.onlyGovernanceOrEmergency();
+        // Make sure creator can still have normal permissions after renouncing
+        // Creator can only renounce to 0x in public gardens
+        _require(_newCreator != address(0) && creator == address(0), Errors.CREATOR_CANNOT_RENOUNCE);
+        creator = _newCreator;
+        extraCreators[0] = _newCreators[0];
+        extraCreators[1] = _newCreators[1];
+        extraCreators[2] = _newCreators[2];
+        extraCreators[3] = _newCreators[3];
     }
 
     /**

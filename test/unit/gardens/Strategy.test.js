@@ -729,7 +729,7 @@ describe('Strategy', function () {
       await injectFakeProfits(long3, eth(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance3).to.be.closeTo(from('32737424404549201'), treasuryBalance3.div(20));
+      expect(treasuryBalance3).to.be.closeTo(from('31130940706102534'), treasuryBalance3.div(20));
 
       await injectFakeProfits(long4, eth(200));
       await finalizeStrategy(long4);

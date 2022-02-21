@@ -66,6 +66,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
+    event ProtocolWantedAssetUpdated(address indexed _wantedAsset, bool _wanted);
     event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
@@ -124,7 +125,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public validReserveAsset;
 
     // Mapping to check whitelisted assets
-    mapping(address => bool) public assetWhitelist;
+    mapping(address => bool) private assetWhitelist;
 
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
@@ -177,6 +178,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override mardukGate;
     address public override heart;
     address public override curveMetaRegistry;
+    mapping(address => bool) public override protocolWantedAssets;
 
     /* ============ Constants ============ */
 
@@ -361,6 +363,20 @@ contract BabController is OwnableUpgradeable, IBabController {
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
         emit ReserveAssetRemoved(_reserveAsset);
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
+     *
+     * @param _wantedAsset  Address of the wanted assset
+     * @param _wanted       True if wanted, false otherwise
+     */
+    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external override {
+        _onlyGovernanceOrEmergency();
+        require(_wantedAsset != address(0) && ERC20(_wantedAsset).decimals() <= 18, 'Incorrect address');
+        require(protocolWantedAssets[_wantedAsset] != _wanted, 'Wanted asset already added');
+        protocolWantedAssets[_wantedAsset] = _wanted;
+        emit ProtocolWantedAssetUpdated(_wantedAsset, _wanted);
     }
 
     /**
