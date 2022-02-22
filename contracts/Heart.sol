@@ -416,16 +416,16 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Uses on chain oracle to fetch prices
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
         require(pricePerTokenUnit != 0, 'No price found');
-        uint256 amountinPurchaseAssetOffered = pricePerTokenUnit.preciseMul(_amountToSell);
+        uint256 amountInPurchaseAssetOffered = pricePerTokenUnit.preciseMul(_amountToSell);
         require(
-            IERC20(assetForPurchases).balanceOf(address(this)) >= amountinPurchaseAssetOffered,
+            IERC20(assetForPurchases).balanceOf(address(this)) >= amountInPurchaseAssetOffered,
             'Not enough balance to buy wanted asset'
         );
         IERC20(_assetToSell).safeTransferFrom(msg.sender, address(this), _amountToSell);
         // Buy it from the strategy plus 1% premium
-        uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountinPurchaseAssetOffered.preciseMul(101e16));
+        uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy
-        IERC20(WETH).transfer(msg.sender, wethTraded);
+        IERC20(WETH).safeTransfer(msg.sender, wethTraded);
     }
 
     // solhint-disable-next-line
