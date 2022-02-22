@@ -421,6 +421,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             IERC20(assetForPurchases).balanceOf(address(this)) >= amountinPurchaseAssetOffered,
             'Not enough balance to buy wanted asset'
         );
+        IERC20(_assetToSell).safeTransferFrom(msg.sender, address(this), _amountToSell);
         // Buy it from the strategy plus 1% premium
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountinPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy

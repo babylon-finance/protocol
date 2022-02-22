@@ -36,7 +36,6 @@ describe('HeartTradeIntegration', function () {
         const garden1 = await createGarden({ reserveAsset: token });
         const tokenContract = await getERC20(token);
         const assetContract = await getERC20(addresses.tokens.BABL);
-        const heartBalanceBabl = await assetContract.balanceOf(heart.address);
         const strategyContract = await getStrategy({
           kind: 'buy',
           state: 'vote',
@@ -61,7 +60,7 @@ describe('HeartTradeIntegration', function () {
         expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
         await finalizeStrategy(strategyContract, 0);
         expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
-        expect(await assetContract.balanceOf(heart.address)).to.eq(heartBalanceBabl.add(assetBalance));
+        expect(await assetContract.balanceOf(heart.address)).to.be.closeTo(assetBalance, assetBalance.div(100));
       });
     });
   });
