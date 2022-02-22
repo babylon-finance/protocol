@@ -33,33 +33,30 @@ describe('HeartTradeIntegration', function () {
   describe('exchange', function () {
     pick(GARDENS).forEach(({ token, name, fee }) => {
       it(`sell BABL to the heart in a ${name} garden`, async function () {
-        const garden1 = await createGarden({ reserveAsset: token });
-        const tokenContract = await getERC20(token);
+        const garden = await createGarden({ reserveAsset: token });
+        const reserveAsset = await getERC20(token);
         const assetContract = await getERC20(addresses.tokens.BABL);
         const strategyContract = await getStrategy({
           kind: 'buy',
           state: 'vote',
           integration: masterSwapper.address,
           specificParams: [assetContract.address, 0],
-          garden: garden1,
+          garden,
         });
-        await executeStrategy(strategyContract);
-        const tokenPriceInAsset = await priceOracle.connect(owner).getPrice(token, assetContract.address);
-        const assetDecimals = await assetContract.decimals();
-        const assetDecimalsDelta = 10 ** (18 - assetDecimals);
 
-        const tokenDecimals = await tokenContract.decimals();
-        const tokenDecimalsDelta = 10 ** (18 - tokenDecimals);
+        const gardenStartBalance = await reserveAsset.balanceOf(garden.address);
+
+        await executeStrategy(strategyContract);
 
         const assetBalance = await assetContract.balanceOf(strategyContract.address);
-        const expectedBalance = tokenPriceInAsset
-          .mul(tokenDecimalsDelta)
-          .mul(STRATEGY_EXECUTE_MAP[token])
-          .div(eth())
-          .div(assetDecimalsDelta);
-        expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
+
         await finalizeStrategy(strategyContract, 0);
+
         expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
+        expect(await reserveAsset.balanceOf(garden.address)).to.be.closeTo(
+          gardenStartBalance.mul(101).div(100),
+          gardenStartBalance.div(50),
+        );
         expect(await assetContract.balanceOf(heart.address)).to.be.closeTo(assetBalance, assetBalance.div(100));
       });
     });
