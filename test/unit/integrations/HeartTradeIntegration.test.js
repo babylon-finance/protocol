@@ -60,9 +60,8 @@ describe('HeartTradeIntegration', function () {
           .div(assetDecimalsDelta);
         expect(expectedBalance).to.be.closeTo(assetBalance, assetBalance.div(40)); // 2.5% slippage
         await finalizeStrategy(strategyContract, 0);
-
         expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
-        expect(assetBalance).to.eq((await assetContract.balanceOf(heart.address)).sub(heartBalanceBabl));
+        expect(await assetContract.balanceOf(heart.address)).to.eq(heartBalanceBabl.sub(assetBalance));
       });
     });
   });

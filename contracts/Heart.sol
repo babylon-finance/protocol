@@ -105,6 +105,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     IERC20 private constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
+    IERC20 private constant FRAX = IERC20(0x853d955aCEf822Db058eb8505911ED77F175b99e);
 
     // Fuse
     address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
@@ -409,21 +410,22 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _amountToSell                 Amount of asset to sell
      */
     function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
+      console.log('in sell heart', _assetToSell, _amountToSell);
         controller.isSystemContract(msg.sender);
         require(controller.protocolWantedAssets(_assetToSell), 'Must be a wanted asset');
         require(assetForPurchases != address(0), 'Asset for purchases not set');
         // Uses on chain oracle to fetch prices
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
         require(pricePerTokenUnit != 0, 'No price found');
-        uint256 amountinPurchaseAssethOffered = pricePerTokenUnit.preciseMul(_amountToSell);
+        uint256 amountinPurchaseAssetOffered = pricePerTokenUnit.preciseMul(_amountToSell);
         require(
-            IERC20(assetForPurchases).balanceOf(address(this)) >= amountinPurchaseAssethOffered,
+            IERC20(assetForPurchases).balanceOf(address(this)) >= amountinPurchaseAssetOffered,
             'Not enough balance to buy wanted asset'
         );
         // Buy it from the strategy plus 1% premium
-        uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountinPurchaseAssethOffered.preciseMul(101e16));
+        uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountinPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy
-        IERC20(WETH).safeTransfer(msg.sender, wethTraded);
+        IERC20(WETH).transfer(msg.sender, wethTraded);
     }
 
     // solhint-disable-next-line
@@ -621,18 +623,25 @@ contract Heart is OwnableUpgradeable, IHeart {
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
-        ISwapRouter.ExactInputSingleParams memory params =
-            ISwapRouter.ExactInputSingleParams({
-                tokenIn: _tokenIn,
-                tokenOut: _tokenOut,
-                fee: _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut),
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountIn: _amount,
-                amountOutMinimum: minAmountExpected,
-                sqrtPriceLimitX96: 0
-            });
-        return swapRouter.exactInputSingle(params);
+        bytes memory path;
+        if (_tokenIn == address(FRAX) || _tokenOut == address(FRAX)) {
+            address hopToken = address(DAI);
+            uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, hopToken);
+            uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, hopToken);
+            path = abi.encodePacked(_tokenIn, fee0, hopToken, fee1, _tokenOut);
+        } else {
+            uint24 fee = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut);
+            path = abi.encodePacked(_tokenIn, fee, _tokenOut);
+        }
+        ISwapRouter.ExactInputParams memory params =
+            ISwapRouter.ExactInputParams(
+              path,
+              address(this),
+              block.timestamp,
+              _amount,
+              minAmountExpected
+            );
+        return swapRouter.exactInput(params);
     }
 
     /**
