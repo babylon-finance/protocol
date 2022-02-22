@@ -29,6 +29,7 @@ require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/upgrade-multisig');
 require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
+require('./lib/tasks/vesting');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/stuck');
