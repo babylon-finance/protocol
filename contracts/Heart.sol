@@ -410,7 +410,6 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _amountToSell                 Amount of asset to sell
      */
     function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
-      console.log('in sell heart', _assetToSell, _amountToSell);
         controller.isSystemContract(msg.sender);
         require(controller.protocolWantedAssets(_assetToSell), 'Must be a wanted asset');
         require(assetForPurchases != address(0), 'Asset for purchases not set');
