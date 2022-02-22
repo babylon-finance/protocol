@@ -93,18 +93,21 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * @param _univ3                  Address of univ3 trade integration
      * @param _synthetix              Address of synthetix trade integration
      * @param _univ2                  Address of univ2 trade integration
+     * @param _hearttrade             Address of heart trade integration
      */
     constructor(
         IBabController _controller,
         ITradeIntegration _curve,
         ITradeIntegration _univ3,
         ITradeIntegration _synthetix,
-        ITradeIntegration _univ2
+        ITradeIntegration _univ2,
+        ITradeIntegration _hearttrade
     ) BaseIntegration('master_swapper_v3', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
         univ2 = _univ2;
+        heartTradeIntegration = _hearttrade;
     }
 
     /* ============ External Functions ============ */
@@ -201,6 +204,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
                 _sendToken = WETH;
                 _sendQuantity = ERC20(WETH).balanceOf(_strategy).sub(wethBalance);
+                if (_receiveToken == WETH) {
+                    return;
+                }
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Heart Trade Integration ', _sendToken, WETH);
             }
