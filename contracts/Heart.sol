@@ -634,13 +634,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             path = abi.encodePacked(_tokenIn, fee, _tokenOut);
         }
         ISwapRouter.ExactInputParams memory params =
-            ISwapRouter.ExactInputParams(
-              path,
-              address(this),
-              block.timestamp,
-              _amount,
-              minAmountExpected
-            );
+            ISwapRouter.ExactInputParams(path, address(this), block.timestamp, _amount, minAmountExpected);
         return swapRouter.exactInput(params);
     }
 
