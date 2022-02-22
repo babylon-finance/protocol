@@ -204,7 +204,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
                 _sendToken = WETH;
                 _sendQuantity = ERC20(WETH).balanceOf(_strategy).sub(wethBalance);
-                if(_receiveToken == WETH) {
+                if (_receiveToken == WETH) {
                     return;
                 }
             } catch Error(string memory _err) {
