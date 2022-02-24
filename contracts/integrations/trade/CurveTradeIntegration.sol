@@ -28,6 +28,7 @@ import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
 
+
 /**
  * @title CurveTradeIntegration
  * @author Babylon Finance Protocol
@@ -93,17 +94,9 @@ contract CurveTradeIntegration is TradeIntegration {
             curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
         // Palstakeaave. TODO: Add others
         bytes memory methodData;
+        // palStkAAVE/AAVE pool
         if (curvePool == 0x48536EC5233297C367fd0b6979B75d9270bB6B15) {
             methodData = abi.encodeWithSignature('exchange(uint256,uint256,uint256,uint256)', i, j, _sendQuantity, 1);
-            if (underlying) {
-                methodData = abi.encodeWithSignature(
-                    'exchange_underlying(uin256,uint256,uint256,uint256)',
-                    i,
-                    j,
-                    _sendQuantity,
-                    1
-                );
-            }
         } else {
             methodData = abi.encodeWithSignature(
                 'exchange(int128,int128,uint256,uint256)',
