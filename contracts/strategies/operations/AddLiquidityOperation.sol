@@ -165,12 +165,12 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = _garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i]) && address(msg.sender).balance > 0) {
+                if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > 0) {
+                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).balanceOf(msg.sender),
@@ -336,7 +336,7 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     try
                         IStrategy(msg.sender).trade(
                             rewards[i],
