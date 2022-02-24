@@ -85,7 +85,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     address internal creator;
 
     bool internal active; // DEPRECATED;
-    bool public privateGarden;
+    bool internal privateGarden;
 
     uint256 internal principal; // DEPRECATED;
 
@@ -131,7 +131,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     mapping(address => bool) internal isGardenStrategy; // Security control mapping
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
-    uint256 public keeperDebt;
+    uint256 internal keeperDebt;
     uint256 internal totalKeeperFees;
 
     // Allow internal strategy creators for certain gardens
