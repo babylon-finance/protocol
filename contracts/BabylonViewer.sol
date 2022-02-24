@@ -51,14 +51,13 @@ contract BabylonViewer {
     using Math for int256;
     using SafeDecimalMath for uint256;
 
-    IBabController public controller;
+    IBabController private immutable controller;
     uint24 internal constant FEE_LOW = 500;
     uint24 internal constant FEE_MEDIUM = 3000;
     uint24 internal constant FEE_HIGH = 10000;
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     constructor(IBabController _controller) {
-        require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
     }
 
