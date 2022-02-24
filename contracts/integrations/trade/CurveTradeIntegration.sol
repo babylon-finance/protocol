@@ -28,7 +28,6 @@ import {ControllerLib} from '../../lib/ControllerLib.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
 
-
 /**
  * @title CurveTradeIntegration
  * @author Babylon Finance Protocol
