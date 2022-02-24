@@ -495,7 +495,7 @@ contract BabylonViewer {
             }
             tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserRewards(_strategies[i], _contributor);
             for (uint256 j = 0; j < 8; j++) {
-                totalRewards[i] = totalRewards[i].add(tempRewards[i]);
+                totalRewards[j] = totalRewards[j].add(tempRewards[j]);
             }
         }
         return totalRewards;
