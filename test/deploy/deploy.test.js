@@ -3,11 +3,12 @@ const { expect } = require('chai');
 // const { increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
 const addresses = require('lib/addresses');
+const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 
-const STUCK_EXECUTE = [
+const STUCK = [
   // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
   // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED
@@ -19,9 +20,12 @@ const STUCK_EXECUTE = [
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
   // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
   // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
-  '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
+  // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
+  // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
+  // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
+  '0x5c0afc3bfab3492baa1fc2f3c02355df7915398f',
 ];
 
 describe('deploy', function () {
@@ -36,7 +40,7 @@ describe('deploy', function () {
 
   async function iterateStrategiesFromGardens(cb) {
     for (const garden of gardens) {
-      const gardenContract = await ethers.getContractAt('Garden', garden);
+      const gardenContract = await ethers.getContractAt('IGarden', garden);
       console.log(`${await gardenContract.name()}`);
 
       const reserveAsset = await gardenContract.reserveAsset();
@@ -98,8 +102,7 @@ describe('deploy', function () {
 
   async function finalizeStrategy(strategyContract, name, reserveAsset) {
     const isExecuting = await strategyContract.isStrategyActive();
-    const gardenContract = await ethers.getContractAt('Garden', await strategyContract.garden());
-
+    const gardenContract = await ethers.getContractAt('IGarden', await strategyContract.garden());
     if (!isExecuting) {
       console.log(`  Strategy ${name} ${strategyContract.address} is not active.`);
       return;
@@ -109,9 +112,11 @@ describe('deploy', function () {
     try {
       await strategyContract
         .connect(gov)
-        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth()], { gasPrice: 0 });
+        .updateParams([await gardenContract.minStrategyDuration(), eth(0.1), eth(0.1), eth(), eth(100)], {
+          gasPrice: 0,
+        });
 
-      await strategyContract.connect(keeper).finalizeStrategy(1, '');
+      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0);
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
@@ -124,13 +129,39 @@ describe('deploy', function () {
   }
 
   async function executeStuckStrategies() {
-    const strategies = STUCK_EXECUTE;
+    const strategies = STUCK;
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-      const gardenContract = await ethers.getContractAt('Garden', strategyContract.garden());
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
       const reserveAsset = await gardenContract.reserveAsset();
       const name = await strategyNft.getStrategyName(strategy);
       await addCapitalToStrategy(strategyContract, name, reserveAsset);
+    }
+  }
+
+  async function finalizeStuckStrategies() {
+    const strategies = STUCK;
+    for (const strategy of strategies) {
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
+      const reserveAsset = await gardenContract.reserveAsset();
+      const name = await strategyNft.getStrategyName(strategy);
+      await finalizeStrategy(strategyContract, name, reserveAsset);
+    }
+  }
+
+  async function checkNAVStrategies() {
+    const strategies = STUCK;
+    for (const strategy of strategies) {
+      console.log('strategy', strategy);
+      const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+      const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
+      const reserveAsset = await gardenContract.reserveAsset();
+      console.log('reserve', reserveAsset);
+      const name = await strategyNft.getStrategyName(strategy);
+      console.log('name', name);
+      const nav = await strategyContract.getNAV();
+      console.log(name, reserveAsset, nav.toString());
     }
   }
 
@@ -185,7 +216,7 @@ describe('deploy', function () {
 
     it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
-        const gardenContract = await ethers.getContractAt('Garden', garden);
+        const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))
           .mul(await gardenContract.totalSupply())
           .div(eth());
@@ -208,6 +239,10 @@ describe('deploy', function () {
       }
     });
 
+    it('gets right NAV strategies', async () => {
+      await checkNAVStrategies();
+    });
+
     it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
@@ -216,8 +251,12 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('can finalize all active strategies', async () => {
+    it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
+    });
+
+    it.only('can finalize stuck strategies', async () => {
+      await finalizeStuckStrategies();
     });
   });
 });

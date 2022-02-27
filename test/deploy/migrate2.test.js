@@ -76,7 +76,7 @@ describe('migrate', function () {
       arkadGarden = '0xd42B3A30ca89155d6C3499c81F0C4e5A978bE5c2';
       affectedGarden = '0x8e6DAfCACE886235E2c5E93d72D85230B449926d';
       const viewer = '0x3393bf9ff37899735b149fc2f5233b6639903dfa';
-      gardenContract = await ethers.getContractAt('Garden', affectedGarden);
+      gardenContract = await ethers.getContractAt('IGarden', affectedGarden);
       creator = await gardenContract.creator();
       gardenMember = await impersonateAddress('0x80e82A9fd9B1D3886d4042e5f06CA1cC753d3DdB');
       gardenMember2 = await impersonateAddress('0x4ecbaa7d2f86f2d78c04f49986ec2c57938752a6'); // depositor

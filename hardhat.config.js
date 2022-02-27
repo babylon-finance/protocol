@@ -31,6 +31,8 @@ require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
+require('./lib/tasks/stuck');
+require('./lib/tasks/mining');
 require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 
@@ -44,10 +46,10 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 13927000; // old 13171630 new 13665320
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14225000;
 
 const CHAIN_IDS = {
-  hardhat: 31337,
+  hardhat: 1337,
   kovan: 42,
   goerli: 5,
   mainnet: 1,

@@ -15,7 +15,10 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
+
 pragma solidity 0.7.6;
+
+import {IBaseIntegration} from '../interfaces/IBaseIntegration.sol';
 
 /**
  * @title ITrade
@@ -23,7 +26,7 @@ pragma solidity 0.7.6;
  *
  * Interface for trading protocol integrations
  */
-interface ITradeIntegration {
+interface ITradeIntegration is IBaseIntegration {
     function trade(
         address _strategy,
         address _sendToken,

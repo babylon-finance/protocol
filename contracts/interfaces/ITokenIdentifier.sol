@@ -17,7 +17,10 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
+
 pragma solidity 0.7.6;
+
+import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
 
 /**
  * @title IPriceOracle
@@ -28,7 +31,11 @@ pragma solidity 0.7.6;
 interface ITokenIdentifier {
     /* ============ Functions ============ */
 
-    function identifyTokens(address _tokenIn, address _tokenOut)
+    function identifyTokens(
+        address _tokenIn,
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
+    )
         external
         view
         returns (

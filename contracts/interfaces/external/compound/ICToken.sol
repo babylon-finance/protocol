@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.7.0 <0.9.0;
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-interface ICToken {
+interface ICToken is IERC20 {
     function mint(uint256 mintAmount) external returns (uint256);
 
     function redeem(uint256 redeemTokens) external returns (uint256);
+
+    function accrueInterest() external returns (uint256);
 
     function redeemUnderlying(uint256 redeemAmount) external returns (uint256);
 
@@ -15,7 +18,11 @@ interface ICToken {
 
     function exchangeRateStored() external view returns (uint256);
 
-    function balanceOf(address _owner) external view returns (uint256);
+    function getCash() external view returns (uint256);
+
+    function borrowRatePerBlock() external view returns (uint256);
+
+    function totalBorrowsCurrent() external view returns (uint256);
 
     function underlying() external view returns (address);
 

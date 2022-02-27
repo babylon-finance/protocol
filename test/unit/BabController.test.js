@@ -10,6 +10,8 @@ const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth
 const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
 
+const EMERGENCY = '0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e';
+
 describe('BabController', function () {
   let babController;
   let treasury;
@@ -24,6 +26,7 @@ describe('BabController', function () {
   let rewardsDistributor;
   let strategy11;
   let owner;
+  let emergency;
   let MULTISIG;
 
   beforeEach(async () => {
@@ -42,6 +45,8 @@ describe('BabController', function () {
       uniswapV3TradeIntegration,
       rewardsDistributor,
     } = await setupTests()());
+
+    emergency = await impersonateAddress(EMERGENCY);
     const signers = await ethers.getSigners();
     MULTISIG = signers[2];
     await fund([signer1.address, signer2.address, signer3.address]);
@@ -90,6 +95,22 @@ describe('BabController', function () {
 
       await babController.connect(owner).removeReserveAsset(addresses.tokens.YFI);
       expect(await babController.validReserveAsset(addresses.tokens.YFI)).to.eq(false);
+    });
+  });
+
+  describe('protocolWantedAssets', function () {
+    it('can add a protocol wanted asset', async function () {
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, true);
+
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(true);
+    });
+
+    it('can remove a protocol wanted asset', async function () {
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, true);
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(true);
+
+      await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, false);
+      expect(await babController.protocolWantedAssets(addresses.tokens.BABL)).to.eq(false);
     });
   });
 
@@ -160,9 +181,30 @@ describe('BabController', function () {
       );
     });
 
-    it('should pause globally the protocol principal functions', async function () {
-      await babController.connect(owner).setPauseGuardian(signer1.address);
-      await babController.connect(signer1).setGlobalPause(true);
+    it('emergency can unpause globally the protocol', async function () {
+      await babController.connect(emergency).setGlobalPause(true);
+      await expect(
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+          value: eth(),
+        }),
+      ).to.be.revertedWith('BAB#083');
+      await babController.connect(emergency).setGlobalPause(false);
+      await garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+        value: eth(),
+      });
+    });
+
+    it('emergency can pause globally the protocol', async function () {
+      await babController.connect(emergency).setGlobalPause(true);
+      await expect(
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+          value: eth(),
+        }),
+      ).to.be.revertedWith('BAB#083');
+    });
+
+    it('owner can pause globally the protocol', async function () {
+      await babController.connect(owner).setGlobalPause(true);
       await expect(
         garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
           value: eth(),
@@ -195,7 +237,7 @@ describe('BabController', function () {
       await expect(executeStrategy(long1, eth())).to.be.revertedWith('BAB#083');
     });
 
-    it('should pause individually the reward distributor main functions', async function () {
+    it('should pause individually the reward distributor', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
     });
@@ -210,6 +252,18 @@ describe('BabController', function () {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('BAB#083');
+    });
+
+    it('emergency can unpause a strategy', async function () {
+      const long1 = await getStrategy({ garden: garden1, state: 'vote' });
+
+      await babController.connect(owner).setPauseGuardian(signer1.address);
+      await babController.connect(signer1).setSomePause([long1.address], true);
+
+      await expect(executeStrategy(long1, eth())).to.be.revertedWith('BAB#083');
+
+      await babController.connect(emergency).setSomePause([long1.address], false);
+      await executeStrategy(long1, eth());
     });
 
     it('owner can unpause a strategy', async function () {
@@ -241,11 +295,11 @@ describe('BabController', function () {
       });
     });
 
-    it('owner can unpause the reward distributor main functions', async function () {
+    it('owner can unpause the reward distributor', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setSomePause([rewardsDistributor.address], true);
       await expect(babController.connect(signer1).setSomePause([rewardsDistributor.address], false)).to.be.revertedWith(
-        'only admin can unpause',
+        'Not enough privileges',
       );
       const newBablToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
       await babController.connect(owner).setSomePause([rewardsDistributor.address], false);

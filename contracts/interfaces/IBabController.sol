@@ -44,6 +44,8 @@ interface IBabController {
 
     function removeReserveAsset(address _reserveAsset) external;
 
+    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;
+
     function editPriceOracle(address _priceOracle) external;
 
     function editMardukGate(address _mardukGate) external;
@@ -52,11 +54,15 @@ interface IBabController {
 
     function editTreasury(address _newTreasury) external;
 
+    function editHeart(address _newHeart) external;
+
     function editRewardsDistributor(address _rewardsDistributor) external;
 
     function editGardenFactory(address _newGardenFactory) external;
 
     function editGardenNFT(address _newGardenNFT) external;
+
+    function editCurveMetaRegistry(address _curveMetaRegistry) external;
 
     function editStrategyNFT(address _newStrategyNFT) external;
 
@@ -98,9 +104,13 @@ interface IBabController {
 
     function gardenValuer() external view returns (address);
 
+    function heart() external view returns (address);
+
     function gardenNFT() external view returns (address);
 
     function strategyNFT() external view returns (address);
+
+    function curveMetaRegistry() external view returns (address);
 
     function rewardsDistributor() external view returns (address);
 
@@ -131,6 +141,8 @@ interface IBabController {
     function getOperations() external view returns (address[20] memory);
 
     function isGarden(address _garden) external view returns (bool);
+
+    function protocolWantedAssets(address _wantedAsset) external view returns (bool);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 

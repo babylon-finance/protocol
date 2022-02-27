@@ -51,6 +51,12 @@ describe('AaveLendIntegrationTest', function () {
       expect(await aaveLendIntegration.isInvestment(addresses.tokens.USDC)).to.equal(true);
     });
 
+    it('gets the collateral factor of a token', async function () {
+      expect(await aaveLendIntegration.getCollateralFactor('0x6b175474e89094c44da98b954eedeac495271d0f')).to.equal(
+        ethers.utils.parseEther('0.80'),
+      );
+    });
+
     it('can supply and redeem tokens from Aave', async function () {
       const strategyContract = await createStrategy(
         'lend',

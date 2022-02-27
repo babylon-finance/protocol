@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -121,7 +122,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
         _require(
             isIntegration ||
-                _address == 0xccE114848A694152Ba45a8caff440Fcb12f73862 ||
+                _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E ||
+                _address == 0x72e27dA102a67767a7a3858D117159418f93617D ||
                 masterSwapper.isTradeIntegration(_address),
             Errors.ONLY_INTEGRATION
         );
@@ -257,10 +259,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         _require(controller.isSystemContract(_garden), Errors.NOT_A_GARDEN);
         _require(IERC20(address(garden)).balanceOf(_strategist) > 0, Errors.STRATEGIST_TOKENS_TOO_LOW);
-        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
 
-        maxCapitalRequested = _maxCapitalRequested;
-
+        _setMaxCapitalRequested(_maxCapitalRequested);
         _setStake(_stake, _strategist);
         _setDuration(_strategyDuration);
         _setMaxTradeSlippage(_maxTradeSlippagePercentage);
@@ -334,7 +334,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp.sub(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
-
         // set votes to zero expecting keeper to provide correct values
         totalPositiveVotes = 0;
         totalNegativeVotes = 0;
@@ -348,12 +347,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 totalNegativeVotes = totalNegativeVotes.add(uint256(Math.abs(_votes[i])));
             }
         }
-
         _require(totalPositiveVotes.sub(totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
 
         // Keeper will account for strategist vote/stake
         voters = _voters;
-
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
         emit StrategyVoted(address(garden), totalPositiveVotes, totalNegativeVotes, block.timestamp);
@@ -379,8 +376,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Updates the reserve asset position accordingly.
      * @param _fee                     The fee paid to keeper to compensate the gas cost
      * @param _tokenURI                URL with the JSON for the strategy
+     * @param _minReserveOut           Minimum reserve asset to get during strategy finalization
      */
-    function finalizeStrategy(uint256 _fee, string memory _tokenURI) external override nonReentrant {
+    function finalizeStrategy(
+        uint256 _fee,
+        string memory _tokenURI,
+        uint256 _minReserveOut
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
@@ -397,6 +399,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
         garden.payKeeper(msg.sender, _fee);
+        // MinReserveOut security check
+        _require(capitalReturned >= _minReserveOut, Errors.INVALID_RESERVE_AMOUNT);
         // Transfer rewards
         _transferStrategyPrincipal();
         // Send rest to garden if any
@@ -473,9 +477,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      *   _params[1]  maxGasFeePercentage
      *   _params[2]  maxTradeSlippagePercentage
      *   _params[3]  maxAllocationPercentage
+     *   _params[4]  maxCapitalRequested
      * @param _params  New params
      */
-    function updateParams(uint256[4] calldata _params) external override {
+    function updateParams(uint256[5] calldata _params) external override {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
 
@@ -485,6 +490,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _setMaxGasFeePercentage(_params[1]);
         _setMaxTradeSlippage(_params[2]);
         _setMaxAllocationPercentage(_params[3]);
+        _setMaxCapitalRequested(_params[4]);
 
         emit StrategyDurationChanged(_params[0], duration);
     }
@@ -492,15 +498,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /**
      * Any tokens (other than the target) that are sent here by mistake are recoverable by contributors
      * Converts it to the reserve asset and sends it to the garden.
-     * @param _token             Address of the token to sweep
+     * @param _token                   Address of the token to sweep
+     * @param _newSlippage             New Slippage to override
      */
-    function sweep(address _token) external nonReentrant {
+    function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        _require(
-            IERC20(address(garden)).balanceOf(msg.sender) > 0 &&
-                IBabController(controller).isSystemContract(address(garden)),
-            Errors.ONLY_CONTRIBUTOR
-        );
         _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
         _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
@@ -508,7 +510,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 balance = IERC20(_token).balanceOf(address(this));
         _require(balance > 0, Errors.BALANCE_TOO_LOW);
 
-        _trade(_token, balance, garden.reserveAsset());
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
@@ -561,7 +563,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _sendToken                    Token to exchange
      * @param _sendQuantity                 Amount of tokens to send
      * @param _receiveToken                 Token to receive
+     * @param _overrideSlippage             Slippage to override
      */
+    function trade(
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _overrideSlippage
+    ) external override returns (uint256) {
+        _onlyOperation();
+        _onlyUnpaused();
+        return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage);
+    }
+
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
@@ -569,7 +583,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken);
+        return _trade(_sendToken, _sendQuantity, _receiveToken, 0);
     }
 
     /**
@@ -748,7 +762,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 opDatas.length > 0
                     ? opDatas[lastOp]
                     : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12);
-            uint256 borrowBalance = IERC20(token).universalBalanceOf(address(this));
+            uint256 borrowBalance = IERC20(token == address(0) ? WETH : token).balanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
                 positiveNav = positiveNav.add(
@@ -787,6 +801,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _setMaxAllocationPercentage(uint256 _maxAllocationPercentage) internal {
         _require(_maxAllocationPercentage <= 1e18, Errors.MAX_STRATEGY_ALLOCATION_PERCENTAGE);
         maxAllocationPercentage = _maxAllocationPercentage;
+    }
+
+    function _setMaxCapitalRequested(uint256 _maxCapitalRequested) internal {
+        _require(_maxCapitalRequested > 0, Errors.MAX_CAPITAL_REQUESTED);
+        maxCapitalRequested = _maxCapitalRequested;
     }
 
     function _setMaxGasFeePercentage(uint256 _maxGasFeePercentage) internal {
@@ -883,7 +902,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetFinalized,
                 capitalPending,
                 assetStatus,
-                _percentage,
+                // should use the percentage only for the first operation because we do not want to take percentage of
+                // the percentage for the subsequent operations
+                i == opTypes.length ? _percentage : HUNDRED_PERCENT,
                 _getOpDecodedData(i - 1),
                 garden,
                 opIntegrations[i - 1]
@@ -896,7 +917,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetFinalized = WETH;
             }
             if (assetFinalized != garden.reserveAsset()) {
-                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset());
+                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset(), 0);
             }
         }
     }
@@ -923,7 +944,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _value,
         bytes memory _data
     ) private returns (bytes memory _returnValue) {
-        _returnValue = _target.functionCallWithValue(_data, _value);
+        _returnValue = _target.functionCallWithValue(_data, _value, 'no err msg');
         emit Invoked(_target, _value, _data, _returnValue);
         return _returnValue;
     }
@@ -942,11 +963,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _sendToken                    Token to exchange
      * @param _sendQuantity                 Amount of tokens to send
      * @param _receiveToken                 Token to receive
+     * @param _overrideSlippage             Override slippage
      */
     function _trade(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        uint256 _overrideSlippage
     ) private returns (uint256) {
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
@@ -958,12 +981,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _sendQuantity.preciseMul(pricePerTokenUnit)
             );
-        uint256 minAmountExpected =
-            exactAmount.sub(
-                exactAmount.preciseMul(
-                    maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
-                )
-            );
+        uint256 slippage =
+            _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
+                ? maxTradeSlippagePercentage
+                : DEFAULT_TRADE_SLIPPAGE;
+        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,
@@ -986,8 +1008,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
             if (protocolProfits > 0) {
-                // We avoid a transfer in case capitalReturned == capitalAllocated
-                IERC20(reserveAsset).safeTransfer(IBabController(controller).treasury(), protocolProfits);
+                // Send profits to the heart
+                IERC20(reserveAsset).safeTransfer(IBabController(controller).heart(), protocolProfits);
             }
             strategyReturns = strategyReturns.sub(protocolProfits.toInt256());
         } else {
@@ -1062,4 +1084,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV16 is Strategy {}
+contract StrategyV19 is Strategy {}

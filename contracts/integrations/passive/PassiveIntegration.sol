@@ -103,7 +103,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_investmentAddress, _maxAmountIn, 0);
+            _getPreActionCallData(_investmentAddress, _maxAmountIn, 0, _strategy);
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -150,7 +150,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1);
+            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1, _strategy);
 
         if (targetAddressP != address(0)) {
             // Approve spending of the pre action token
@@ -164,6 +164,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
             _investmentAddress = _getAssetAfterExitPreAction(_investmentAddress);
+            // BUG: Does not respect _investmentTokenIn/percentage
             _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
 
@@ -376,7 +377,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      *
      * hparam  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
-     * hparam  _borrowOp                Type of Borrow op
+     * hparam  _borrowOp                 Type of Passive op
+     * hparam  _strategy                 Address of the strategy
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
@@ -385,7 +387,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     function _getPreActionCallData(
         address, /* _asset */
         uint256, /* _amount */
-        uint256 /* _borrowOp */
+        uint256, /* _borrowOp */
+        address /* _strategy */
     )
         internal
         view

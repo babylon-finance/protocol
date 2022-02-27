@@ -21,13 +21,16 @@ const GARDEN_PARAMS_MAP = {
   [addresses.tokens.USDC]: USDC_GARDEN_PARAMS,
   [addresses.tokens.WBTC]: WBTC_GARDEN_PARAMS,
   [addresses.tokens.BABL]: BABL_GARDEN_PARAMS,
+  [addresses.tokens.AAVE]: BABL_GARDEN_PARAMS,
 };
 
 const CONTRIBUTORS_MAP = {
-  [addresses.tokens.WETH]: parse('1'),
-  [addresses.tokens.DAI]: parse('10000'),
+  [addresses.tokens.WETH]: eth(),
+  [addresses.tokens.DAI]: eth(10000),
   [addresses.tokens.USDC]: from(10000 * 1e6),
-  [addresses.tokens.WBTC]: from(1e7),
+  [addresses.tokens.WBTC]: from(1e8),
+  [addresses.tokens.BABL]: eth(100),
+  [addresses.tokens.AAVE]: eth(100),
 };
 
 async function createGarden({
@@ -71,7 +74,7 @@ async function createGarden({
       },
     );
   const gardens = await babController.getGardens();
-  const garden = await ethers.getContractAt('Garden', gardens.slice(-1)[0]);
+  const garden = await ethers.getContractAt('IGarden', gardens.slice(-1)[0]);
   await ishtarGate
     .connect(signer)
     .grantGardenAccessBatch(garden.address, [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
@@ -88,44 +91,40 @@ async function depositFunds(address, garden) {
 
   switch (address.toLowerCase()) {
     case addresses.tokens.DAI.toLowerCase():
-      whaleAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-      whaleSigner = await impersonateAddress(whaleAddress);
       const DAI = await getERC20(addresses.tokens.DAI);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await DAI.connect(signer3).approve(garden.address, eth('10000'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth('5000'), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(eth('10000'), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.USDC.toLowerCase():
-      whaleAddress = '0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503';
-      whaleSigner = await impersonateAddress(whaleAddress);
       const USDC = await getERC20(addresses.tokens.USDC);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await USDC.connect(signer3).approve(garden.address, from(1e4 * 1e6), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(from(1e4 * 1e6), 1, signer3.getAddress(), false);
+      await USDC.connect(signer3).approve(garden.address, from(1e5 * 1e6), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(from(1e5 * 1e6), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.WETH.toLowerCase():
-      whaleAddress = '0x2f0b23f53734252bda2277357e97e1517d6b042a';
-      whaleSigner = await impersonateAddress(whaleAddress);
       const WETH = await getERC20(addresses.tokens.WETH);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await WETH.connect(signer3).approve(garden.address, eth(1), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await WETH.connect(signer3).approve(garden.address, eth(3), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(eth(3), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.WBTC.toLowerCase():
-      whaleAddress = '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656';
-      whaleSigner = await impersonateAddress(whaleAddress);
       const WBTC = await getERC20(addresses.tokens.WBTC);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await WBTC.connect(signer3).approve(garden.address, from(10e6), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(from(10e6), 1, signer3.getAddress(), false);
+      await WBTC.connect(signer3).approve(garden.address, from(1e8), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(from(1e8), 1, signer3.getAddress(), false);
       break;
     case addresses.tokens.BABL.toLowerCase():
-      whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
-      whaleSigner = await impersonateAddress(whaleAddress);
       const BABL = await getERC20(addresses.tokens.BABL);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await BABL.connect(signer3).approve(garden.address, eth('30'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth('30'), 1, signer3.getAddress(), false);
+      await BABL.connect(signer3).approve(garden.address, eth('100'), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress(), false);
+      break;
+    case addresses.tokens.AAVE.toLowerCase():
+      const AAVE = await getERC20(addresses.tokens.AAVE);
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+      await AAVE.connect(signer3).approve(garden.address, eth('100'), { gasPrice: 0 });
+      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress(), false);
       break;
   }
 }
@@ -135,6 +134,21 @@ async function transferFunds(address) {
   let whaleAddress;
   let whaleSigner;
   switch (address.toLowerCase()) {
+    case addresses.tokens.AAVE.toLowerCase():
+      whaleAddress = '0x4da27a545c0c5b758a6ba100e3a049001de870f5';
+      whaleSigner = await impersonateAddress(whaleAddress);
+      const AAVE = await getERC20(addresses.tokens.AAVE);
+
+      await AAVE.connect(whaleSigner).transfer(signer1.address, eth('30'), {
+        gasPrice: 0,
+      });
+      await AAVE.connect(whaleSigner).transfer(signer2.address, eth('30'), {
+        gasPrice: 0,
+      });
+      await AAVE.connect(whaleSigner).transfer(signer3.address, eth('30'), {
+        gasPrice: 0,
+      });
+      break;
     case addresses.tokens.BABL.toLowerCase():
       whaleAddress = '0x40154ad8014df019a53440a60ed351dfba47574e';
       whaleSigner = await impersonateAddress(whaleAddress);

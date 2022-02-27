@@ -17,13 +17,14 @@
 */
 
 pragma solidity 0.7.6;
+
 import {Clones} from '@openzeppelin/contracts/proxy/Clones.sol';
 import {UpgradeableBeacon} from '@openzeppelin/contracts/proxy/UpgradeableBeacon.sol';
 
 import {SafeBeaconProxy} from '../proxy/SafeBeaconProxy.sol';
 import {IGardenFactory} from '../interfaces/IGardenFactory.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
-import {IGarden} from '../interfaces/IGarden.sol';
+import {IGarden, ICoreGarden, IAdminGarden} from '../interfaces/IGarden.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 
 /**
@@ -74,7 +75,7 @@ contract GardenFactory is IGardenFactory {
                 new SafeBeaconProxy(
                     address(beacon),
                     abi.encodeWithSelector(
-                        IGarden.initialize.selector,
+                        IAdminGarden.initialize.selector,
                         _reserveAsset,
                         controller,
                         _creator,

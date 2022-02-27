@@ -165,12 +165,12 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = _garden.reserveAsset();
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i]) && address(msg.sender).balance > 0) {
+                if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > 0) {
+                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).balanceOf(msg.sender),
@@ -181,6 +181,7 @@ contract AddLiquidityOperation is Operation {
             }
         }
         _sellRewardTokens(_integration, _data, reserveAsset);
+        // BUG: Should respect percentage and not return all the capital
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
 
@@ -217,19 +218,16 @@ contract AddLiquidityOperation is Operation {
             );
         }
         // Price lp token directly if possible
-        // not for tricrypto2
-        if (address(lpToken) != 0xc4AD29ba4B3c580e6D59105FFf484999997675Ff) {
-            price = _getPrice(address(lpToken), _garden.reserveAsset());
-            if (price != 0) {
-                return (
-                    SafeDecimalMath.normalizeAmountTokens(
-                        address(lpToken),
-                        _garden.reserveAsset(),
-                        lpToken.balanceOf(msg.sender).preciseMul(price)
-                    ),
-                    true
-                );
-            }
+        price = _getPrice(address(lpToken), _garden.reserveAsset());
+        if (price != 0) {
+            return (
+                SafeDecimalMath.normalizeAmountTokens(
+                    address(lpToken),
+                    _garden.reserveAsset(),
+                    lpToken.balanceOf(msg.sender).preciseMul(price)
+                ),
+                true
+            );
         }
         uint256 NAV;
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
@@ -246,6 +244,10 @@ contract AddLiquidityOperation is Operation {
                 }
             }
             uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
+            // Special case for weth in some pools
+            if (poolTokens[i] == WETH && balance == 0) {
+                balance = pool.balance;
+            }
             if (price != 0 && balance != 0) {
                 NAV += SafeDecimalMath.normalizeAmountTokens(
                     asset,
@@ -334,9 +336,14 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     try
-                        IStrategy(msg.sender).trade(rewards[i], IERC20(rewards[i]).balanceOf(msg.sender), _reserveAsset)
+                        IStrategy(msg.sender).trade(
+                            rewards[i],
+                            IERC20(rewards[i]).balanceOf(msg.sender),
+                            _reserveAsset,
+                            70e15
+                        )
                     {} catch {}
                 }
             }

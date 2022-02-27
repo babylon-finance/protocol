@@ -21,12 +21,13 @@ pragma solidity 0.7.6;
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
-import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
+import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
 import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
 import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
+
+import {ControllerLib} from './lib/ControllerLib.sol';
 
 /**
  * @title TokenIdentifier
@@ -35,11 +36,9 @@ import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
  * Returns the type of the asset
  */
 contract TokenIdentifier is ITokenIdentifier {
-    /* ============ Constants ============ */
+    using ControllerLib for IBabController;
 
-    // Address of Curve Registry
-    ICurveAddressProvider internal constant curveAddressProvider =
-        ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    /* ============ Constants ============ */
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
@@ -69,17 +68,6 @@ contract TokenIdentifier is ITokenIdentifier {
     mapping(address => bool) public vaults;
 
     /* ============ Modifiers ============ */
-
-    /**
-     * Throws if the sender is not the protocol
-     */
-    modifier onlyGovernanceOrEmergency {
-        require(
-            msg.sender == controller.owner() || msg.sender == controller.EMERGENCY_OWNER(),
-            'Not enough privileges'
-        );
-        _;
-    }
 
     /* ============ Constructor ============ */
 
@@ -321,51 +309,36 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ External Functions ============ */
 
-    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values)
-        external
-        override
-        onlyGovernanceOrEmergency
-    {
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external override {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _vaults.length; i++) {
             vaults[_vaults[i]] = _values[i];
         }
     }
 
-    function updateSynth(address[] calldata _synths, bool[] calldata _values)
-        external
-        override
-        onlyGovernanceOrEmergency
-    {
+    function updateSynth(address[] calldata _synths, bool[] calldata _values) external override {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _synths.length; i++) {
             synths[_synths[i]] = _values[i];
         }
     }
 
-    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings)
-        external
-        override
-        onlyGovernanceOrEmergency
-    {
+    function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings) external override {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _creamTokens.length; i++) {
             crTokenToAsset[_creamTokens[i]] = _underlyings[i];
         }
     }
 
-    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings)
-        external
-        override
-        onlyGovernanceOrEmergency
-    {
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external override {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _aaveTokens.length; i++) {
             aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
         }
     }
 
-    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings)
-        external
-        override
-        onlyGovernanceOrEmergency
-    {
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external override {
+        controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _cTokens.length; i++) {
             cTokenToAsset[_cTokens[i]] = _underlyings[i];
         }
@@ -377,7 +350,11 @@ contract TokenIdentifier is ITokenIdentifier {
      * @param _tokenOut             Address of the second token
      * @return (uint8,uint8)        Types of both tokens
      */
-    function identifyTokens(address _tokenIn, address _tokenOut)
+    function identifyTokens(
+        address _tokenIn,
+        address _tokenOut,
+        ICurveMetaRegistry _curveMetaRegistry
+    )
         external
         view
         override
@@ -432,14 +409,12 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = SYNTH_TOKEN;
         }
 
-        ICurveRegistry curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
-
         // Curve LP Token
-        address crvPool = curveRegistry.get_pool_from_lp_token(_tokenIn);
+        address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenIn);
         if (crvPool != address(0)) {
             tokenInType = CURVE_LP_TOKEN;
         }
-        crvPool = curveRegistry.get_pool_from_lp_token(_tokenOut);
+        crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenOut);
         if (crvPool != address(0)) {
             tokenOutType = CURVE_LP_TOKEN;
         }

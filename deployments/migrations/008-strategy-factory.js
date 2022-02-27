@@ -11,7 +11,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer, owner } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
+  const gasData = await getGasPrice();
 
   const strategyFactoryContract = 'StrategyFactory';
   const strategyContract = 'Strategy';
@@ -23,7 +23,7 @@ module.exports = async ({
     from: deployer,
     args: [],
     log: true,
-    gasPrice,
+    ...gasData,
   });
 
   const beacon = await deploy(beaconContract, {
@@ -31,19 +31,19 @@ module.exports = async ({
     contract: 'UpgradeableBeacon',
     args: [strategy.address],
     log: true,
-    gasPrice,
+    ...gasData,
   });
 
   const strategyFactory = await deploy(strategyFactoryContract, {
     from: deployer,
     args: [controller.address, beacon.address],
     log: true,
-    gasPrice,
+    ...gasData,
   });
 
   if (strategyFactory.newlyDeployed) {
     console.log(`Setting strategy factory on controller ${strategyFactory.address}`);
-    await (await controller.editStrategyFactory(strategyFactory.address, { gasPrice })).wait();
+    await (await controller.editStrategyFactory(strategyFactory.address, { ...gasData })).wait();
   }
 
   if (network.live && strategy.newlyDeployed) {
