@@ -180,7 +180,10 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
-        _sellRewardTokens(_integration, _data, reserveAsset);
+        // Only claim and sell rewards on final exit
+        if (_percentage == HUNDRED_PERCENT) {
+            _sellRewardTokens(_integration, _data, reserveAsset);
+        }
         // BUG: Should respect percentage and not return all the capital
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
