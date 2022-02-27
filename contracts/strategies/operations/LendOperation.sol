@@ -136,7 +136,7 @@ contract LendOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
-        _tokenToTrade(assetToken, msg.sender, _garden, _integration);
+        _tokenToTrade(_percentage, assetToken, msg.sender, _garden, _integration);
         return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
     }
 
@@ -225,6 +225,7 @@ contract LendOperation is Operation {
     }
 
     function _tokenToTrade(
+        uint256 _percentage,
         address _assetToken,
         address _sender,
         IGarden _garden,
@@ -245,7 +246,8 @@ contract LendOperation is Operation {
             );
         }
         address rewardsToken = _getRewardToken(_integration);
-        if (rewardsToken != address(0)) {
+        // Only sell rewards when the strategy finalizes
+        if (rewardsToken != address(0) && _percentage == HUNDRED_PERCENT) {
             uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
