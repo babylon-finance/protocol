@@ -209,6 +209,10 @@ contract BorrowOperation is Operation {
     function _tradeToDebtToken(address _asset, address _assetToken) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance == 0) {
+            if (_asset == address(0)) {
+                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+                _asset = WETH;
+            }
             if (_assetToken != address(0)) {
                 IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
             } else {
