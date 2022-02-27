@@ -24,7 +24,8 @@ const STUCK_EXECUTE = [
   // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
-  '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
+  // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
+  '0x5c0afc3bfab3492baa1fc2f3c02355df7915398f',
 ];
 
 describe('deploy', function () {
@@ -213,7 +214,7 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
     });
 
-    it.only('NAV has NOT changed for gardens after deploy', async () => {
+    it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))
@@ -254,24 +255,8 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it('can finalize stuck strategies', async () => {
-      const strategies = STUCK_EXECUTE;
-      for (const strategy of strategies) {
-        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
-        const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
-        const reserveAsset = await gardenContract.reserveAsset();
-        const name = await strategyNft.getStrategyName(strategy);
-        const isExecuting = await strategyContract.isStrategyActive();
-
-        console.log(`  Finalizing strategy ${name} ${strategyContract.address}`);
-        try {
-          await strategyContract
-            .connect(await impersonateAddress('0xde3bAAea1799338349C50E0F80d37a8BaE79CC54'))
-            .sweep('0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', eth().div(10));
-        } catch (e) {
-          console.log(`failed to finalize strategy ${e}`);
-        }
-      }
+    it.only('can finalize stuck strategies', async () => {
+      await finalizeStuckStrategies();
     });
   });
 });
