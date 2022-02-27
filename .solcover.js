@@ -22,7 +22,7 @@ module.exports = {
     'integrations/pool/BalancerIntegration.sol',
     'integrations/pool/HarvestPoolV3Integration.sol',
     'governance/BabylonGovernor.sol',
-    'governance/Assitant.sol',
+    'governance/Assistant.sol',
     'governance/GovernorAlpha.sol',
     'governance/TimeLock.sol',
     'mocks/BabControllerV2Mock.sol',
