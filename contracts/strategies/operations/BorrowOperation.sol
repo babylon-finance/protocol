@@ -217,7 +217,7 @@ contract BorrowOperation is Operation {
                 IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
             } else {
                 if (_asset != WETH) {
-                  IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), WETH);
+                    IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), WETH);
                 }
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             }
