@@ -8,7 +8,7 @@ const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 
-const STUCK_EXECUTE = [
+const STUCK = [
   // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
   // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED
@@ -129,7 +129,7 @@ describe('deploy', function () {
   }
 
   async function executeStuckStrategies() {
-    const strategies = STUCK_EXECUTE;
+    const strategies = STUCK;
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
       const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
@@ -140,7 +140,7 @@ describe('deploy', function () {
   }
 
   async function finalizeStuckStrategies() {
-    const strategies = STUCK_EXECUTE;
+    const strategies = STUCK;
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
       const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
@@ -151,7 +151,7 @@ describe('deploy', function () {
   }
 
   async function checkNAVStrategies() {
-    const strategies = STUCK_EXECUTE;
+    const strategies = STUCK;
     for (const strategy of strategies) {
       console.log('strategy', strategy);
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
@@ -239,7 +239,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('gets right NAV strategies', async () => {
+    it('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
