@@ -37,6 +37,7 @@ require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
+const COVERAGE = !!process.env.COVERAGE;
 
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
@@ -116,14 +117,16 @@ module.exports = {
         version: '0.7.6',
         settings: {
           optimizer: {
-            enabled: false,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
-            details: {
-              yul: true,
-              yulDetails: {
-                stackAllocation: true,
-              },
-            },
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : undefined,
           },
         },
       },
@@ -131,14 +134,16 @@ module.exports = {
         version: '0.8.2',
         settings: {
           optimizer: {
-            enabled: false,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
-            details: {
-              yul: true,
-              yulDetails: {
-                stackAllocation: true,
-              },
-            },
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : undefined,
           },
         },
       },
