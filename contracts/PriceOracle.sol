@@ -491,10 +491,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token1 = pool.token1();
 
         if (hopTokens[token0]) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
+            liquidityInReserve = ERC20(token0).balanceOf(address(pool));
             denominator = token0;
         } else {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token0).balanceOf(address(pool)));
+            liquidityInReserve = ERC20(token1).balanceOf(address(pool));
             denominator = token1;
         }
         // Normalize to reserve asset
