@@ -74,6 +74,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
 
     /* ============ State Variables ============ */
 
@@ -82,6 +83,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ITradeIntegration public curve;
     ITradeIntegration public synthetix;
     ITradeIntegration public heartTradeIntegration;
+    ITradeIntegration public paladinTradeIntegration;
 
     /* ============ Constructor ============ */
 
@@ -94,6 +96,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * @param _synthetix              Address of synthetix trade integration
      * @param _univ2                  Address of univ2 trade integration
      * @param _hearttrade             Address of heart trade integration
+     * @param _paladinTrade           Address of paladin trade integration
      */
     constructor(
         IBabController _controller,
@@ -101,13 +104,15 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ITradeIntegration _univ3,
         ITradeIntegration _synthetix,
         ITradeIntegration _univ2,
-        ITradeIntegration _hearttrade
+        ITradeIntegration _hearttrade,
+        ITradeIntegration _paladinTrade
     ) BaseIntegration('master_swapper_v3', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
         univ2 = _univ2;
         heartTradeIntegration = _hearttrade;
+        paladinTradeIntegration = _paladinTrade;
     }
 
     /* ============ External Functions ============ */
@@ -170,6 +175,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_index == 4) {
             heartTradeIntegration = ITradeIntegration(_newAddress);
         }
+        if (_index == 5) {
+            paladinTradeIntegration = ITradeIntegration(_newAddress);
+        }
     }
 
     function isTradeIntegration(address _integration) external view returns (bool) {
@@ -178,7 +186,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             _integration == address(univ3) ||
             _integration == address(synthetix) ||
             _integration == address(univ2) ||
-            _integration == address(heartTradeIntegration);
+            _integration == address(heartTradeIntegration) ||
+            _integration == address(paladinTradeIntegration);
     }
 
     /* ============ Internal Functions ============ */
@@ -196,6 +205,26 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
         string memory error;
         bool success;
+
+        // Palstake aave
+        if (_receiveToken == palStkAAVE) {
+            uint256 aaveBalance = ERC20(AAVE).balanceOf(_strategy);
+            ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
+            aaveBalance = ERC20(AAVE).balanceOf(_strategy).sub(aaveBalance);
+            try
+                ITradeIntegration(paladinTradeIntegration).trade(
+                    _strategy,
+                    AAVE,
+                    aaveBalance,
+                    palStkAAVE,
+                    _minReceiveQuantity
+                )
+            {
+                return;
+            } catch Error(string memory _err) {
+                error = _formatError(error, _err, 'Paladin Trade Integration ', AAVE, palStkAAVE);
+            }
+        }
 
         // Heart Direct
         if (controller.protocolWantedAssets(_sendToken)) {
