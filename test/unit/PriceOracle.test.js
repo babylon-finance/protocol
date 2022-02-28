@@ -7,6 +7,12 @@ const { setupTests } = require('fixtures/GardenFixture');
 
 const tokens = [
   {
+    name: 'CVX -> DAI',
+    tokenIn: addresses.tokens.CVX,
+    tokenOut: addresses.tokens.DAI,
+    value: from('28129902631569750455'),
+  },
+  {
     name: 'BABL -> DAI',
     tokenIn: addresses.tokens.BABL,
     tokenOut: addresses.tokens.DAI,
