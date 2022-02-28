@@ -209,8 +209,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         // Palstake aave
         if (_receiveToken == palStkAAVE) {
             uint256 aaveBalance = ERC20(AAVE).balanceOf(_strategy);
-            ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
-            aaveBalance = ERC20(AAVE).balanceOf(_strategy).sub(aaveBalance);
+            if (_sendToken != AAVE) {
+              ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
+              aaveBalance = ERC20(AAVE).balanceOf(_strategy).sub(aaveBalance);
+            }
             try
                 ITradeIntegration(paladinTradeIntegration).trade(
                     _strategy,

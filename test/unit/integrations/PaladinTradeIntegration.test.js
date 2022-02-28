@@ -17,8 +17,8 @@ describe('PaladinTradeIntegrationTest', function () {
 
   describe('Paladin Trade', function () {
     describe('enter and exit operation', function () {
-      pick([...GARDENS, { token: addresses.tokens.AAVE, name: 'AAVE' }]).forEach(({ token, name }) => {
-        it(`can get palStkAAVE form a ${name} garden`, async function () {
+      pick([...GARDENS]).forEach(({ token, name }) => {
+        it(`can get palStkAAVE from a ${name} garden`, async function () {
           await transferFunds(token);
           const garden = await createGarden({ reserveAsset: token });
           const assetContract = await getERC20(addresses.tokens.AAVE);
