@@ -222,7 +222,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return;
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, WETH);
+                error = _formatError(error, _err, 'Paladin Trade Integration ', AAVE, palStkAAVE);
             }
         }
 
