@@ -211,18 +211,19 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 aaveBalance = ERC20(AAVE).balanceOf(_strategy);
             ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
             aaveBalance = ERC20(AAVE).balanceOf(_strategy).sub(aaveBalance);
-            try ITradeIntegration(paladinTradeIntegration).trade(
-                _strategy,
-                AAVE,
-                aaveBalance,
-                palStkAAVE,
-                _minReceiveQuantity
-            ) {
-              return;
+            try
+                ITradeIntegration(paladinTradeIntegration).trade(
+                    _strategy,
+                    AAVE,
+                    aaveBalance,
+                    palStkAAVE,
+                    _minReceiveQuantity
+                )
+            {
+                return;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, WETH);
             }
-
         }
 
         // Heart Direct
