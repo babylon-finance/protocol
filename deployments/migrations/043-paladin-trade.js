@@ -28,4 +28,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['PaladinStake'];
+module.exports.tags = ['PaladinTrade'];
