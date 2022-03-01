@@ -16,7 +16,6 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -1024,17 +1023,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         }
+        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        // Assign BABL Mining Strategy Rewards
+        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
+        // All rewards on Heart Garden are re-compounded (not set aside)
+        // Only LP profits are compounded otherwise (strategist and stewards are set aside)
+        uint256 rewardsToSetAside =
+            address(garden) != controller.heartGarden()
+                ? profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits)
+                : 0;
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
         endingGardenSupply = IERC20(address(garden)).totalSupply();
-        garden.finalizeStrategy(
-            profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits),
-            strategyReturns,
-            burningAmount
-        );
-        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
-        // Must be zero in case the mining program didnt started on time
-        strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        garden.finalizeStrategy(rewardsToSetAside, strategyReturns, burningAmount);
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {

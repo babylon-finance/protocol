@@ -361,11 +361,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Sending BABL as part of the claim process (either by sig or standard claim)
+     * If it is the Heart Garden, the claim is done by the garden during each strategy finalization
+     * This is due to the Heart Garden is auto-compounding all rewards
      *
      */
-    function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
+    function sendBABLToAddress(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        return _sendBABLToContributor(_to, _babl);
+        return _sendBABLToAddress(_to, _babl);
     }
 
     /** PRIVILEGE FUNCTION
@@ -463,6 +465,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) public view override returns (uint256[] memory) {
         _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
+        if (_garden == controller.heartGarden()) {
+            // No claim available at heartGarden as all rewards were auto-compounded
+            // during strategy finalization
+            return totalRewards;
+        }
         uint256 claimedAt;
         (, , claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
@@ -699,8 +706,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[1]: distance
 
         uint256[] memory rewards = new uint256[](8);
-        if (IStrategy(_strategy).isStrategyActive()) {
-            address garden = address(IStrategy(_strategy).garden());
+        address garden = address(IStrategy(_strategy).garden());
+        // Heart Garden rewards are auto-compounded
+        if (IStrategy(_strategy).isStrategyActive() && garden != controller.heartGarden()) {
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share % within the strategy window out of the total garden and users
@@ -970,12 +978,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
-     * @param _to        Address to send the profit and tokens to
+     * Sends profits and BABL tokens rewards to an address (contributor or heart garden) after a claim is requested to the protocol.
+     * @param _to        Address to send the BABL tokens to
      * @param _babl      Amount of BABL to send
      *
      */
-    function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
+    function _sendBABLToAddress(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
