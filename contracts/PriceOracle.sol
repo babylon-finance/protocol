@@ -8,7 +8,6 @@ import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
@@ -30,7 +29,8 @@ import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
-import {OracleLibrary} from './lib/OracleLibrary.sol';
+import {OracleLibrary} from './lib/uniswap-v3/OracleLibrary.sol';
+import {TickMath} from './lib/uniswap-v3/TickMath.sol';
 
 /**
  * @title PriceOracle
