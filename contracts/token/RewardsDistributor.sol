@@ -1,25 +1,9 @@
-/*
-    Copyright 2021 Babylon Finance.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
 
 pragma solidity 0.8.9;
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -53,8 +37,6 @@ import {IProphets} from '../interfaces/IProphets.sol';
  * (Garden creators, Strategists and Stewards).
  */
 contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
-    using LowGasSafeMath for uint256;
-    using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for uint256;

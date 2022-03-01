@@ -1,16 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+
 
 pragma solidity 0.8.9;
 
@@ -18,13 +6,11 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
-import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {ReentrancyGuard} from '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
-import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
-import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
@@ -55,12 +41,10 @@ import {BaseGardenModule} from './BaseGardenModule.sol';
  */
 contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     using SafeCast for int256;
-    using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for int256;
 
     using SafeCast for uint256;
-    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
 

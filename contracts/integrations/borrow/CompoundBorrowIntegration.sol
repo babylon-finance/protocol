@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -30,7 +14,6 @@ import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 
-import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {ControllerLib} from '../../lib/ControllerLib.sol';
 
@@ -43,7 +26,6 @@ import {BorrowIntegration} from './BorrowIntegration.sol';
  * Abstract class that houses Compound borrowing logic.
  */
 contract CompoundBorrowIntegration is BorrowIntegration {
-    using LowGasSafeMath for uint256;
     using SafeERC20 for ERC20;
     using UniversalERC20 for IERC20;
     using ControllerLib for IBabController;

@@ -24,7 +24,6 @@
 - [ ] Payments handling -> fallback
 - [ ] Fallback check
 - [ ] Prevent overflow and underflow
-  - [ ] Use [SafeMath](https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/math/SafeMath.sol)
 - [ ] Function Visibility
   - [ ] Ensure that all relevant functions are marked with the correct visibility
 - [ ] Fix compiler warnings

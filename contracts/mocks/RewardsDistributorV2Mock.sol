@@ -1,30 +1,15 @@
-/*
-    Copyright 2021 Babylon Finance.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
 
 pragma solidity 0.8.9;
 
 import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/proxy/ProxyAdmin.sol';
+import '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol';
 
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -39,20 +24,7 @@ import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IProphets} from '../interfaces/IProphets.sol';
 
-/**
- * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
- * @author Babylon Finance
- * Rewards Distributor contract is a smart contract used to calculate and distribute all the BABL rewards of the BABL Mining Program
- * along the time reserved for executed strategies. It implements a supply curve to distribute 500K BABL along the time.
- * The supply curve is designed to optimize the long-term sustainability of the protocol.
- * The rewards are front-loaded but they last for more than 10 years, slowly decreasing quarter by quarter.
- * For that, it houses the state of the protocol power along the time as each strategy power is compared to the whole protocol usage.
- * Rewards Distributor also is responsible for the calculation and delivery of other rewards as bonuses to specific profiles
- * which are actively contributing to the protocol growth and their communities (Garden creators, Strategists and Stewards).
- */
 contract RewardsDistributorV2Mock is OwnableUpgradeable {
-    using LowGasSafeMath for uint256;
-    using LowGasSafeMath for int256;
     using PreciseUnitMath for uint256;
     using PreciseUnitMath for int256;
     using SafeDecimalMath for uint256;

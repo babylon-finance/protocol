@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
 
 pragma solidity 0.8.9;
 
@@ -24,7 +8,6 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
-import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
@@ -35,7 +18,6 @@ import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Rout
  * UniswapPoolIntegration protocol integration
  */
 contract UniswapPoolIntegration is PoolIntegration {
-    using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
 

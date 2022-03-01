@@ -4,7 +4,6 @@ pragma solidity 0.8.9;
 
 /// @title Optimized overflow and underflow safe math operations
 /// @notice Contains methods for doing math operations that revert on overflow or underflow for minimal gas cost
-library LowGasSafeMath {
     /// @notice Returns x + y, reverts if sum overflows uint256
     /// @param x The augend
     /// @param y The addend
@@ -58,7 +57,6 @@ library LowGasSafeMath {
      * - The divisor cannot be zero.
      */
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b > 0, 'SafeMath: division by zero');
         return a / b;
     }
 }
