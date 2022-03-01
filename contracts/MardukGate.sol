@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
@@ -18,7 +16,6 @@ import {IGarden} from './interfaces/IGarden.sol';
  * Contract that implements guestlists without NFT and checks Ishtar Gate when needed
  */
 contract MardukGate is IMardukGate, Ownable {
-
     /* ============ Events ============ */
 
     event GardenAccess(address indexed _member, address indexed _garden, uint8 _permission);

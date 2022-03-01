@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -29,7 +27,6 @@ import {IBabController} from '../interfaces/IBabController.sol';
  */
 
 abstract contract TimeLockedToken is VoteToken {
-
     /* ============ Events ============ */
 
     /// @notice An event that emitted when a new lockout ocurr

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
-
-
 
 /**
  * @title PreciseUnitMath
@@ -17,7 +13,6 @@ pragma solidity 0.8.9;
  * - 9/21/20: Added safePower function
  */
 library PreciseUnitMath {
-
     // The number One in precise units.
     uint256 internal constant PRECISE_UNIT = 10**18;
     int256 internal constant PRECISE_UNIT_INT = 10**18;

@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 library SafeDecimalMath {
-
     /* Number of decimal places in the representations. */
     uint8 internal constant decimals = 18;
 

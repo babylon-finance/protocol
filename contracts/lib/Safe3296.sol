@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 
-
 library Safe3296 {
-
     /**
      * INTERNAL FUNCTION. Internal function to convert from uint256 to uint32
      *

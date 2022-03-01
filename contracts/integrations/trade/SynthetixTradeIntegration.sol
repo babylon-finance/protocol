@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 pragma abicoder v2;
 
@@ -23,7 +21,6 @@ import {TradeIntegration} from './TradeIntegration.sol';
  * Synthethix trade integration
  */
 contract SynthetixTradeIntegration is TradeIntegration {
-
     /* ============ Modifiers ============ */
 
     /* ============ State Variables ============ */

@@ -4,7 +4,8 @@
 
 pragma solidity 0.8.9;
 
-import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import {ERC721URIStorage} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
+import {ERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -17,7 +18,7 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
  *
  * Contract the NFT for each Strategy
  */
-contract StrategyNFT is ERC721, IStrategyNFT {
+contract StrategyNFT is ERC721URIStorage, ERC721Enumerable,, IStrategyNFT {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
@@ -57,7 +58,7 @@ contract StrategyNFT is ERC721, IStrategyNFT {
         address _controller,
         string memory _name,
         string memory _symbol
-    ) ERC721(_name, _symbol) {
+    ) ERC721URIStorage(_name, _symbol) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(bytes(_name).length < 50, 'Strategy Name is too long');
         controller = IBabController(_controller);

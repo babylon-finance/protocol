@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/security/ReentrancyGuard.sol';
@@ -12,7 +10,6 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 
-
 /**
  * @title BorrowIntegration
  * @author Babylon Finance Protocol
@@ -20,7 +17,6 @@ import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
  * Base class for integration with borrowing protocols
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
-
     /* ============ Struct ============ */
 
     struct DebtInfo {
