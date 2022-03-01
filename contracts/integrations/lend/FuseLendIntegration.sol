@@ -44,7 +44,6 @@ contract FuseLendIntegration is CompoundLendIntegration {
 
     address private constant FUSE_LENS_ADDRESS = 0xc76190E04012f26A364228Cfc41690429C44165d;
 
-
     /* ============ Constructor ============ */
 
     /**
@@ -69,45 +68,43 @@ contract FuseLendIntegration is CompoundLendIntegration {
 
     function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
         address[] memory distributors = IComptroller(comptroller).getRewardsDistributors();
-        uint totalRewards;
+        uint256 totalRewards;
         if (distributors.length > 0) {
-          address[] memory markets = IComptroller(comptroller).getAllMarkets();
-          uint256 nblocks = _getDurationStrategy(_strategy);
-          for (uint256 i = 0; i < markets.length; i++) {
-              uint balanceCToken = IERC20(markets[i]).balanceOf(_strategy);
-              uint rewardPerBlock;
-              uint divisor;
-              // If there is balance, strategy supplied
-              if (balanceCToken > 0) {
-                (
-                    ,
-                    // err
-                    uint256 cTokenBalance, // borrow balance
-                    ,
-                    uint256 exchangeRateMantissa
-                ) = ICToken(markets[i]).getAccountSnapshot(_strategy);
-                balanceCToken = cTokenBalance.preciseMul(exchangeRateMantissa);
-                rewardPerBlock = IRewardsDistributor(distributors[0]).compSupplySpeeds(markets[i]);
-                divisor = ICToken(markets[i]).getCash();
-              } else {
-                // Check if borrow enabled
-                if (ICToken(markets[i]).borrowRatePerBlock() > 0) {
-                  (
-                      ,
-                      ,
-                      balanceCToken,
-                  ) = ICToken(markets[i]).getAccountSnapshot(_strategy);
-                  // If there is borrow balance, strategy borrowed from this market
-                  if (balanceCToken > 0) {
-                    rewardPerBlock = IRewardsDistributor(distributors[0]).compBorrowSpeeds(markets[i]);
-                    divisor = ICToken(markets[i]).totalBorrows();
-                  }
+            address[] memory markets = IComptroller(comptroller).getAllMarkets();
+            uint256 nblocks = _getDurationStrategy(_strategy);
+            for (uint256 i = 0; i < markets.length; i++) {
+                uint256 balanceCToken = IERC20(markets[i]).balanceOf(_strategy);
+                uint256 rewardPerBlock;
+                uint256 divisor;
+                // If there is balance, strategy supplied
+                if (balanceCToken > 0) {
+                    (
+                        ,
+                        // err
+                        uint256 cTokenBalance, // borrow balance
+                        ,
+                        uint256 exchangeRateMantissa
+                    ) = ICToken(markets[i]).getAccountSnapshot(_strategy);
+                    balanceCToken = cTokenBalance.preciseMul(exchangeRateMantissa);
+                    rewardPerBlock = IRewardsDistributor(distributors[0]).compSupplySpeeds(markets[i]);
+                    divisor = ICToken(markets[i]).getCash();
+                } else {
+                    // Check if borrow enabled
+                    if (ICToken(markets[i]).borrowRatePerBlock() > 0) {
+                        (, , balanceCToken, ) = ICToken(markets[i]).getAccountSnapshot(_strategy);
+                        // If there is borrow balance, strategy borrowed from this market
+                        if (balanceCToken > 0) {
+                            rewardPerBlock = IRewardsDistributor(distributors[0]).compBorrowSpeeds(markets[i]);
+                            divisor = ICToken(markets[i]).totalBorrows();
+                        }
+                    }
                 }
-              }
-              if (balanceCToken > 0 && rewardPerBlock > 0 && divisor > 0) {
-                totalRewards = totalRewards.add(rewardPerBlock.preciseMul(balanceCToken.preciseDiv(divisor)).mul(nblocks));
-              }
-          }
+                if (balanceCToken > 0 && rewardPerBlock > 0 && divisor > 0) {
+                    totalRewards = totalRewards.add(
+                        rewardPerBlock.preciseMul(balanceCToken.preciseDiv(divisor)).mul(nblocks)
+                    );
+                }
+            }
         }
         return totalRewards;
     }
