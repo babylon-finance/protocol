@@ -22,7 +22,7 @@ library AddressArrayUtils {
                 return (i, true);
             }
         }
-        return (uint256(-1), false);
+        return (2**256 - 1, false);
     }
 
     /**
