@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.9;
 
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {ERC721URIStorage} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
 import {ERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
@@ -15,7 +16,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
  *
  * Contract the NFT for each Garden
  */
-contract GardenNFT is ERC721URIStorage, ERC721Enumerable, IGardenNFT {
+contract GardenNFT is ERC721, ERC721URIStorage, ERC721Enumerable, IGardenNFT {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
@@ -54,7 +55,7 @@ contract GardenNFT is ERC721URIStorage, ERC721Enumerable, IGardenNFT {
         address _controller,
         string memory _name,
         string memory _symbol
-    ) ERC721Enumerable(_name, _symbol) {
+    ) ERC721(_name, _symbol) {
         require(address(_controller) != address(0), 'Controller must exist');
         controller = IBabController(_controller);
     }
@@ -90,5 +91,35 @@ contract GardenNFT is ERC721URIStorage, ERC721Enumerable, IGardenNFT {
         require(controller.isSystemContract(msg.sender), 'Only a system contract can call this');
         gardenTokenURIs[_garden] = _gardenTokenURI;
         gardenSeeds[_garden] = _seed;
+    }
+
+    // The following functions are overrides required by Solidity.
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721Enumerable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

@@ -13,7 +13,5 @@ import {IBabylonGate} from './IBabylonGate.sol';
 interface IIshtarGate is IBabylonGate {
     /* ============ Functions ============ */
 
-    function tokenURI() external view returns (string memory);
-
     function updateGardenURI(string memory _tokenURI) external;
 }

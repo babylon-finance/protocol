@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
 pragma solidity 0.8.9;
 
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {ERC721URIStorage} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
 import {ERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
@@ -18,7 +17,7 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
  *
  * Contract the NFT for each Strategy
  */
-contract StrategyNFT is ERC721URIStorage, ERC721Enumerable,, IStrategyNFT {
+contract StrategyNFT is ERC721, ERC721URIStorage, ERC721Enumerable, IStrategyNFT {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
@@ -58,7 +57,7 @@ contract StrategyNFT is ERC721URIStorage, ERC721Enumerable,, IStrategyNFT {
         address _controller,
         string memory _name,
         string memory _symbol
-    ) ERC721URIStorage(_name, _symbol) {
+    ) ERC721(_name, _symbol) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(bytes(_name).length < 50, 'Strategy Name is too long');
         controller = IBabController(_controller);
@@ -112,5 +111,36 @@ contract StrategyNFT is ERC721URIStorage, ERC721Enumerable,, IStrategyNFT {
 
     function getStrategyName(address _strategy) external view override returns (string memory) {
         return stratDetails[_strategy].name;
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721Enumerable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

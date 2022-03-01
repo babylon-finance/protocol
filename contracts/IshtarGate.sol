@@ -3,6 +3,7 @@
 pragma solidity 0.8.9;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import {ERC721URIStorage} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
 import {ERC721Enumerable} from '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import {Counters} from '@openzeppelin/contracts/utils/Counters.sol';
@@ -16,7 +17,7 @@ import {IGarden} from './interfaces/IGarden.sol';
  *
  * Contract that implements guestlists for Babylon Finance using an NFT
  */
-contract IshtarGate is ERC721URIStorage, ERC721Enumerable, IIshtarGate, Ownable {
+contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, Ownable {
     using Counters for Counters.Counter;
 
     /* ============ Events ============ */
@@ -30,9 +31,6 @@ contract IshtarGate is ERC721URIStorage, ERC721Enumerable, IIshtarGate, Ownable 
 
     // Address of the Controller contract
     IBabController public controller;
-
-    // Address of the Ishtar Gate JSON (Shared JSON)
-    string public override tokenURI;
 
     uint256 public override maxNumberOfInvites;
 
@@ -68,7 +66,7 @@ contract IshtarGate is ERC721URIStorage, ERC721Enumerable, IIshtarGate, Ownable 
      * @param _controller         Address of controller contract
      * @param _tokenURI           URL of the Ishtar Gate JSON metadata
      */
-    constructor(IBabController _controller, string memory _tokenURI) ERC721URIStorage('IshtarGate', 'ISHT') {
+    constructor(IBabController _controller, string memory _tokenURI) ERC721('IshtarGate', 'ISHT') {
         require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
         tokenURI = _tokenURI;
@@ -274,4 +272,35 @@ contract IshtarGate is ERC721URIStorage, ERC721Enumerable, IIshtarGate, Ownable 
         emit GardenCreationPower(_user, _canCreate, newItemId);
         return newItemId;
     }
+
+    // The following functions are overrides required by Solidity.
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721Enumerable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
 }

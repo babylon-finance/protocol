@@ -100,7 +100,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Address of the master swapper used by the protocol
     address public override masterSwapper;
     // Mapping of valid operations
-    address[MAX_OPERATIONS] public override enabledOperations;
+    address[20] public override enabledOperations;
 
     // Mappings to check whether address is valid Garden or Reserve Asset
     mapping(address => bool) public override isGarden;
