@@ -221,6 +221,21 @@ contract AddLiquidityOperation is Operation {
                 );
             }
         }
+        // get rewards if hanging around
+        try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
+            for (uint256 i = 0; i < rewards.length; i++) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                    price = _getPrice(_garden.reserveAsset(), rewards[i]);
+                    if (price > 0) {
+                        NAV += SafeDecimalMath.normalizeAmountTokens(
+                            rewards[i],
+                            _garden.reserveAsset(),
+                            IERC20(rewards[i]).balanceOf(msg.sender)
+                        );
+                    }
+                }
+            }
+        } catch {}
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
