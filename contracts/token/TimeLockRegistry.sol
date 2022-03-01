@@ -12,11 +12,11 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.6;
+pragma solidity 0.8.9;
 pragma experimental ABIEncoderV2;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {TimeLockedToken} from './TimeLockedToken.sol';

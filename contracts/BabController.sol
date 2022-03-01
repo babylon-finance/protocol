@@ -16,14 +16,14 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 
-pragma solidity 0.7.6;
+pragma solidity 0.8.9;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
 import {IGarden} from './interfaces/IGarden.sol';

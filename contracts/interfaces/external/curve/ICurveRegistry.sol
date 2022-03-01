@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.7.6;
+pragma solidity 0.8.9;
 
 interface ICurveRegistry {
     function get_pool_from_lp_token(address _lpToken) external view returns (address);

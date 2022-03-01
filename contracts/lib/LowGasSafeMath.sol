@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity 0.7.6;
+pragma solidity 0.8.9;
 
 /// @title Optimized overflow and underflow safe math operations
 /// @notice Contains methods for doing math operations that revert on overflow or underflow for minimal gas cost

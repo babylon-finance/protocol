@@ -17,7 +17,7 @@
 
     SPDX-License-Identifier: Apache License, Version 2.0
 */
-pragma solidity 0.7.6;
+pragma solidity 0.8.9;
 
 import {ITokenIdentifier} from './ITokenIdentifier.sol';
 
