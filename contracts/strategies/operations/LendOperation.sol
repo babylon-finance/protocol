@@ -166,7 +166,7 @@ contract LendOperation is Operation {
         address rewardsToken = _getRewardToken(_integration);
         // Replace FuseLend
         if (_integration == 0x3D0160388eC9196ceA4fA57E020E11ae446b3c13) {
-            _integration = 0xD45af5912Ec965635fbd47D111444FA2BdCc54B4;
+            _integration = 0x68BE39E4357408f8c504ae1c25380bF132bd5555;
         }
         if (rewardsToken != address(0)) {
             uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
