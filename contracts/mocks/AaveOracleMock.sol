@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  *Submitted for verification at Etherscan.io on 2020-11-17
  */
