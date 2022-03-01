@@ -71,13 +71,13 @@ contract PaladinTradeIntegration is TradeIntegration {
      * Executes the trade through paladin.
      *
      * hparam _strategy             Address of the strategy
-     * @param _sendToken            Address of the token to be sent to the heart
+     * hparam _sendToken            Address of the token to be sent to the heart
      * @param _sendQuantity         Units of reserve asset token sent to the heart
      * hparam _receiveToken         Address of the token that will be received from the heart
      */
     function _getTradeCallData(
         address, /* _strategy */
-        address _sendToken,
+        address, /* _sendToken, */
         uint256 _sendQuantity,
         address /* _receiveToken */
     )

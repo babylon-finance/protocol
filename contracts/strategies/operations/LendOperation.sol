@@ -164,6 +164,10 @@ contract LendOperation is Operation {
                 price
             );
         address rewardsToken = _getRewardToken(_integration);
+        // Replace fuse
+        if (_integration == 0x3D0160388eC9196ceA4fA57E020E11ae446b3c13) {
+            _integration = 0x4bf010f1b9beDA5450a8dD702ED602A104ff65EE;
+        }
         if (rewardsToken != address(0)) {
             uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
             if (rewardsAmount > 0) {

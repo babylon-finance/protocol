@@ -484,7 +484,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (address(pool) == address(0)) {
             return (address(0), 0);
         }
-        uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         address denominator;
         address token0 = pool.token0();

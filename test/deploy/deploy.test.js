@@ -25,7 +25,7 @@ const STUCK = [
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
-  '0x5c0afc3bfab3492baa1fc2f3c02355df7915398f',
+  '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4',
 ];
 
 describe('deploy', function () {
@@ -160,7 +160,12 @@ describe('deploy', function () {
       console.log('reserve', reserveAsset);
       const name = await strategyNft.getStrategyName(strategy);
       console.log('name', name);
-      const nav = await strategyContract.getNAV();
+      let nav;
+      try {
+        nav = await strategyContract.getNAV();
+      } catch (error) {
+        console.error(error);
+      }
       console.log(name, reserveAsset, nav.toString());
     }
   }
@@ -239,6 +244,14 @@ describe('deploy', function () {
       }
     });
 
+    const getStrategyFuseRewards = async (_strategy) => {
+      const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
+      const rest = await lensPool.getUnclaimedRewardsByDistributors(_strategy, [
+        '0x3711c959d9732255dd5c0843622d8d364f143d73',
+      ]);
+      console.log('rest', await ethers.utils.formatEther(rest[1][0]));
+    };
+
     it('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
@@ -255,7 +268,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it.only('can finalize stuck strategies', async () => {
+    it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
     });
   });
