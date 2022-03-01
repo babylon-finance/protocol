@@ -46,7 +46,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14225000;
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14303000;
 
 const CHAIN_IDS = {
   hardhat: 1337,
