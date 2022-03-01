@@ -138,6 +138,13 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         strategies = strategies.remove(msg.sender);
         finalizedStrategies.push(msg.sender);
         strategyMapping[msg.sender] = false;
+        if (address(this) == controller.heartGarden()) {
+            // BABL Rewards are sent to the heart Garden during finalization, no claim option afterwards for users
+            // _rewards (set aside) must also be zero in this case
+            uint256 bablRewards = IStrategy(msg.sender).strategyRewards();
+            uint256 strategyBABLRewards = _returns >= 0 ? bablRewards : bablRewards.preciseMul(8e17); // No profits gets only 80% (LP)
+            rewardsDistributor.sendBABLToAddress(address(this), strategyBABLRewards);
+        }
     }
 
     /**
