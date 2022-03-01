@@ -71,7 +71,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
         uint256 totalRewards;
         if (distributors.length > 0) {
             address[] memory markets = IComptroller(comptroller).getAllMarkets();
-            uint256 nblocks = _getDurationStrategy(_strategy);
+            uint256 nblocks = _getDurationStrategy(_strategy).div(14); // assuming 14 secs per block
             for (uint256 i = 0; i < markets.length; i++) {
                 uint256 balanceCToken = IERC20(markets[i]).balanceOf(_strategy);
                 uint256 rewardPerBlock;

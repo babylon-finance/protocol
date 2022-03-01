@@ -25,7 +25,7 @@ const STUCK = [
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
-  '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4',
+  '0x69B9a89083E2324079922e01557cAfb87cd90B09',
 ];
 
 describe('deploy', function () {
@@ -37,6 +37,14 @@ describe('deploy', function () {
   let valuer;
   let gardensNAV;
   let snapshotId;
+
+  const getStrategyFuseRewards = async (_strategy) => {
+    const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
+    const rest = await lensPool.getUnclaimedRewardsByDistributors(_strategy, [
+      '0x3711c959d9732255dd5c0843622d8d364f143d73',
+    ]);
+    console.log('rest', await ethers.utils.formatEther(rest[1][0]));
+  };
 
   async function iterateStrategiesFromGardens(cb) {
     for (const garden of gardens) {
@@ -166,7 +174,7 @@ describe('deploy', function () {
       } catch (error) {
         console.error(error);
       }
-      console.log(name, reserveAsset, nav.toString());
+      console.log(name, reserveAsset, ethers.utils.formatEther(nav));
     }
   }
 
@@ -207,6 +215,11 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
+    it.only('gets right NAV strategies', async () => {
+      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
+      await checkNAVStrategies();
+    });
+
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
@@ -244,15 +257,8 @@ describe('deploy', function () {
       }
     });
 
-    const getStrategyFuseRewards = async (_strategy) => {
-      const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
-      const rest = await lensPool.getUnclaimedRewardsByDistributors(_strategy, [
-        '0x3711c959d9732255dd5c0843622d8d364f143d73',
-      ]);
-      console.log('rest', await ethers.utils.formatEther(rest[1][0]));
-    };
-
-    it('gets right NAV strategies', async () => {
+    it.only('gets right NAV strategies', async () => {
+      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
       await checkNAVStrategies();
     });
 
