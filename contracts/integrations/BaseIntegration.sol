@@ -95,4 +95,10 @@ abstract contract BaseIntegration is IBaseIntegration {
         }
         return ERC20(_token).balanceOf(_strategy);
     }
+
+    function _getDurationStrategy(address _strategy) internal view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        (,,,,uint256 executedAt,,) =  strategy.getStrategyState();
+        return block.timestamp.sub(executedAt);
+    }
 }

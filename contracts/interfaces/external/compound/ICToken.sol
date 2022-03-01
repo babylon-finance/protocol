@@ -22,7 +22,7 @@ interface ICToken is IERC20 {
 
     function borrowRatePerBlock() external view returns (uint256);
 
-    function totalBorrowsCurrent() external view returns (uint256);
+    function totalBorrows() external view returns (uint256);
 
     function underlying() external view returns (address);
 
