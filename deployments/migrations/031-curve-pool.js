@@ -11,16 +11,17 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'CurvePoolIntegration';
 
   const controller = await getController();
 
+  const curveMetaRegistry = await deployments.get('CurveMetaRegistry');
+
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, curveMetaRegistry.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (network.live && deployment.newlyDeployed) {

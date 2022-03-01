@@ -1,3 +1,5 @@
+const addresses = require('../../lib/addresses');
+
 module.exports = async ({
   network,
   getTenderlyContract,
@@ -6,27 +8,25 @@ module.exports = async ({
   deployments,
   ethers,
   getGasPrice,
+  getController,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
-  const contract = 'HarvestPoolV3Integration';
+  const contract = 'FuseLendIntegration';
 
-  const controller = await deployments.get('BabControllerProxy');
+  const controller = await getController();
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, '0xC7125E3A2925877C7371d579D29dAe4729Ac9033'],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
-  if (deployment.newlyDeployed) {
-    console.log(`Adding harvest univ3 integration ${contract}(${deployment.address})`);
-  }
+
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
 };
 
-module.exports.tags = ['HarvestUniV3'];
+module.exports.tags = ['FuseLend'];

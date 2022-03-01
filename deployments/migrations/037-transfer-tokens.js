@@ -6,9 +6,8 @@ let MULTISIG = process.env.MULTISIG || '';
 module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getChainId, getContract, getGasPrice }) => {
   const signers = await ethers.getSigners();
   const chainId = await getChainId();
-  const gasPrice = await getGasPrice();
 
-  if (chainId === '31337') {
+  if (chainId === '1337') {
     // use the third signer as MULTISIG
     MULTISIG = signers[2].address;
   } else if (!MULTISIG) {
@@ -26,12 +25,16 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
 
   console.log('Send 500k BABL tokens to RewardsDistributor');
   await (
-    await bablToken.connect(deployerSigner).transfer(rewardsDistributor.address, eth().mul(500000), { gasPrice })
+    await bablToken
+      .connect(deployerSigner)
+      .transfer(rewardsDistributor.address, eth().mul(500000), { ...(await getGasPrice()) })
   ).wait();
 
   console.log('Send 305k BABL tokens to TimeLockRegistry');
   await (
-    await bablToken.connect(deployerSigner).transfer(timeLockRegistry.address, eth().mul('305000'), { gasPrice })
+    await bablToken
+      .connect(deployerSigner)
+      .transfer(timeLockRegistry.address, eth().mul('305000'), { ...(await getGasPrice()) })
   ).wait();
 
   console.log('Register investor and team allocations');
@@ -52,7 +55,9 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   const batchSize = 20;
   for (let i = 0; i < allocations.length; i += batchSize) {
     await (
-      await timeLockRegistry.connect(deployerSigner).registerBatch(allocations.slice(i, i + batchSize), { gasPrice })
+      await timeLockRegistry
+        .connect(deployerSigner)
+        .registerBatch(allocations.slice(i, i + batchSize), { ...(await getGasPrice()) })
     ).wait();
   }
   console.log(
@@ -60,14 +65,18 @@ module.exports = async ({ getNamedAccounts, deployments, ethers, getSigner, getC
   );
 
   console.log('Send 23k to MULTISIG');
-  await (await bablToken.connect(deployerSigner).transfer(MULTISIG, eth().mul(23000), { gasPrice })).wait();
+  await (
+    await bablToken.connect(deployerSigner).transfer(MULTISIG, eth().mul(23000), { ...(await getGasPrice()) })
+  ).wait();
 
   const balance = await bablToken.balanceOf(deployerSigner.address);
   console.log(`Send ${ethers.utils.formatUnits(balance, 'ether')} to the Treasury`);
-  await (await bablToken.connect(deployerSigner).transfer(treasury.address, balance, { gasPrice })).wait();
+  await (
+    await bablToken.connect(deployerSigner).transfer(treasury.address, balance, { ...(await getGasPrice()) })
+  ).wait();
 
   console.log('Disable BABL transfers');
-  await (await bablToken.connect(deployerSigner).disableTokensTransfers({ gasPrice })).wait();
+  await (await bablToken.connect(deployerSigner).disableTokensTransfers({ ...(await getGasPrice()) })).wait();
 };
 
 module.exports.tags = ['Transfer'];

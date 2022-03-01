@@ -57,6 +57,7 @@ abstract contract Operation is IOperation {
     }
 
     /* ============ State Variables ============ */
+    uint256 internal constant MIN_TRADE_AMOUNT = 1000;
     uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;

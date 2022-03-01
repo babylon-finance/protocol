@@ -24,9 +24,10 @@ describe('Keeper', function () {
   let signer1;
   let signer2;
   let signer3;
+  let priceOracle;
 
   beforeEach(async () => {
-    ({ keeper, signer1, signer2, signer3 } = await setupTests()());
+    ({ keeper, signer1, signer2, signer3, priceOracle } = await setupTests()());
     await fund([signer1.address, signer2.address, signer3.address]);
   });
 
@@ -99,6 +100,15 @@ describe('Keeper', function () {
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
+          const price = await priceOracle.getPrice(token, addresses.tokens.DAI);
+          const fee = eth(2000)
+            .mul(eth())
+            .div(price)
+            .mul(99)
+            .div(100)
+            .mul((10 ** (await tokenContract.decimals())).toString())
+            .div(eth());
+
           await func(garden, strategy, keeper, fee, token);
 
           expect(await tokenContract.balanceOf(await keeper.getAddress())).to.equal(fee);
@@ -106,10 +116,20 @@ describe('Keeper', function () {
 
         it(`refuse to pay more than max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
+          const tokenContract = await getERC20(token);
+
+          const price = await priceOracle.getPrice(token, addresses.tokens.DAI);
+          const fee = eth(2000)
+            .mul(eth())
+            .div(price)
+            .mul(99)
+            .div(100)
+            .mul((10 ** (await tokenContract.decimals())).toString())
+            .div(eth());
 
           const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
 
-          await expect(func(garden, strategy, keeper, fee.add(1), token)).to.be.revertedWith('BAB#019');
+          await expect(func(garden, strategy, keeper, fee.mul(110).div(100), token)).to.be.revertedWith('BAB#019');
         });
       });
     });

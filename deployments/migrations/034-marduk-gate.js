@@ -13,7 +13,6 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const gasPrice = await getGasPrice();
   const contract = 'MardukGate';
 
   const controller = await getController();
@@ -23,12 +22,12 @@ module.exports = async ({
     from: deployer,
     args: [controller.address, ishtarGate.address],
     log: true,
-    gasPrice,
+    ...(await getGasPrice()),
   });
 
   if (deployment.newlyDeployed) {
     console.log(`Setting marduk gate on controller ${deployment.address}`);
-    await (await controller.editMardukGate(deployment.address, { gasPrice })).wait();
+    await (await controller.editMardukGate(deployment.address, { ...(await getGasPrice()) })).wait();
   }
 
   if (network.live && deployment.newlyDeployed) {

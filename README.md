@@ -89,19 +89,34 @@ For non-upgradeable contracts use named scripts from the `deployments/migrations
 would deploy `UniswapV2TradeIntegration`. To invoke the script use the following command.
 
 ```bash
-  GAS_LIMIT=1000000000000 npx hardhat deploy --network mainnet --tags UniV2Trade
+  npx hardhat deploy --network mainnet --tags UniV2Trade
 ```
 
-`GAS_LIMIT` is in wei. `tags` value can be found inside a deployment script.
+`tags` value can be found inside a deployment script.
 
 To deploy a new implementation for an upgradeable contract use `deploy-contract.js` script, e.g., to deploy a new
 implementation for the Strategy contract use the following command:
 
 ```bash
-  GAS_LIMIT=100000000000 npx hardhat deploy-contract --contract StrategyV16 --network mainnet
+  npx hardhat deploy-contract --contract StrategyV16 --network mainnet
 ```
 
 `contract` is the name of the new implementation.
+
+To auto-deploy a contract use a simple bash script which will try until it succeeds.
+
+```bash
+  while ! npx hardhat deploy-contract --contract StrategyV16 --network mainnet; do echo 'Trying to deploy
+  again 🤖'; done; echo 'Deployed 🚀';
+```
+
+`deploy-contract` command supports passing arguments to the contract constructor. You can use deployments names instead
+of the addresses. This feature requires using the `dx{contractName}` notation, e.g.:
+
+```bash
+  npx hardhat deploy-contract --contract BabylonViewer --network mainnet dxBabControllerProxy
+  npx hardhat deploy-contract --contract AddLiquidityOperation --network mainnet lp dxBabControllerProxy
+```
 
 ## Upgrade
 
@@ -114,6 +129,30 @@ the appropriate implementations. The implementations have to be deployed beforeh
 ```
 
 All the arguments are optional meaning only required proxies should be upgraded.
+
+The list of options for upgrade is the following:
+
+- controller
+- distributor
+- garden
+- assistant
+- strategy
+- curve
+- oracle
+- buy
+- liquidity
+- deposit
+- lend
+- tradeCurve
+- tradeUniV3
+- tradeSynth
+- tradeUniV2
+
+An example of the command:
+
+```bash
+npx hardhat upgrade-multisig --network mainnet --curve CurveMetaRegistry --oracle PriceOracle --trade-curve CurveTradeIntegration --liquidity AddLiquidityOperation
+```
 
 This script will create a proposal at [Defender Admin](https://defender.openzeppelin.com/#/admin). It has to be signed
 and executed to upgrade the protocol.

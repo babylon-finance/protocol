@@ -6,7 +6,8 @@ const { impersonateAddress, setCode } = require('lib/rpc');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
-const { createStrategy, finalizeStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
+const { createGarden } = require('fixtures/GardenHelper');
+const { getStrategy, createStrategy, finalizeStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
 
 describe('GardenValuer', function () {
   let dai;
@@ -35,20 +36,20 @@ describe('GardenValuer', function () {
       signer3,
       uniswapV3TradeIntegration,
     } = await setupTests()());
+    await fund([signer1.address, signer2.address, signer3.address]);
   });
 
   describe('deployment', function () {
     it('should NOT allow zero address for controller during deployment', async function () {
       const { deploy } = deployments;
       const { deployer, owner } = await getNamedAccounts();
-      const gasPrice = await getGasPrice();
       const contract = 'GardenValuer';
       await expect(
         deploy(contract, {
           from: deployer,
           args: [ADDRESS_ZERO],
           log: true,
-          gasPrice,
+          ...(await getGasPrice()),
         }),
       ).to.be.revertedWith('Incorrect address');
     });
@@ -93,22 +94,16 @@ describe('GardenValuer', function () {
     });
 
     it('accounts for the keeper debt', async function () {
-      // add 4 ETH to the garden and trade them for a token
-      const strategy = await createStrategy(
-        'buy',
-        'vote',
-        [signer1, signer2, signer3],
-        uniswapV3TradeIntegration.address,
-        garden1,
-      );
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      const strategy = await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.USDT, 0] });
 
-      await executeStrategy(strategy, { fee: eth(1), amount: eth(4), time: ONE_DAY_IN_SECONDS });
+      await executeStrategy(strategy, { fee: eth(2000), amount: eth(12000), time: ONE_DAY_IN_SECONDS });
 
-      const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden1.address, addresses.tokens.WETH);
-      const totalSupply = await garden1.totalSupply();
+      const pricePerGardenToken = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.DAI);
+      const totalSupply = await garden.totalSupply();
 
-      expect(await garden1.keeperDebt()).to.equal(eth());
-      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth().mul(4), eth().div(10));
+      expect(await garden.keeperDebt()).to.equal(eth(2000));
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth(12000), eth(100));
     });
 
     it('gets correct value for the garden 0 price asset', async function () {
