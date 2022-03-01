@@ -53,10 +53,6 @@ describe('FuseLendIntegrationTest', function () {
       );
     });
 
-    it('can get the amount of rewards', async function () {
-      expect(await fuseLendIntegration.getRewardsAccrued(fuseLendIntegration.address)).to.equal(0);
-    });
-
     it('can supply and redeem tokens from Fuse pool', async function () {
       const strategyContract = await createStrategy(
         'lend',
@@ -117,7 +113,9 @@ describe('FuseLendIntegrationTest', function () {
       increaseTime(ONE_DAY_IN_SECONDS);
       const NAV = await strategyContract.getNAV();
       const compAccrued = await fuseLendIntegration.getRewardsAccrued(strategyContract.address);
-      expect(NAV.sub(compAccrued)).to.be.closeTo(eth('1'), eth('1').div(100));
+      const NAVafter = await strategyContract.getNAV();
+      expect(compAccrued).to.be.gte(eth('0.01'));
+      expect(NAVafter).to.be.gt(NAV);
     });
   });
 });
