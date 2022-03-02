@@ -169,7 +169,9 @@ describe('CurvePoolIntegrationTest', function () {
 
     pick(cryptofactorypools).forEach(({ name, pool }) => {
       it(`can enter and exit the factory ${name} pool`, async function () {
-        await testCurvePool(name, pool);
+        if (pool !== addresses.curve.pools.cryptofactory) {
+          await testCurvePool(name, pool);
+        }
       });
     });
   });
