@@ -42,6 +42,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IStrategyGarden} from '../interfaces/IGarden.sol';
+import {IHeart} from '../interfaces/IHeart.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
@@ -138,12 +139,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         strategies = strategies.remove(msg.sender);
         finalizedStrategies.push(msg.sender);
         strategyMapping[msg.sender] = false;
-        if (address(this) == controller.heartGarden()) {
+        if (address(this) == address(IHeart(controller.heart()).heartGarden())) {
             // BABL Rewards are sent to the heart Garden during finalization, no claim option afterwards for users
             // _rewards (set aside) must also be zero in this case
-            uint256 bablRewards = IStrategy(msg.sender).strategyRewards();
-            uint256 strategyBABLRewards = _returns >= 0 ? bablRewards : bablRewards.preciseMul(8e17); // No profits gets only 80% (LP)
-            rewardsDistributor.sendBABLToAddress(address(this), strategyBABLRewards);
+            rewardsDistributor.sendBABLToAddress(address(this), IStrategy(msg.sender).strategyRewards());
         }
     }
 

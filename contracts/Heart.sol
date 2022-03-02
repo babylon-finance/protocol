@@ -121,7 +121,7 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Instance of the Controller contract
 
     // Heart garden address
-    IGarden public heartGarden;
+    IGarden public override heartGarden;
 
     // Variables to handle garden seed investments
     address[] public override votedGardens;

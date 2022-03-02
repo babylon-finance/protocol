@@ -222,8 +222,6 @@ async function setUpFixture(
 
   // Set the heart
   await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
-  // Set the heart Garden
-  await babController.connect(owner).editHeartGarden(heartGarden.address, { gasPrice: 0 });
 
   // Grants community access
   for (let i = 0; i < gardens.length; i += 1) {

@@ -56,8 +56,6 @@ interface IBabController {
 
     function editHeart(address _newHeart) external;
 
-    function editHeartGarden(address _newHeartGarden) external;
-
     function editRewardsDistributor(address _rewardsDistributor) external;
 
     function editGardenFactory(address _newGardenFactory) external;
@@ -107,8 +105,6 @@ interface IBabController {
     function gardenValuer() external view returns (address);
 
     function heart() external view returns (address);
-
-    function heartGarden() external view returns (address);
 
     function gardenNFT() external view returns (address);
 
