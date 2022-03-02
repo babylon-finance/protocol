@@ -99,7 +99,7 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         ) = ICToken(cToken).getAccountSnapshot(_strategy);
         uint256 decimals = IERC20(asset).universalDecimals();
         // Source: balanceOfUnderlying from any ctoken
-        return cTokenBalance.mul(exchangeRateMantissa).div(10**decimals);
+        return cTokenBalance*(exchangeRateMantissa).div(10**decimals);
     }
 
     /**

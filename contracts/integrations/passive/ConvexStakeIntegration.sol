@@ -200,7 +200,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
     {
         IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = rewards.earned(_strategy).mul(2); // * 2 accounts roughly for CVX
+        uint256 totalAmount = rewards.earned(_strategy)*(2); // * 2 accounts roughly for CVX
         // add extra rewards and convert to reward token
         uint256 extraRewardsLength = rewards.extraRewardsLength();
         if (extraRewardsLength > 0) {

@@ -140,7 +140,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
 
         uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
-            pricePerTokenUnitInDAI.preciseMul(_fee).mul(
+            pricePerTokenUnitInDAI.preciseMul(_fee)*(
                 10**(uint256(18)-(ERC20Upgradeable(reserveAsset).decimals()))
             );
 

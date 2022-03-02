@@ -76,7 +76,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
-        return ctoken.balanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**18);
+        return ctoken.balanceOf(_address)*(ctoken.exchangeRateStored()).div(10**18);
     }
 
     /* ============ Internal Functions ============ */
@@ -118,7 +118,7 @@ contract CompoundLendIntegration is LendIntegration {
         returns (uint256)
     {
         uint256 oneCTokenInUderlying = _getExchangeRatePerToken(_assetToken);
-        return oneCTokenInUderlying.mul(_numTokensToSupply).div(10**18);
+        return oneCTokenInUderlying*(_numTokensToSupply).div(10**18);
     }
 
     // TODO: Test this
@@ -129,7 +129,7 @@ contract CompoundLendIntegration is LendIntegration {
         // cTokens always have 8 decimals.
         if (assetDecimals < 8) {
             uint256 mantissa = 8 - assetDecimals;
-            return exchangeRateCurrent.mul(10**mantissa);
+            return exchangeRateCurrent*(10**mantissa);
         } else {
             uint256 mantissa = assetDecimals - 8;
             return exchangeRateCurrent.div(10**mantissa);

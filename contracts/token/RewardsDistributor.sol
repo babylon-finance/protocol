@@ -491,7 +491,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 percentage = 1e18;
             for (uint256 i = 0; i < numQuarters; i++) {
                 // Initialization timestamp at the end of the first slot where the strategy starts its execution
-                uint256 slotEnding = START_TIME+(startingQuarter+(i).mul(EPOCH_DURATION));
+                uint256 slotEnding = START_TIME+(startingQuarter+(i)*(EPOCH_DURATION));
                 // We calculate each epoch
                 uint256 strategyPower = strategyPerQuarter[_strategy][startingQuarter+(i)].quarterPower;
                 uint256 protocolPower = protocolPerQuarter[startingQuarter+(i)].quarterPower;
@@ -783,7 +783,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // To compare strategy power between all strategies we normalize their capital into DAI
         // Then, we need to take control of getPrice fluctuations along the time
         uint256 pricePerTokenUnit = _getStrategyPricePerTokenUnit(reserveAsset, _strategy, _capital, _addOrSubstract);
-        _capital = _capital.preciseMul(pricePerTokenUnit).mul(10**uint256(18)-(ERC20(reserveAsset).decimals()));
+        _capital = _capital.preciseMul(pricePerTokenUnit)*(10**uint256(18)-(ERC20(reserveAsset).decimals()));
         // Create or/and update the protocol quarter checkpoints if mining program is activated
         _updateProtocolPowerPerQuarter();
         // We update the strategy power per quarter normalized in DAI if mining program is activated
@@ -830,7 +830,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[1] = _getQuarter(block.timestamp);
         data[2] = block.timestamp-(miningUpdatedAt);
         ProtocolPerQuarter storage protocolCheckpoint = protocolPerQuarter[data[1]];
-        data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal.mul(data[2]);
+        data[3] = miningUpdatedAt == 0 ? 0 : miningProtocolPrincipal*(data[2]);
         if (!isProtocolPerQuarter[data[1]]) {
             // The quarter is not initialized yet, we then create it
             if (miningUpdatedAt > 0) {
@@ -841,7 +841,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     // We re-initialize the protocol power in the new epoch adding only the corresponding
                     // to its duration
                     protocolCheckpoint.quarterPower = data[3]
-                        .mul(block.timestamp-(START_TIME+(data[1].mul(EPOCH_DURATION)-(EPOCH_DURATION))))
+                        *(block.timestamp-(START_TIME+(data[1]*(EPOCH_DURATION)-(EPOCH_DURATION))))
                         .div(data[2]);
                     // We now update the previous quarter with its proportional pending debtPower
                     protocolPerQuarter[data[1]-(1)].quarterPower = protocolPerQuarter[data[1]-(1)]
@@ -853,22 +853,22 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     // We have to update all the quarters since last update
                     for (uint256 i = 0; i <= data[1]-(data[0]); i++) {
                         ProtocolPerQuarter storage newCheckpoint = protocolPerQuarter[data[0]+(i)];
-                        uint256 slotEnding = START_TIME+(data[0]+(i).mul(EPOCH_DURATION));
+                        uint256 slotEnding = START_TIME+(data[0]+(i)*(EPOCH_DURATION));
                         if (i == 0) {
                             // We are in the first quarter to update (corresponding to miningUpdatedAt timestamp)
                             // We add the corresponding proportional part
                             newCheckpoint.quarterPower = newCheckpoint.quarterPower+(
-                                data[3].mul(slotEnding-(miningUpdatedAt)).div(data[2])
+                                data[3]*(slotEnding-(miningUpdatedAt)).div(data[2])
                             );
                         } else if (i < data[1]-(data[0])) {
                             // We are in an intermediate quarter without checkpoints - need to create and update it
-                            newCheckpoint.quarterPower = data[3].mul(EPOCH_DURATION).div(data[2]);
+                            newCheckpoint.quarterPower = data[3]*(EPOCH_DURATION).div(data[2]);
                         } else {
                             // We are in the last (current) quarter
                             // We update its proportional remaining debt power
                             protocolCheckpoint.quarterPower = data[3]
-                                .mul(
-                                block.timestamp-(START_TIME+(data[1].mul(EPOCH_DURATION)-(EPOCH_DURATION)))
+                                *(
+                                block.timestamp-(START_TIME+(data[1]*(EPOCH_DURATION)-(EPOCH_DURATION)))
                             )
                                 .div(data[2]);
                         }
@@ -907,7 +907,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         data[3] = _getQuarter(block.timestamp);
         StrategyPerQuarter storage strategyCheckpoint = strategyPerQuarter[_strategy][data[3]];
         // We calculate the debt Power since last checkpoint (if any)
-        data[4] = strategyPrincipal[_strategy].mul(data[2]);
+        data[4] = strategyPrincipal[_strategy]*(data[2]);
         if (!strategyCheckpoint.initialized) {
             // The strategy quarter is not yet initialized then we create it
             // If it the first checkpoint in the first executing epoch - keep power 0
@@ -924,20 +924,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // the one where we are now
                 for (uint256 i = 0; i < numQuarters; i++) {
                     StrategyPerQuarter storage newCheckpoint = strategyPerQuarter[_strategy][startingQuarter+(i)];
-                    uint256 slotEnding = START_TIME+(startingQuarter+(i).mul(EPOCH_DURATION));
+                    uint256 slotEnding = START_TIME+(startingQuarter+(i)*(EPOCH_DURATION));
                     if (i == 0) {
                         // We are in the first quarter to update, we add the proportional pending part
                         newCheckpoint.quarterPower = newCheckpoint.quarterPower+(
-                            data[4].mul(slotEnding-(data[1])).div(data[2])
+                            data[4]*(slotEnding-(data[1])).div(data[2])
                         );
                     } else if (i > 0 && i+(1) < numQuarters) {
                         // We are updating an intermediate quarter
-                        newCheckpoint.quarterPower = data[4].mul(EPOCH_DURATION).div(data[2]);
+                        newCheckpoint.quarterPower = data[4]*(EPOCH_DURATION).div(data[2]);
                         newCheckpoint.initialized = true;
                     } else {
                         // We are updating the current quarter of this strategy checkpoint
                         newCheckpoint.quarterPower = data[4]
-                            .mul(block.timestamp-(START_TIME+(data[3].mul(EPOCH_DURATION)-(EPOCH_DURATION))))
+                            *(block.timestamp-(START_TIME+(data[3]*(EPOCH_DURATION)-(EPOCH_DURATION))))
                             .div(data[2]);
                     }
                 }
@@ -1022,7 +1022,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // We are controlling pair reserveAsset-DAI fluctuations along the time
             if (_addOrSubstract) {
                 strPpt.pricePerTokenUnit = (
-                    ((strPpt.pricePerTokenUnit.mul(strPpt.preallocated))+(_capital.mul(pricePerTokenUnit))).div(1e18)
+                    ((strPpt.pricePerTokenUnit*(strPpt.preallocated))+(_capital*(pricePerTokenUnit))).div(1e18)
                 )
                     .preciseDiv(strPpt.preallocated+(_capital));
                 strPpt.preallocated = strPpt.preallocated+(_capital);
@@ -1116,14 +1116,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 supply = _gardenSupply > 0 ? _gardenSupply : ERC20(_garden).totalSupply();
             // First we need to get an updatedValue of user and garden power since lastDeposits as of block.timestamp
             uint256 updatedPower =
-                contributor.tsContributions[0].power+((block.timestamp-(contributor.lastDepositAt)).mul(balance));
+                contributor.tsContributions[0].power+((block.timestamp-(contributor.lastDepositAt))*(balance));
             uint256 updatedGardenPower =
-                gardenData.accGardenPower+((block.timestamp-(gardenData.lastDepositAt)).mul(supply));
+                gardenData.accGardenPower+((block.timestamp-(gardenData.lastDepositAt))*(supply));
             // We then time travel back to when the strategy exitedAt
             // Calculate the power at "_time" timestamp
             uint256 timeDiff = block.timestamp-(_time);
-            uint256 userPowerDiff = contributor.tsContributions[0].avgBalance.mul(timeDiff);
-            uint256 gardenPowerDiff = gardenData.avgGardenBalance.mul(timeDiff);
+            uint256 userPowerDiff = contributor.tsContributions[0].avgBalance*(timeDiff);
+            uint256 gardenPowerDiff = gardenData.avgGardenBalance*(timeDiff);
             // Avoid underflow conditions 0 at user, 1 at garden
             updatedPower = updatedPower > userPowerDiff ? updatedPower-(userPowerDiff) : 0;
             updatedGardenPower = updatedGardenPower > gardenPowerDiff ? updatedGardenPower-(gardenPowerDiff) : 1;
@@ -1186,7 +1186,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // if deposited before endTime, take proportional
                 // if deposited after endTime, take nothing
                 balanceEnd = timestamp < endTime
-                    ? balanceEnd.mul(endTime-(timestamp)).div(endTime-(startTime))
+                    ? balanceEnd*(endTime-(timestamp)).div(endTime-(startTime))
                     : 0;
             }
         }
@@ -1222,7 +1222,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // addressPower = sum(balance x time of each period between checkpoints)
             // Initializing addressPower since the last known checkpoint _endTime
             // addressPower since _cpEnd checkpoint is "balance x time difference (endTime - checkpoint timestamp)"
-            addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens.mul(
+            addressPower = gardenCheckpoints[_garden][_address][_cpEnd].tokens*(
                 _endTime-(gardenCheckpoints[_garden][_address][_cpEnd].fromTime)
             );
             // Then, we add addressPower data from periods between all intermediate checkpoints (if any)
@@ -1236,13 +1236,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 timeDiff = gardenCheckpoints[_garden][_address][i].fromTime-(
                     userPrevCheckpoint.fromTime > _start ? userPrevCheckpoint.fromTime : _start
                 );
-                addressPower = addressPower+(userPrevCheckpoint.tokens.mul(timeDiff));
+                addressPower = addressPower+(userPrevCheckpoint.tokens*(timeDiff));
             }
             // We now handle the previous addressPower of beta addresses (if applicable)
             uint256 fromTimeCp0 = gardenCheckpoints[_garden][_address][0].fromTime;
             if (cpStart == 0 && fromTimeCp0 > _start) {
                 // Beta address with previous balance before _start
-                addressPower = addressPower+(prevBalance.mul(fromTimeCp0-(_start)));
+                addressPower = addressPower+(prevBalance*(fromTimeCp0-(_start)));
             }
             // avg balance = addressPower / total period of the "strategy" considered
             return addressPower.div(_endTime-(_start));
@@ -1433,7 +1433,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 uint256(Math.abs(userVotes)).preciseDiv(votesAccounting)
             );
 
-            bablCap = babl.mul(2); // Max cap
+            bablCap = babl*(2); // Max cap
             // We add a bonus inverse to the error of expected return vs real returns
             babl = babl+(babl.preciseMul(_strategyDetails[11].preciseDiv(_strategyDetails[8])));
             if (babl > bablCap) {
@@ -1504,7 +1504,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 babl;
         babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
         if (_profitData[0] == true && _profitData[1] == true) {
-            uint256 bablCap = babl.mul(2); // Cap x2
+            uint256 bablCap = babl*(2); // Cap x2
             // Strategist get a bonus based on the profits with a max cap of x2
             babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
             if (babl > bablCap) {
@@ -1732,7 +1732,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (i+(1) == _numQuarters) {
                 // last quarter - we need to take proportional supply for that timeframe despite
                 // the epoch has not finished yet
-                uint256 slotEnding = START_TIME+(_startingQuarter+(i).mul(EPOCH_DURATION));
+                uint256 slotEnding = START_TIME+(_startingQuarter+(i)*(EPOCH_DURATION));
                 percentage = block.timestamp-(slotEnding-(EPOCH_DURATION)).preciseDiv(
                     slotEnding-(slotEnding-(EPOCH_DURATION))
                 );
@@ -1819,17 +1819,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 currentQuarter = _getQuarter(block.timestamp); // current quarter
         uint256 timeDiff = block.timestamp-(_updatedAt); // 1sec to avoid division by zero
         // We check the pending power to be accounted until now, since last update for protocol and strategy
-        uint256 powerDebt = _principal.mul(timeDiff);
+        uint256 powerDebt = _principal*(timeDiff);
         if (powerDebt > 0) {
             for (uint256 i = 0; i < _numQuarters; i++) {
-                uint256 slotEnding = START_TIME+(_startingQuarter+(i).mul(EPOCH_DURATION));
+                uint256 slotEnding = START_TIME+(_startingQuarter+(i)*(EPOCH_DURATION));
                 if (i == 0 && lastQuarter == _startingQuarter && lastQuarter < currentQuarter) {
                     // We are in the first quarter to update, we add the proportional pending part
-                    _powerToUpdate[i] = _powerToUpdate[i]+(powerDebt.mul(slotEnding-(_updatedAt)).div(timeDiff));
+                    _powerToUpdate[i] = _powerToUpdate[i]+(powerDebt*(slotEnding-(_updatedAt)).div(timeDiff));
                 } else if (i > 0 && i+(1) < _numQuarters && lastQuarter <= _startingQuarter+(i)) {
                     // We are updating an intermediate quarter
                     // Should have 0 inside before updating
-                    _powerToUpdate[i] = _powerToUpdate[i]+(powerDebt.mul(EPOCH_DURATION).div(timeDiff));
+                    _powerToUpdate[i] = _powerToUpdate[i]+(powerDebt*(EPOCH_DURATION).div(timeDiff));
                 } else if (_startingQuarter+(i) == currentQuarter) {
                     // We are updating the current quarter of this strategy checkpoint or the last to update
                     // It can be a multiple quarter strategy or the only one that need proportional time
@@ -1839,7 +1839,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                     } else {
                         // should have 0 inside before updating in case of different epoch since last update
                         _powerToUpdate[i] = _powerToUpdate[i]+(
-                            powerDebt.mul(block.timestamp-(slotEnding-(EPOCH_DURATION))).div(timeDiff)
+                            powerDebt*(block.timestamp-(slotEnding-(EPOCH_DURATION))).div(timeDiff)
                         );
                     }
                 }

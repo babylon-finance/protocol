@@ -1034,14 +1034,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         bool _addedCapital
     ) private view returns (uint256) {
         uint256 capital = _addedCapital ? _newCapital : _newCapital+(_deltaAmount);
-        uint256 cube = capital.mul(duration);
+        uint256 cube = capital*(duration);
         uint256 ratio;
         if (_addedCapital) {
             // allocation of new capital
-            ratio = cube-(_deltaAmount.mul(block.timestamp-(executedAt))).preciseDiv(cube);
+            ratio = cube-(_deltaAmount*(block.timestamp-(executedAt))).preciseDiv(cube);
         } else {
             // Unwind
-            ratio = cube.preciseDiv(cube-(_deltaAmount.mul(executedAt+(duration)-(block.timestamp))));
+            ratio = cube.preciseDiv(cube-(_deltaAmount*(executedAt+(duration)-(block.timestamp))));
         }
         return expectedReturn.preciseMul(ratio);
     }

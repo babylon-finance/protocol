@@ -143,7 +143,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (ERC20(_underlying).decimals() > 8) {
             exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - 8));
         } else {
-            exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(_underlying).decimals()));
+            exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
         }
         return exchangeRateNormalized;
     }
@@ -153,7 +153,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (ERC20(_underlying).decimals() > 8) {
             exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - 8));
         } else {
-            exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(_underlying).decimals()));
+            exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
         }
         return exchangeRateNormalized;
     }
@@ -253,7 +253,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             );
             uint256 yvDecimals = ERC20(_tokenIn).decimals();
             if (yvDecimals < 18) {
-                price = price.mul(10**(18 - yvDecimals));
+                price = price*(10**(18 - yvDecimals));
             }
             return price;
         }
@@ -366,7 +366,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                 .getQuoteAtTick(
                 tick,
                 // because we use 1e18 as a precision unit
-                uint128(uint256(1e18).mul(10**(uint256(18)-(ERC20(_tokenOut).decimals())))),
+                uint128(uint256(1e18)*(10**(uint256(18)-(ERC20(_tokenOut).decimals())))),
                 _tokenIn,
                 _tokenOut
             )
@@ -549,7 +549,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         } else {
             price = _getCurveDY(_curvePool, i, j, decimalsIn);
         }
-        price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
+        price = price*(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
         if (price < uint256(1e18)+(delta) && price > uint256(1e18)-(delta)) {
             return price;

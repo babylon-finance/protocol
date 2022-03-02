@@ -106,7 +106,7 @@ contract GardenValuer {
         valuation = valuation.preciseMul(reservePrice);
 
         if (quoteAssetDecimals < 18) {
-            valuation = valuation.mul(10**(18 - quoteAssetDecimals));
+            valuation = valuation*(10**(18 - quoteAssetDecimals));
         }
 
         return valuation.preciseDiv(ERC20(_garden).totalSupply());

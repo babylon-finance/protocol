@@ -187,10 +187,10 @@ contract LendOperation is Operation {
             // Update amount so we can exit if there is debt
             try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
                 numTokensToRedeem = numTokensToRedeem-(
-                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg).mul(105).div(100)
+                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg)*(105).div(100)
                 ); // add a bit extra 5% just in case
             } catch {
-                numTokensToRedeem = numTokensToRedeem-(remainingDebtInCollateralTokens.mul(140).div(100));
+                numTokensToRedeem = numTokensToRedeem-(remainingDebtInCollateralTokens*(140).div(100));
             }
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
@@ -202,7 +202,7 @@ contract LendOperation is Operation {
             msg.sender,
             _assetToken,
             numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem-(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
+            exchangeRate*(numTokensToRedeem-(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED*(2))))
         );
     }
 
