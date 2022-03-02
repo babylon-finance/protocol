@@ -706,9 +706,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // profitData[1]: distance
 
         uint256[] memory rewards = new uint256[](8);
-        address garden = address(IStrategy(_strategy).garden());
-        // Heart Garden rewards are auto-compounded
-        if (IStrategy(_strategy).isStrategyActive() && garden != controller.heartGarden()) {
+        if (IStrategy(_strategy).isStrategyActive()) {
+            address garden = address(IStrategy(_strategy).garden());
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share % within the strategy window out of the total garden and users
