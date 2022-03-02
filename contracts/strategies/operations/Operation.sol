@@ -174,6 +174,6 @@ abstract contract Operation is IOperation {
                 _reserve,
                 amount1.mul(priceToken1).div(totalSupply)
             );
-        return priceinReserveToken0.add(priceinReserveToken1);
+        return priceinReserveToken0+(priceinReserveToken1);
     }
 }

@@ -183,7 +183,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         if (rewardsLength > 0) {
             for (uint256 i = 0; i < rewardsLength; i++) {
                 uint256 rewardAmount = pool.earned(i, _strategy);
-                totalAmount = totalAmount.add(
+                totalAmount = totalAmount+(
                     oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
                 );
             }

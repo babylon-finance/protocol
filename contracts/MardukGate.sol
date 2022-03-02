@@ -252,7 +252,7 @@ contract MardukGate is IMardukGate, Ownable {
         require(_permission <= 3, 'Permission out of bounds');
         if (_permission > 0 && permissionsByCommunity[_garden][_user] == 0) {
             require(gardenAccessCount[_garden] < maxNumberOfInvites, 'Max Number of invites reached');
-            gardenAccessCount[_garden] = gardenAccessCount[_garden].add(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden]+(1);
             invitesPerGarden[_garden].push(_user);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {

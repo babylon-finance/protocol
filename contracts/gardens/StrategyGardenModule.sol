@@ -115,10 +115,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             _burn(strategist, _burningAmount);
         }
 
-        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
+        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside+(_rewards);
 
         // Mark strategy as finalized
-        absoluteReturns = absoluteReturns.add(_returns);
+        absoluteReturns = absoluteReturns+(_returns);
         strategies = strategies.remove(msg.sender);
         finalizedStrategies.push(msg.sender);
         strategyMapping[msg.sender] = false;
@@ -146,13 +146,13 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
-        keeperDebt = keeperDebt.add(_fee);
+        keeperDebt = keeperDebt+(_fee);
         uint256 liquidReserve = _liquidReserve();
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && liquidReserve > 0) {
             uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
-            totalKeeperFees = totalKeeperFees.add(toPay);
+            totalKeeperFees = totalKeeperFees+(toPay);
             keeperDebt = keeperDebt-(toPay);
         }
     }
@@ -188,7 +188,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
                 _stratParams
             );
         strategyMapping[strategy] = true;
-        totalStake = totalStake.add(_stratParams[1]);
+        totalStake = totalStake+(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;
@@ -204,7 +204,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = controller.protocolManagementFee().preciseMul(_capital);
-        _require(_capital.add(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
+        _require(_capital+(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee to the heart
         IERC20(reserveAsset).safeTransfer(controller.heart(), protocolMgmtFee);

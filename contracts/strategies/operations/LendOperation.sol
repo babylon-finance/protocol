@@ -152,7 +152,7 @@ contract LendOperation is Operation {
                 uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
                 // We add rewards
                 if (priceRewards != 0) {
-                    NAV = NAV.add(
+                    NAV = NAV+(
                         SafeDecimalMath
                             .normalizeAmountTokens(rewardsToken, _garden.reserveAsset(), rewardsAmount)
                             .preciseDiv(priceRewards)

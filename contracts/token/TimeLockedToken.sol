@@ -207,7 +207,7 @@ abstract contract TimeLockedToken is VoteToken {
         require(_receiver != msg.sender, 'the owner cannot lockup itself');
 
         // update amount of locked distribution
-        distribution[_receiver] = distribution[_receiver].add(_amount);
+        distribution[_receiver] = distribution[_receiver]+(_amount);
 
         VestedToken storage newVestedToken = vestedToken[_receiver];
 
@@ -280,7 +280,7 @@ abstract contract TimeLockedToken is VoteToken {
         uint256 lockedAmount = amount;
 
         // Team and investors cannot transfer tokens in the first year
-        if (vestedToken[account].vestingBegin.add(365 days) > block.timestamp && amount != 0) {
+        if (vestedToken[account].vestingBegin+(365 days) > block.timestamp && amount != 0) {
             return lockedAmount;
         }
 
@@ -373,13 +373,13 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
         require(
-            unlockedBalance(msg.sender) >= allowance(msg.sender, spender).add(addedValue) ||
+            unlockedBalance(msg.sender) >= allowance(msg.sender, spender)+(addedValue) ||
                 spender == address(timeLockRegistry),
             'TimeLockedToken::increaseAllowance:Not enough unlocked tokens'
         );
         require(spender != address(0), 'TimeLockedToken::increaseAllowance:Spender cannot be zero address');
         require(spender != msg.sender, 'TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender');
-        _approve(msg.sender, spender, allowance(msg.sender, spender).add(addedValue));
+        _approve(msg.sender, spender, allowance(msg.sender, spender)+(addedValue));
         return true;
     }
 

@@ -505,7 +505,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             if (_contributor == strategy.strategist()) {
-                lockedAmount = lockedAmount.add(strategy.stake());
+                lockedAmount = lockedAmount+(strategy.stake());
             }
         }
         // Avoid overflows if off-chain voting system fails
@@ -562,7 +562,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // TODO: if there is more than 5% slippage that will block
             // withdrawal
             _onlyNonZero(_unwindStrategy);
-            IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
+            IStrategy(_unwindStrategy).unwindStrategy(amountOut+(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
         _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
@@ -640,7 +640,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
-            _require(_liquidReserve().add(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            _require(_liquidReserve()+(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
@@ -701,14 +701,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
-            contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
+            contributor.claimedRewards = contributor.claimedRewards+(_profits); // Rewards claimed properly
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside-(_profits);
             _safeSendReserveAsset(payable(_contributor), _profits);
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
             uint256 bablSent = rewardsDistributor.sendBABLToContributor(_contributor, _babl);
-            contributor.claimedBABL = contributor.claimedBABL.add(bablSent); // BABL Rewards claimed properly
+            contributor.claimedBABL = contributor.claimedBABL+(bablSent); // BABL Rewards claimed properly
             emit BABLRewardsForContributor(_contributor, bablSent);
         }
     }
@@ -761,11 +761,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-            totalContributors = totalContributors.add(1);
+            totalContributors = totalContributors+(1);
             contributor.initialDepositAt = block.timestamp;
         }
         // We make checkpoints around contributor deposits to give the right rewards afterwards
-        contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
+        contributor.totalDeposits = contributor.totalDeposits+(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
@@ -790,7 +790,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.totalDeposits = 0;
             totalContributors = totalContributors-(1);
         } else {
-            contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
+            contributor.withdrawnSince = contributor.withdrawnSince+(_amountOut);
         }
         // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
@@ -867,7 +867,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
-            slippage = slippage.add(block.timestamp-(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
+            slippage = slippage+(block.timestamp-(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
             if (_pricePerShare > lastPricePerShare) {
                 _require(
                     _pricePerShare-(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
@@ -876,7 +876,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             } else {
                 _require(
                     lastPricePerShare-(_pricePerShare) <=
-                        lastPricePerShare-(lastPricePerShare.preciseDiv(slippage.add(1e18))),
+                        lastPricePerShare-(lastPricePerShare.preciseDiv(slippage+(1e18))),
                     Errors.PRICE_PER_SHARE_WRONG
                 );
             }

@@ -205,7 +205,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
-        totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
+        totalStats[1] = totalStats[1]+(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
         // 25% to BABL-ETH pair
@@ -321,7 +321,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         controller.onlyGovernanceOrEmergency();
         // Get the BABL reward
         IERC20(BABL).safeTransferFrom(msg.sender, address(this), _bablAmount);
-        bablRewardLeft = bablRewardLeft.add(_bablAmount);
+        bablRewardLeft = bablRewardLeft+(_bablAmount);
         weeklyRewardAmount = _weeklyRate;
     }
 
@@ -464,10 +464,10 @@ contract Heart is OwnableUpgradeable, IHeart {
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
             // Trade if it's above a min amount (otherwise wait until next pump)
             if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
-                totalStats[0] = totalStats[0].add(_trade(reserveAsset, address(WETH), balance));
+                totalStats[0] = totalStats[0]+(_trade(reserveAsset, address(WETH), balance));
             }
             if (reserveAsset == address(WETH)) {
-                totalStats[0] = totalStats[0].add(balance);
+                totalStats[0] = totalStats[0]+(balance);
             }
         }
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
@@ -482,7 +482,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
         IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
         IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
-        totalStats[2] = totalStats[2].add(bablBought);
+        totalStats[2] = totalStats[2]+(bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
 
@@ -561,7 +561,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         }
         uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
         uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
-        totalStats[5] = totalStats[5].add(assettoLendBalanceInWeth);
+        totalStats[5] = totalStats[5]+(assettoLendBalanceInWeth);
         emit FuseLentAsset(block.timestamp, _lendAsset, assettoLendBalanceInWeth);
     }
 
@@ -576,7 +576,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
             bablRewardLeft = bablRewardLeft-(bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
-            totalStats[6] = totalStats[6].add(bablToSend);
+            totalStats[6] = totalStats[6]+(bablToSend);
         }
     }
 

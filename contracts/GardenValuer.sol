@@ -90,11 +90,11 @@ contract GardenValuer {
         for (uint256 j = 0; j < strategies.length; j++) {
             IStrategy strategy = IStrategy(strategies[j]);
             // strategies return their valuation in garden's reserveAsset
-            valuation = valuation.add(strategy.getNAV());
+            valuation = valuation+(strategy.getNAV());
         }
 
         // Add garden reserve assets and garden's reserve asset
-        valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
+        valuation = valuation+(ERC20(reserveAsset).balanceOf(address(_garden)));
 
         // Subtract the reserves set aside for rewards
         valuation = valuation-(IGarden(_garden).reserveAssetRewardsSetAside());

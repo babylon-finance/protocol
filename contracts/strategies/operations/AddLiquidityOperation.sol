@@ -84,7 +84,7 @@ contract AddLiquidityOperation is Operation {
                         poolTokens[poolTokens.length - 1],
                         _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
                     );
-                    poolTotal = poolTotal.add(_poolWeights[i]);
+                    poolTotal = poolTotal+(_poolWeights[i]);
                 }
                 for (uint256 i = 0; i < poolTokens.length; i++) {
                     _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);

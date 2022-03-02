@@ -212,7 +212,7 @@ contract DepositVaultOperation is Operation {
             NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         }
         // Get value of pending rewards
-        NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
+        NAV = NAV+(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -240,7 +240,7 @@ contract DepositVaultOperation is Operation {
                 _getPrice(CRV, _reserveAsset).preciseMul(
                     IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender).mul(2)
                 );
-            nav = nav.add(
+            nav = nav+(
                 _getPrice(LDO, _reserveAsset).preciseMul(
                     IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
                 )

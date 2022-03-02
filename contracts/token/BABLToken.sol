@@ -73,13 +73,13 @@ contract BABLToken is TimeLockedToken {
         BABLTokenDeploymentTimestamp = block.timestamp;
 
         // Set-up the minimum time of 8 years to wait until the maxSupplyAllowed can be changed (it will also include a max cap)
-        maxSupplyAllowedAfter = block.timestamp.add(FIRST_EPOCH_MINT);
+        maxSupplyAllowedAfter = block.timestamp+(FIRST_EPOCH_MINT);
 
         //Starting with a maxSupplyAllowed of 1 million for the first 8 years
         _mint(msg.sender, 1_000_000e18);
 
         //Set-up the minimum time of 8 years for additional mints
-        mintingAllowedAfter = block.timestamp.add(FIRST_EPOCH_MINT);
+        mintingAllowedAfter = block.timestamp+(FIRST_EPOCH_MINT);
 
         // Set the Babylon Controller
         controller = newController;
@@ -100,9 +100,9 @@ contract BABLToken is TimeLockedToken {
      * @return Whether or not the mint succeeded
      */
     function mint(address _to, uint256 _amount) external onlyOwner returns (bool) {
-        require(totalSupply().add(_amount) <= maxSupplyAllowed, 'BABLToken::mint: max supply exceeded');
+        require(totalSupply()+(_amount) <= maxSupplyAllowed, 'BABLToken::mint: max supply exceeded');
         require(
-            block.timestamp >= BABLTokenDeploymentTimestamp.add(FIRST_EPOCH_MINT),
+            block.timestamp >= BABLTokenDeploymentTimestamp+(FIRST_EPOCH_MINT),
             'BABLToken::mint: minting not allowed after the FIRST_EPOCH_MINT has passed >= 8 years'
         );
         require(_amount > 0, 'BABLToken::mint: mint should be higher than zero');
@@ -114,7 +114,7 @@ contract BABLToken is TimeLockedToken {
         require(_to != address(this), 'BABLToken::mint: cannot mint to the address of this contract');
 
         // set-up the new time where a new (the next) mint can be allowed
-        mintingAllowedAfter = block.timestamp.add(MIN_TIME_BETWEEN_MINTS);
+        mintingAllowedAfter = block.timestamp+(MIN_TIME_BETWEEN_MINTS);
 
         // mint the amount
         uint96 amount = safe96(_amount, 'BABLToken::mint: amount exceeds 96 bits');
@@ -144,7 +144,7 @@ contract BABLToken is TimeLockedToken {
      */
     function changeMaxSupply(uint256 newMaxSupply, uint256 newMaxSupplyAllowedAfter) external onlyOwner returns (bool) {
         require(
-            block.timestamp >= BABLTokenDeploymentTimestamp.add(FIRST_EPOCH_MINT),
+            block.timestamp >= BABLTokenDeploymentTimestamp+(FIRST_EPOCH_MINT),
             'BABLToken::changeMaxSupply: a change on maxSupplyAllowed not allowed until 8 years after deployment'
         );
         require(
@@ -157,13 +157,13 @@ contract BABLToken is TimeLockedToken {
             newMaxSupply > maxSupplyAllowed,
             'BABLToken::changeMaxSupply: changeMaxSupply should be higher than previous value'
         );
-        uint256 limitedNewSupply = maxSupplyAllowed.add(maxSupplyAllowed.mul(MAX_SUPPLY_CAP).div(100));
+        uint256 limitedNewSupply = maxSupplyAllowed+(maxSupplyAllowed.mul(MAX_SUPPLY_CAP).div(100));
         require(newMaxSupply <= limitedNewSupply, 'BABLToken::changeMaxSupply: exceeded of allowed 5% cap');
         emit MaxSupplyChanged(maxSupplyAllowed, newMaxSupply);
         maxSupplyAllowed = safe96(newMaxSupply, 'BABLToken::changeMaxSupply: potential max amount exceeds 96 bits');
 
         // update the new waiting time until a new change could be done >= 1 year since this change
-        uint256 futureTime = block.timestamp.add(365 days);
+        uint256 futureTime = block.timestamp+(365 days);
         require(
             newMaxSupplyAllowedAfter >= futureTime,
             'BABLToken::changeMaxSupply: the newMaxSupplyAllowedAfter should be at least 1 year in the future'

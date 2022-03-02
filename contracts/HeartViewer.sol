@@ -83,7 +83,7 @@ contract HeartViewer {
             heart.getGardenWeights(),
             [heart.bablRewardLeft(), heart.weeklyRewardAmount()],
             [heart.lastPumpAt(), heart.lastVotesAt()],
-            [wethAmount.add(wethAmountF), bablAmount.add(bablAmountF)]
+            [wethAmount+(wethAmountF), bablAmount+(bablAmountF)]
         );
     }
 

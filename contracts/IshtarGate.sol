@@ -249,7 +249,7 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
         uint256 newItemId = _createOrGetGateNFT(_user);
         if (_permission > 0 && permissionsByCommunity[_garden][_user] == 0) {
             require(gardenAccessCount[_garden] < maxNumberOfInvites, 'Max Number of invites reached');
-            gardenAccessCount[_garden] = gardenAccessCount[_garden].add(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden]+(1);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
             gardenAccessCount[_garden] = gardenAccessCount[_garden]-(1);

@@ -164,12 +164,12 @@ contract TimeLockRegistry is Ownable {
         );
         require(vestingStartingDate >= 1614553200, 'Cannot register earlier than March 2021'); // 1614553200 is UNIX TIME of 2021 March the 1st
         require(
-            vestingStartingDate <= block.timestamp.add(30 days),
+            vestingStartingDate <= block.timestamp+(30 days),
             'Cannot register more than 30 days ahead in the future'
         );
-        require(totalTokens.add(distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
+        require(totalTokens+(distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
 
-        totalTokens = totalTokens.add(distribution);
+        totalTokens = totalTokens+(distribution);
         // register distribution
         registeredDistributions[receiver] = distribution;
         registrations.push(receiver);
@@ -180,9 +180,9 @@ contract TimeLockRegistry is Ownable {
         newTokenVested.vestingBegin = vestingStartingDate;
 
         if (newTokenVested.team == true) {
-            newTokenVested.vestingEnd = vestingStartingDate.add(teamVesting);
+            newTokenVested.vestingEnd = vestingStartingDate+(teamVesting);
         } else {
-            newTokenVested.vestingEnd = vestingStartingDate.add(investorVesting);
+            newTokenVested.vestingEnd = vestingStartingDate+(investorVesting);
         }
         newTokenVested.lastClaim = vestingStartingDate;
 
