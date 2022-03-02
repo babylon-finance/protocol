@@ -431,9 +431,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         capitalAllocated = capitalAllocated.sub(_amountToUnwind);
         // expected return update
         expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
-
-        rewardsDistributor.updateProtocolPrincipal(_amountToUnwind, false);
-
+        _updateProtocolPrincipal(_amountToUnwind, false);
         // Send the amount back to the garden for the immediate withdrawal
         // TODO: Transfer the precise value; not entire balance
         IERC20(garden.reserveAsset()).safeTransfer(
@@ -681,8 +679,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[7] = capitalReturned;
         data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
         data[9] = strategyRewards;
-        boolData[0] = capitalReturned >= capitalAllocated ? true : false;
-        boolData[1] = capitalReturned >= data[8] ? true : false;
+        boolData[0] = capitalReturned >= capitalAllocated;
+        boolData[1] = capitalReturned >= data[8];
         data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         data[12] = startingGardenSupply;
@@ -857,7 +855,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // expected return update
             expectedReturn = _updateExpectedReturn(capitalAllocated, _capital, true);
         }
-        rewardsDistributor.updateProtocolPrincipal(_capital, true);
+        _updateProtocolPrincipal(_capital, true);
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
@@ -1020,23 +1018,24 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Return the balance back to the garden
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
-        // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
-        if (address(rewardsDistributor) == address(0)) {
-            rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
-        }
-        rewardsDistributor.updateProtocolPrincipal(capitalAllocated, false);
+        _updateProtocolPrincipal(capitalAllocated, false);
         // Assign BABL Mining Strategy Rewards
         strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
+        // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
         uint256[3] memory profitsSharing = rewardsDistributor.getGardenProfitsSharing(address(garden));
         // All rewards on Heart Garden are re-compounded (not set aside)
         // Only LP profits are compounded otherwise (strategist and stewards are set aside)
         uint256 rewardsToSetAside =
-            address(garden) != address(IHeart(controller.heart()).heartGarden())
+            (address(garden) != address(IHeart(controller.heart()).heartGarden()))
                 ? profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits)
                 : 0;
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
         endingGardenSupply = IERC20(address(garden)).totalSupply();
         garden.finalizeStrategy(rewardsToSetAside, strategyReturns, burningAmount);
+    }
+
+    function _updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) internal {
+        rewardsDistributor.updateProtocolPrincipal(_capital, _addOrSubstract);
     }
 
     function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
