@@ -50,7 +50,7 @@ interface IWstETH is IERC20 {
      * @notice Shortcut to stake ETH and auto-wrap returned stETH
      */
     // receive() external payable {
-    //     uint256 shares = stETH.submit{value: msg.value}(address(0));
+    //     uint256 shares = stETH-mit{value: msg.value}(address(0));
     //     _mint(msg.sender, shares);
     // }
 

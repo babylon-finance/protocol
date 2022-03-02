@@ -90,7 +90,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
-        poolInfo.poolTokensInTransaction = IERC20(poolInfo.lpToken).balanceOf(address(poolInfo.strategy)).sub(
+        poolInfo.poolTokensInTransaction = IERC20(poolInfo.lpToken).balanceOf(address(poolInfo.strategy))-(
             poolInfo.poolTokensInStrategy
         );
         _validatePostJoinPoolData(poolInfo);

@@ -256,7 +256,7 @@ contract MardukGate is IMardukGate, Ownable {
             invitesPerGarden[_garden].push(_user);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
-            gardenAccessCount[_garden] = gardenAccessCount[_garden].sub(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden]-(1);
         }
         permissionsByCommunity[_garden][_user] = _permission;
         isOverriden[_garden][_user] = true;

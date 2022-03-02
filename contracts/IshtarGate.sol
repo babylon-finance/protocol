@@ -252,7 +252,7 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
             gardenAccessCount[_garden] = gardenAccessCount[_garden].add(1);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
-            gardenAccessCount[_garden] = gardenAccessCount[_garden].sub(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden]-(1);
         }
         permissionsByCommunity[_garden][_user] = _permission;
         emit GardenAccess(_user, _garden, _permission, newItemId);

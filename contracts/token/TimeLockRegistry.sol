@@ -216,7 +216,7 @@ contract TimeLockRegistry is Ownable {
         registrations.remove(receiver);
 
         // decrease total tokens
-        totalTokens = totalTokens.sub(amount);
+        totalTokens = totalTokens-(amount);
 
         // emit cancel event
         emit Cancel(receiver, amount);
@@ -274,7 +274,7 @@ contract TimeLockRegistry is Ownable {
         delete registeredDistributions[_receiver];
 
         // decrease total tokens
-        totalTokens = totalTokens.sub(amount);
+        totalTokens = totalTokens-(amount);
 
         // register lockup in TimeLockedToken
         // this will transfer funds from this contract and lock them for sender

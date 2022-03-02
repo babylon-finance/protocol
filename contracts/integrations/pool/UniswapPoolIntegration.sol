@@ -158,8 +158,8 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _tokensIn[1],
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0].sub(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
-                _maxAmountsIn[1].sub(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
+                _maxAmountsIn[0]-(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
+                _maxAmountsIn[1]-(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
                 _strategy,
                 block.timestamp.add(MAX_DELTA_BLOCKS)
             );

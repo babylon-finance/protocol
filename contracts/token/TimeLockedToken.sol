@@ -261,7 +261,7 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function unlockedBalance(address account) public returns (uint256) {
         // totalBalance - lockedBalance
-        return balanceOf(account).sub(lockedBalance(account));
+        return balanceOf(account)-(lockedBalance(account));
     }
 
     /**
@@ -289,8 +289,8 @@ abstract contract TimeLockedToken is VoteToken {
             lockedAmount = 0;
         } else if (amount != 0) {
             // in case of still under vesting period, locked tokens are recalculated
-            lockedAmount = amount.mul(vestedToken[account].vestingEnd.sub(block.timestamp)).div(
-                vestedToken[account].vestingEnd.sub(vestedToken[account].vestingBegin)
+            lockedAmount = amount.mul(vestedToken[account].vestingEnd-(block.timestamp)).div(
+                vestedToken[account].vestingEnd-(vestedToken[account].vestingBegin)
             );
         }
         return lockedAmount;
@@ -407,7 +407,7 @@ abstract contract TimeLockedToken is VoteToken {
             'TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry'
         );
 
-        _approve(msg.sender, spender, allowance(msg.sender, spender).sub(subtractedValue));
+        _approve(msg.sender, spender, allowance(msg.sender, spender)-(subtractedValue));
         return true;
     }
 

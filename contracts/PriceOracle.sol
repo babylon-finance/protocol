@@ -366,11 +366,11 @@ contract PriceOracle is Ownable, IPriceOracle {
                 .getQuoteAtTick(
                 tick,
                 // because we use 1e18 as a precision unit
-                uint128(uint256(1e18).mul(10**(uint256(18).sub(ERC20(_tokenOut).decimals())))),
+                uint128(uint256(1e18).mul(10**(uint256(18)-(ERC20(_tokenOut).decimals())))),
                 _tokenIn,
                 _tokenOut
             )
-                .div(10**(uint256(18).sub(ERC20(_tokenIn).decimals())));
+                .div(10**(uint256(18)-(ERC20(_tokenIn).decimals())));
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {
@@ -551,7 +551,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
-        if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
+        if (price < uint256(1e18).add(delta) && price > uint256(1e18)-(delta)) {
             return price;
         }
         return 0;

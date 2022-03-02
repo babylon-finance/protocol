@@ -113,7 +113,7 @@ contract DepositVaultOperation is Operation {
         address _integration
     ) internal view returns (uint256) {
         uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
-        return exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        return exactAmount-(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
     }
 
     /**
@@ -146,9 +146,9 @@ contract DepositVaultOperation is Operation {
             IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
-                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                amountVault-(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
                     IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
-                        10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                        10**PreciseUnitMath.decimals()-(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                     )
                 );
             IPassiveIntegration(_integration).exitInvestment(
@@ -196,7 +196,7 @@ contract DepositVaultOperation is Operation {
             pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
             // Normalization of pricePerShare
             pricePerShare = pricePerShare.mul(
-                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                10**PreciseUnitMath.decimals()-(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
             );
         }
         uint256 NAV;

@@ -274,13 +274,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // account for non 18 decimals ERC20 tokens, e.g. USDC
             uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
             _internalDeposit(
-                _amountIn.sub(_fee),
-                _minAmountOut.sub(feeShares),
+                _amountIn-(_fee),
+                _minAmountOut-(feeShares),
                 signer,
                 signer,
                 _mintNft,
                 _pricePerShare,
-                minContribution > _fee ? minContribution.sub(_fee) : 0
+                minContribution > _fee ? minContribution-(_fee) : 0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
@@ -371,7 +371,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         _withdrawInternal(
             _amountIn,
-            _minAmountOut.sub(_maxFee),
+            _minAmountOut-(_maxFee),
             payable(signer),
             _withPenalty,
             _unwindStrategy,
@@ -388,7 +388,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
         // Flashloan protection
         _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
+            block.timestamp-(contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.DEPOSIT_HARDLOCK
         );
         uint256[] memory rewards = new uint256[](8);
@@ -484,7 +484,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.claimedBABL,
             contributor.claimedRewards,
             contributor.totalDeposits > contributor.withdrawnSince
-                ? contributor.totalDeposits.sub(contributor.withdrawnSince)
+                ? contributor.totalDeposits-(contributor.withdrawnSince)
                 : 0,
             balance,
             lockedBalance,
@@ -542,21 +542,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 prevBalance = balanceOf(_to);
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
-        _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        _require(block.timestamp-(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
 
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
-        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))
-            ? prevBalance.sub(getLockedBalance(_to))
+        _amountIn = _amountIn > prevBalance-(getLockedBalance(_to))
+            ? prevBalance-(getLockedBalance(_to))
             : _amountIn;
-        _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+        _require(_amountIn <= prevBalance-(getLockedBalance(_to)), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
         // if withPenaltiy then unwind strategy
         if (_withPenalty && !(_liquidReserve() >= amountOut)) {
-            amountOut = amountOut.sub(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+            amountOut = amountOut-(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
             // TODO: if there is more than 5% slippage that will block
@@ -570,7 +570,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         _burn(_to, _amountIn);
-        _safeSendReserveAsset(_to, amountOut.sub(_fee));
+        _safeSendReserveAsset(_to, amountOut-(_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
@@ -657,7 +657,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         // Make sure we received the correct amount of reserve asset
         _require(
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,
+            IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetBalanceBefore) == _amountIn,
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
@@ -702,7 +702,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(_profits);
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside-(_profits);
             _safeSendReserveAsset(payable(_contributor), _profits);
             emit RewardsForContributor(_contributor, _profits);
         }
@@ -717,8 +717,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Gets liquid reserve available for to Garden.
      */
     function _liquidReserve() private view returns (uint256) {
-        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
-        return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
+        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetRewardsSetAside);
+        return reserve > keeperDebt ? reserve-(keeperDebt) : 0;
     }
 
     // Disable garden token transfers. Allow minting and burning.
@@ -739,7 +739,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // Check that the withdrawal is possible
             // Unwrap WETH if ETH balance lower than amount
             if (address(this).balance < _amount) {
-                IWETH(WETH).withdraw(_amount.sub(address(this).balance));
+                IWETH(WETH).withdraw(_amount-(address(this).balance));
             }
             // Send ETH
             Address.sendValue(_to, _amount);
@@ -788,7 +788,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
-            totalContributors = totalContributors.sub(1);
+            totalContributors = totalContributors-(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
@@ -867,16 +867,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
-            slippage = slippage.add(block.timestamp.sub(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
+            slippage = slippage.add(block.timestamp-(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
             if (_pricePerShare > lastPricePerShare) {
                 _require(
-                    _pricePerShare.sub(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
+                    _pricePerShare-(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
                     Errors.PRICE_PER_SHARE_WRONG
                 );
             } else {
                 _require(
-                    lastPricePerShare.sub(_pricePerShare) <=
-                        lastPricePerShare.sub(lastPricePerShare.preciseDiv(slippage.add(1e18))),
+                    lastPricePerShare-(_pricePerShare) <=
+                        lastPricePerShare-(lastPricePerShare.preciseDiv(slippage.add(1e18))),
                     Errors.PRICE_PER_SHARE_WRONG
                 );
             }

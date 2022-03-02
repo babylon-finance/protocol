@@ -97,10 +97,10 @@ contract GardenValuer {
         valuation = valuation.add(ERC20(reserveAsset).balanceOf(address(_garden)));
 
         // Subtract the reserves set aside for rewards
-        valuation = valuation.sub(IGarden(_garden).reserveAssetRewardsSetAside());
+        valuation = valuation-(IGarden(_garden).reserveAssetRewardsSetAside());
 
         // Subtract Keeper debt
-        valuation = valuation.sub(IGarden(_garden).keeperDebt());
+        valuation = valuation-(IGarden(_garden).keeperDebt());
 
         // Get the valuation in terms of the quote asset
         valuation = valuation.preciseMul(reservePrice);

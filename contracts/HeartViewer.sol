@@ -116,6 +116,6 @@ contract HeartViewer {
     function _getProposalInfo(uint256 _proposalId) internal view returns (address, uint256[3] memory) {
         (, address proposer, , , uint256 endBlock, uint256 forVotes, uint256 againstVotes, , , ) =
             governor.proposals(_proposalId);
-        return (proposer, [endBlock, forVotes.sub(againstVotes), uint256(governor.state(_proposalId))]);
+        return (proposer, [endBlock, forVotes-(againstVotes), uint256(governor.state(_proposalId))]);
     }
 }

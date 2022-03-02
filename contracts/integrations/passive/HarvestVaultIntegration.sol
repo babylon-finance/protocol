@@ -48,7 +48,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
         // Normalizing pricePerShare returned by Harvest
         return
             _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()).div(
-                10**PreciseUnitMath.decimals().sub(ERC20(_vault).decimals())
+                10**PreciseUnitMath.decimals()-(ERC20(_vault).decimals())
             );
     }
 

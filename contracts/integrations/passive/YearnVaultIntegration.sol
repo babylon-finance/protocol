@@ -47,7 +47,7 @@ contract YearnVaultIntegration is PassiveIntegration {
         // Normalizing pricePerShare returned by Yearn
         return
             _amount.preciseDiv(IYearnVault(_asset).pricePerShare()).div(
-                10**PreciseUnitMath.decimals().sub(ERC20(_asset).decimals())
+                10**PreciseUnitMath.decimals()-(ERC20(_asset).decimals())
             );
     }
 

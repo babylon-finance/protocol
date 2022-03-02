@@ -197,8 +197,8 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function pump() public override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
-        _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
-        _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
+        _require(block.timestamp-(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
+        _require(block.timestamp-(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
@@ -500,7 +500,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 oldTreasuryBalance = visor.balanceOf(treasury);
         uint256 shares = visor.deposit(wethToDeposit, bablTraded, treasury);
         _require(
-            shares == visor.balanceOf(treasury).sub(oldTreasuryBalance) && visor.balanceOf(treasury) > 0,
+            shares == visor.balanceOf(treasury)-(oldTreasuryBalance) && visor.balanceOf(treasury) > 0,
             Errors.HEART_LP_TOKENS
         );
         totalStats[3] += _wethBalance;
@@ -574,7 +574,7 @@ contract Heart is OwnableUpgradeable, IHeart {
             uint256 currentBalance = IERC20(BABL).balanceOf(address(this));
             bablToSend = currentBalance < bablToSend ? currentBalance : bablToSend;
             IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
-            bablRewardLeft = bablRewardLeft.sub(bablToSend);
+            bablRewardLeft = bablRewardLeft-(bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
             totalStats[6] = totalStats[6].add(bablToSend);
         }
@@ -601,7 +601,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(tradeSlippage));
+        uint256 minAmountExpected = exactAmount-(exactAmount.preciseMul(tradeSlippage));
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);

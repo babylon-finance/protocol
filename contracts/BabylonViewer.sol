@@ -55,7 +55,7 @@ contract BabylonViewer {
     function getGardenPrincipal(address _garden) public view returns (uint256) {
         IGarden garden = IGarden(_garden);
         IERC20 reserveAsset = IERC20(garden.reserveAsset());
-        uint256 principal = reserveAsset.balanceOf(address(garden)).sub(garden.reserveAssetRewardsSetAside());
+        uint256 principal = reserveAsset.balanceOf(address(garden))-(garden.reserveAssetRewardsSetAside());
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee();
         address[] memory strategies = garden.getStrategies();
         for (uint256 i = 0; i < strategies.length; i++) {
@@ -72,7 +72,7 @@ contract BabylonViewer {
         principal = principal.add(garden.totalKeeperFees());
         int256 absoluteReturns = garden.absoluteReturns();
         if (absoluteReturns > 0) {
-            principal = principal > uint256(absoluteReturns) ? principal.sub(uint256(absoluteReturns)) : 0;
+            principal = principal > uint256(absoluteReturns) ? principal-(uint256(absoluteReturns)) : 0;
         } else {
             principal = principal.add(uint256(-absoluteReturns));
         }
@@ -111,10 +111,10 @@ contract BabylonViewer {
         totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
         totalSupplyValuationAndSeed[3] = ERC20(garden.reserveAsset()).balanceOf(address(garden));
         if (totalSupplyValuationAndSeed[3] > garden.keeperDebt()) {
-            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.keeperDebt());
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3]-(garden.keeperDebt());
         }
         if (totalSupplyValuationAndSeed[3] > garden.reserveAssetRewardsSetAside()) {
-            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3].sub(garden.reserveAssetRewardsSetAside());
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3]-(garden.reserveAssetRewardsSetAside());
         } else {
             totalSupplyValuationAndSeed[3] = 0;
         }

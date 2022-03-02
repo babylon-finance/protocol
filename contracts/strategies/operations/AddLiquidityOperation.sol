@@ -97,7 +97,7 @@ contract AddLiquidityOperation is Operation {
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
-            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokensOut-(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
             poolTokens,
             maxAmountsIn
         );

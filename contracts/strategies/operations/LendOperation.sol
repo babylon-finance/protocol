@@ -88,7 +88,7 @@ contract LendOperation is Operation {
             numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
         }
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        uint256 minAmountExpected = exactAmount-(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
         return (assetToken, numTokensToSupply, 1); // put as collateral
     }
@@ -186,11 +186,11 @@ contract LendOperation is Operation {
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
             try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
-                numTokensToRedeem = numTokensToRedeem.sub(
+                numTokensToRedeem = numTokensToRedeem-(
                     remainingDebtInCollateralTokens.preciseDiv(collateralPctg).mul(105).div(100)
                 ); // add a bit extra 5% just in case
             } catch {
-                numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(140).div(100));
+                numTokensToRedeem = numTokensToRedeem-(remainingDebtInCollateralTokens.mul(140).div(100));
             }
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
@@ -202,7 +202,7 @@ contract LendOperation is Operation {
             msg.sender,
             _assetToken,
             numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
+            exchangeRate.mul(numTokensToRedeem-(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
         );
     }
 

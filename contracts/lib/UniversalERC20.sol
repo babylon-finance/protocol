@@ -44,7 +44,7 @@ library UniversalERC20 {
                 address(uint160(to)).transfer(amount);
             }
             if (msg.value > amount) {
-                msg.sender.transfer(msg.value.sub(amount));
+                msg.sender.transfer(msg.value-(amount));
             }
         } else {
             token.safeTransferFrom(from, to, amount);

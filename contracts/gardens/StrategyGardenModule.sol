@@ -141,7 +141,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
             pricePerTokenUnitInDAI.preciseMul(_fee).mul(
-                10**(uint256(18).sub(ERC20Upgradeable(reserveAsset).decimals()))
+                10**(uint256(18)-(ERC20Upgradeable(reserveAsset).decimals()))
             );
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
@@ -153,7 +153,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
             totalKeeperFees = totalKeeperFees.add(toPay);
-            keeperDebt = keeperDebt.sub(toPay);
+            keeperDebt = keeperDebt-(toPay);
         }
     }
 
@@ -231,8 +231,8 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * Gets liquid reserve available for to Garden.
      */
     function _liquidReserve() private view returns (uint256) {
-        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
-        return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
+        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetRewardsSetAside);
+        return reserve > keeperDebt ? reserve-(keeperDebt) : 0;
     }
 
     /**
