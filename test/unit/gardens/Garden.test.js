@@ -31,6 +31,7 @@ const {
 const { impersonateAddress } = require('lib/rpc');
 
 const {
+  strategyParamsToArray,
   createStrategy,
   getStrategy,
   getStrategyState,
@@ -49,7 +50,6 @@ const {
   getWithdrawSigHash,
   transferFunds,
   depositFunds,
-  strategyParamsToArray,
 } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
@@ -1479,7 +1479,14 @@ describe('Garden', function () {
       await expect(
         garden1
           .connect(signer3)
-          .addStrategy('name', 'STRT', strategyParamsToArray(WETH_STRATEGY_PARAMS), [1], [balancerIntegration.address], encodedData),
+          .addStrategy(
+            'name',
+            'STRT',
+            strategyParamsToArray(WETH_STRATEGY_PARAMS),
+            [1],
+            [balancerIntegration.address],
+            encodedData,
+          ),
       ).to.not.be.reverted;
     });
 

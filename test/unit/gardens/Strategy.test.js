@@ -12,7 +12,6 @@ const {
   injectFakeProfits,
   deposit,
   DEFAULT_STRATEGY_PARAMS,
-  ZEROMAXCAP_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
@@ -96,7 +95,7 @@ describe('Strategy', function () {
       await expect(
         getStrategy({
           state: 'deposit',
-          params: ZEROMAXCAP_STRATEGY_PARAMS,
+          params: { maxCapitalRequested: eth(0) },
           specificParams: [addresses.tokens.USDT, 0],
         }),
       ).to.be.revertedWith('BAB#041');
