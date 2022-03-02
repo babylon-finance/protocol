@@ -16,6 +16,7 @@ const {
   GARDEN_PARAMS,
   ADDRESS_ZERO,
   ONE_YEAR_IN_SECONDS,
+  WETH_STRATEGY_PARAMS,
 } = require('lib/constants.js');
 const {
   pick,
@@ -30,7 +31,6 @@ const {
 const { impersonateAddress } = require('lib/rpc');
 
 const {
-  DEFAULT_STRATEGY_PARAMS,
   createStrategy,
   getStrategy,
   getStrategyState,
@@ -49,6 +49,7 @@ const {
   getWithdrawSigHash,
   transferFunds,
   depositFunds,
+  strategyParamsToArray,
 } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
@@ -1455,7 +1456,7 @@ describe('Garden', function () {
           .addStrategy(
             'name',
             'STRT',
-            DEFAULT_STRATEGY_PARAMS,
+            strategyParamsToArray(WETH_STRATEGY_PARAMS),
             [1],
             [balancerIntegration.address],
             [addresses.balancer.pools.wethdai],
@@ -1478,7 +1479,7 @@ describe('Garden', function () {
       await expect(
         garden1
           .connect(signer3)
-          .addStrategy('name', 'STRT', DEFAULT_STRATEGY_PARAMS, [1], [balancerIntegration.address], encodedData),
+          .addStrategy('name', 'STRT', strategyParamsToArray(WETH_STRATEGY_PARAMS), [1], [balancerIntegration.address], encodedData),
       ).to.not.be.reverted;
     });
 
@@ -1486,8 +1487,8 @@ describe('Garden', function () {
       await garden1.connect(signer3).deposit(eth(), 1, signer3.getAddress(), false, {
         value: eth(),
       });
-      const params = [...DEFAULT_STRATEGY_PARAMS];
-      params[1] = eth('0');
+      const params = strategyParamsToArray(WETH_STRATEGY_PARAMS);
+      params[1] = eth(0);
       let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
       let iface = new ethers.utils.Interface(ABI);
       let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [addresses.balancer.pools.wethdai, 0]);

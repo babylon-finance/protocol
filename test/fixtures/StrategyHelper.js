@@ -441,6 +441,7 @@ async function getStrategyState(strategy) {
 }
 
 module.exports = {
+  strategyParamsToArray,
   createStrategy,
   getStrategy,
   getStrategyState,

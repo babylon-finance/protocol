@@ -12,6 +12,7 @@ const {
   injectFakeProfits,
   deposit,
   DEFAULT_STRATEGY_PARAMS,
+  ZEROMAXCAP_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
@@ -19,15 +20,6 @@ const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('fixtures/StrategyHelper');
-const ZEROMAXCAP_STRATEGY_PARAMS = [
-  eth(0), // _maxCapitalRequested == 0
-  eth(0.1), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage,
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
-];
 
 describe('Strategy', function () {
   let strategyDataset;
