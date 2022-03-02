@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVoteToken} from '../interfaces/IVoteToken.sol';
@@ -329,7 +330,7 @@ abstract contract VoteToken is Context, ERC20, Ownable, IVoteToken, ReentrancyGu
      *
      * @dev internal function to get chain ID
      */
-    function getChainId() internal pure returns (uint256) {
+    function getChainId() internal view returns (uint256) {
         uint256 chainId;
         assembly {
             chainId := chainid()

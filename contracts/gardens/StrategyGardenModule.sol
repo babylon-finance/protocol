@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -115,10 +116,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             _burn(strategist, _burningAmount);
         }
 
-        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside+(_rewards);
+        reserveAssetRewardsSetAside = reserveAssetRewardsSetAside + (_rewards);
 
         // Mark strategy as finalized
-        absoluteReturns = absoluteReturns+(_returns);
+        absoluteReturns = absoluteReturns + (_returns);
         strategies = strategies.remove(msg.sender);
         finalizedStrategies.push(msg.sender);
         strategyMapping[msg.sender] = false;
@@ -140,20 +141,18 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
 
         uint256 pricePerTokenUnitInDAI = IPriceOracle(controller.priceOracle()).getPrice(reserveAsset, DAI);
         uint256 feeInDAI =
-            pricePerTokenUnitInDAI.preciseMul(_fee)*(
-                10**(uint256(18)-(ERC20Upgradeable(reserveAsset).decimals()))
-            );
+            pricePerTokenUnitInDAI.preciseMul(_fee) * (10**(uint256(18) - (ERC20Upgradeable(reserveAsset).decimals())));
 
         _require(feeInDAI <= 2000 * 1e18, Errors.FEE_TOO_HIGH);
 
-        keeperDebt = keeperDebt+(_fee);
+        keeperDebt = keeperDebt + (_fee);
         uint256 liquidReserve = _liquidReserve();
         // Pay Keeper in Reserve Asset
         if (keeperDebt > 0 && liquidReserve > 0) {
             uint256 toPay = liquidReserve > keeperDebt ? keeperDebt : liquidReserve;
             IERC20(reserveAsset).safeTransfer(_keeper, toPay);
-            totalKeeperFees = totalKeeperFees+(toPay);
-            keeperDebt = keeperDebt-(toPay);
+            totalKeeperFees = totalKeeperFees + (toPay);
+            keeperDebt = keeperDebt - (toPay);
         }
     }
 
@@ -188,7 +187,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
                 _stratParams
             );
         strategyMapping[strategy] = true;
-        totalStake = totalStake+(_stratParams[1]);
+        totalStake = totalStake + (_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;
@@ -204,7 +203,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         _onlyStrategy();
 
         uint256 protocolMgmtFee = controller.protocolManagementFee().preciseMul(_capital);
-        _require(_capital+(protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
+        _require(_capital + (protocolMgmtFee) <= _liquidReserve(), Errors.MIN_LIQUIDITY);
 
         // Take protocol mgmt fee to the heart
         IERC20(reserveAsset).safeTransfer(controller.heart(), protocolMgmtFee);
@@ -231,8 +230,8 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * Gets liquid reserve available for to Garden.
      */
     function _liquidReserve() private view returns (uint256) {
-        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetRewardsSetAside);
-        return reserve > keeperDebt ? reserve-(keeperDebt) : 0;
+        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)) - (reserveAssetRewardsSetAside);
+        return reserve > keeperDebt ? reserve - (keeperDebt) : 0;
     }
 
     /**

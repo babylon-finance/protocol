@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 
@@ -85,8 +86,8 @@ contract OneInchPoolIntegration is PoolIntegration {
             (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(poolAddress) : poolAddress.balance);
         uint256 token1Balance =
             (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(poolAddress) : poolAddress.balance);
-        result[0] = token0Balance*(_liquidity)/(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        result[1] = token1Balance*(_liquidity)/(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[0] = (token0Balance * (_liquidity)) / (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[1] = (token1Balance * (_liquidity)) / (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
     }
 
@@ -140,8 +141,8 @@ contract OneInchPoolIntegration is PoolIntegration {
                 'deposit(uint256[2],uint256[2])',
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0]-(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED * 2)),
-                _maxAmountsIn[1]-(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED * 2))
+                _maxAmountsIn[0] - (_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED * 2)),
+                _maxAmountsIn[1] - (_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED * 2))
             );
         uint256 value = 0;
         // Add ETH if one of the tokens

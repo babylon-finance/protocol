@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 interface ICryptoRegistry {
     function find_pool_for_coins(

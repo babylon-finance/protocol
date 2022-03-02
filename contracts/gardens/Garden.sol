@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -274,13 +275,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // account for non 18 decimals ERC20 tokens, e.g. USDC
             uint256 feeShares = _reserveToShares(_fee, _pricePerShare);
             _internalDeposit(
-                _amountIn-(_fee),
-                _minAmountOut-(feeShares),
+                _amountIn - (_fee),
+                _minAmountOut - (feeShares),
                 signer,
                 signer,
                 _mintNft,
                 _pricePerShare,
-                minContribution > _fee ? minContribution-(_fee) : 0
+                minContribution > _fee ? minContribution - (_fee) : 0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
@@ -371,7 +372,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         _withdrawInternal(
             _amountIn,
-            _minAmountOut-(_maxFee),
+            _minAmountOut - (_maxFee),
             payable(signer),
             _withPenalty,
             _unwindStrategy,
@@ -388,7 +389,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
         // Flashloan protection
         _require(
-            block.timestamp-(contributors[msg.sender].lastDepositAt) >= depositHardlock,
+            block.timestamp - (contributors[msg.sender].lastDepositAt) >= depositHardlock,
             Errors.DEPOSIT_HARDLOCK
         );
         uint256[] memory rewards = new uint256[](8);
@@ -484,7 +485,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.claimedBABL,
             contributor.claimedRewards,
             contributor.totalDeposits > contributor.withdrawnSince
-                ? contributor.totalDeposits-(contributor.withdrawnSince)
+                ? contributor.totalDeposits - (contributor.withdrawnSince)
                 : 0,
             balance,
             lockedBalance,
@@ -505,7 +506,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             if (_contributor == strategy.strategist()) {
-                lockedAmount = lockedAmount+(strategy.stake());
+                lockedAmount = lockedAmount + (strategy.stake());
             }
         }
         // Avoid overflows if off-chain voting system fails
@@ -542,27 +543,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 prevBalance = balanceOf(_to);
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
-        _require(block.timestamp-(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        _require(block.timestamp - (contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
 
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
-        _amountIn = _amountIn > prevBalance-(getLockedBalance(_to))
-            ? prevBalance-(getLockedBalance(_to))
+        _amountIn = _amountIn > prevBalance - (getLockedBalance(_to))
+            ? prevBalance - (getLockedBalance(_to))
             : _amountIn;
-        _require(_amountIn <= prevBalance-(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+        _require(_amountIn <= prevBalance - (getLockedBalance(_to)), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
         // if withPenaltiy then unwind strategy
         if (_withPenalty && !(_liquidReserve() >= amountOut)) {
-            amountOut = amountOut-(amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
+            amountOut = amountOut - (amountOut.preciseMul(EARLY_WITHDRAWAL_PENALTY));
             // When unwinding a strategy, a slippage on integrations will result in receiving less tokens
             // than desired so we have have to account for this with a 5% slippage.
             // TODO: if there is more than 5% slippage that will block
             // withdrawal
             _onlyNonZero(_unwindStrategy);
-            IStrategy(_unwindStrategy).unwindStrategy(amountOut+(amountOut.preciseMul(5e16)), _strategyNAV);
+            IStrategy(_unwindStrategy).unwindStrategy(amountOut + (amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
         _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
@@ -570,7 +571,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         _burn(_to, _amountIn);
-        _safeSendReserveAsset(_to, amountOut-(_fee));
+        _safeSendReserveAsset(_to, amountOut - (_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
@@ -640,7 +641,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
-            _require(_liquidReserve()+(_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
+            _require(_liquidReserve() + (_amountIn) <= maxDepositLimit, Errors.MAX_DEPOSIT_LIMIT);
         }
 
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
@@ -657,7 +658,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         // Make sure we received the correct amount of reserve asset
         _require(
-            IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetBalanceBefore) == _amountIn,
+            IERC20(reserveAsset).balanceOf(address(this)) - (reserveAssetBalanceBefore) == _amountIn,
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
@@ -701,14 +702,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
-            contributor.claimedRewards = contributor.claimedRewards+(_profits); // Rewards claimed properly
-            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside-(_profits);
+            contributor.claimedRewards = contributor.claimedRewards + (_profits); // Rewards claimed properly
+            reserveAssetRewardsSetAside = reserveAssetRewardsSetAside - (_profits);
             _safeSendReserveAsset(payable(_contributor), _profits);
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
             uint256 bablSent = rewardsDistributor.sendBABLToContributor(_contributor, _babl);
-            contributor.claimedBABL = contributor.claimedBABL+(bablSent); // BABL Rewards claimed properly
+            contributor.claimedBABL = contributor.claimedBABL + (bablSent); // BABL Rewards claimed properly
             emit BABLRewardsForContributor(_contributor, bablSent);
         }
     }
@@ -717,8 +718,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Gets liquid reserve available for to Garden.
      */
     function _liquidReserve() private view returns (uint256) {
-        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this))-(reserveAssetRewardsSetAside);
-        return reserve > keeperDebt ? reserve-(keeperDebt) : 0;
+        uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)) - (reserveAssetRewardsSetAside);
+        return reserve > keeperDebt ? reserve - (keeperDebt) : 0;
     }
 
     // Disable garden token transfers. Allow minting and burning.
@@ -739,7 +740,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // Check that the withdrawal is possible
             // Unwrap WETH if ETH balance lower than amount
             if (address(this).balance < _amount) {
-                IWETH(WETH).withdraw(_amount-(address(this).balance));
+                IWETH(WETH).withdraw(_amount - (address(this).balance));
             }
             // Send ETH
             Address.sendValue(_to, _amount);
@@ -761,11 +762,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
-            totalContributors = totalContributors+(1);
+            totalContributors = totalContributors + (1);
             contributor.initialDepositAt = block.timestamp;
         }
         // We make checkpoints around contributor deposits to give the right rewards afterwards
-        contributor.totalDeposits = contributor.totalDeposits+(_reserveAssetQuantity);
+        contributor.totalDeposits = contributor.totalDeposits + (_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
@@ -788,9 +789,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
-            totalContributors = totalContributors-(1);
+            totalContributors = totalContributors - (1);
         } else {
-            contributor.withdrawnSince = contributor.withdrawnSince+(_amountOut);
+            contributor.withdrawnSince = contributor.withdrawnSince + (_amountOut);
         }
         // RD checkpoint for accurate rewards
         _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
@@ -867,16 +868,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
         // if no previous record then just pass the check
         if (lastPricePerShare != 0) {
-            slippage = slippage+(block.timestamp-(lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
+            slippage = slippage + (block.timestamp - (lastPricePerShareTS).preciseDiv(365 days).preciseMul(decay));
             if (_pricePerShare > lastPricePerShare) {
                 _require(
-                    _pricePerShare-(lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
+                    _pricePerShare - (lastPricePerShare) <= lastPricePerShare.preciseMul(slippage),
                     Errors.PRICE_PER_SHARE_WRONG
                 );
             } else {
                 _require(
-                    lastPricePerShare-(_pricePerShare) <=
-                        lastPricePerShare-(lastPricePerShare.preciseDiv(slippage+(1e18))),
+                    lastPricePerShare - (_pricePerShare) <=
+                        lastPricePerShare - (lastPricePerShare.preciseDiv(slippage + (1e18))),
                     Errors.PRICE_PER_SHARE_WRONG
                 );
             }

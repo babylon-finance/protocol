@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -88,7 +89,7 @@ contract LendOperation is Operation {
             numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
         }
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
-        uint256 minAmountExpected = exactAmount-(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        uint256 minAmountExpected = exactAmount - (exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
         return (assetToken, numTokensToSupply, 1); // put as collateral
     }
@@ -152,11 +153,13 @@ contract LendOperation is Operation {
                 uint256 priceRewards = _getPrice(_garden.reserveAsset(), rewardsToken);
                 // We add rewards
                 if (priceRewards != 0) {
-                    NAV = NAV+(
-                        SafeDecimalMath
-                            .normalizeAmountTokens(rewardsToken, _garden.reserveAsset(), rewardsAmount)
-                            .preciseDiv(priceRewards)
-                    );
+                    NAV =
+                        NAV +
+                        (
+                            SafeDecimalMath
+                                .normalizeAmountTokens(rewardsToken, _garden.reserveAsset(), rewardsAmount)
+                                .preciseDiv(priceRewards)
+                        );
                 }
             }
         }
@@ -186,11 +189,11 @@ contract LendOperation is Operation {
         if (_remaining > 0) {
             // Update amount so we can exit if there is debt
             try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
-                numTokensToRedeem = numTokensToRedeem-(
-                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg)*(105)/(100)
-                ); // add a bit extra 5% just in case
+                numTokensToRedeem =
+                    numTokensToRedeem -
+                    ((remainingDebtInCollateralTokens.preciseDiv(collateralPctg) * (105)) / (100)); // add a bit extra 5% just in case
             } catch {
-                numTokensToRedeem = numTokensToRedeem-(remainingDebtInCollateralTokens*(140)/(100));
+                numTokensToRedeem = numTokensToRedeem - ((remainingDebtInCollateralTokens * (140)) / (100));
             }
         }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
@@ -202,7 +205,7 @@ contract LendOperation is Operation {
             msg.sender,
             _assetToken,
             numTokensToRedeem,
-            exchangeRate*(numTokensToRedeem-(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED*(2))))
+            exchangeRate * (numTokensToRedeem - (numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED * (2))))
         );
     }
 

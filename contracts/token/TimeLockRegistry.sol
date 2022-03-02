@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma experimental ABIEncoderV2;
+
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -164,12 +164,12 @@ contract TimeLockRegistry is Ownable {
         );
         require(vestingStartingDate >= 1614553200, 'Cannot register earlier than March 2021'); // 1614553200 is UNIX TIME of 2021 March the 1st
         require(
-            vestingStartingDate <= block.timestamp+(30 days),
+            vestingStartingDate <= block.timestamp + (30 days),
             'Cannot register more than 30 days ahead in the future'
         );
-        require(totalTokens+(distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
+        require(totalTokens + (distribution) <= IERC20(token).balanceOf(address(this)), 'Not enough tokens');
 
-        totalTokens = totalTokens+(distribution);
+        totalTokens = totalTokens + (distribution);
         // register distribution
         registeredDistributions[receiver] = distribution;
         registrations.push(receiver);
@@ -180,9 +180,9 @@ contract TimeLockRegistry is Ownable {
         newTokenVested.vestingBegin = vestingStartingDate;
 
         if (newTokenVested.team == true) {
-            newTokenVested.vestingEnd = vestingStartingDate+(teamVesting);
+            newTokenVested.vestingEnd = vestingStartingDate + (teamVesting);
         } else {
-            newTokenVested.vestingEnd = vestingStartingDate+(investorVesting);
+            newTokenVested.vestingEnd = vestingStartingDate + (investorVesting);
         }
         newTokenVested.lastClaim = vestingStartingDate;
 
@@ -216,7 +216,7 @@ contract TimeLockRegistry is Ownable {
         registrations.remove(receiver);
 
         // decrease total tokens
-        totalTokens = totalTokens-(amount);
+        totalTokens = totalTokens - (amount);
 
         // emit cancel event
         emit Cancel(receiver, amount);
@@ -274,7 +274,7 @@ contract TimeLockRegistry is Ownable {
         delete registeredDistributions[_receiver];
 
         // decrease total tokens
-        totalTokens = totalTokens-(amount);
+        totalTokens = totalTokens - (amount);
 
         // register lockup in TimeLockedToken
         // this will transfer funds from this contract and lock them for sender

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
@@ -85,16 +86,12 @@ contract UniswapPoolIntegration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 totalSupply = IUniswapV2Pair(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
-        result[0] = IERC20(IUniswapV2Pair(poolAddress).token0())
-            .balanceOf(poolAddress)
-            *(_liquidity)
-            /(totalSupply)
-            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        result[1] = IERC20(IUniswapV2Pair(poolAddress).token1())
-            .balanceOf(poolAddress)
-            *(_liquidity)
-            /(totalSupply)
-            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[0] =
+            (IERC20(IUniswapV2Pair(poolAddress).token0()).balanceOf(poolAddress) * (_liquidity)) /
+            (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[1] =
+            (IERC20(IUniswapV2Pair(poolAddress).token1()).balanceOf(poolAddress) * (_liquidity)) /
+            (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
     }
 
@@ -158,10 +155,10 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _tokensIn[1],
                 _maxAmountsIn[0],
                 _maxAmountsIn[1],
-                _maxAmountsIn[0]-(_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
-                _maxAmountsIn[1]-(_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
+                _maxAmountsIn[0] - (_maxAmountsIn[0].preciseMul(SLIPPAGE_ALLOWED)),
+                _maxAmountsIn[1] - (_maxAmountsIn[1].preciseMul(SLIPPAGE_ALLOWED)),
                 _strategy,
-                block.timestamp+(MAX_DELTA_BLOCKS)
+                block.timestamp + (MAX_DELTA_BLOCKS)
             );
     }
 
@@ -206,7 +203,7 @@ contract UniswapPoolIntegration is PoolIntegration {
                 _minAmountsOut[0],
                 _minAmountsOut[1],
                 _strategy,
-                block.timestamp+(MAX_DELTA_BLOCKS)
+                block.timestamp + (MAX_DELTA_BLOCKS)
             );
 
         return (address(uniRouter), 0, methodData);

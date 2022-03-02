@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -183,9 +184,9 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         if (rewardsLength > 0) {
             for (uint256 i = 0; i < rewardsLength; i++) {
                 uint256 rewardAmount = pool.earned(i, _strategy);
-                totalAmount = totalAmount+(
-                    oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount)
-                );
+                totalAmount =
+                    totalAmount +
+                    (oracle.getPrice(pool.rewardTokens(i), reserveAsset).preciseMul(rewardAmount));
             }
         }
         return (reserveAsset, totalAmount);

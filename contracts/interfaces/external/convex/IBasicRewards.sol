@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.5;
+pragma abicoder v1;
 
 interface IBasicRewards {
     function getReward(address _account, bool _claimExtras) external;

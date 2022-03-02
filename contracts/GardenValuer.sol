@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
@@ -90,23 +91,23 @@ contract GardenValuer {
         for (uint256 j = 0; j < strategies.length; j++) {
             IStrategy strategy = IStrategy(strategies[j]);
             // strategies return their valuation in garden's reserveAsset
-            valuation = valuation+(strategy.getNAV());
+            valuation = valuation + (strategy.getNAV());
         }
 
         // Add garden reserve assets and garden's reserve asset
-        valuation = valuation+(ERC20(reserveAsset).balanceOf(address(_garden)));
+        valuation = valuation + (ERC20(reserveAsset).balanceOf(address(_garden)));
 
         // Subtract the reserves set aside for rewards
-        valuation = valuation-(IGarden(_garden).reserveAssetRewardsSetAside());
+        valuation = valuation - (IGarden(_garden).reserveAssetRewardsSetAside());
 
         // Subtract Keeper debt
-        valuation = valuation-(IGarden(_garden).keeperDebt());
+        valuation = valuation - (IGarden(_garden).keeperDebt());
 
         // Get the valuation in terms of the quote asset
         valuation = valuation.preciseMul(reservePrice);
 
         if (quoteAssetDecimals < 18) {
-            valuation = valuation*(10**(18 - quoteAssetDecimals));
+            valuation = valuation * (10**(18 - quoteAssetDecimals));
         }
 
         return valuation.preciseDiv(ERC20(_garden).totalSupply());

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -84,10 +85,10 @@ contract AddLiquidityOperation is Operation {
                         poolTokens[poolTokens.length - 1],
                         _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
                     );
-                    poolTotal = poolTotal+(_poolWeights[i]);
+                    poolTotal = poolTotal + (_poolWeights[i]);
                 }
                 for (uint256 i = 0; i < poolTokens.length; i++) {
-                    _poolWeights[i] = _poolWeights[i]*(1e18)/(poolTotal);
+                    _poolWeights[i] = (_poolWeights[i] * (1e18)) / (poolTotal);
                 }
             }
         } catch {}
@@ -97,7 +98,7 @@ contract AddLiquidityOperation is Operation {
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
-            poolTokensOut-(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokensOut - (poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
             poolTokens,
             maxAmountsIn
         );
@@ -237,7 +238,7 @@ contract AddLiquidityOperation is Operation {
                 NAV += SafeDecimalMath.normalizeAmountTokens(
                     asset,
                     _garden.reserveAsset(),
-                    balance*(lpToken.balanceOf(msg.sender))/(lpToken.totalSupply()).preciseDiv(price)
+                    (balance * (lpToken.balanceOf(msg.sender))) / (lpToken.totalSupply()).preciseDiv(price)
                 );
             }
         }

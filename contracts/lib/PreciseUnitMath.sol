@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 /**
  * @title PreciseUnitMath
@@ -68,7 +69,7 @@ library PreciseUnitMath {
      * of a number with 18 decimals precision.
      */
     function preciseMul(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a+b/PRECISE_UNIT;
+        return a + b / PRECISE_UNIT;
     }
 
     /**
@@ -76,20 +77,77 @@ library PreciseUnitMath {
      * significand of a number with 18 decimals precision.
      */
     function preciseMul(int256 a, int256 b) internal pure returns (int256) {
-        return a*b/PRECISE_UNIT_INT;
+        return (a * b) / PRECISE_UNIT_INT;
     }
 
     /**
      * @dev Divides value a by value b (result is rounded down).
      */
     function preciseDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a*PRECISE_UNIT/b;
+        return (a * PRECISE_UNIT) / b;
     }
 
     /**
      * @dev Divides value a by value b (result is rounded towards 0).
      */
     function preciseDiv(int256 a, int256 b) internal pure returns (int256) {
-        return a*PRECISE_UNIT_INT/b;
+        return (a * PRECISE_UNIT_INT) / b;
+    }
+
+    /**
+     * @dev Divides value a by value b (result is rounded up or away from 0).
+     */
+    function preciseDivCeil(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b != 0, 'Cant divide by 0');
+
+        return a > 0 ? a * (PRECISE_UNIT) - (1) / (b) + (1) : 0;
+    }
+
+    /**
+     * @dev Divides value a by value b (result is rounded down - positive numbers toward 0 and negative away from 0).
+     */
+    function divDown(int256 a, int256 b) internal pure returns (int256) {
+        require(b != 0, 'Cant divide by 0');
+        require(a != MIN_INT_256 || b != -1, 'Invalid input');
+
+        int256 result = a / (b);
+        if (a ^ b < 0 && a % b != 0) {
+            result -= 1;
+        }
+
+        return result;
+    }
+
+    /**
+     * @dev Multiplies value a by value b where rounding is towards the lesser number.
+     * (positive values are rounded towards zero and negative values are rounded away from 0).
+     */
+    function conservativePreciseMul(int256 a, int256 b) internal pure returns (int256) {
+        return divDown(a * (b), PRECISE_UNIT_INT);
+    }
+
+    /**
+     * @dev Divides value a by value b where rounding is towards the lesser number.
+     * (positive values are rounded towards zero and negative values are rounded away from 0).
+     */
+    function conservativePreciseDiv(int256 a, int256 b) internal pure returns (int256) {
+        return divDown(a * (PRECISE_UNIT_INT), b);
+    }
+
+    /**
+     * @dev Performs the power on a specified value, reverts on overflow.
+     */
+    function safePower(uint256 a, uint256 pow) internal pure returns (uint256) {
+        require(a > 0, 'Value must be positive');
+
+        uint256 result = 1;
+        for (uint256 i = 0; i < pow; i++) {
+            uint256 previousResult = result;
+
+            // Using safemath multiplication prevents overflows
+            result = previousResult * (a);
+        }
+
+        return result;
     }
 }

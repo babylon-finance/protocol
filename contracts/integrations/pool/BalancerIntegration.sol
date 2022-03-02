@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
@@ -77,11 +78,9 @@ contract BalancerIntegration is PoolIntegration {
         address[] memory poolTokens = IBPool(poolAddress).getCurrentTokens();
         uint256[] memory result = new uint256[](poolTokens.length);
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            result[i] = IERC20(poolTokens[i])
-                .balanceOf(poolAddress)
-                *(_liquidity)
-                /(lpTokensTotalSupply)
-                .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+            result[i] =
+                (IERC20(poolTokens[i]).balanceOf(poolAddress) * (_liquidity)) /
+                (lpTokensTotalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         }
         return result;
     }

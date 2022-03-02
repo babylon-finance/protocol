@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.5;
+pragma abicoder v1;
 
 interface IStakedAave {
     function stake(address to, uint256 amount) external;

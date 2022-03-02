@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
@@ -366,15 +367,15 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         if (registryKind == 1) {
             (int128 oneIndexI, int128 twoIndexI, bool underlyingI) =
                 curveRegistry.get_coin_indices(_pool, _fromToken, _toToken);
-            oneIndex = uint256(oneIndexI);
-            twoIndex = uint256(twoIndexI);
+            oneIndex = uint256(uint128(oneIndexI));
+            twoIndex = uint256(uint128(twoIndexI));
             underlying = underlyingI;
         }
         if (registryKind == 2) {
             (int128 oneIndexI, int128 twoIndexI, bool underlyingI) =
                 factoryRegistry.get_coin_indices(_pool, _fromToken, _toToken);
-            oneIndex = uint256(oneIndexI);
-            twoIndex = uint256(twoIndexI);
+            oneIndex = uint256(uint128(oneIndexI));
+            twoIndex = uint256(uint128(twoIndexI));
             underlying = underlyingI;
         }
         if (registryKind == 3) {

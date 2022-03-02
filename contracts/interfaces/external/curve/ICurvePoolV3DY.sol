@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.5;
+pragma abicoder v1;
 
 interface ICurvePoolV3DY {
     function get_dy(

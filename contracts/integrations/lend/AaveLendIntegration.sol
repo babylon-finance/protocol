@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
@@ -60,7 +61,7 @@ contract AaveLendIntegration is LendIntegration {
 
     function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
         (, , uint256 collateral, , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
-        return collateral*(1e14);
+        return collateral * (1e14);
     }
 
     function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {

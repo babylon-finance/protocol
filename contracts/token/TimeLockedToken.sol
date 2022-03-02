@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {TimeLockRegistry} from './TimeLockRegistry.sol';
@@ -207,7 +208,7 @@ abstract contract TimeLockedToken is VoteToken {
         require(_receiver != msg.sender, 'the owner cannot lockup itself');
 
         // update amount of locked distribution
-        distribution[_receiver] = distribution[_receiver]+(_amount);
+        distribution[_receiver] = distribution[_receiver] + (_amount);
 
         VestedToken storage newVestedToken = vestedToken[_receiver];
 
@@ -261,7 +262,7 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function unlockedBalance(address account) public returns (uint256) {
         // totalBalance - lockedBalance
-        return balanceOf(account)-(lockedBalance(account));
+        return balanceOf(account) - (lockedBalance(account));
     }
 
     /**
@@ -280,7 +281,7 @@ abstract contract TimeLockedToken is VoteToken {
         uint256 lockedAmount = amount;
 
         // Team and investors cannot transfer tokens in the first year
-        if (vestedToken[account].vestingBegin+(365 days) > block.timestamp && amount != 0) {
+        if (vestedToken[account].vestingBegin + (365 days) > block.timestamp && amount != 0) {
             return lockedAmount;
         }
 
@@ -289,9 +290,9 @@ abstract contract TimeLockedToken is VoteToken {
             lockedAmount = 0;
         } else if (amount != 0) {
             // in case of still under vesting period, locked tokens are recalculated
-            lockedAmount = amount*(vestedToken[account].vestingEnd-(block.timestamp))/(
-                vestedToken[account].vestingEnd-(vestedToken[account].vestingBegin)
-            );
+            lockedAmount =
+                (amount * (vestedToken[account].vestingEnd - (block.timestamp))) /
+                (vestedToken[account].vestingEnd - (vestedToken[account].vestingBegin));
         }
         return lockedAmount;
     }
@@ -344,8 +345,8 @@ abstract contract TimeLockedToken is VoteToken {
         require(spender != msg.sender, 'TimeLockedToken::approve: spender cannot be the msg.sender');
 
         uint96 amount;
-        if (rawAmount == uint256(-1)) {
-            amount = uint96(-1);
+        if (rawAmount == type(uint256).max) {
+            amount = type(uint96).max;
         } else {
             amount = safe96(rawAmount, 'TimeLockedToken::approve: amount exceeds 96 bits');
         }
@@ -373,13 +374,13 @@ abstract contract TimeLockedToken is VoteToken {
      */
     function increaseAllowance(address spender, uint256 addedValue) public override nonReentrant returns (bool) {
         require(
-            unlockedBalance(msg.sender) >= allowance(msg.sender, spender)+(addedValue) ||
+            unlockedBalance(msg.sender) >= allowance(msg.sender, spender) + (addedValue) ||
                 spender == address(timeLockRegistry),
             'TimeLockedToken::increaseAllowance:Not enough unlocked tokens'
         );
         require(spender != address(0), 'TimeLockedToken::increaseAllowance:Spender cannot be zero address');
         require(spender != msg.sender, 'TimeLockedToken::increaseAllowance:Spender cannot be the msg.sender');
-        _approve(msg.sender, spender, allowance(msg.sender, spender)+(addedValue));
+        _approve(msg.sender, spender, allowance(msg.sender, spender) + (addedValue));
         return true;
     }
 
@@ -407,7 +408,7 @@ abstract contract TimeLockedToken is VoteToken {
             'TimeLockedToken::decreaseAllowance:cannot decrease allowance to timeLockRegistry'
         );
 
-        _approve(msg.sender, spender, allowance(msg.sender, spender)-(subtractedValue));
+        _approve(msg.sender, spender, allowance(msg.sender, spender) - (subtractedValue));
         return true;
     }
 

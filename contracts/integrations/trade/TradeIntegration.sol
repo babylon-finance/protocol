@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -247,11 +248,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      */
     function _validatePostTrade(TradeInfo memory _tradeInfo) internal view returns (uint256) {
         uint256 exchangedQuantity =
-            ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy))-(
-                _tradeInfo.preTradeReceiveTokenBalance
-            );
+            ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)) -
+                (_tradeInfo.preTradeReceiveTokenBalance);
         uint256 sendTokenBalance = ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy));
-        uint256 realUsed = _tradeInfo.preTradeSendTokenBalance-(sendTokenBalance);
+        uint256 realUsed = _tradeInfo.preTradeSendTokenBalance - (sendTokenBalance);
         // Uses at least 90% of the send token (disallow partial liquidity trades)
         require(realUsed >= _tradeInfo.totalSendQuantity.preciseMul(9e17), 'Partial trade not allowed');
         require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (governance/IGovernor.sol)
 
-pragma solidity ^0.8.9;
-pragma abicoder v2;
+pragma solidity ^0.8.5;
 
 /**
  * @dev Interface of the {Governor} core.

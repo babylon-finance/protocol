@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.5;
 
 import '@openzeppelin/contracts/governance/Governor.sol';
 import '@openzeppelin/contracts/governance/compatibility/GovernorCompatibilityBravo.sol';

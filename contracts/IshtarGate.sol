@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
@@ -69,7 +70,6 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
     constructor(IBabController _controller, string memory _tokenURI) ERC721('IshtarGate', 'ISHT') {
         require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
-        tokenURI = _tokenURI;
         maxNumberOfInvites = 10;
     }
 
@@ -90,11 +90,7 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
      *
      * @param _tokenURI               Address of the tokenURI
      */
-    function updateGardenURI(string memory _tokenURI) external override onlyOwner {
-        string memory oldURI = tokenURI;
-        tokenURI = _tokenURI;
-        emit GateURIUpdated(tokenURI, oldURI);
-    }
+    function updateGardenURI(string memory _tokenURI) external override onlyOwner {}
 
     /**
      * Awards the ishtar gate to a user and gives him access to a specific garden
@@ -225,7 +221,7 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
             _tokenIds.increment();
             newItemId = _tokenIds.current();
             _safeMint(_user, newItemId);
-            _setTokenURI(newItemId, tokenURI);
+            // _setTokenURI(newItemId, tokenURI);
             emit IshtarGateAwarded(_user, newItemId);
         } else {
             newItemId = tokenOfOwnerByIndex(_user, 0);
@@ -249,10 +245,10 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
         uint256 newItemId = _createOrGetGateNFT(_user);
         if (_permission > 0 && permissionsByCommunity[_garden][_user] == 0) {
             require(gardenAccessCount[_garden] < maxNumberOfInvites, 'Max Number of invites reached');
-            gardenAccessCount[_garden] = gardenAccessCount[_garden]+(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden] + (1);
         }
         if (_permission == 0 && permissionsByCommunity[_garden][_user] > 0) {
-            gardenAccessCount[_garden] = gardenAccessCount[_garden]-(1);
+            gardenAccessCount[_garden] = gardenAccessCount[_garden] - (1);
         }
         permissionsByCommunity[_garden][_user] = _permission;
         emit GardenAccess(_user, _garden, _permission, newItemId);
@@ -274,10 +270,11 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
     }
 
     // The following functions are overrides required by Solidity.
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal
-        override(ERC721, ERC721Enumerable)
-    {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override(ERC721, ERC721Enumerable) {
         super._beforeTokenTransfer(from, to, tokenId);
     }
 
@@ -285,22 +282,11 @@ contract IshtarGate is ERC721, ERC721URIStorage, ERC721Enumerable, IIshtarGate, 
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
 }

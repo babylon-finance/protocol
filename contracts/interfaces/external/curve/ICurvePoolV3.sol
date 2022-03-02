@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.5;
+pragma abicoder v1;
 
 interface ICurvePoolV3 {
     function coins(uint256 arg0) external view returns (address out);

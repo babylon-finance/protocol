@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
@@ -83,7 +82,7 @@ contract HeartViewer {
             heart.getGardenWeights(),
             [heart.bablRewardLeft(), heart.weeklyRewardAmount()],
             [heart.lastPumpAt(), heart.lastVotesAt()],
-            [wethAmount+(wethAmountF), bablAmount+(bablAmountF)]
+            [wethAmount + (wethAmountF), bablAmount + (bablAmountF)]
         );
     }
 
@@ -116,6 +115,6 @@ contract HeartViewer {
     function _getProposalInfo(uint256 _proposalId) internal view returns (address, uint256[3] memory) {
         (, address proposer, , , uint256 endBlock, uint256 forVotes, uint256 againstVotes, , , ) =
             governor.proposals(_proposalId);
-        return (proposer, [endBlock, forVotes-(againstVotes), uint256(governor.state(_proposalId))]);
+        return (proposer, [endBlock, forVotes - (againstVotes), uint256(governor.state(_proposalId))]);
     }
 }

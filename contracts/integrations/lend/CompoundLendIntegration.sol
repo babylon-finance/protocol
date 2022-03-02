@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
@@ -76,7 +77,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
-        return ctoken.balanceOf(_address)*(ctoken.exchangeRateStored())/(10**18);
+        return (ctoken.balanceOf(_address) * (ctoken.exchangeRateStored())) / (10**18);
     }
 
     /* ============ Internal Functions ============ */
@@ -118,7 +119,7 @@ contract CompoundLendIntegration is LendIntegration {
         returns (uint256)
     {
         uint256 oneCTokenInUderlying = _getExchangeRatePerToken(_assetToken);
-        return oneCTokenInUderlying*(_numTokensToSupply)/(10**18);
+        return (oneCTokenInUderlying * (_numTokensToSupply)) / (10**18);
     }
 
     // TODO: Test this
@@ -129,10 +130,10 @@ contract CompoundLendIntegration is LendIntegration {
         // cTokens always have 8 decimals.
         if (assetDecimals < 8) {
             uint256 mantissa = 8 - assetDecimals;
-            return exchangeRateCurrent*(10**mantissa);
+            return exchangeRateCurrent * (10**mantissa);
         } else {
             uint256 mantissa = assetDecimals - 8;
-            return exchangeRateCurrent/(10**mantissa);
+            return exchangeRateCurrent / (10**mantissa);
         }
     }
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -29,7 +30,7 @@ library SafeDecimalMath {
      */
     function multiplyDecimal(uint256 x, uint256 y) internal pure returns (uint256) {
         /* Divide by UNIT to remove the extra factor introduced by the product. */
-        return x*y / UNIT;
+        return (x * y) / UNIT;
     }
 
     /**
@@ -50,7 +51,7 @@ library SafeDecimalMath {
         uint256 precisionUnit
     ) private pure returns (uint256) {
         /* Divide by UNIT to remove the extra factor introduced by the product. */
-        uint256 quotientTimesTen = x*y / (precisionUnit / 10);
+        uint256 quotientTimesTen = (x * y) / (precisionUnit / 10);
 
         if (quotientTimesTen % 10 >= 5) {
             quotientTimesTen += 10;
@@ -86,7 +87,7 @@ library SafeDecimalMath {
      */
     function divideDecimal(uint256 x, uint256 y) internal pure returns (uint256) {
         /* Reintroduce the UNIT factor that will be divided out by y. */
-        return x*UNIT/y;
+        return (x * UNIT) / y;
     }
 
     /**
@@ -102,7 +103,7 @@ library SafeDecimalMath {
         uint256 y,
         uint256 precisionUnit
     ) private pure returns (uint256) {
-        uint256 resultTimesTen = x*(precisionUnit * 10)/(y);
+        uint256 resultTimesTen = (x * (precisionUnit * 10)) / (y);
 
         if (resultTimesTen % 10 >= 5) {
             resultTimesTen += 10;
@@ -143,9 +144,9 @@ library SafeDecimalMath {
             return quantity;
         }
         if (tokenDecimalsTarget > tokenDecimals) {
-            return quantity*(10**(tokenDecimalsTarget-(tokenDecimals)));
+            return quantity * (10**(tokenDecimalsTarget - (tokenDecimals)));
         }
-        return quantity/(10**(tokenDecimals-(tokenDecimalsTarget)));
+        return quantity / (10**(tokenDecimals - (tokenDecimalsTarget)));
     }
 
     function _isETH(address _address) internal pure returns (bool) {

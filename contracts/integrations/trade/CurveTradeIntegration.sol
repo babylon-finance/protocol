@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -81,16 +80,16 @@ contract CurveTradeIntegration is TradeIntegration {
         } else {
             methodData = abi.encodeWithSignature(
                 'exchange(int128,int128,uint256,uint256)',
-                int128(i),
-                int128(j),
+                int128(uint128(i)),
+                int128(uint128(j)),
                 _sendQuantity,
                 1
             );
             if (underlying) {
                 methodData = abi.encodeWithSignature(
                     'exchange_underlying(int128,int128,uint256,uint256)',
-                    int128(i),
-                    int128(j),
+                    int128(uint128(i)),
+                    int128(uint128(j)),
                     _sendQuantity,
                     1
                 );

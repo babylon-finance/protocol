@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -55,26 +54,27 @@ contract BabylonViewer {
     function getGardenPrincipal(address _garden) public view returns (uint256) {
         IGarden garden = IGarden(_garden);
         IERC20 reserveAsset = IERC20(garden.reserveAsset());
-        uint256 principal = reserveAsset.balanceOf(address(garden))-(garden.reserveAssetRewardsSetAside());
+        uint256 principal = reserveAsset.balanceOf(address(garden)) - (garden.reserveAssetRewardsSetAside());
         uint256 protocolMgmtFee = IBabController(controller).protocolManagementFee();
         address[] memory strategies = garden.getStrategies();
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            principal = principal+(strategy.capitalAllocated())+(
-                protocolMgmtFee.preciseMul(strategy.capitalAllocated())
-            );
+            principal =
+                principal +
+                (strategy.capitalAllocated()) +
+                (protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
         }
         address[] memory finalizedStrategies = garden.getFinalizedStrategies();
         for (uint256 i = 0; i < finalizedStrategies.length; i++) {
             IStrategy strategy = IStrategy(finalizedStrategies[i]);
-            principal = principal+(protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
+            principal = principal + (protocolMgmtFee.preciseMul(strategy.capitalAllocated()));
         }
-        principal = principal+(garden.totalKeeperFees());
+        principal = principal + (garden.totalKeeperFees());
         int256 absoluteReturns = garden.absoluteReturns();
         if (absoluteReturns > 0) {
-            principal = principal > uint256(absoluteReturns) ? principal-(uint256(absoluteReturns)) : 0;
+            principal = principal > uint256(absoluteReturns) ? principal - (uint256(absoluteReturns)) : 0;
         } else {
-            principal = principal+(uint256(-absoluteReturns));
+            principal = principal + (uint256(-absoluteReturns));
         }
         return principal;
     }
@@ -111,10 +111,10 @@ contract BabylonViewer {
         totalSupplyValuationAndSeed[2] = _getGardenSeed(_garden);
         totalSupplyValuationAndSeed[3] = ERC20(garden.reserveAsset()).balanceOf(address(garden));
         if (totalSupplyValuationAndSeed[3] > garden.keeperDebt()) {
-            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3]-(garden.keeperDebt());
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3] - (garden.keeperDebt());
         }
         if (totalSupplyValuationAndSeed[3] > garden.reserveAssetRewardsSetAside()) {
-            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3]-(garden.reserveAssetRewardsSetAside());
+            totalSupplyValuationAndSeed[3] = totalSupplyValuationAndSeed[3] - (garden.reserveAssetRewardsSetAside());
         } else {
             totalSupplyValuationAndSeed[3] = 0;
         }
@@ -144,7 +144,7 @@ contract BabylonViewer {
                 garden.strategyCooldownPeriod(),
                 garden.minContribution(),
                 garden.minLiquidityAsset(),
-                garden.totalKeeperFees()+(garden.keeperDebt()),
+                garden.totalKeeperFees() + (garden.keeperDebt()),
                 garden.pricePerShareDecayRate(),
                 garden.pricePerShareDelta()
             ],
@@ -266,7 +266,7 @@ contract BabylonViewer {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](100);
         bool[] memory hasUserDeposited = new bool[](100);
-        uint256 limit = gardens.length <= 100 ? gardens.length : _offset+(100);
+        uint256 limit = gardens.length <= 100 ? gardens.length : _offset + (100);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
         for (uint256 i = _offset; i < limit; i++) {
@@ -307,7 +307,7 @@ contract BabylonViewer {
         for (uint256 i = 0; i < _members.length; i++) {
             (bool canDeposit, bool canVote, ) = getGardenPermissions(_garden, _members[i]);
             if (canDeposit && canVote) {
-                total = total+(IERC20(_garden).balanceOf(_members[i]));
+                total = total + (IERC20(_garden).balanceOf(_members[i]));
             }
         }
         return total;
@@ -323,11 +323,11 @@ contract BabylonViewer {
         for (uint8 i = 0; i < _strategies.length; i++) {
             IStrategy strategy = IStrategy(_strategies[i]);
             if (strategy.strategist() == _user) {
-                strategiesCreated = strategiesCreated+(1);
+                strategiesCreated = strategiesCreated + (1);
             }
             int256 votes = strategy.getUserVotes(_user);
             if (votes != 0) {
-                totalVotes = totalVotes+(uint256(Math.abs(votes)));
+                totalVotes = totalVotes + (uint256(Math.abs(votes)));
             }
         }
         return (strategiesCreated, totalVotes);
@@ -411,10 +411,10 @@ contract BabylonViewer {
         address denominator;
 
         if (pool.token0() == _reserveAsset) {
-            liquidityInReserve = poolLiquidity*(poolLiquidity)/(ERC20(pool.token1()).balanceOf(address(pool)));
+            liquidityInReserve = (poolLiquidity * (poolLiquidity)) / (ERC20(pool.token1()).balanceOf(address(pool)));
             denominator = pool.token0();
         } else {
-            liquidityInReserve = poolLiquidity*(poolLiquidity)/(ERC20(pool.token0()).balanceOf(address(pool)));
+            liquidityInReserve = (poolLiquidity * (poolLiquidity)) / (ERC20(pool.token0()).balanceOf(address(pool)));
             denominator = pool.token1();
         }
         // Normalize to reserve asset
@@ -478,7 +478,7 @@ contract BabylonViewer {
             }
             tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserRewards(_strategies[i], _contributor);
             for (uint256 j = 0; j < 8; j++) {
-                totalRewards[j] = totalRewards[j]+(tempRewards[j]);
+                totalRewards[j] = totalRewards[j] + (tempRewards[j]);
             }
         }
         return totalRewards;

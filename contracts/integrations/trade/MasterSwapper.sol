@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -193,7 +194,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             uint256 aaveBalance = ERC20(AAVE).balanceOf(_strategy);
             if (_sendToken != AAVE) {
                 ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
-                aaveBalance = ERC20(AAVE).balanceOf(_strategy)-(aaveBalance);
+                aaveBalance = ERC20(AAVE).balanceOf(_strategy) - (aaveBalance);
             }
             try
                 ITradeIntegration(paladinTradeIntegration).trade(
@@ -216,7 +217,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             // If the heart wants it go through the heart and get WETH
             try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
                 _sendToken = WETH;
-                _sendQuantity = ERC20(WETH).balanceOf(_strategy)-(wethBalance);
+                _sendQuantity = ERC20(WETH).balanceOf(_strategy) - (wethBalance);
                 if (_receiveToken == WETH) {
                     return;
                 }
@@ -324,7 +325,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ITradeIntegration(_two).trade(
             _strategy,
             _reserve,
-            _getTokenOrETHBalance(_strategy, _reserve)-(reserveBalance),
+            _getTokenOrETHBalance(_strategy, _reserve) - (reserveBalance),
             _receiveToken,
             _minReceiveQuantity
         );
@@ -368,7 +369,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _trade(
                     _strategy,
                     DAI,
-                    _getTokenOrETHBalance(_strategy, DAI)-(reserveBalance),
+                    _getTokenOrETHBalance(_strategy, DAI) - (reserveBalance),
                     _receiveToken,
                     _minReceiveQuantity
                 );
@@ -383,7 +384,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
             if (_sendToken != DAI) {
                 _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
-                reserveBalance = _getTokenOrETHBalance(_strategy, DAI)-(reserveBalance);
+                reserveBalance = _getTokenOrETHBalance(_strategy, DAI) - (reserveBalance);
             }
             try ITradeIntegration(synthetix).trade(_strategy, DAI, reserveBalance, _receiveToken, _minReceiveQuantity) {
                 return ('', true);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -46,9 +47,8 @@ contract YearnVaultIntegration is PassiveIntegration {
     function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
         // Normalizing pricePerShare returned by Yearn
         return
-            _amount.preciseDiv(IYearnVault(_asset).pricePerShare())/(
-                10**PreciseUnitMath.decimals()-(ERC20(_asset).decimals())
-            );
+            _amount.preciseDiv(IYearnVault(_asset).pricePerShare()) /
+            (10**PreciseUnitMath.decimals() - (ERC20(_asset).decimals()));
     }
 
     function _getPricePerShare(address _asset) internal view override returns (uint256) {

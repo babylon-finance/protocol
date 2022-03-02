@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -20,7 +21,7 @@ library UniversalERC20 {
         }
 
         if (isETH(token)) {
-            address(uint160(to)).transfer(amount);
+            payable(address(uint160(to))).transfer(amount);
             return true;
         } else {
             token.safeTransfer(to, amount);
@@ -41,10 +42,10 @@ library UniversalERC20 {
         if (isETH(token)) {
             require(from == msg.sender && msg.value >= amount, 'msg.value is zero');
             if (to != address(this)) {
-                address(uint160(to)).transfer(amount);
+                payable(address(uint160(to))).transfer(amount);
             }
             if (msg.value > amount) {
-                msg.sender.transfer(msg.value-(amount));
+                payable(msg.sender).transfer(msg.value - (amount));
             }
         } else {
             token.safeTransferFrom(from, to, amount);

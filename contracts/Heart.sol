@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -197,15 +196,15 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function pump() public override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
-        _require(block.timestamp-(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
-        _require(block.timestamp-(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
+        _require(block.timestamp - (lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
+        _require(block.timestamp - (lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
         _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
-        totalStats[1] = totalStats[1]+(wethBalance.preciseMul(feeDistributionWeights[0]));
+        totalStats[1] = totalStats[1] + (wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
         // 25% to BABL-ETH pair
@@ -321,7 +320,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         controller.onlyGovernanceOrEmergency();
         // Get the BABL reward
         IERC20(BABL).safeTransferFrom(msg.sender, address(this), _bablAmount);
-        bablRewardLeft = bablRewardLeft+(_bablAmount);
+        bablRewardLeft = bablRewardLeft + (_bablAmount);
         weeklyRewardAmount = _weeklyRate;
     }
 
@@ -464,10 +463,10 @@ contract Heart is OwnableUpgradeable, IHeart {
             uint256 balance = IERC20(reserveAsset).balanceOf(address(this));
             // Trade if it's above a min amount (otherwise wait until next pump)
             if (reserveAsset != address(BABL) && reserveAsset != address(WETH) && balance > minAmounts[reserveAsset]) {
-                totalStats[0] = totalStats[0]+(_trade(reserveAsset, address(WETH), balance));
+                totalStats[0] = totalStats[0] + (_trade(reserveAsset, address(WETH), balance));
             }
             if (reserveAsset == address(WETH)) {
-                totalStats[0] = totalStats[0]+(balance);
+                totalStats[0] = totalStats[0] + (balance);
             }
         }
         emit FeesCollected(block.timestamp, IERC20(WETH).balanceOf(address(this)));
@@ -480,9 +479,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _buyback(uint256 _amount) private {
         // Gift 50% BABL back to garden and send 50% to the treasury
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
-        IERC20(BABL).safeTransfer(address(heartGarden), bablBought/(2));
-        IERC20(BABL).safeTransfer(treasury, bablBought/(2));
-        totalStats[2] = totalStats[2]+(bablBought);
+        IERC20(BABL).safeTransfer(address(heartGarden), bablBought / (2));
+        IERC20(BABL).safeTransfer(treasury, bablBought / (2));
+        totalStats[2] = totalStats[2] + (bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }
 
@@ -500,7 +499,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 oldTreasuryBalance = visor.balanceOf(treasury);
         uint256 shares = visor.deposit(wethToDeposit, bablTraded, treasury);
         _require(
-            shares == visor.balanceOf(treasury)-(oldTreasuryBalance) && visor.balanceOf(treasury) > 0,
+            shares == visor.balanceOf(treasury) - (oldTreasuryBalance) && visor.balanceOf(treasury) > 0,
             Errors.HEART_LP_TOKENS
         );
         totalStats[3] += _wethBalance;
@@ -561,7 +560,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         }
         uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
         uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
-        totalStats[5] = totalStats[5]+(assettoLendBalanceInWeth);
+        totalStats[5] = totalStats[5] + (assettoLendBalanceInWeth);
         emit FuseLentAsset(block.timestamp, _lendAsset, assettoLendBalanceInWeth);
     }
 
@@ -574,9 +573,9 @@ contract Heart is OwnableUpgradeable, IHeart {
             uint256 currentBalance = IERC20(BABL).balanceOf(address(this));
             bablToSend = currentBalance < bablToSend ? currentBalance : bablToSend;
             IERC20(BABL).safeTransfer(address(heartGarden), bablToSend);
-            bablRewardLeft = bablRewardLeft-(bablToSend);
+            bablRewardLeft = bablRewardLeft - (bablToSend);
             emit BABLRewardSent(block.timestamp, bablToSend);
-            totalStats[6] = totalStats[6]+(bablToSend);
+            totalStats[6] = totalStats[6] + (bablToSend);
         }
     }
 
@@ -601,7 +600,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
-        uint256 minAmountExpected = exactAmount-(exactAmount.preciseMul(tradeSlippage));
+        uint256 minAmountExpected = exactAmount - (exactAmount.preciseMul(tradeSlippage));
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);

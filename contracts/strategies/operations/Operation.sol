@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
@@ -166,14 +165,14 @@ abstract contract Operation is IOperation {
             SafeDecimalMath.normalizeAmountTokens(
                 IHarvestUniv3Pool(_pool).token0(),
                 _reserve,
-                amount0*(priceToken0)/(totalSupply)
+                (amount0 * (priceToken0)) / (totalSupply)
             );
         uint256 priceinReserveToken1 =
             SafeDecimalMath.normalizeAmountTokens(
                 IHarvestUniv3Pool(_pool).token1(),
                 _reserve,
-                amount1*(priceToken1)/(totalSupply)
+                (amount1 * (priceToken1)) / (totalSupply)
             );
-        return priceinReserveToken0+(priceinReserveToken1);
+        return priceinReserveToken0 + (priceinReserveToken1);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/math/SafeCast.sol';
@@ -90,9 +91,9 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
-        poolInfo.poolTokensInTransaction = IERC20(poolInfo.lpToken).balanceOf(address(poolInfo.strategy))-(
-            poolInfo.poolTokensInStrategy
-        );
+        poolInfo.poolTokensInTransaction =
+            IERC20(poolInfo.lpToken).balanceOf(address(poolInfo.strategy)) -
+            (poolInfo.poolTokensInStrategy);
         _validatePostJoinPoolData(poolInfo);
         emit PoolEntered(address(poolInfo.strategy), address(poolInfo.garden), poolAddress, _poolTokensOut);
     }

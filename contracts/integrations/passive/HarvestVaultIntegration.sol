@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
@@ -47,9 +48,8 @@ contract HarvestVaultIntegration is PassiveIntegration {
     function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
         // Normalizing pricePerShare returned by Harvest
         return
-            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare())/(
-                10**PreciseUnitMath.decimals()-(ERC20(_vault).decimals())
-            );
+            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()) /
+            (10**PreciseUnitMath.decimals() - (ERC20(_vault).decimals()));
     }
 
     function _getPricePerShare(address _vault) internal view override returns (uint256) {

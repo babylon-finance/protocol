@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -141,9 +142,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getCompoundExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(_underlying).decimals() > 8) {
-            exchangeRateNormalized = exchangeRateNormalized/(10**(ERC20(_underlying).decimals() - 8));
+            exchangeRateNormalized = exchangeRateNormalized / (10**(ERC20(_underlying).decimals() - 8));
         } else {
-            exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
+            exchangeRateNormalized = exchangeRateNormalized * (10**(8 - ERC20(_underlying).decimals()));
         }
         return exchangeRateNormalized;
     }
@@ -151,9 +152,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getCreamExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(_underlying).decimals() > 8) {
-            exchangeRateNormalized = exchangeRateNormalized/(10**(ERC20(_underlying).decimals() - 8));
+            exchangeRateNormalized = exchangeRateNormalized / (10**(ERC20(_underlying).decimals() - 8));
         } else {
-            exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
+            exchangeRateNormalized = exchangeRateNormalized * (10**(8 - ERC20(_underlying).decimals()));
         }
         return exchangeRateNormalized;
     }
@@ -253,7 +254,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             );
             uint256 yvDecimals = ERC20(_tokenIn).decimals();
             if (yvDecimals < 18) {
-                price = price*(10**(18 - yvDecimals));
+                price = price * (10**(18 - yvDecimals));
             }
             return price;
         }
@@ -264,7 +265,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
             uint256 yvDecimals = ERC20(_tokenOut).decimals();
             if (yvDecimals < 18) {
-                price = price/(10**(18 - yvDecimals));
+                price = price / (10**(18 - yvDecimals));
             }
             return price;
         }
@@ -362,15 +363,13 @@ contract PriceOracle is Ownable, IPriceOracle {
             return 0;
         }
         return
-            OracleLibrary
-                .getQuoteAtTick(
+            OracleLibrary.getQuoteAtTick(
                 tick,
                 // because we use 1e18 as a precision unit
-                uint128(uint256(1e18)*(10**(uint256(18)-(ERC20(_tokenOut).decimals())))),
+                uint128(uint256(1e18) * (10**(uint256(18) - (ERC20(_tokenOut).decimals())))),
                 _tokenIn,
                 _tokenOut
-            )
-                /(10**(uint256(18)-(ERC20(_tokenIn).decimals())));
+            ) / (10**(uint256(18) - (ERC20(_tokenIn).decimals())));
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {
@@ -529,7 +528,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             int56[] memory tickCumulatives,
             uint160[] memory /* secondsPerLiquidityCumulativeX128s */
         ) {
-            return (tickCumulatives[1] - tickCumulatives[0]) / SECONDS_GRANULARITY;
+            return int56((tickCumulatives[1] - tickCumulatives[0]) / int56(int32(SECONDS_GRANULARITY)));
         } catch {
             return 0;
         }
@@ -549,9 +548,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         } else {
             price = _getCurveDY(_curvePool, i, j, decimalsIn);
         }
-        price = price*(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
+        price = price * (10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
-        if (price < uint256(1e18)+(delta) && price > uint256(1e18)-(delta)) {
+        if (price < uint256(1e18) + (delta) && price > uint256(1e18) - (delta)) {
             return price;
         }
         return 0;
@@ -566,7 +565,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         try ICurvePoolV3DY(_curvePool).get_dy(i, j, decimals) returns (uint256 price) {
             return price;
         } catch {
-            try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price2) {
+            try ICurvePoolV3(_curvePool).get_dy(int128(uint128(i)), int128(uint128(j)), decimals) returns (
+                uint256 price2
+            ) {
                 return price2;
             } catch {
                 revert('get dy failed');
@@ -583,10 +584,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         try ICurvePoolV3DY(_curvePool).get_dy_underlying(i, j, decimals) returns (uint256 price) {
             return price;
         } catch {
-            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
+            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(int256(i)), int128(int256(j)), decimals) returns (
+                uint256 price2
+            ) {
                 return price2;
             } catch {
-                try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
+                try ICurvePoolV3(_curvePool).get_dy(int128(int256(i)), int128(int256(j)), decimals) returns (
+                    uint256 price3
+                ) {
                     return price3;
                 } catch {
                     revert('get dy underlying failed');

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -113,7 +114,7 @@ contract DepositVaultOperation is Operation {
         address _integration
     ) internal view returns (uint256) {
         uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
-        return exactAmount-(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
+        return exactAmount - (exactAmount.preciseMul(SLIPPAGE_ALLOWED));
     }
 
     /**
@@ -146,11 +147,12 @@ contract DepositVaultOperation is Operation {
             IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
-                amountVault-(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
-                    IPassiveIntegration(_integration).getPricePerShare(yieldVault)*(
-                        10**PreciseUnitMath.decimals()-(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-                    )
-                );
+                amountVault -
+                    (amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                        IPassiveIntegration(_integration).getPricePerShare(yieldVault) *
+                            (10**PreciseUnitMath.decimals() -
+                                (vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals()))
+                    );
             IPassiveIntegration(_integration).exitInvestment(
                 msg.sender,
                 yieldVault,
@@ -195,9 +197,9 @@ contract DepositVaultOperation is Operation {
         if (pricePerShare == 0) {
             pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
             // Normalization of pricePerShare
-            pricePerShare = pricePerShare*(
-                10**PreciseUnitMath.decimals()-(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-            );
+            pricePerShare =
+                pricePerShare *
+                (10**PreciseUnitMath.decimals() - (vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals()));
         }
         uint256 NAV;
         // If vault asset cannot be priced
@@ -212,7 +214,7 @@ contract DepositVaultOperation is Operation {
             NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         }
         // Get value of pending rewards
-        NAV = NAV+(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
+        NAV = NAV + (_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -238,27 +240,29 @@ contract DepositVaultOperation is Operation {
         ) {
             uint256 nav =
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender)*(2)
+                    IBasicRewards(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03).earned(msg.sender) * (2)
                 );
-            nav = nav+(
-                _getPrice(LDO, _reserveAsset).preciseMul(
-                    IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
-                )
-            );
+            nav =
+                nav +
+                (
+                    _getPrice(LDO, _reserveAsset).preciseMul(
+                        IBasicRewards(0x008aEa5036b819B4FEAEd10b2190FBb3954981E8).earned(msg.sender)
+                    )
+                );
             return nav;
         }
         // Patching 3Pool
         if (address(msg.sender) == 0x9D78319EDA31663B487204F0CA88A046e742eE16) {
             return
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender)*(2)
+                    IBasicRewards(0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8).earned(msg.sender) * (2)
                 );
         }
         // Patching IB
         if (_yieldVault == 0x912EC00eaEbf3820a9B0AC7a5E15F381A1C91f22) {
             return
                 _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender)*(2)
+                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender) * (2)
                 );
         }
         try IPassiveIntegration(_integration).getRewards(msg.sender, _yieldVault) returns (

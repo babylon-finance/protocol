@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -200,7 +201,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
     {
         IBasicRewards rewards = IBasicRewards(_getRewardPool(_asset));
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = rewards.earned(_strategy)*(2); // * 2 accounts roughly for CVX
+        uint256 totalAmount = rewards.earned(_strategy) * (2); // * 2 accounts roughly for CVX
         // add extra rewards and convert to reward token
         uint256 extraRewardsLength = rewards.extraRewardsLength();
         if (extraRewardsLength > 0) {
@@ -211,7 +212,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
                     try oracle.getPrice(rewards.extraRewards(i), extraRewards.rewardToken()) returns (
                         uint256 priceExtraReward
                     ) {
-                        totalAmount = totalAmount+(priceExtraReward.preciseMul(extraAmount));
+                        totalAmount = totalAmount + (priceExtraReward.preciseMul(extraAmount));
                     } catch {}
                 }
             }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -116,7 +117,7 @@ contract CurvePoolIntegration is PoolIntegration {
             result[0] = uint256(1e18);
         } else {
             for (uint8 i = 0; i < poolTokens.length; i++) {
-                result[i] = uint256(1e18)/(poolTokens.length);
+                result[i] = uint256(1e18) / (poolTokens.length);
             }
         }
         return result;

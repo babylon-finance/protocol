@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -275,7 +276,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             msg.sender == address(garden) && !dataSet && IBabController(controller).isSystemContract(address(garden)),
             Errors.ONLY_GARDEN_AND_DATA_NOT_SET
         );
-        uint256 opEncodedLength = _opEncodedData.length/(64); // encoded without signature
+        uint256 opEncodedLength = _opEncodedData.length / (64); // encoded without signature
         _require(
             opEncodedLength < MAX_OPERATIONS &&
                 opEncodedLength > 0 &&
@@ -312,7 +313,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyKeeper();
         _require(_voters.length >= garden.minVoters(), Errors.MIN_VOTERS_CHECK);
         _require(!active && !finalized, Errors.VOTES_ALREADY_RESOLVED);
-        _require(block.timestamp-(enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
+        _require(block.timestamp - (enteredAt) <= MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OVER);
         _require(_voters.length == _votes.length, Errors.INVALID_VOTES_LENGTH);
         active = true;
         // set votes to zero expecting keeper to provide correct values
@@ -323,19 +324,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         for (uint256 i = 0; i < _voters.length; i++) {
             votes[_voters[i]] = _votes[i];
             if (_votes[i] > 0) {
-                totalPositiveVotes = totalPositiveVotes+(uint256(Math.abs(_votes[i])));
+                totalPositiveVotes = totalPositiveVotes + (uint256(Math.abs(_votes[i])));
             } else {
-                totalNegativeVotes = totalNegativeVotes+(uint256(Math.abs(_votes[i])));
+                totalNegativeVotes = totalNegativeVotes + (uint256(Math.abs(_votes[i])));
             }
         }
-        _require(totalPositiveVotes-(totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
+        _require(totalPositiveVotes - (totalNegativeVotes) > 0, Errors.TOTAL_VOTES_HAVE_TO_BE_POSITIVE);
 
         // Keeper will account for strategist vote/stake
         voters = _voters;
         // Initializes cooldown
         enteredCooldownAt = block.timestamp;
         emit StrategyVoted(address(garden), totalPositiveVotes, totalNegativeVotes, block.timestamp);
-        garden.payKeeper(msg.sender, _fee);
+        garden.payKeeper(payable(msg.sender), _fee);
     }
 
     /**
@@ -347,7 +348,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _onlyKeeper();
         _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
-        _executesStrategy(_capital, _fee, msg.sender);
+        _executesStrategy(_capital, _fee, payable(msg.sender));
     }
 
     /**
@@ -366,12 +367,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
-        _require(executedAt > 0 && block.timestamp > executedAt+(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
+        _require(executedAt > 0 && block.timestamp > executedAt + (duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this))-(reserveAssetReturns);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)) - (reserveAssetReturns);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -379,7 +380,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Mint NFT
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
-        garden.payKeeper(msg.sender, _fee);
+        garden.payKeeper(payable(msg.sender), _fee);
         // MinReserveOut security check
         _require(capitalReturned >= _minReserveOut, Errors.INVALID_RESERVE_AMOUNT);
         // Transfer rewards
@@ -404,12 +405,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(block.timestamp < executedAt+(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        _require(block.timestamp < executedAt + (duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
         // An unwind should not allow users to remove all capital from a strategy
         _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
-        capitalAllocated = capitalAllocated-(_amountToUnwind);
+        capitalAllocated = capitalAllocated - (_amountToUnwind);
         // expected return update
         expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
 
@@ -435,9 +436,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _onlyKeeper();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        _require(block.timestamp-(enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
+        _require(block.timestamp - (enteredAt) > MAX_CANDIDATE_PERIOD, Errors.VOTING_WINDOW_IS_OPENED);
         // pay keeper before expiring strategy
-        garden.payKeeper(msg.sender, _fee);
+        garden.payKeeper(payable(msg.sender), _fee);
         _deleteCandidateStrategy();
         emit StrategyExpired(address(garden), block.timestamp);
     }
@@ -660,12 +661,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[5] = totalNegativeVotes;
         data[6] = capitalAllocated;
         data[7] = capitalReturned;
-        data[8] = capitalAllocated+(capitalAllocated.preciseMul(expectedReturn));
+        data[8] = capitalAllocated + (capitalAllocated.preciseMul(expectedReturn));
         data[9] = strategyRewards;
         boolData[0] = capitalReturned >= capitalAllocated ? true : false;
         boolData[1] = capitalReturned >= data[8] ? true : false;
-        data[10] = boolData[0] ? capitalReturned-(capitalAllocated) : 0; // no profit
-        data[11] = boolData[1] ? capitalReturned-(data[8]) : data[8]-(capitalReturned);
+        data[10] = boolData[0] ? capitalReturned - (capitalAllocated) : 0; // no profit
+        data[11] = boolData[1] ? capitalReturned - (data[8]) : data[8] - (capitalReturned);
         data[12] = startingGardenSupply;
         data[13] = endingGardenSupply;
         return (strategist, data, boolData);
@@ -729,9 +730,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 bool positive
             ) {
                 if (positive) {
-                    positiveNav = positiveNav+(opNAV);
+                    positiveNav = positiveNav + (opNAV);
                 } else {
-                    negativeNav = negativeNav+(opNAV);
+                    negativeNav = negativeNav + (opNAV);
                 }
             } catch {}
         }
@@ -746,16 +747,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256 borrowBalance = IERC20(token == address(0) ? WETH : token).balanceOf(address(this));
             if (borrowBalance > 0) {
                 uint256 price = _getPrice(reserveAsset, token);
-                positiveNav = positiveNav+(
-                    SafeDecimalMath.normalizeAmountTokens(token, reserveAsset, borrowBalance).preciseDiv(price)
-                );
+                positiveNav =
+                    positiveNav +
+                    (SafeDecimalMath.normalizeAmountTokens(token, reserveAsset, borrowBalance).preciseDiv(price));
             }
         }
         if (negativeNav > positiveNav) {
             // Underwater, will display using operation NAV
             return 0;
         }
-        return positiveNav-(negativeNav);
+        return positiveNav - (negativeNav);
     }
 
     /**
@@ -773,7 +774,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _setStake(uint256 _stake, address _strategist) internal {
         _require(
             _stake > 0 &&
-                IERC20(address(garden)).balanceOf(_strategist)-(garden.getLockedBalance(_strategist)) >= _stake,
+                IERC20(address(garden)).balanceOf(_strategist) - (garden.getLockedBalance(_strategist)) >= _stake,
             Errors.TOKENS_STAKED
         );
         stake = _stake;
@@ -820,14 +821,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address payable _keeper
     ) private {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(capitalAllocated+(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
-        _require(
-            block.timestamp-(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
-            Errors.STRATEGY_IN_COOLDOWN
-        );
+        _require(capitalAllocated + (_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
+        _require(block.timestamp - (enteredCooldownAt) >= garden.strategyCooldownPeriod(), Errors.STRATEGY_IN_COOLDOWN);
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
-        capitalAllocated = capitalAllocated+(_capital);
+        capitalAllocated = capitalAllocated + (_capital);
         _enterStrategy(_capital);
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
@@ -966,7 +964,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
                 ? maxTradeSlippagePercentage
                 : DEFAULT_TRADE_SLIPPAGE;
-        uint256 minAmountExpected = exactAmount-(exactAmount.preciseMul(slippage));
+        uint256 minAmountExpected = exactAmount - (exactAmount.preciseMul(slippage));
         ITradeIntegration(IBabController(controller).masterSwapper()).trade(
             address(this),
             _sendToken,
@@ -979,12 +977,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _transferStrategyPrincipal() private {
         address reserveAsset = garden.reserveAsset();
-        int256 strategyReturns = capitalReturned.toInt256()-(capitalAllocated.toInt256());
+        int256 strategyReturns = capitalReturned.toInt256() - (capitalAllocated.toInt256());
         uint256 protocolProfits;
         uint256 burningAmount;
         // Strategy returns were positive
         // in reserve asset, e.g., WETH, USDC, DAI, WBTC
-        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned-(capitalAllocated) : 0;
+        uint256 profits = capitalReturned > capitalAllocated ? capitalReturned - (capitalAllocated) : 0;
         if (capitalReturned >= capitalAllocated) {
             // Send weth performance fee to the protocol
             protocolProfits = IBabController(controller).protocolPerformanceFee().preciseMul(profits);
@@ -992,15 +990,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 // Send profits to the heart
                 IERC20(reserveAsset).safeTransfer(IBabController(controller).heart(), protocolProfits);
             }
-            strategyReturns = strategyReturns-(protocolProfits.toInt256());
+            strategyReturns = strategyReturns - (protocolProfits.toInt256());
         } else {
             // Returns were negative so let's burn the strategiest stake
-            burningAmount = (stake-(capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
+            burningAmount = (stake - (capitalReturned.preciseDiv(capitalAllocated).preciseMul(stake))).multiplyDecimal(
                 STAKE_QUADRATIC_PENALTY_FOR_LOSSES
             );
         }
         // Return the balance back to the garden
-        IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned-(protocolProfits));
+        IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned - (protocolProfits));
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
         if (address(rewardsDistributor) == address(0)) {
             rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
@@ -1009,7 +1007,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
         endingGardenSupply = IERC20(address(garden)).totalSupply();
         garden.finalizeStrategy(
-            profits-(profits.preciseMul(profitsSharing[2]))-(protocolProfits),
+            profits - (profits.preciseMul(profitsSharing[2])) - (protocolProfits),
             strategyReturns,
             burningAmount
         );
@@ -1033,15 +1031,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _deltaAmount,
         bool _addedCapital
     ) private view returns (uint256) {
-        uint256 capital = _addedCapital ? _newCapital : _newCapital+(_deltaAmount);
-        uint256 cube = capital*(duration);
+        uint256 capital = _addedCapital ? _newCapital : _newCapital + (_deltaAmount);
+        uint256 cube = capital * (duration);
         uint256 ratio;
         if (_addedCapital) {
             // allocation of new capital
-            ratio = cube-(_deltaAmount*(block.timestamp-(executedAt))).preciseDiv(cube);
+            ratio = cube - (_deltaAmount * (block.timestamp - (executedAt))).preciseDiv(cube);
         } else {
             // Unwind
-            ratio = cube.preciseDiv(cube-(_deltaAmount*(executedAt+(duration)-(block.timestamp))));
+            ratio = cube.preciseDiv(cube - (_deltaAmount * (executedAt + (duration) - (block.timestamp))));
         }
         return expectedReturn.preciseMul(ratio);
     }

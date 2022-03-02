@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
@@ -88,16 +89,12 @@ contract HarvestPoolV3Integration is PoolIntegration {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 totalSupply = IHarvestUniv3Pool(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
-        result[0] = IERC20(IHarvestUniv3Pool(poolAddress).token0())
-            .balanceOf(poolAddress)
-            *(_liquidity)
-            /(totalSupply)
-            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        result[1] = IERC20(IHarvestUniv3Pool(poolAddress).token1())
-            .balanceOf(poolAddress)
-            *(_liquidity)
-            /(totalSupply)
-            .preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[0] =
+            (IERC20(IHarvestUniv3Pool(poolAddress).token0()).balanceOf(poolAddress) * (_liquidity)) /
+            (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[1] =
+            (IERC20(IHarvestUniv3Pool(poolAddress).token1()).balanceOf(poolAddress) * (_liquidity)) /
+            (totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
     }
 

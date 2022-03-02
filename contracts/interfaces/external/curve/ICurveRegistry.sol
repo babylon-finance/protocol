@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 interface ICurveRegistry {
     function get_pool_from_lp_token(address _lpToken) external view returns (address);

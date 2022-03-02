@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.8.9;
+pragma abicoder v1;
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
