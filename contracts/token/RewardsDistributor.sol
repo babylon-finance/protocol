@@ -37,6 +37,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IProphets} from '../interfaces/IProphets.sol';
+import {IHeart} from '../interfaces/IHeart.sol';
 
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
@@ -84,7 +85,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _onlyGovernanceOrEmergency() private view {
         _require(
             msg.sender == controller.owner() ||
-                msg.sender == owner() ||
                 msg.sender == controller.EMERGENCY_OWNER() ||
                 msg.sender == address(controller),
             Errors.ONLY_GOVERNANCE_OR_EMERGENCY
@@ -465,7 +465,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     ) public view override returns (uint256[] memory) {
         _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
         uint256[] memory totalRewards = new uint256[](8);
-        if (_garden == controller.heartGarden()) {
+        if (_garden == address(IHeart(controller.heart()).heartGarden())) {
             // No claim available at heartGarden as all rewards were auto-compounded
             // during strategy finalization
             return totalRewards;

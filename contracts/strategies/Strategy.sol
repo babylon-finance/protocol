@@ -42,6 +42,7 @@ import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IHeart} from '../interfaces/IHeart.sol';
 
 /**
  * @title Strategy
@@ -1030,7 +1031,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // All rewards on Heart Garden are re-compounded (not set aside)
         // Only LP profits are compounded otherwise (strategist and stewards are set aside)
         uint256 rewardsToSetAside =
-            address(garden) != controller.heartGarden()
+            address(garden) != address(IHeart(controller.heart()).heartGarden())
                 ? profits.sub(profits.preciseMul(profitsSharing[2])).sub(protocolProfits)
                 : 0;
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)

@@ -16,6 +16,7 @@
     SPDX-License-Identifier: Apache License, Version 2.0
 */
 pragma solidity 0.7.6;
+import {IGarden} from './IGarden.sol';
 
 /**
  * @title IHeart
@@ -27,6 +28,8 @@ interface IHeart {
     // View functions
 
     function getVotedGardens() external view returns (address[] memory);
+
+    function heartGarden() external view returns (IGarden);
 
     function getGardenWeights() external view returns (uint256[] memory);
 

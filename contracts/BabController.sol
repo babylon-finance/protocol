@@ -80,7 +80,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     event GardenNFTChanged(address indexed _newGardenNFT, address _oldStrategyNFT);
     event StrategyNFTChanged(address indexed _newStrategyNFT, address _oldStrategyNFT);
     event HeartChanged(address indexed _newHeart, address _oldHeart);
-    event HeartGardenChanged(address indexed _newHeartGarden, address _oldHeartGarden);
 
     event StrategyFactoryEdited(address indexed _strategyFactory, address _oldStrategyFactory);
 
@@ -180,7 +179,6 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override heart;
     address public override curveMetaRegistry;
     mapping(address => bool) public override protocolWantedAssets;
-    address public override heartGarden;
 
     /* ============ Constants ============ */
 
@@ -433,21 +431,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         heart = _newHeart;
 
         emit HeartChanged(_newHeart, oldHeart);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the heart garden contract
-     *
-     * @param _newHeartGarden      Address of the new heart garden
-     */
-    function editHeartGarden(address _newHeartGarden) external override {
-        _onlyGovernanceOrEmergency();
-        require(_newHeartGarden != address(0), 'Address must not be 0');
-
-        address oldHeartGarden = heartGarden;
-        heartGarden = _newHeartGarden;
-
-        emit HeartGardenChanged(_newHeartGarden, oldHeartGarden);
     }
 
     /**
