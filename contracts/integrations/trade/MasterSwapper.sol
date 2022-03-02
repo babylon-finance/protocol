@@ -224,7 +224,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             {
                 return;
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'Paladin Trade Integration ', AAVE, palStkAAVE);
+                error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, palStkAAVE);
             }
         }
 
@@ -244,9 +244,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
 
         // Synthetix Direct
-        (error, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        string memory err;
+        (err, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         if (success) {
             return;
+        } else {
+            error = string(abi.encodePacked(error, err));
         }
 
         // Curve Direct
