@@ -87,7 +87,7 @@ contract AddLiquidityOperation is Operation {
                     poolTotal = poolTotal+(_poolWeights[i]);
                 }
                 for (uint256 i = 0; i < poolTokens.length; i++) {
-                    _poolWeights[i] = _poolWeights[i]*(1e18).div(poolTotal);
+                    _poolWeights[i] = _poolWeights[i]*(1e18)/(poolTotal);
                 }
             }
         } catch {}
@@ -237,7 +237,7 @@ contract AddLiquidityOperation is Operation {
                 NAV += SafeDecimalMath.normalizeAmountTokens(
                     asset,
                     _garden.reserveAsset(),
-                    balance*(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
+                    balance*(lpToken.balanceOf(msg.sender))/(lpToken.totalSupply()).preciseDiv(price)
                 );
             }
         }

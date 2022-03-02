@@ -85,8 +85,8 @@ contract OneInchPoolIntegration is PoolIntegration {
             (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(poolAddress) : poolAddress.balance);
         uint256 token1Balance =
             (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(poolAddress) : poolAddress.balance);
-        result[0] = token0Balance*(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
-        result[1] = token1Balance*(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[0] = token0Balance*(_liquidity)/(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
+        result[1] = token1Balance*(_liquidity)/(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
     }
 

@@ -299,7 +299,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD && _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
             Errors.NOT_IN_RANGE
         );
-        _require(_minVotesQuorum >= TEN_PERCENT.div(2) && _minVotesQuorum <= TEN_PERCENT*(5), Errors.VALUE_TOO_LOW);
+        _require(_minVotesQuorum >= TEN_PERCENT/(2) && _minVotesQuorum <= TEN_PERCENT*(5), Errors.VALUE_TOO_LOW);
         _require(
             _maxStrategyDuration >= _minStrategyDuration &&
                 _minStrategyDuration >= 1 days &&

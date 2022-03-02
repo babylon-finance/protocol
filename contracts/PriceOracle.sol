@@ -141,7 +141,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getCompoundExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(_underlying).decimals() > 8) {
-            exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - 8));
+            exchangeRateNormalized = exchangeRateNormalized/(10**(ERC20(_underlying).decimals() - 8));
         } else {
             exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
         }
@@ -151,7 +151,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     function getCreamExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         if (ERC20(_underlying).decimals() > 8) {
-            exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - 8));
+            exchangeRateNormalized = exchangeRateNormalized/(10**(ERC20(_underlying).decimals() - 8));
         } else {
             exchangeRateNormalized = exchangeRateNormalized*(10**(8 - ERC20(_underlying).decimals()));
         }
@@ -264,7 +264,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
             uint256 yvDecimals = ERC20(_tokenOut).decimals();
             if (yvDecimals < 18) {
-                price = price.div(10**(18 - yvDecimals));
+                price = price/(10**(18 - yvDecimals));
             }
             return price;
         }
@@ -370,7 +370,7 @@ contract PriceOracle is Ownable, IPriceOracle {
                 _tokenIn,
                 _tokenOut
             )
-                .div(10**(uint256(18)-(ERC20(_tokenIn).decimals())));
+                /(10**(uint256(18)-(ERC20(_tokenIn).decimals())));
     }
 
     function _getUniV3PriceNaive(address _tokenIn, address _tokenOut) private view returns (uint256) {

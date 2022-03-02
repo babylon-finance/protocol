@@ -80,7 +80,7 @@ contract BalancerIntegration is PoolIntegration {
             result[i] = IERC20(poolTokens[i])
                 .balanceOf(poolAddress)
                 *(_liquidity)
-                .div(lpTokensTotalSupply)
+                /(lpTokensTotalSupply)
                 .preciseMul(1e18 - SLIPPAGE_ALLOWED);
         }
         return result;

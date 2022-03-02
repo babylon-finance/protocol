@@ -289,7 +289,7 @@ abstract contract TimeLockedToken is VoteToken {
             lockedAmount = 0;
         } else if (amount != 0) {
             // in case of still under vesting period, locked tokens are recalculated
-            lockedAmount = amount*(vestedToken[account].vestingEnd-(block.timestamp)).div(
+            lockedAmount = amount*(vestedToken[account].vestingEnd-(block.timestamp))/(
                 vestedToken[account].vestingEnd-(vestedToken[account].vestingBegin)
             );
         }

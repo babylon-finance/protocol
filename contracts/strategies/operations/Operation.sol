@@ -166,13 +166,13 @@ abstract contract Operation is IOperation {
             SafeDecimalMath.normalizeAmountTokens(
                 IHarvestUniv3Pool(_pool).token0(),
                 _reserve,
-                amount0*(priceToken0).div(totalSupply)
+                amount0*(priceToken0)/(totalSupply)
             );
         uint256 priceinReserveToken1 =
             SafeDecimalMath.normalizeAmountTokens(
                 IHarvestUniv3Pool(_pool).token1(),
                 _reserve,
-                amount1*(priceToken1).div(totalSupply)
+                amount1*(priceToken1)/(totalSupply)
             );
         return priceinReserveToken0+(priceinReserveToken1);
     }

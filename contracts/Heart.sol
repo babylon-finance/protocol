@@ -480,8 +480,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     function _buyback(uint256 _amount) private {
         // Gift 50% BABL back to garden and send 50% to the treasury
         uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
-        IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
-        IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
+        IERC20(BABL).safeTransfer(address(heartGarden), bablBought/(2));
+        IERC20(BABL).safeTransfer(treasury, bablBought/(2));
         totalStats[2] = totalStats[2]+(bablBought);
         emit BablBuyback(block.timestamp, _amount, bablBought);
     }

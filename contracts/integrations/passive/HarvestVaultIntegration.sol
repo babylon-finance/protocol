@@ -47,7 +47,7 @@ contract HarvestVaultIntegration is PassiveIntegration {
     function _getExpectedShares(address _vault, uint256 _amount) internal view override returns (uint256) {
         // Normalizing pricePerShare returned by Harvest
         return
-            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare()).div(
+            _amount.preciseDiv(IHarvestVault(_vault).getPricePerFullShare())/(
                 10**PreciseUnitMath.decimals()-(ERC20(_vault).decimals())
             );
     }

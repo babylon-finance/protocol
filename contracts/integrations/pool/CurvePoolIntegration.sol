@@ -116,7 +116,7 @@ contract CurvePoolIntegration is PoolIntegration {
             result[0] = uint256(1e18);
         } else {
             for (uint8 i = 0; i < poolTokens.length; i++) {
-                result[i] = uint256(1e18).div(poolTokens.length);
+                result[i] = uint256(1e18)/(poolTokens.length);
             }
         }
         return result;

@@ -88,12 +88,12 @@ contract UniswapPoolIntegration is PoolIntegration {
         result[0] = IERC20(IUniswapV2Pair(poolAddress).token0())
             .balanceOf(poolAddress)
             *(_liquidity)
-            .div(totalSupply)
+            /(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = IERC20(IUniswapV2Pair(poolAddress).token1())
             .balanceOf(poolAddress)
             *(_liquidity)
-            .div(totalSupply)
+            /(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;
     }

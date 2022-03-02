@@ -121,7 +121,7 @@ contract BABLToken is TimeLockedToken {
 
         // After FIRST_EPOCH_MINT (8 years) a MINT_CAP applies
         require(
-            amount <= totalSupply()*(MINT_CAP).div(100),
+            amount <= totalSupply()*(MINT_CAP)/(100),
             'BABLToken::mint: exceeded mint cap of 2% of total supply'
         );
         _mint(_to, amount);
@@ -157,7 +157,7 @@ contract BABLToken is TimeLockedToken {
             newMaxSupply > maxSupplyAllowed,
             'BABLToken::changeMaxSupply: changeMaxSupply should be higher than previous value'
         );
-        uint256 limitedNewSupply = maxSupplyAllowed+(maxSupplyAllowed*(MAX_SUPPLY_CAP).div(100));
+        uint256 limitedNewSupply = maxSupplyAllowed+(maxSupplyAllowed*(MAX_SUPPLY_CAP)/(100));
         require(newMaxSupply <= limitedNewSupply, 'BABLToken::changeMaxSupply: exceeded of allowed 5% cap');
         emit MaxSupplyChanged(maxSupplyAllowed, newMaxSupply);
         maxSupplyAllowed = safe96(newMaxSupply, 'BABLToken::changeMaxSupply: potential max amount exceeds 96 bits');

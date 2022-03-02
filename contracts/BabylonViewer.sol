@@ -411,10 +411,10 @@ contract BabylonViewer {
         address denominator;
 
         if (pool.token0() == _reserveAsset) {
-            liquidityInReserve = poolLiquidity*(poolLiquidity).div(ERC20(pool.token1()).balanceOf(address(pool)));
+            liquidityInReserve = poolLiquidity*(poolLiquidity)/(ERC20(pool.token1()).balanceOf(address(pool)));
             denominator = pool.token0();
         } else {
-            liquidityInReserve = poolLiquidity*(poolLiquidity).div(ERC20(pool.token0()).balanceOf(address(pool)));
+            liquidityInReserve = poolLiquidity*(poolLiquidity)/(ERC20(pool.token0()).balanceOf(address(pool)));
             denominator = pool.token1();
         }
         // Normalize to reserve asset
