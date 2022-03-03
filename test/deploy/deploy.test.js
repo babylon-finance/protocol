@@ -127,7 +127,7 @@ describe('deploy', function () {
           gasPrice: 0,
         });
 
-      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0);
+      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0, { gasLimit: 30000000 });
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 

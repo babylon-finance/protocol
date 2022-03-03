@@ -161,8 +161,8 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             _minAmountsOut
         );
-        // Exit Pool tokens
-        address reserveAsset = _garden.reserveAsset();
+        // Exit Pool tokens to a consolidated asset
+        address reserveAsset = WETH;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
