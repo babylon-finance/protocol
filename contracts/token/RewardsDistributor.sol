@@ -379,7 +379,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * This is due to the Heart Garden is auto-compounding all rewards
      *
      */
-    function sendBABLToAddress(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
+    function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
         _isGarden(msg.sender);
         return _sendBABLToAddress(_to, _babl);
     }
