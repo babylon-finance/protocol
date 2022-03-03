@@ -137,9 +137,9 @@ contract LendOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
         // Change to weth if needed
-        if (_assetToken == address(0)) {
-            _assetToken = WETH;
-            IStrategy(_sender).handleWeth(true, _sender.balance);
+        if (assetToken == address(0)) {
+            assetToken = WETH;
+            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
         }
         address rewardsToken = _getRewardToken(_integration);
         // Only sell rewards when the strategy finalizes
