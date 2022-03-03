@@ -129,6 +129,10 @@ contract BuyOperation is Operation {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        // Override PSP
+        if (address(msg.sender) == 0x4BDCE84E1FdB03E05C5bf131111b9c431C7F3eE6) {
+            token = WETH;
+        }
         IStrategy(msg.sender).trade(
             token,
             ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
