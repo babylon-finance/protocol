@@ -22,6 +22,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IProphets} from '../interfaces/IProphets.sol';
+import {IHeart} from '../interfaces/IHeart.sol';
 
 /**
  * @title Rewards Distributor implementing the BABL Mining Program and other Rewards to Strategists and Stewards
@@ -59,8 +60,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function _onlyStrategy(address _strategy) private view {
         address garden = address(IStrategy(_strategy).garden());
-        _require(controller.isGarden(garden), Errors.ONLY_ACTIVE_GARDEN);
-        _require(IGarden(garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
+        _isGarden(garden);
+        _isGardenStrategy(garden, _strategy);
     }
 
     /**
@@ -69,7 +70,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _onlyGovernanceOrEmergency() private view {
         _require(
             msg.sender == controller.owner() ||
-                msg.sender == owner() ||
                 msg.sender == controller.EMERGENCY_OWNER() ||
                 msg.sender == address(controller),
             Errors.ONLY_GOVERNANCE_OR_EMERGENCY
@@ -82,6 +82,20 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _onlyUnpaused() private view {
         // Do not execute if Globally or individually paused
         _require(!controller.isPaused(address(this)), Errors.ONLY_UNPAUSED);
+    }
+
+    /**
+     * Throws if not an official Babylon garden
+     */
+    function _isGarden(address _garden) private view {
+        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+    }
+
+    /**
+     * Throws if not an official Babylon strategy of that garden
+     */
+    function _isGardenStrategy(address _garden, address _strategy) private view {
+        _require(IGarden(_garden).isGardenStrategy(_strategy), Errors.STRATEGY_GARDEN_MISMATCH);
     }
 
     /**
@@ -338,7 +352,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _tokenDiff,
         bool _addOrSubstract
     ) external override nonReentrant {
-        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _isGarden(msg.sender);
         uint256 newBalance = _addOrSubstract ? _previousBalance.add(_tokenDiff) : _previousBalance.sub(_tokenDiff);
         // Creates a new user checkpoint
         _writeCheckpoint(_garden, _contributor, newBalance, _previousBalance);
@@ -346,11 +360,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Sending BABL as part of the claim process (either by sig or standard claim)
+     * If it is the Heart Garden, the claim is done by the garden during each strategy finalization
+     * This is due to the Heart Garden is auto-compounding all rewards
      *
      */
     function sendBABLToContributor(address _to, uint256 _babl) external override nonReentrant returns (uint256) {
-        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        return _sendBABLToContributor(_to, _babl);
+        _isGarden(msg.sender);
+        return _sendBABLToAddress(_to, _babl);
     }
 
     /** PRIVILEGE FUNCTION
@@ -367,7 +383,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _lpShare
     ) external override {
         _onlyGovernanceOrEmergency();
-        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _isGarden(_garden);
         _setProfitRewards(_garden, _strategistShare, _stewardsShare, _lpShare);
     }
 
@@ -446,13 +462,18 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         address[] calldata _finalizedStrategies
     ) public view override returns (uint256[] memory) {
-        _require(controller.isGarden(_garden), Errors.ONLY_ACTIVE_GARDEN);
+        _isGarden(_garden);
         uint256[] memory totalRewards = new uint256[](8);
+        if (_garden == address(IHeart(controller.heart()).heartGarden())) {
+            // No claim available at heartGarden as all rewards were auto-compounded
+            // during strategy finalization
+            return totalRewards;
+        }
         uint256 claimedAt;
         (, , claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             // Security check
-            _require(IGarden(_garden).isGardenStrategy(_finalizedStrategies[i]), Errors.STRATEGY_GARDEN_MISMATCH);
+            _isGardenStrategy(_garden, _finalizedStrategies[i]);
 
             uint256[] memory tempRewards = new uint256[](8);
 
@@ -480,7 +501,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory ts = new uint256[](3);
         (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
-        if (strategy.enteredAt() >= START_TIME || ts[1] >= START_TIME) {
+        if (ts[1] >= START_TIME) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
             uint256 rewards = strategy.strategyRewards();
             if (rewards != 0) {
@@ -955,12 +976,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Sends profits and BABL tokens rewards to a contributor after a claim is requested to the protocol.
-     * @param _to        Address to send the profit and tokens to
+     * Sends profits and BABL tokens rewards to an address (contributor or heart garden) after a claim is requested to the protocol.
+     * @param _to        Address to send the BABL tokens to
      * @param _babl      Amount of BABL to send
      *
      */
-    function _sendBABLToContributor(address _to, uint256 _babl) internal returns (uint256) {
+    function _sendBABLToAddress(address _to, uint256 _babl) internal returns (uint256) {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;

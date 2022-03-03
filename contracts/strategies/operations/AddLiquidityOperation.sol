@@ -120,7 +120,7 @@ contract AddLiquidityOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -145,8 +145,8 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             _minAmountsOut
         );
-        // Exit Pool tokens
-        address reserveAsset = _garden.reserveAsset();
+        // Exit Pool tokens to a consolidated asset
+        address reserveAsset = WETH;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {

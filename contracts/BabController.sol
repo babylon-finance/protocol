@@ -78,7 +78,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     /* ============ Modifiers ============ */
 
-    function _onlyGovernanceOrEmergency() internal {
+    function _onlyGovernanceOrEmergency() internal view {
         require(msg.sender == owner() || msg.sender == EMERGENCY_OWNER, 'Not enough privileges');
     }
 

@@ -149,7 +149,7 @@ contract BorrowOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received
-
+        _asset = _asset == address(0) ? WETH : _asset;
         _tradeToDebtToken(_asset, assetToken);
 
         uint256 debtTokenBalance = IERC20(assetToken).universalBalanceOf(address(msg.sender));

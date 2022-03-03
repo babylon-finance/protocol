@@ -90,12 +90,12 @@ contract BuyOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
-        address, /* _asset */
+        address _asset,
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        bytes calldata _data,
-        IGarden _garden,
+        bytes calldata, /*_data */
+        IGarden, /*_garden */
         address /* _integration */
     )
         external
@@ -107,22 +107,9 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = BytesLib.decodeOpDataAddress(_data);
-        // Replace old AXS with new AXS
-        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
-            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
-        }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        // Override PSP
-        if (address(msg.sender) == 0x4BDCE84E1FdB03E05C5bf131111b9c431C7F3eE6) {
-            token = WETH;
-        }
-        IStrategy(msg.sender).trade(
-            token,
-            ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset()
-        );
-        return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
+        uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
+        return (_asset, balance, 0);
     }
 
     /**
