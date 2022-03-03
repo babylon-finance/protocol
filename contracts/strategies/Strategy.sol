@@ -890,7 +890,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) private {
-        address assetFinalized = garden.reserveAsset();
+        address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
         uint256 capitalPending;
         uint8 assetStatus;
         for (uint256 i = opTypes.length; i > 0; i--) {
