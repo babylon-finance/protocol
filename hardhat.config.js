@@ -11,6 +11,7 @@ require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('hardhat-log-remover');
 require('hardhat-watcher');
+require('hardhat-spdx-license-identifier');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
