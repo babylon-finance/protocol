@@ -40,6 +40,8 @@ describe('deploy', function () {
   let valuer;
   let gardensNAV;
   let snapshotId;
+  let distributor;
+  let gnosis;
 
   const getStrategyFuseRewards = async (_strategy) => {
     const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
@@ -206,7 +208,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, strategyNft, valuer, gardens } = await getContracts());
+      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
@@ -239,7 +241,7 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
+      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
@@ -291,9 +293,30 @@ describe('deploy', function () {
       const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const gardenBalance = await babl.balanceOf(heartGarden.address);
+      const estimatedStrategistBABLStr1 = await distributor.estimateUserRewards(firstStrategy.address, gnosis.address);
+      const estimatedStrategistBABLStr2 = await distributor.estimateUserRewards(secondStrategy.address, gnosis.address);
+      const getRewardsStrategistBABL1 = await distributor.getRewards(heartGarden.address, gnosis.address, [
+        firstStrategy.address,
+        secondStrategy.address,
+      ]);
+      const strategistBalanceBefore = await babl.balanceOf(gnosis.address);
+
       await finalizeHeartStrategies();
       const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
       const rewards = (await firstStrategy.strategyRewards()).add(await secondStrategy.strategyRewards());
+      const estimatedStrategistBABLStr11 = await distributor.estimateUserRewards(firstStrategy.address, gnosis.address);
+      const estimatedStrategistBABLStr21 = await distributor.estimateUserRewards(
+        secondStrategy.address,
+        gnosis.address,
+      );
+      const getRewardsStrategistBABL2 = await distributor.getRewards(heartGarden.address, gnosis.address, [
+        firstStrategy.address,
+        secondStrategy.address,
+      ]);
+      await expect(
+        heartGarden.connect(gnosis).claimReturns(await heartGarden.getFinalizedStrategies()),
+      ).to.be.revertedWith('BAB#082'); // No rewards to claim
+      const strategistBalanceAfter = await babl.balanceOf(gnosis.address);
       expect(gardenBalanceAfter).to.be.closeTo(
         gardenBalance
           .add(await firstStrategy.capitalReturned())
@@ -301,6 +324,13 @@ describe('deploy', function () {
           .add(rewards),
         eth('100'),
       );
+      expect(strategistBalanceAfter).to.eq(strategistBalanceBefore);
+      expect(estimatedStrategistBABLStr1[5]).to.be.gt(0);
+      expect(estimatedStrategistBABLStr1[6]).to.be.eq(estimatedStrategistBABLStr2[6]).to.eq(0); // No profitable strategy
+      expect(estimatedStrategistBABLStr2[5]).to.be.gt(0);
+      expect(estimatedStrategistBABLStr11[5]).to.be.eq(estimatedStrategistBABLStr21[5]).to.eq(0);
+      expect(getRewardsStrategistBABL2[5]).to.eq(getRewardsStrategistBABL1[5]).to.eq(0);
+      expect(getRewardsStrategistBABL2[6]).to.eq(getRewardsStrategistBABL1[6]).to.eq(0);
     });
 
     it('can finalize stuck strategies', async () => {
