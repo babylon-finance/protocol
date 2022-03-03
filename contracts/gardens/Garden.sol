@@ -723,7 +723,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
-            uint256 bablSent = rewardsDistributor.sendBABLToAddress(_contributor, _babl);
+            uint256 bablSent = rewardsDistributor.sendBABLToContributor(_contributor, _babl);
             contributor.claimedBABL = contributor.claimedBABL.add(bablSent); // BABL Rewards claimed properly
             emit BABLRewardsForContributor(_contributor, bablSent);
         }

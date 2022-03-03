@@ -142,7 +142,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         if (address(this) == address(IHeart(controller.heart()).heartGarden())) {
             // BABL Rewards are sent to the heart Garden during finalization, no claim option afterwards for users
             // _rewards (set aside) must also be zero in this case
-            rewardsDistributor.sendBABLToAddress(address(this), IStrategy(msg.sender).strategyRewards());
+            rewardsDistributor.sendBABLToContributor(address(this), IStrategy(msg.sender).strategyRewards());
         }
     }
 

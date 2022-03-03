@@ -79,5 +79,5 @@ interface IRewardsDistributor {
         bool _addOrSubstract
     ) external;
 
-    function sendBABLToAddress(address _to, uint256 _babl) external returns (uint256);
+    function sendBABLToContributor(address _to, uint256 _babl) external returns (uint256);
 }
