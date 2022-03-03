@@ -479,7 +479,7 @@ describe('Garden', function () {
     });
   });
 
-  describe.only('withdrawBySig', async function () {
+  describe('withdrawBySig', async function () {
     it('can withdraw', async function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
@@ -514,6 +514,47 @@ describe('Garden', function () {
       expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
 
       const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+      expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
+      expect(principalAfter).to.equal(0);
+    });
+
+    it('smart contract can withdraw', async function () {
+      const walletFactory = await ethers.getContractFactory('ERC1271WalletMock');
+      const wallet = await walletFactory.deploy(signer3.address);
+      const signerWallet = await impersonateAddress(wallet.address);
+
+      let amountIn = from(1000 * 1e6);
+      let minAmountOut = eth(1000);
+
+      await fund([signer1.address, wallet.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+      await garden.connect(signer1).makeGardenPublic();
+
+      await usdc.connect(signerWallet).approve(garden.address, amountIn, {gasPrice: 0});
+
+      await garden.connect(signerWallet).deposit(amountIn, minAmountOut, wallet.address, false, { gasPrice: 0 });
+
+      const gardenBalanceBefore = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+
+      const [, , , , , principalBefore, ,] = await garden.getContributor(wallet.address);
+
+      amountIn = eth(1000);
+      minAmountOut = from(1000 * 1e6);
+
+      const sig = await getWithdrawSig(garden.address, signer3, amountIn, minAmountOut, 1, 0, false);
+      await garden
+        .connect(keeper)
+        .withdrawBySig(amountIn, minAmountOut, 1, 0, false, ADDRESS_ZERO, eth(), 0, 0, wallet.address, sig);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyBefore.sub(supplyAfter)).to.be.eq(amountIn);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(wallet.address);
       expect(principalBefore.sub(principalAfter)).to.equal(minAmountOut);
       expect(principalAfter).to.equal(0);
     });
@@ -580,7 +621,7 @@ describe('Garden', function () {
                 0,
                 fee,
                 signer3.address,
-                sig
+                sig,
               ),
           ).to.changeTokenBalances(erc20, [keeper, garden], [fee, minAmountOut.mul(-1)]);
 
@@ -602,7 +643,7 @@ describe('Garden', function () {
                 0,
                 fee,
                 signer3.address,
-                sig
+                sig,
               ),
           ).to.changeTokenBalances(
             erc20,
@@ -723,7 +764,7 @@ describe('Garden', function () {
           strategyNAV,
           0,
           signer3.address,
-          sig
+          sig,
         );
 
       // put the funds back
@@ -802,7 +843,7 @@ describe('Garden', function () {
           strategyNAV,
           0,
           signer3.address,
-          sig
+          sig,
         );
 
       // put the funds back
@@ -1123,6 +1164,46 @@ describe('Garden', function () {
         .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, signer3.address, sig);
 
       const [, , , , , principalAfter, ,] = await garden.getContributor(signer3.address);
+
+      const supplyAfter = await garden.totalSupply();
+      expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
+
+      const gardenBalanceAfter = await usdc.balanceOf(garden.address);
+      expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
+
+      expect(principalAfter.sub(principalBefore)).to.equal(amountIn);
+    });
+
+    it('smart contract can deposit', async function () {
+      const walletFactory = await ethers.getContractFactory('ERC1271WalletMock');
+      const wallet = await walletFactory.deploy(signer3.address);
+
+      const amountIn = from(1000 * 1e6);
+      const minAmountOut = eth(1000);
+      const fee = from(0);
+      const maxFee = from(0);
+      const nonce = 0;
+
+      await fund([signer1.address, wallet.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+      await garden.connect(signer1).makeGardenPublic();
+
+      await usdc.connect(await impersonateAddress(wallet.address)).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      const gardenBalance = await usdc.balanceOf(garden.address);
+      const supplyBefore = await garden.totalSupply();
+      const [, , , , , principalBefore, ,] = await garden.getContributor(wallet.address);
+
+      const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, false, nonce, maxFee);
+
+      await garden
+        .connect(keeper)
+        .depositBySig(amountIn, minAmountOut, false, nonce, maxFee, eth(), fee, wallet.address, sig);
+
+      const [, , , , , principalAfter, ,] = await garden.getContributor(wallet.address);
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
