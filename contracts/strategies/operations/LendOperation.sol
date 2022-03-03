@@ -121,7 +121,7 @@ contract LendOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes memory _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external

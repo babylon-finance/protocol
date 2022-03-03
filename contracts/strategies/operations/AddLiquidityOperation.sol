@@ -136,7 +136,7 @@ contract AddLiquidityOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
