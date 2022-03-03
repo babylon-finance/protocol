@@ -1,7 +1,8 @@
 const { expect } = require('chai');
 // const { deployments } = require('hardhat');
-// const { increaseTime } = require('utils/test-helpers');
+const { getERC20, increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
+const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
@@ -27,6 +28,8 @@ const STUCK = [
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
   '0x69B9a89083E2324079922e01557cAfb87cd90B09',
 ];
+
+const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
 
 describe('deploy', function () {
   let owner;
@@ -147,8 +150,7 @@ describe('deploy', function () {
     }
   }
 
-  async function finalizeStuckStrategies() {
-    const strategies = STUCK;
+  async function finalizeStrategies(strategies) {
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
       const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
@@ -156,6 +158,14 @@ describe('deploy', function () {
       const name = await strategyNft.getStrategyName(strategy);
       await finalizeStrategy(strategyContract, name, reserveAsset);
     }
+  }
+
+  async function finalizeStuckStrategies() {
+    await finalizeStrategies(STUCK);
+  }
+
+  async function finalizeHeartStrategies() {
+    await finalizeStrategies(HEART_STRATEGIES.slice(1));
   }
 
   async function checkNAVStrategies() {
@@ -215,7 +225,7 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it.only('gets right NAV strategies', async () => {
+    it('gets right NAV strategies', async () => {
       await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
       await checkNAVStrategies();
     });
@@ -257,7 +267,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('gets right NAV strategies', async () => {
+    it('gets right NAV strategies', async () => {
       await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
       await checkNAVStrategies();
     });
@@ -272,6 +282,29 @@ describe('deploy', function () {
 
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
+    });
+
+    it.only('can finalize heart strategies and compound rewards', async () => {
+      const babl = await getERC20(addresses.tokens.BABL);
+      const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
+      const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
+      const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const gardenBalance = await babl.balanceOf(heartGarden.address);
+      const strategist = await impersonateAddress(await secondStrategy.strategist());
+      await secondStrategy
+        .connect(strategist)
+        .updateParams([ONE_DAY_IN_SECONDS * 55, eth(0.1), eth(0.4), eth(), eth(10000)]);
+      await finalizeHeartStrategies();
+      const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
+      const rewards = (await firstStrategy.strategyRewards()).add(await secondStrategy.strategyRewards());
+      expect(gardenBalanceAfter).to.be.closeTo(
+        gardenBalance
+          .add(await firstStrategy.capitalReturned())
+          .add(await secondStrategy.capitalReturned())
+          .add(rewards),
+        eth('100'),
+      );
     });
 
     it('can finalize stuck strategies', async () => {
