@@ -456,6 +456,7 @@ describe('Strategy', function () {
         [signer1, signer2, signer3],
         oneInchPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [addresses.oneinch.pools.wethdai, 0],
       );
@@ -472,6 +473,7 @@ describe('Strategy', function () {
         [signer1, signer2, signer3],
         uniswapPoolIntegration.address,
         garden1,
+        keeper,
         DEFAULT_STRATEGY_PARAMS,
         [addresses.uniswap.pairs.wethdai, 0],
       );

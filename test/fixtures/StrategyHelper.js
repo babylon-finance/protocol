@@ -44,7 +44,7 @@ const WBTC_STRATEGY_PARAMS = [
 const BABL_STRATEGY_PARAMS = [
   eth(1e3), // _maxCapitalRequested
   eth(1), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
+  ONE_DAY_IN_SECONDS * 55, // _strategyDuration
   ...STRATEGY_PARAMS,
 ];
 
@@ -171,7 +171,6 @@ async function createStrategyWithManyOperations(
 }
 
 async function deposit(garden, signers) {
-  const gardenValuer = await getContract('GardenValuer');
   const reserveAsset = await garden.reserveAsset();
   const reserveContract = await getERC20(reserveAsset);
   let amount;
@@ -202,7 +201,7 @@ async function deposit(garden, signers) {
     }
     await garden.connect(signer).deposit(
       amount,
-      amount,
+      amount.mul(75).div(100),
       signer.getAddress(),
       false,
       isWeth
@@ -215,7 +214,7 @@ async function deposit(garden, signers) {
   }
 }
 
-async function vote(strategy, signers) {
+async function vote(strategy, signers, keeper) {
   const garden = await strategy.garden();
   const gardenContract = await ethers.getContractAt('IGarden', garden);
 
@@ -223,10 +222,13 @@ async function vote(strategy, signers) {
 
   const signer1Balance = await gardenContract.balanceOf(signer1.getAddress());
   const signer2Balance = await gardenContract.balanceOf(signer2.getAddress());
+  if (keeper === undefined) {
+    keeper = (await ethers.getSigners())[1];
+  }
   return (
     strategy
       // use keeper
-      .connect((await ethers.getSigners())[1])
+      .connect(keeper)
       .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance.div(3), signer2Balance.div(3)], 0, {
         gasPrice: 0,
       })
@@ -242,6 +244,7 @@ async function executeStrategy(
     fee = 0,
     gasPrice = 0,
     gasLimit = 9500000,
+    executedBy,
   } = {},
 ) {
   const garden = await strategy.garden();
@@ -251,10 +254,16 @@ async function executeStrategy(
   if (time > 0) {
     await increaseTime(time);
   }
+  let keeper;
+  if (executedBy === undefined) {
+    keeper = signers[1];
+  } else {
+    keeper = executedBy;
+  }
   return (
     strategy
       // use keeper
-      .connect(signers[1])
+      .connect(keeper)
       .executeStrategy(amount, fee, {
         gasPrice,
         gasLimit,
@@ -262,8 +271,8 @@ async function executeStrategy(
   );
 }
 
-async function executeStrategyImmediate(strategy) {
-  await executeStrategy(strategy, { time: 0 });
+async function executeStrategyImmediate(strategy, { keeper } = {}) {
+  await executeStrategy(strategy, { time: 0, executedBy: keeper });
 }
 
 async function finalizeStrategy(
@@ -276,42 +285,44 @@ async function finalizeStrategy(
     minReserveOut = 0,
     gasPrice = 0,
     gasLimit = 9500000,
+    executedBy,
   } = {},
 ) {
   const signers = await ethers.getSigners();
   if (time > 0) {
     await increaseTime(time);
   }
+  const keeper = executedBy || signers[1];
   return (
     strategy
       // use keeper
-      .connect(signers[1])
+      .connect(keeper)
       .finalizeStrategy(fee, NFT_ADDRESS, minReserveOut, { gasPrice, gasLimit })
   );
 }
 
-async function finalizeStrategyImmediate(strategy) {
-  await finalizeStrategy(strategy, { time: 0 });
+async function finalizeStrategyImmediate(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: 0, executedBy: keeper });
 }
 
-async function finalizeStrategyAfter30Days(strategy) {
-  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 30 });
+async function finalizeStrategyAfter30Days(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 30, executedBy: keeper });
 }
 
-async function finalizeStrategyAfterQuarter(strategy) {
-  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 90 });
+async function finalizeStrategyAfterQuarter(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 90, executedBy: keeper });
 }
 
-async function finalizeStrategyAfter2Quarters(strategy) {
-  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 180 });
+async function finalizeStrategyAfter2Quarters(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 180, executedBy: keeper });
 }
 
-async function finalizeStrategyAfter3Quarters(strategy) {
-  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 270 });
+async function finalizeStrategyAfter3Quarters(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 270, executedBy: keeper });
 }
 
-async function finalizeStrategyAfter2Years(strategy) {
-  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 365 * 2 });
+async function finalizeStrategyAfter2Years(strategy, { keeper } = {}) {
+  await finalizeStrategy(strategy, { time: ONE_DAY_IN_SECONDS * 365 * 2, executedBy: keeper });
 }
 
 async function injectFakeProfits(strategy, amount) {
@@ -390,11 +401,30 @@ async function substractFakeProfits(strategy, amount) {
   }
 }
 
-async function createStrategy(kind, state, signers, integrations, garden, params, specificParams, customOps) {
+async function createStrategy(
+  kind,
+  state,
+  signers,
+  integrations,
+  garden,
+  executedBy,
+  params,
+  specificParams,
+  customOps,
+) {
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
+  if (params === undefined) {
+    params = BABL_STRATEGY_PARAMS;
+  }
+  let keeper;
+  if (executedBy === undefined) {
+    keeper = (await ethers.getSigners())[1];
+  } else {
+    keeper = executedBy;
+  }
 
   switch (kind) {
     case 'buy':
@@ -448,15 +478,15 @@ async function createStrategy(kind, state, signers, integrations, garden, params
     if (state === 'deposit') {
       return strategy;
     }
-    await vote(strategy, signers);
+    await vote(strategy, signers, keeper);
     if (state === 'vote') {
       return strategy;
     }
-    await executeStrategy(strategy);
+    await executeStrategy(strategy, { executedBy: keeper });
     if (state === 'active') {
       return strategy;
     }
-    await finalizeStrategy(strategy);
+    await finalizeStrategy(strategy, { executedBy: keeper });
   }
 
   return strategy;
@@ -470,6 +500,7 @@ async function getStrategy({
   integrations,
   params,
   specificParams,
+  executedBy,
 } = {}) {
   const babController = await getContract('BabController', 'BabControllerProxy');
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
@@ -482,6 +513,7 @@ async function getStrategy({
     signers || [signer1, signer2, signer3],
     integrations || uniswapV3TradeIntegration.address,
     garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0])),
+    executedBy || (await ethers.getSigners())[1],
     params,
     specificParams,
   );
