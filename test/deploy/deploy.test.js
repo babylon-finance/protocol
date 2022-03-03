@@ -165,7 +165,7 @@ describe('deploy', function () {
   }
 
   async function finalizeHeartStrategies() {
-    await finalizeStrategies(HEART_STRATEGIES.slice(0, 1));
+    await finalizeStrategies(HEART_STRATEGIES);
   }
 
   async function checkNAVStrategies() {
