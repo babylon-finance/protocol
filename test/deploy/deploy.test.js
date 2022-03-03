@@ -291,7 +291,6 @@ describe('deploy', function () {
       const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const gardenBalance = await babl.balanceOf(heartGarden.address);
-      // const strategist = await impersonateAddress(await secondStrategy.strategist());
       await finalizeHeartStrategies();
       const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
       const rewards = (await firstStrategy.strategyRewards()).add(await secondStrategy.strategyRewards());

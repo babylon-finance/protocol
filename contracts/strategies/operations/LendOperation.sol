@@ -136,6 +136,11 @@ contract LendOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
+        // Change to weth if needed
+        if (_assetToken == address(0)) {
+            _assetToken = WETH;
+            IStrategy(_sender).handleWeth(true, _sender.balance);
+        }
         address rewardsToken = _getRewardToken(_integration);
         // Only sell rewards when the strategy finalizes
         if (rewardsToken != address(0) && _percentage == HUNDRED_PERCENT) {
