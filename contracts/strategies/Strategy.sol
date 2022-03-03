@@ -911,11 +911,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
             if (assetFinalized == address(0)) {
-                _handleWeth(true, address(this).balance);
+                _handleWeth(true, capitalPending);
                 assetFinalized = WETH;
             }
             if (assetFinalized != garden.reserveAsset()) {
-                _trade(assetFinalized, IERC20(assetFinalized).balanceOf(address(this)), garden.reserveAsset(), 0);
+                _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
             }
         }
     }
