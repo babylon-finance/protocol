@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
 const { getAssetWhale } = require('lib/whale');
@@ -113,13 +113,7 @@ async function createStrategyWithLendOperation(garden, signer, params, integrati
   return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithLendAndBorrowOperation(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-) {
+async function createStrategyWithLendAndBorrowOperation(garden, signer, params, integrations, data) {
   if (integrations.length !== 2 || data.length / 2 !== 2) {
     throw new Error('Need two integrations and data to create lend & borrow');
   }
@@ -132,13 +126,7 @@ async function createStrategyWithLendAndBorrowOperation(
   return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithAddAndDepositOperation(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-) {
+async function createStrategyWithAddAndDepositOperation(garden, signer, params, integrations, data) {
   if (integrations.length !== 2 || data.length / 2 !== 2) {
     throw new Error('Need two integrations and data to create lend & borrow');
   }
@@ -151,14 +139,7 @@ async function createStrategyWithAddAndDepositOperation(
   return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithManyOperations(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-  ops,
-) {
+async function createStrategyWithManyOperations(garden, signer, params, integrations, data, ops) {
   if (integrations.length !== data.length / 2) {
     throw new Error('Need data and integrations to match');
   }
@@ -415,10 +396,7 @@ async function createStrategy(
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
-  params = params || GARDEN_PARAMS_MAP[reserveAsset];
-  if (params === undefined) {
-    params = BABL_STRATEGY_PARAMS;
-  }
+  params = params || strategyParamsToArray(STRATEGY_PARAMS_MAP[reserveAsset]);
   let keeper;
   if (executedBy === undefined) {
     keeper = (await ethers.getSigners())[1];
@@ -506,6 +484,10 @@ async function getStrategy({
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const [, , , signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
+  garden = garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0]));
+  const reserveAsset = await garden.reserveAsset();
+
+  params = { ...STRATEGY_PARAMS_MAP[reserveAsset], ...params };
 
   return await createStrategy(
     kind,
@@ -514,9 +496,29 @@ async function getStrategy({
     integrations || uniswapV3TradeIntegration.address,
     garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0])),
     executedBy || (await ethers.getSigners())[1],
-    params,
+    strategyParamsToArray(params),
     specificParams,
   );
+}
+
+function strategyParamsToArray({
+  maxCapitalRequested,
+  stake,
+  strategyDuration,
+  expectedReturn,
+  maxAllocationPercentage,
+  maxGasFeePercentage,
+  maxTradeSlippagePercentage,
+}) {
+  return [
+    maxCapitalRequested,
+    stake,
+    strategyDuration,
+    expectedReturn,
+    maxAllocationPercentage,
+    maxGasFeePercentage,
+    maxTradeSlippagePercentage,
+  ];
 }
 
 async function getStrategyState(strategy) {
@@ -526,12 +528,10 @@ async function getStrategyState(strategy) {
 }
 
 module.exports = {
+  strategyParamsToArray,
   createStrategy,
   getStrategy,
   getStrategyState,
-  DEFAULT_STRATEGY_PARAMS,
-  DAI_STRATEGY_PARAMS,
-  USDC_STRATEGY_PARAMS,
   executeStrategy,
   vote,
   executeStrategyImmediate,
