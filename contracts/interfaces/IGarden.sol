@@ -176,9 +176,8 @@ interface ICoreGarden {
         uint256 _maxFee,
         uint256 _pricePerShare,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external;
 
     function withdraw(
@@ -190,8 +189,8 @@ interface ICoreGarden {
     ) external;
 
     function withdrawBySig(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
         bool _withPenalty,
@@ -199,9 +198,8 @@ interface ICoreGarden {
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external;
 
     function claimReturns(address[] calldata _finalizedStrategies) external;

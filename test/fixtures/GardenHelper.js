@@ -245,8 +245,7 @@ function getDepositSigHash(garden, amountIn, minAmountOut, mintNft, nonce, maxFe
 async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
   let payloadHash = getDepositSigHash(garden, amountIn, minAmountOut, mintNft, nonce, maxFee);
 
-  let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
-  return ethers.utils.splitSignature(signature);
+  return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }
 
 function getWithdrawSigHash(garden, amountIn, minAmountOut, nonce, maxFee, withPenalty) {
@@ -267,8 +266,7 @@ function getWithdrawSigHash(garden, amountIn, minAmountOut, nonce, maxFee, withP
 async function getWithdrawSig(garden, signer, amountIn, minAmountOut, nonce, maxFee, withPenalty) {
   let payloadHash = getWithdrawSigHash(garden, amountIn, minAmountOut, nonce, maxFee, withPenalty);
 
-  let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
-  return ethers.utils.splitSignature(signature);
+  return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }
 
 function getRewardsSigHash(garden, babl, profits, nonce, maxFee) {
