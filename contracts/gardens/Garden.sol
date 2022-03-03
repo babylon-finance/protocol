@@ -18,7 +18,7 @@ import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
-import {SignatureChecker} from "../lib/SignatureChecker.sol";
+import {SignatureChecker} from '../lib/SignatureChecker.sol';
 
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';

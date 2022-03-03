@@ -531,7 +531,7 @@ describe('Garden', function () {
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
       await garden.connect(signer1).makeGardenPublic();
 
-      await usdc.connect(signerWallet).approve(garden.address, amountIn, {gasPrice: 0});
+      await usdc.connect(signerWallet).approve(garden.address, amountIn, { gasPrice: 0 });
 
       await garden.connect(signerWallet).deposit(amountIn, minAmountOut, wallet.address, false, { gasPrice: 0 });
 
