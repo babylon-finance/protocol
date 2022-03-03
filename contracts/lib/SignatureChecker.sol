@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.7.6;
 
-import "./ECDSA.sol";
-import "../Address.sol";
-import "../../interfaces/IERC1271.sol";
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
+
+import {IERC1271} from '../interfaces/IERC1271.sol';
 
 /**
  * @dev Signature verification helper: Provide a single mechanism to verify both private-key (EOA) ECDSA signature and
