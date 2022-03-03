@@ -165,7 +165,7 @@ describe('deploy', function () {
   }
 
   async function finalizeHeartStrategies() {
-    await finalizeStrategies(HEART_STRATEGIES.slice(1));
+    await finalizeStrategies(HEART_STRATEGIES.slice(0, 1));
   }
 
   async function checkNAVStrategies() {
@@ -291,10 +291,7 @@ describe('deploy', function () {
       const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const gardenBalance = await babl.balanceOf(heartGarden.address);
-      const strategist = await impersonateAddress(await secondStrategy.strategist());
-      await secondStrategy
-        .connect(strategist)
-        .updateParams([ONE_DAY_IN_SECONDS * 55, eth(0.1), eth(0.4), eth(), eth(10000)]);
+      // const strategist = await impersonateAddress(await secondStrategy.strategist());
       await finalizeHeartStrategies();
       const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
       const rewards = (await firstStrategy.strategyRewards()).add(await secondStrategy.strategyRewards());
