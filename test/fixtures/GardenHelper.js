@@ -285,8 +285,7 @@ function getRewardsSigHash(garden, babl, profits, nonce, maxFee) {
 async function getRewardsSig(garden, signer, babl, profits, nonce, maxFee) {
   let payloadHash = getRewardsSigHash(garden, babl, profits, nonce, maxFee);
 
-  let signature = await signer.signMessage(ethers.utils.arrayify(payloadHash));
-  return ethers.utils.splitSignature(signature);
+  return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }
 
 module.exports = {

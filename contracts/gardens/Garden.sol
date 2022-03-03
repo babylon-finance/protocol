@@ -442,17 +442,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
         bytes32 hash =
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
         _onlyValidSigner(signer, _nonce);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
+
+        signer.isValidSignatureNow(hash, signature);
+
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         _sendRewardsInternal(signer, _babl, _profits);

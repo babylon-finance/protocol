@@ -2343,7 +2343,7 @@ describe.skip('RewardsDistributor', function () {
       // Signer 2 claim rewards by sig
       await newGarden
         .connect(keeper)
-        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 });
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
       const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
@@ -2356,6 +2356,7 @@ describe.skip('RewardsDistributor', function () {
       expect(signer2BABLBalanceBefore).to.be.equal(0);
       expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
     });
+
     [
       {
         token: addresses.tokens.WETH,
@@ -2416,7 +2417,7 @@ describe.skip('RewardsDistributor', function () {
         // Signer 2 claim rewards by sig
         await newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 });
         if (token === addresses.tokens.WETH) {
           signer2AssetBalanceAfter = await ethers.provider.getBalance(signer2.address);
         } else {
@@ -2471,7 +2472,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(signer2)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -2502,7 +2503,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
       // nonce 3 also fails
       nonce = 3;
@@ -2510,7 +2511,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
       // nonce 2 works
       nonce = 2;
@@ -2521,7 +2522,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
       // Now we check that nonce is been updated with the claimRewardsBySig
       // nonce is 3 at this point
@@ -2543,7 +2544,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
     });
     it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
@@ -2580,7 +2581,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
@@ -3752,6 +3753,7 @@ describe.skip('RewardsDistributor', function () {
           .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
       ).to.be.revertedWith('BAB#073');
     });
+
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
@@ -3798,6 +3800,7 @@ describe.skip('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
+
   describe('NFT stake in Gardens to boost BABL rewards', function () {
     it('can stake common prophet NFT in a garden to get 1% LP', async function () {
       const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
