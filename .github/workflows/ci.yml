@@ -39,10 +39,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hardhat-v3
 
-      - name: Run fast tests
+      - name: Run Unit Tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
-        run: yarn test:ci:fast
+        run: yarn test:unit
+
+      - name: Run Integration Tests
+        env:
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
+        run: yarn test:integration:fast
 
   lint:
     name: Lint
