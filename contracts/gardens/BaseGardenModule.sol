@@ -1,16 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -85,7 +73,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     address internal creator;
 
     bool internal active; // DEPRECATED;
-    bool public privateGarden;
+    bool internal privateGarden;
 
     uint256 internal principal; // DEPRECATED;
 
@@ -131,7 +119,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     mapping(address => bool) internal isGardenStrategy; // Security control mapping
 
     // Keeper debt in reserve asset if any, repaid upon every strategy finalization
-    uint256 public keeperDebt;
+    uint256 internal keeperDebt;
     uint256 internal totalKeeperFees;
 
     // Allow internal strategy creators for certain gardens
@@ -142,6 +130,18 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
 
     // Addresses for extra creators
     address[MAX_EXTRA_CREATORS] internal extraCreators;
+
+    // last recorded price per share of the garden during deposit or withdrawal operation
+    uint256 internal lastPricePerShare;
+
+    // last recorded time of the deposit or withdraw in seconds
+    uint256 internal lastPricePerShareTS;
+
+    // Decay rate of the slippage for pricePerShare over time
+    uint256 internal pricePerShareDecayRate;
+
+    // Base slippage for pricePerShare of the garden
+    uint256 internal pricePerShareDelta;
 
     /* ============ Modifiers ============ */
 

@@ -19,15 +19,6 @@ const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('fixtures/StrategyHelper');
-const ZEROMAXCAP_STRATEGY_PARAMS = [
-  eth(0), // _maxCapitalRequested == 0
-  eth(0.1), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage,
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
-];
 
 describe('Strategy', function () {
   let strategyDataset;
@@ -104,7 +95,7 @@ describe('Strategy', function () {
       await expect(
         getStrategy({
           state: 'deposit',
-          params: ZEROMAXCAP_STRATEGY_PARAMS,
+          params: { maxCapitalRequested: eth(0) },
           specificParams: [addresses.tokens.USDT, 0],
         }),
       ).to.be.revertedWith('BAB#041');
@@ -729,7 +720,7 @@ describe('Strategy', function () {
       await injectFakeProfits(long3, eth(200));
       await finalizeStrategy(long3);
       const treasuryBalance3 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance3).to.be.closeTo(from('32737424404549201'), treasuryBalance3.div(20));
+      expect(treasuryBalance3).to.be.closeTo(from('31130940706102534'), treasuryBalance3.div(20));
 
       await injectFakeProfits(long4, eth(200));
       await finalizeStrategy(long4);

@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -74,6 +58,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ICurveAddressProvider internal constant curveAddressProvider =
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
+    address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
 
     /* ============ State Variables ============ */
 
@@ -81,6 +66,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     ITradeIntegration public univ3;
     ITradeIntegration public curve;
     ITradeIntegration public synthetix;
+    ITradeIntegration public heartTradeIntegration;
+    ITradeIntegration public paladinTradeIntegration;
 
     /* ============ Constructor ============ */
 
@@ -92,18 +79,24 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
      * @param _univ3                  Address of univ3 trade integration
      * @param _synthetix              Address of synthetix trade integration
      * @param _univ2                  Address of univ2 trade integration
+     * @param _hearttrade             Address of heart trade integration
+     * @param _paladinTrade           Address of paladin trade integration
      */
     constructor(
         IBabController _controller,
         ITradeIntegration _curve,
         ITradeIntegration _univ3,
         ITradeIntegration _synthetix,
-        ITradeIntegration _univ2
+        ITradeIntegration _univ2,
+        ITradeIntegration _hearttrade,
+        ITradeIntegration _paladinTrade
     ) BaseIntegration('master_swapper_v3', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
         univ2 = _univ2;
+        heartTradeIntegration = _hearttrade;
+        paladinTradeIntegration = _paladinTrade;
     }
 
     /* ============ External Functions ============ */
@@ -163,6 +156,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_index == 3) {
             univ2 = ITradeIntegration(_newAddress);
         }
+        if (_index == 4) {
+            heartTradeIntegration = ITradeIntegration(_newAddress);
+        }
+        if (_index == 5) {
+            paladinTradeIntegration = ITradeIntegration(_newAddress);
+        }
     }
 
     function isTradeIntegration(address _integration) external view returns (bool) {
@@ -170,7 +169,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             _integration == address(curve) ||
             _integration == address(univ3) ||
             _integration == address(synthetix) ||
-            _integration == address(univ2);
+            _integration == address(univ2) ||
+            _integration == address(heartTradeIntegration) ||
+            _integration == address(paladinTradeIntegration);
     }
 
     /* ============ Internal Functions ============ */
@@ -189,10 +190,50 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         string memory error;
         bool success;
 
+        // Palstake AAVE
+        if (_receiveToken == palStkAAVE) {
+            uint256 aaveBalance = ERC20(AAVE).balanceOf(_strategy);
+            if (_sendToken != AAVE) {
+                ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1);
+                aaveBalance = ERC20(AAVE).balanceOf(_strategy).sub(aaveBalance);
+            }
+            try
+                ITradeIntegration(paladinTradeIntegration).trade(
+                    _strategy,
+                    AAVE,
+                    aaveBalance,
+                    palStkAAVE,
+                    _minReceiveQuantity
+                )
+            {
+                return;
+            } catch Error(string memory _err) {
+                error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, palStkAAVE);
+            }
+        }
+
+        // Heart Direct
+        if (controller.protocolWantedAssets(_sendToken)) {
+            uint256 wethBalance = ERC20(WETH).balanceOf(_strategy);
+            // If the heart wants it go through the heart and get WETH
+            try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+                _sendToken = WETH;
+                _sendQuantity = ERC20(WETH).balanceOf(_strategy).sub(wethBalance);
+                if (_receiveToken == WETH) {
+                    return;
+                }
+            } catch Error(string memory _err) {
+                error = _formatError(error, _err, 'Heart Trade Integration ', _sendToken, WETH);
+            }
+        }
+
         // Synthetix Direct
-        (error, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        string memory err;
+        (err, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         if (success) {
             return;
+        } else {
+            error = string(abi.encodePacked(error, err));
         }
 
         // Curve Direct
@@ -366,7 +407,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity,
         string memory error
     ) internal returns (string memory, bool) {
-        address[3] memory reserves = [DAI, WETH, WBTC];
+        address[4] memory reserves = [DAI, WETH, WBTC, AAVE];
         for (uint256 i = 0; i < reserves.length; i++) {
             if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
                 // Going through Curve but switching first to reserve

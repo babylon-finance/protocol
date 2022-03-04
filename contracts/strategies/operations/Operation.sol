@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -57,6 +41,7 @@ abstract contract Operation is IOperation {
     }
 
     /* ============ State Variables ============ */
+    uint256 internal constant MIN_TRADE_AMOUNT = 1000;
     uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;

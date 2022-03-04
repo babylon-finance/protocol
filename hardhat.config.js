@@ -11,6 +11,7 @@ require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('hardhat-log-remover');
 require('hardhat-watcher');
+require('hardhat-spdx-license-identifier');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
@@ -48,7 +49,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14198000; // old 13171630 new 13665320
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14303000;
 
 const CHAIN_IDS = {
   hardhat: 1337,

@@ -110,6 +110,14 @@ To auto-deploy a contract use a simple bash script which will try until it succe
   again 🤖'; done; echo 'Deployed 🚀';
 ```
 
+`deploy-contract` command supports passing arguments to the contract constructor. You can use deployments names instead
+of the addresses. This feature requires using the `dx{contractName}` notation, e.g.:
+
+```bash
+  npx hardhat deploy-contract --contract BabylonViewer --network mainnet dxBabControllerProxy
+  npx hardhat deploy-contract --contract AddLiquidityOperation --network mainnet lp dxBabControllerProxy
+```
+
 ## Upgrade
 
 To upgrade Babylon Protocol use `upgrade-multisig.js` script. It will create a batch tx for Gnosis Multisig to upgrade

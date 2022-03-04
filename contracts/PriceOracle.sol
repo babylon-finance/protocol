@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -78,6 +62,10 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+
+    address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
+    address private constant curvePalStkAave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -283,6 +271,21 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
+        // palstkaave (Curve cannot find otherwise weth-palstk)
+        if (_tokenIn == palStkAAVE) {
+            uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE, curveMetaRegistry);
+            if (tokenInPrice != 0) {
+                return tokenInPrice.preciseMul(_getBestPriceUniV3(AAVE, _tokenOut));
+            }
+        }
+
+        if (_tokenOut == palStkAAVE) {
+            uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE, curveMetaRegistry);
+            if (tokenOutPrice != 0) {
+                return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
+            }
+        }
+
         // Direct curve pair
         price = _checkPairThroughCurve(_tokenIn, _tokenOut, curveMetaRegistry);
         if (price != 0) {
@@ -465,17 +468,16 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (address(pool) == address(0)) {
             return (address(0), 0);
         }
-        uint256 poolLiquidity = uint256(pool.liquidity());
         uint256 liquidityInReserve;
         address denominator;
         address token0 = pool.token0();
         address token1 = pool.token1();
 
         if (hopTokens[token0]) {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token1).balanceOf(address(pool)));
+            liquidityInReserve = ERC20(token0).balanceOf(address(pool));
             denominator = token0;
         } else {
-            liquidityInReserve = poolLiquidity.mul(poolLiquidity).div(ERC20(token0).balanceOf(address(pool)));
+            liquidityInReserve = ERC20(token1).balanceOf(address(pool));
             denominator = token1;
         }
         // Normalize to reserve asset

@@ -1,191 +1,95 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
 const { getAssetWhale } = require('lib/whale');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
-const STRATEGY_PARAMS = [
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn,
-  eth(0.1), // 10% _maxAllocationPercentage
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.05), // 5% _maxTradeSlippagePercentage
-];
-
-const DEFAULT_STRATEGY_PARAMS = [
-  eth(10), // _maxCapitalRequested
-  eth(0.1), // _stake
-  ...STRATEGY_PARAMS,
-];
-
-const DAI_STRATEGY_PARAMS = [
-  eth(1e5), // _maxCapitalRequested
-  eth(100), // _stake
-  ...STRATEGY_PARAMS,
-];
-
-const USDC_STRATEGY_PARAMS = [
-  from(1e8 * 1e6), // _maxCapitalRequested
-  from(100 * 1e6), // _stake
-  ...STRATEGY_PARAMS,
-];
-
-const WBTC_STRATEGY_PARAMS = [
-  from(1e8), // _maxCapitalRequested
-  from(1e6), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  eth(0.05), // 5% _expectedReturn
-  eth(0.1), // 10% _maxAllocationPercentage
-  eth(0.05), // 5% _maxGasFeePercentage
-  eth(0.09), // 9% _maxTradeSlippagePercentage
-];
-
-const BABL_STRATEGY_PARAMS = [
-  eth(1e3), // _maxCapitalRequested
-  eth(1), // _stake
-  ONE_DAY_IN_SECONDS * 30, // _strategyDuration
-  ...STRATEGY_PARAMS,
-];
-
-const GARDEN_PARAMS_MAP = {
-  [addresses.tokens.WETH]: DEFAULT_STRATEGY_PARAMS,
-  [addresses.tokens.DAI]: DAI_STRATEGY_PARAMS,
-  [addresses.tokens.USDC]: USDC_STRATEGY_PARAMS,
-  [addresses.tokens.WBTC]: WBTC_STRATEGY_PARAMS,
-  [addresses.tokens.BABL]: BABL_STRATEGY_PARAMS,
-};
+function encodeData(data) {
+  return new ethers.utils.AbiCoder().encode(
+    data.map((int, i) => (i % 2 === 0 ? 'address' : 'uint256')),
+    data,
+  );
+}
 
 const STRAT_NAME_PARAMS = ['Strategy Name', 'STRT']; // [ NAME, SYMBOL ]
 const NFT_ADDRESS = 'https://babylon.mypinata.cloud/ipfs/Qmc7MfvuCkhA8AA2z6aBzmb5G4MaRfPeKgCVTWcKqU2tjB';
 
 async function createStrategyWithBuyOperation(garden, signer, params, integration, data) {
   const passedLongParams = [[0], [integration]];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.tokens.DAI, 0]);
+  const encoded = encodeData(data || [addresses.tokens.DAI, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLongParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
 async function createStrategyWithPoolOperation(garden, signer, params, integration, data) {
   const passedPoolParams = [[1], [integration]];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.oneinch.pools.wethdai, 0]);
+  const encoded = encodeData(data || [addresses.oneinch.pools.wethdai, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedPoolParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
 async function createStrategyWithVaultOperation(garden, signer, params, integration, data) {
   const passedYieldParams = [[2], [integration]];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.yearn.daiVault, 0]);
+  const encoded = encodeData(data || [addresses.yearn.daiVault, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedYieldParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
 async function createStrategyWithLendOperation(garden, signer, params, integration, data) {
   const passedLendParams = [[3], [integration]];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256'], data || [addresses.tokens.USDC, 0]);
-
+  const encoded = encodeData(data || [addresses.tokens.USDC, 0]);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithLendAndBorrowOperation(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-) {
+async function createStrategyWithLendAndBorrowOperation(garden, signer, params, integrations, data) {
   if (integrations.length !== 2 || data.length / 2 !== 2) {
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedLendBorrowParams = [[3, 4], integrations];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedLendBorrowParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithAddAndDepositOperation(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-) {
+async function createStrategyWithAddAndDepositOperation(garden, signer, params, integrations, data) {
   if (integrations.length !== 2 || data.length / 2 !== 2) {
     throw new Error('Need two integrations and data to create lend & borrow');
   }
   const passedAddandDepositParams = [[1, 2], integrations];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(['address', 'uint256', 'address', 'uint256'], [data[0], data[1], data[2], data[3]]);
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedAddandDepositParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
 
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
-async function createStrategyWithManyOperations(
-  garden,
-  signer,
-  params = DEFAULT_STRATEGY_PARAMS,
-  integrations,
-  data,
-  ops,
-) {
+async function createStrategyWithManyOperations(garden, signer, params, integrations, data, ops) {
   if (integrations.length !== data.length / 2) {
     throw new Error('Need data and integrations to match');
   }
   const passedParams = [ops, integrations];
-  const AbiCoder = ethers.utils.AbiCoder;
-  const abiCoder = new AbiCoder();
-  const encoded = abiCoder.encode(
-    ['address', 'uint256', 'address', 'uint256', 'address', 'uint256'],
-    [data[0], data[1], data[2], data[3], data[4], data[5]],
-  );
-
+  const encoded = encodeData(data);
   await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedParams, encoded);
   const strategies = await garden.getStrategies();
   const lastStrategyAddr = strategies[strategies.length - 1];
-
-  const strategy = await ethers.getContractAt('Strategy', lastStrategyAddr);
-
-  return strategy;
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
 
 async function deposit(garden, signers) {
@@ -198,6 +102,9 @@ async function deposit(garden, signers) {
       amount = ethers.BigNumber.from(2000 * 1e6);
       break;
     case addresses.tokens.BABL.toLowerCase():
+      amount = STRATEGY_EXECUTE_MAP[reserveAsset];
+      break;
+    case addresses.tokens.AAVE.toLowerCase():
       amount = STRATEGY_EXECUTE_MAP[reserveAsset];
       break;
     case addresses.tokens.DAI.toLowerCase():
@@ -332,9 +239,7 @@ async function finalizeStrategyAfter2Years(strategy) {
 async function injectFakeProfits(strategy, amount) {
   const kind = (await strategy.getOperationByIndex(0))[0];
   if (kind === 0) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
     const asset = await getERC20(decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
     if (whaleAddress) {
@@ -347,9 +252,7 @@ async function injectFakeProfits(strategy, amount) {
     }
   }
   if (kind === 1) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
 
     const asset = await getERC20(decoded[0]);
     const whaleAddress = await strategy.pool();
@@ -359,9 +262,7 @@ async function injectFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
 
     const asset = await getERC20(decoded[0]);
     const whaleAddress = await strategy.yieldVault();
@@ -376,9 +277,7 @@ async function substractFakeProfits(strategy, amount) {
   const kind = (await strategy.getOperationByIndex(0))[0];
   const strategyAddress = await impersonateAddress(strategy.address);
   if (kind === 0) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
 
     const asset = await getERC20(decoded[0]);
     const whaleAddress = getAssetWhale(asset.address);
@@ -392,9 +291,7 @@ async function substractFakeProfits(strategy, amount) {
     }
   }
   if (kind === 1) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
 
     const asset = await getERC20(decoded[0]);
     const whaleAddress = await strategy.pool();
@@ -404,9 +301,7 @@ async function substractFakeProfits(strategy, amount) {
     });
   }
   if (kind === 2) {
-    const AbiCoder = ethers.utils.AbiCoder;
-    const abiCoder = new AbiCoder();
-    const decoded = abiCoder.decode(['address', 'uint256'], await strategy.opEncodedData());
+    const decoded = new ethers.utils.AbiCoder().decode(['address', 'uint256'], await strategy.opEncodedData());
 
     const asset = await getERC20(decoded[0]);
     const whaleAddress = await strategy.yieldVault();
@@ -421,7 +316,8 @@ async function createStrategy(kind, state, signers, integrations, garden, params
   let strategy;
 
   const reserveAsset = await garden.reserveAsset();
-  params = params || GARDEN_PARAMS_MAP[reserveAsset];
+
+  params = params || strategyParamsToArray(STRATEGY_PARAMS_MAP[reserveAsset]);
 
   switch (kind) {
     case 'buy':
@@ -502,16 +398,40 @@ async function getStrategy({
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const [, , , signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
+  garden = garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0]));
+  const reserveAsset = await garden.reserveAsset();
+
+  params = { ...STRATEGY_PARAMS_MAP[reserveAsset], ...params };
 
   return await createStrategy(
     kind,
     state,
     signers || [signer1, signer2, signer3],
     integrations || uniswapV3TradeIntegration.address,
-    garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0])),
-    params,
+    garden,
+    strategyParamsToArray(params),
     specificParams,
   );
+}
+
+function strategyParamsToArray({
+  maxCapitalRequested,
+  stake,
+  strategyDuration,
+  expectedReturn,
+  maxAllocationPercentage,
+  maxGasFeePercentage,
+  maxTradeSlippagePercentage,
+}) {
+  return [
+    maxCapitalRequested,
+    stake,
+    strategyDuration,
+    expectedReturn,
+    maxAllocationPercentage,
+    maxGasFeePercentage,
+    maxTradeSlippagePercentage,
+  ];
 }
 
 async function getStrategyState(strategy) {
@@ -521,12 +441,10 @@ async function getStrategyState(strategy) {
 }
 
 module.exports = {
+  strategyParamsToArray,
   createStrategy,
   getStrategy,
   getStrategyState,
-  DEFAULT_STRATEGY_PARAMS,
-  DAI_STRATEGY_PARAMS,
-  USDC_STRATEGY_PARAMS,
   executeStrategy,
   vote,
   executeStrategyImmediate,

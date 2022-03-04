@@ -95,6 +95,22 @@ describe('BabController', function () {
     });
   });
 
+  describe('protocolWantedAssets', function () {
+    it('can add a protocol wanted asset', async function () {
+      await controller.connect(owner).updateProtocolWantedAsset(erc20.address, true);
+
+      expect(await controller.protocolWantedAssets(erc20.address)).to.eq(true);
+    });
+
+    it('can remove a protocol wanted asset', async function () {
+      await controller.connect(owner).updateProtocolWantedAsset(erc20.address, true);
+      expect(await controller.protocolWantedAssets(erc20.address)).to.eq(true);
+
+      await controller.connect(owner).updateProtocolWantedAsset(erc20.address, false);
+      expect(await controller.protocolWantedAssets(erc20.address)).to.eq(false);
+    });
+  });
+
   describe('setPauseGuardian', function () {
     it('can set a pause guardian from owner', async function () {
       await controller.connect(owner).setPauseGuardian(signer1.address);
@@ -131,5 +147,6 @@ describe('BabController', function () {
         'only pause guardian and owner can update pause guardian',
       );
     });
+
   });
 });

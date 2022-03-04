@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -103,7 +87,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_investmentAddress, _maxAmountIn, 0);
+            _getPreActionCallData(_investmentAddress, _maxAmountIn, 0, _strategy);
         if (targetAddressP != address(0)) {
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -150,7 +134,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1);
+            _getPreActionCallData(_investmentAddress, _investmentTokenIn, 1, _strategy);
 
         if (targetAddressP != address(0)) {
             // Approve spending of the pre action token
@@ -377,7 +361,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      *
      * hparam  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
-     * hparam  _borrowOp                Type of Borrow op
+     * hparam  _borrowOp                 Type of Passive op
+     * hparam  _strategy                 Address of the strategy
      *
      * @return address                   Target contract address
      * @return uint256                   Call value
@@ -386,7 +371,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     function _getPreActionCallData(
         address, /* _asset */
         uint256, /* _amount */
-        uint256 /* _borrowOp */
+        uint256, /* _borrowOp */
+        address /* _strategy */
     )
         internal
         view

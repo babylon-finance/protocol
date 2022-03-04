@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
     Original version by Synthetix.io
     https://docs.synthetix.io/contracts/source/libraries/safedecimalmath
@@ -322,4 +324,8 @@ library Errors {
     uint256 internal constant HEART_ASSET_LEND_SAME = 116;
     // Heart invalid ctoken
     uint256 internal constant HEART_INVALID_CTOKEN = 117;
+    // Price per share is wrong
+    uint256 internal constant PRICE_PER_SHARE_WRONG = 118;
+    // Heart asset to purchase is same
+    uint256 internal constant HEART_ASSET_PURCHASE_INVALID = 119;
 }

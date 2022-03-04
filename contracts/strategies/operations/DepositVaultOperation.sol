@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -162,13 +146,21 @@ contract DepositVaultOperation is Operation {
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
             IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
-        uint256 minAmount =
-            amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
-                IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
-                    10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-                )
+        if (amountVault > 0) {
+            uint256 minAmount =
+                amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
+                    IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                        10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
+                    )
+                );
+            IPassiveIntegration(_integration).exitInvestment(
+                msg.sender,
+                yieldVault,
+                amountVault,
+                vaultAsset,
+                minAmount
             );
-        IPassiveIntegration(_integration).exitInvestment(msg.sender, yieldVault, amountVault, vaultAsset, minAmount);
+        }
         return (
             vaultAsset,
             vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,

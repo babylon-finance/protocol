@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -60,6 +44,7 @@ abstract contract BaseIntegration is IBaseIntegration {
     address internal constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
     address internal constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
     address internal constant sUSD = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
+    address internal constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
 
     /* ============ State Variables ============ */
 
@@ -93,5 +78,11 @@ abstract contract BaseIntegration is IBaseIntegration {
             return _strategy.balance;
         }
         return ERC20(_token).balanceOf(_strategy);
+    }
+
+    function _getDurationStrategy(address _strategy) internal view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
+        return block.timestamp.sub(executedAt);
     }
 }

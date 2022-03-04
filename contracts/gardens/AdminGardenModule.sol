@@ -1,16 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -42,10 +30,11 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IAdminGarden} from '../interfaces/IGarden.sol';
+import {IVoteToken} from '../interfaces/IVoteToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
-
+import {ControllerLib} from '../lib/ControllerLib.sol';
 import {BaseGardenModule} from './BaseGardenModule.sol';
 
 /**
@@ -69,6 +58,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
 
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+
+    using ControllerLib for IBabController;
 
     /* ============ Events ============ */
 
@@ -129,20 +120,25 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         controller = _controller;
         reserveAsset = _reserveAsset;
         creator = _creator;
+
         rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
+
         _onlyNonZero(address(rewardsDistributor));
+
         privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
         publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];
-
         publicStewards = !privateGarden && _publicGardenStrategistsStewards[2];
+
         _require(
             _gardenParams[3] > 0 &&
                 _initialContribution >= _gardenParams[3] &&
                 _initialContribution <= _gardenParams[0],
             Errors.MIN_CONTRIBUTION
         );
+
         gardenInitializedAt = block.timestamp;
-        _start(
+
+        _updateGardenParams(
             _gardenParams[0],
             _gardenParams[1],
             _gardenParams[2],
@@ -151,7 +147,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _gardenParams[5],
             _gardenParams[6],
             _gardenParams[7],
-            _gardenParams[8]
+            _gardenParams[8],
+            _gardenParams[9],
+            _gardenParams[10]
         );
     }
 
@@ -175,6 +173,24 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         }
         _require(extraCreators[_index] == msg.sender, Errors.ONLY_CREATOR);
         extraCreators[_index] = _newCreator;
+    }
+
+    /*
+     * Governance can transfer garden owners to a different owner if original creator renounced
+     * Must be a creator or an aux creator
+     * @param _newCreator   New creator address
+     * @param _newCreators  Addresses of the new creators
+     */
+    function updateCreators(address _newCreator, address[MAX_EXTRA_CREATORS] memory _newCreators) external override {
+        controller.onlyGovernanceOrEmergency();
+        // Make sure creator can still have normal permissions after renouncing
+        // Creator can only renounce to 0x in public gardens
+        _require(_newCreator != address(0) && creator == address(0), Errors.CREATOR_CANNOT_RENOUNCE);
+        creator = _newCreator;
+        extraCreators[0] = _newCreators[0];
+        extraCreators[1] = _newCreators[1];
+        extraCreators[2] = _newCreators[2];
+        extraCreators[3] = _newCreators[3];
     }
 
     /**
@@ -214,9 +230,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[9] memory _newParams) external override {
+    function updateGardenParams(uint256[11] memory _newParams) external override {
         _onlyCreator(msg.sender);
-        _start(
+        _updateGardenParams(
             _newParams[0], // uint256 _maxDepositLimit
             _newParams[1], // uint256 _minLiquidityAsset,
             _newParams[2], // uint256 _depositHardlock,
@@ -225,8 +241,23 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _newParams[5], // uint256 _minVotesQuorum,
             _newParams[6], // uint256 _minStrategyDuration,
             _newParams[7], // uint256 _maxStrategyDuration,
-            _newParams[8] // uint256 _minVoters
+            _newParams[8], // uint256 _minVoters
+            _newParams[9], // uint256 _pricePerShareDecayRate
+            _newParams[10] // uint256 _pricePerShareDelta
         );
+    }
+
+    /**
+     * PRIVILEGE FUNCTION to delegate Garden voting power itself into a delegatee
+     * To be used by Garden Creator only.
+     * Compatible with BABL and COMP and few others ERC20Comp related tokens
+     * @param _token         Address of BABL or any other ERC20Comp related governance token
+     * @param _delegatee     Address to delegate token voting power into
+     */
+    function delegateVotes(address _token, address _delegatee) external override {
+        _onlyCreator(msg.sender);
+        _require(_token != address(0) && _delegatee != address(0), Errors.ADDRESS_IS_ZERO);
+        IVoteToken(_token).delegate(_delegatee);
     }
 
     /* ============ External Getter Functions ============ */
@@ -234,8 +265,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
     /* ============ Internal Functions ============ */
 
     /**
-     * Starts the Garden with allowed reserve assets,
-     * fees and issuance premium. Only callable by the Garden's creator
+     *  Updates Garden params
      *
      * @param _maxDepositLimit             Max deposit limit
      * @param _minLiquidityAsset           Number that represents min amount of liquidity denominated in ETH
@@ -248,8 +278,10 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _minStrategyDuration         Min duration of an strategy
      * @param _maxStrategyDuration         Max duration of an strategy
      * @param _minVoters                   The minimum amount of voters needed for quorum
+     * @param _pricePerShareDecayRate      Decay rate of price per share
+     * @param _pricePerShareDelta          Base slippage for price per share
      */
-    function _start(
+    function _updateGardenParams(
         uint256 _maxDepositLimit,
         uint256 _minLiquidityAsset,
         uint256 _depositHardlock,
@@ -258,7 +290,9 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         uint256 _minVotesQuorum,
         uint256 _minStrategyDuration,
         uint256 _maxStrategyDuration,
-        uint256 _minVoters
+        uint256 _minVoters,
+        uint256 _pricePerShareDecayRate,
+        uint256 _pricePerShareDelta
     ) private {
         _require(
             _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
@@ -278,15 +312,17 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         );
         _require(_minVoters >= 1 && _minVoters < 10, Errors.MIN_VOTERS_CHECK);
 
+        maxDepositLimit = _maxDepositLimit;
         minContribution = _minContribution;
         strategyCooldownPeriod = _strategyCooldownPeriod;
         minVotesQuorum = _minVotesQuorum;
         minVoters = _minVoters;
         minStrategyDuration = _minStrategyDuration;
         maxStrategyDuration = _maxStrategyDuration;
-        maxDepositLimit = _maxDepositLimit;
         minLiquidityAsset = _minLiquidityAsset;
         depositHardlock = _depositHardlock;
+        pricePerShareDecayRate = _pricePerShareDecayRate;
+        pricePerShareDelta = _pricePerShareDelta;
     }
 
     // Checks if an address is a creator

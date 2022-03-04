@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -136,7 +120,7 @@ contract AddLiquidityOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -161,16 +145,16 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             _minAmountsOut
         );
-        // Exit Pool tokens
-        address reserveAsset = _garden.reserveAsset();
+        // Exit Pool tokens to a consolidated asset
+        address reserveAsset = WETH;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i]) && address(msg.sender).balance > 0) {
+                if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > 0) {
+                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).balanceOf(msg.sender),
@@ -180,7 +164,10 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         }
-        _sellRewardTokens(_integration, _data, reserveAsset);
+        // Only claim and sell rewards on final exit
+        if (_percentage == HUNDRED_PERCENT) {
+            _sellRewardTokens(_integration, _data, reserveAsset);
+        }
         // BUG: Should respect percentage and not return all the capital
         return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
     }
@@ -256,6 +243,21 @@ contract AddLiquidityOperation is Operation {
                 );
             }
         }
+        // get rewards if hanging around
+        try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
+            for (uint256 i = 0; i < rewards.length; i++) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                    price = _getPrice(_garden.reserveAsset(), rewards[i]);
+                    if (price > 0) {
+                        NAV += SafeDecimalMath.normalizeAmountTokens(
+                            rewards[i],
+                            _garden.reserveAsset(),
+                            IERC20(rewards[i]).balanceOf(msg.sender)
+                        );
+                    }
+                }
+            }
+        } catch {}
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
     }
@@ -336,7 +338,7 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > 0) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     try
                         IStrategy(msg.sender).trade(
                             rewards[i],

@@ -61,12 +61,12 @@ describe('ConvexStakeIntegrationTest', function () {
   });
 
   describe('Convex Stake Multigarden multiasset', function () {
-    [
+    pick([
       { token: addresses.tokens.WETH, name: 'WETH' },
       { token: addresses.tokens.DAI, name: 'DAI' },
       { token: addresses.tokens.USDC, name: 'USDC' },
       { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(async ({ token, name }) => {
+    ]).forEach(async ({ token, name }) => {
       pick(addresses.convex.pools).forEach(({ crvpool, cvxpool, name }) => {
         it(`can enter ${name} CRV pool and stake into convex`, async function () {
           await depositAndStakeStrategy(crvpool, cvxpool, token);

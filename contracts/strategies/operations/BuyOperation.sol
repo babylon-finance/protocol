@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -106,12 +90,12 @@ contract BuyOperation is Operation {
      * @param _percentage of capital to exit from the strategy
      */
     function exitOperation(
-        address, /* _asset */
+        address _asset,
         uint256, /* _remaining */
         uint8, /* _assetStatus */
         uint256 _percentage,
-        bytes calldata _data,
-        IGarden _garden,
+        bytes calldata, /*_data */
+        IGarden, /*_garden */
         address /* _integration */
     )
         external
@@ -123,18 +107,9 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = BytesLib.decodeOpDataAddress(_data);
-        // Replace old AXS with new AXS
-        if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
-            token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
-        }
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        IStrategy(msg.sender).trade(
-            token,
-            ERC20(token).balanceOf(address(msg.sender)).preciseMul(_percentage),
-            _garden.reserveAsset()
-        );
-        return (_garden.reserveAsset(), ERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
+        uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
+        return (_asset, balance, 0);
     }
 
     /**

@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -66,6 +50,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
+    event ProtocolWantedAssetUpdated(address indexed _wantedAsset, bool _wanted);
     event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
@@ -86,16 +71,15 @@ contract BabController is OwnableUpgradeable, IBabController {
     event NewPauseGuardian(address _oldPauseGuardian, address _newPauseGuardian);
 
     /// @notice Emitted when an action is paused globally
-    event ActionPaused(string _action, bool _pauseState);
+    event ActionPaused(bool _pauseState);
 
     /// @notice Emitted when an action is paused individually
-    event ActionPausedIndividually(string _action, address _address, bool _pauseState);
+    event ActionPausedIndividually(address _address, bool _pauseState);
 
     /* ============ Modifiers ============ */
 
-    modifier onlyGovernanceOrEmergency {
+    function _onlyGovernanceOrEmergency() internal view {
         require(msg.sender == owner() || msg.sender == EMERGENCY_OWNER, 'Not enough privileges');
-        _;
     }
 
     /* ============ State Variables ============ */
@@ -125,7 +109,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public validReserveAsset;
 
     // Mapping to check whitelisted assets
-    mapping(address => bool) public assetWhitelist;
+    mapping(address => bool) private assetWhitelist;
 
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
@@ -178,6 +162,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override mardukGate;
     address public override heart;
     address public override curveMetaRegistry;
+    mapping(address => bool) public override protocolWantedAssets;
 
     /* ============ Constants ============ */
 
@@ -342,7 +327,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset Address of the reserve assset
      */
-    function addReserveAsset(address _reserveAsset) external override onlyOwner {
+    function addReserveAsset(address _reserveAsset) external override {
+        _onlyGovernanceOrEmergency();
         require(_reserveAsset != address(0) && ERC20(_reserveAsset).decimals() <= 18, 'Incorrect address');
         require(!validReserveAsset[_reserveAsset], 'Reserve asset already added');
         validReserveAsset[_reserveAsset] = true;
@@ -355,11 +341,26 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _reserveAsset               Address of the reserve asset to remove
      */
-    function removeReserveAsset(address _reserveAsset) external override onlyOwner {
+    function removeReserveAsset(address _reserveAsset) external override {
+        _onlyGovernanceOrEmergency();
         require(validReserveAsset[_reserveAsset], 'Reserve asset does not exist');
         reserveAssets = reserveAssets.remove(_reserveAsset);
         delete validReserveAsset[_reserveAsset];
         emit ReserveAssetRemoved(_reserveAsset);
+    }
+
+    /**
+     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
+     *
+     * @param _wantedAsset  Address of the wanted assset
+     * @param _wanted       True if wanted, false otherwise
+     */
+    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external override {
+        _onlyGovernanceOrEmergency();
+        require(_wantedAsset != address(0) && ERC20(_wantedAsset).decimals() <= 18, 'Incorrect address');
+        require(protocolWantedAssets[_wantedAsset] != _wanted, 'Wanted asset already added');
+        protocolWantedAssets[_wantedAsset] = _wanted;
+        emit ProtocolWantedAssetUpdated(_wantedAsset, _wanted);
     }
 
     /**
@@ -406,7 +407,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newHeart      Address of the new heart
      */
-    function editHeart(address _newHeart) external override onlyGovernanceOrEmergency {
+    function editHeart(address _newHeart) external override {
+        _onlyGovernanceOrEmergency();
         require(_newHeart != address(0), 'Address must not be 0');
 
         address oldHeart = heart;
@@ -420,7 +422,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _curveMetaRegistry      Address of the new curve meta registry
      */
-    function editCurveMetaRegistry(address _curveMetaRegistry) external override onlyGovernanceOrEmergency {
+    function editCurveMetaRegistry(address _curveMetaRegistry) external override {
+        _onlyGovernanceOrEmergency();
         require(_curveMetaRegistry != address(0), 'Address must not be 0');
 
         curveMetaRegistry = _curveMetaRegistry;
@@ -447,7 +450,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _priceOracle               Address of the new price oracle
      */
-    function editPriceOracle(address _priceOracle) external override onlyGovernanceOrEmergency {
+    function editPriceOracle(address _priceOracle) external override {
+        _onlyGovernanceOrEmergency();
         require(_priceOracle != priceOracle, 'Price oracle already exists');
 
         require(_priceOracle != address(0), 'Price oracle must exist');
@@ -463,7 +467,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _gardenValuer Address of the new garden valuer
      */
-    function editGardenValuer(address _gardenValuer) external override onlyGovernanceOrEmergency {
+    function editGardenValuer(address _gardenValuer) external override {
+        _onlyGovernanceOrEmergency();
         require(_gardenValuer != gardenValuer, 'Garden Valuer already exists');
 
         require(_gardenValuer != address(0), 'Garden Valuer must exist');
@@ -479,7 +484,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newGardenFactory      Address of the new garden factory
      */
-    function editGardenFactory(address _newGardenFactory) external override onlyGovernanceOrEmergency {
+    function editGardenFactory(address _newGardenFactory) external override {
+        _onlyGovernanceOrEmergency();
         require(_newGardenFactory != address(0), 'Address must not be 0');
 
         address oldGardenFactory = gardenFactory;
@@ -493,7 +499,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newGardenNFT      Address of the new garden NFT
      */
-    function editGardenNFT(address _newGardenNFT) external override onlyGovernanceOrEmergency {
+    function editGardenNFT(address _newGardenNFT) external override {
+        _onlyGovernanceOrEmergency();
         require(_newGardenNFT != address(0), 'Address must not be 0');
 
         address oldGardenNFT = gardenNFT;
@@ -507,7 +514,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newStrategyNFT      Address of the new strategy NFT
      */
-    function editStrategyNFT(address _newStrategyNFT) external override onlyGovernanceOrEmergency {
+    function editStrategyNFT(address _newStrategyNFT) external override {
+        _onlyGovernanceOrEmergency();
         require(_newStrategyNFT != address(0), 'Address must not be 0');
 
         address oldStrategyNFT = strategyNFT;
@@ -521,7 +529,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newStrategyFactory      Address of the new strategy factory
      */
-    function editStrategyFactory(address _newStrategyFactory) external override onlyGovernanceOrEmergency {
+    function editStrategyFactory(address _newStrategyFactory) external override {
+        _onlyGovernanceOrEmergency();
         require(_newStrategyFactory != address(0), 'Address must not be 0');
 
         address oldStrategyFactory = strategyFactory;
@@ -535,7 +544,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newDefaultMasterSwapper     Address of the new default trade integration
      */
-    function setMasterSwapper(address _newDefaultMasterSwapper) external override onlyGovernanceOrEmergency {
+    function setMasterSwapper(address _newDefaultMasterSwapper) external override {
+        _onlyGovernanceOrEmergency();
         require(_newDefaultMasterSwapper != address(0), 'Address must not be 0');
         require(_newDefaultMasterSwapper != masterSwapper, 'Address must be different');
         address oldMasterSwapper = masterSwapper;
@@ -550,7 +560,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param  _kind             Operation kind
      * @param  _operation        Address of the operation contract to set
      */
-    function setOperation(uint8 _kind, address _operation) public override onlyGovernanceOrEmergency {
+    function setOperation(uint8 _kind, address _operation) public override {
+        _onlyGovernanceOrEmergency();
         require(_kind < MAX_OPERATIONS, 'Max operations reached');
         require(enabledOperations[_kind] != _operation, 'Operation already set');
         require(_operation != address(0), 'Operation address must exist.');
@@ -585,11 +596,15 @@ contract BabController is OwnableUpgradeable, IBabController {
      * @param _state               True to pause, false to unpause.
      */
     function setGlobalPause(bool _state) external override returns (bool) {
-        require(msg.sender == guardian || msg.sender == owner(), 'only pause guardian and owner can pause globally');
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+        require(
+            msg.sender == guardian || msg.sender == owner() || msg.sender == EMERGENCY_OWNER,
+            'Not enough privileges'
+        );
+        require(!(msg.sender == guardian && _state == false), 'Not enough privileges');
 
         guardianGlobalPaused = _state;
-        emit ActionPaused('Guardian global pause', _state);
+
+        emit ActionPaused(_state);
         return _state;
     }
 
@@ -601,13 +616,14 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function setSomePause(address[] memory _address, bool _state) external override returns (bool) {
         require(
-            msg.sender == guardian || msg.sender == owner(),
-            'only pause guardian and owner can pause individually'
+            msg.sender == guardian || msg.sender == owner() || msg.sender == EMERGENCY_OWNER,
+            'Not enough privileges'
         );
-        require(msg.sender == owner() || _state == true, 'only admin can unpause');
+        require(!(msg.sender == guardian && _state == false), 'Not enough privileges');
+
         for (uint256 i = 0; i < _address.length; i++) {
             guardianPaused[_address[i]] = _state;
-            emit ActionPausedIndividually('Guardian individual pause', _address[i], _state);
+            emit ActionPausedIndividually(_address[i], _state);
         }
         return _state;
     }
@@ -694,4 +710,4 @@ contract BabController is OwnableUpgradeable, IBabController {
     receive() external payable {}
 }
 
-contract BabControllerV13 is BabController {}
+contract BabControllerV15 is BabController {}
