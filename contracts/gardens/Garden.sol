@@ -18,6 +18,7 @@ import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
+import {SignatureChecker} from '../lib/SignatureChecker.sol';
 
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
@@ -54,6 +55,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+
+    using SignatureChecker for address;
 
     /* ============ Events ============ */
 
@@ -259,9 +262,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _maxFee,
         uint256 _pricePerShare,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
 
@@ -270,8 +272,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce, _maxFee)
             )
                 .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
+
         _onlyValidSigner(signer, _nonce);
+
+        signer.isValidSignatureNow(hash, signature);
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
@@ -365,13 +369,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
 
-        address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce, _maxFee, _withPenalty, v, r, s);
+        _onlyValidSigner(signer, _nonce);
+
+        bytes32 hash =
+            keccak256(
+                abi.encode(
+                    WITHDRAW_BY_SIG_TYPEHASH,
+                    address(this),
+                    _amountIn,
+                    _minAmountOut,
+                    _nonce,
+                    _maxFee,
+                    _withPenalty
+                )
+            )
+                .toEthSignedMessageHash();
+
+        signer.isValidSignatureNow(hash, signature);
 
         _withdrawInternal(
             _amountIn,
@@ -423,17 +442,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
         bytes32 hash =
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
         _onlyValidSigner(signer, _nonce);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
+
+        signer.isValidSignatureNow(hash, signature);
+
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         _sendRewardsInternal(signer, _babl, _profits);
@@ -596,34 +616,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // Get valuation of the Garden with the quote asset as the reserve asset.
             return IGardenValuer(controller.gardenValuer()).calculateGardenValuation(address(this), reserveAsset);
         }
-    }
-
-    function _getWithdrawSigner(
-        uint256 _amountIn,
-        uint256 _minAmountOut,
-        uint256 _nonce,
-        uint256 _maxFee,
-        bool _withPenalty,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal view returns (address) {
-        bytes32 hash =
-            keccak256(
-                abi.encode(
-                    WITHDRAW_BY_SIG_TYPEHASH,
-                    address(this),
-                    _amountIn,
-                    _minAmountOut,
-                    _nonce,
-                    _maxFee,
-                    _withPenalty
-                )
-            )
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        _onlyValidSigner(signer, _nonce);
-        return signer;
     }
 
     function _internalDeposit(

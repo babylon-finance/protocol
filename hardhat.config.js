@@ -30,6 +30,7 @@ require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/upgrade-multisig');
 require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
+require('./lib/tasks/vesting');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/stuck');
@@ -38,6 +39,7 @@ require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
+const COVERAGE = !!process.env.COVERAGE;
 
 const FORK = !!process.env.FORK;
 
@@ -121,8 +123,16 @@ module.exports = {
         version: '0.7.6',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : undefined,
           },
         },
       },
@@ -130,8 +140,16 @@ module.exports = {
         version: '0.8.2',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : undefined,
           },
         },
       },
