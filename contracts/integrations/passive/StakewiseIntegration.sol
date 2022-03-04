@@ -33,7 +33,7 @@ import {IrETH2} from '../../interfaces/external/stakewise/IrETH2.sol';
  * @title StakewiseIntegration
  * @author Babylon Finance Protocol
  *
- * Lido Integration
+ * StakewiseIntegration
  */
 contract StakewiseIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;

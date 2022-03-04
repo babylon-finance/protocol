@@ -31,7 +31,7 @@ import {IPaladinZap} from '../../interfaces/external/paladin/IPaladinZap.sol';
  * @title PaladinStakeIntegration
  * @author Babylon Finance Protocol
  *
- * Lido Integration
+ * Lido PaladinStakeIntegration
  */
 contract PaladinStakeIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;

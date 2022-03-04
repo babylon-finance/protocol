@@ -51,15 +51,13 @@ contract BabylonViewer {
     using Math for int256;
     using SafeDecimalMath for uint256;
 
-    IBabController public controller;
+    IBabController private immutable controller;
     uint24 internal constant FEE_LOW = 500;
     uint24 internal constant FEE_MEDIUM = 3000;
     uint24 internal constant FEE_HIGH = 10000;
-    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IUniswapV3Factory internal constant uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     constructor(IBabController _controller) {
-        require(address(_controller) != address(0), 'Controller must exist');
         controller = _controller;
     }
 
@@ -496,15 +494,9 @@ contract BabylonViewer {
                 continue;
             }
             tempRewards = IRewardsDistributor(rewardsDistributor).estimateUserRewards(_strategies[i], _contributor);
-
-            totalRewards[0] = totalRewards[0].add(tempRewards[0]);
-            totalRewards[1] = totalRewards[1].add(tempRewards[1]);
-            totalRewards[2] = totalRewards[2].add(tempRewards[2]);
-            totalRewards[3] = totalRewards[3].add(tempRewards[3]);
-            totalRewards[4] = totalRewards[4].add(tempRewards[4]);
-            totalRewards[5] = totalRewards[5].add(tempRewards[5]);
-            totalRewards[6] = totalRewards[6].add(tempRewards[6]);
-            totalRewards[7] = totalRewards[7].add(tempRewards[7]);
+            for (uint256 j = 0; j < 8; j++) {
+                totalRewards[j] = totalRewards[j].add(tempRewards[j]);
+            }
         }
         return totalRewards;
     }

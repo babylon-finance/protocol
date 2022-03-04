@@ -173,6 +173,7 @@ describe('CurvePoolIntegrationTest', function () {
       });
     });
 
+    // Hardhat have some caching issue with this tests
     it('can enter the palstake aave pool after staking in an aave garden', async function () {
       const reserveAsset = await getERC20(addresses.tokens.AAVE);
       const aaveGarden = await createGarden({ reserveAsset: reserveAsset.address });
