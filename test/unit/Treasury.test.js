@@ -2,9 +2,7 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO } = require('lib/constants');
-const { fund } = require('lib/whale');
 const addresses = require('lib/addresses');
-const { setupTests } = require('fixtures/GardenFixture');
 const {
   pick,
   increaseTime,
@@ -17,31 +15,34 @@ const {
 } = require('utils/test-helpers');
 
 describe('Treasury', function () {
-  let signer1;
   let treasury;
-  let weth;
   let owner;
-  let wethWhaleSigner;
+  let signer1;
+  let erc20;
 
   beforeEach(async () => {
-    ({ owner, wethWhaleSigner, signer1, treasury, weth } = await setupTests()());
+    [, , owner, signer1] = await ethers.getSigners();
+    const treasuryFactory = await ethers.getContractFactory('Treasury');
+    treasury = await treasuryFactory.deploy();
+    //TODO: Figure out how to deploy from a specific signer
+    await treasury.transferOwnership(owner.address);
 
-    await fund([treasury.address]);
+    const erc20Fatory = await ethers.getContractFactory('ERC20Mock');
+    erc20 = await erc20Fatory.deploy('Babylon Finance', 'BABL', treasury.address, eth(1e6));
+
+    //TODO: Use Hardhhat set_balance to give ETH
+    await owner.sendTransaction({
+      to: treasury.address,
+      value: eth(),
+    });
   });
 
   describe('sendTreasuryFunds', async function () {
-    pick([
-      { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
-      { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },
-      { token: addresses.tokens.USDC, name: 'USDC', amount: from(2000 * 1e6) },
-      { token: addresses.tokens.WBTC, name: 'WBTC', amount: from(0.05 * 1e8) },
-    ]).forEach(({ token, name, amount }) => {
-      it(`can send ${name}`, async function () {
-        const erc20 = await getERC20(token);
-        await expect(() =>
-          treasury.connect(owner).sendTreasuryFunds(token, amount, signer1.address, { gasPrice: 0 }),
-        ).to.changeTokenBalances(erc20, [treasury, signer1], [amount.mul(-1), amount]);
-      });
+    it('can send', async function () {
+      const amount = eth();
+      await expect(() =>
+        treasury.connect(owner).sendTreasuryFunds(erc20.address, amount, signer1.address),
+      ).to.changeTokenBalances(erc20, [treasury, signer1], [amount.mul(-1), amount]);
     });
 
     it(`can send ETH`, async function () {
@@ -60,14 +61,6 @@ describe('Treasury', function () {
       await expect(
         treasury.connect(owner).sendTreasuryFunds(addresses.tokens.WETH, eth(), ADDRESS_ZERO, { gasPrice: 0 }),
       ).to.be.revertedWith('Target address must exist');
-    });
-
-    it('fails if not enough funds in treasury', async function () {
-      await expect(
-        treasury
-          .connect(owner)
-          .sendTreasuryFunds(addresses.tokens.WETH, eth(99999999), signer1.address, { gasPrice: 0 }),
-      ).to.be.revertedWith('SafeERC20: low-level call failed');
     });
   });
 });

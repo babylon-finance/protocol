@@ -60,8 +60,22 @@ yarn estimate-size
 
 🧪 Test
 
+To run unit tests
+
 ```bash
-yarn test
+yarn test:unit
+```
+
+To run integartion tests
+
+```bash
+yarn test:integration
+```
+
+To run fast integartion tests (recommended)
+
+```bash
+yarn test:integration:fast
 ```
 
 Or watch test 👁

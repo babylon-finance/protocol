@@ -4,8 +4,8 @@ on:
   push:
 
 jobs:
-  test:
-    name: Test
+  test-unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -39,10 +39,50 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hardhat-v3
 
-      - name: Run fast tests
+      - name: Run Unit Tests
         env:
           ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
-        run: yarn test:ci:fast
+        run: yarn test:unit
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use node@12
+        uses: actions/setup-node@v1
+        with: { node-version: '12.x' }
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v2
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-v1-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-v1
+
+      - name: Install dependencies
+        run: yarn --prefer-offline
+
+      - uses: actions/cache@v2
+        id: hardhat-cache
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-hardhat-v3-${{ hashFiles('hardhat.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-hardhat-v3
+
+      - name: Run Integration Tests
+        env:
+          ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY}}
+        run: yarn test:integration:fast
 
   lint:
     name: Lint
