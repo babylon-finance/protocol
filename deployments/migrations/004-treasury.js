@@ -17,7 +17,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [],
     log: true,
     ...(await getGasPrice()),
   });
