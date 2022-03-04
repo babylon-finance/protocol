@@ -74,10 +74,12 @@ module.exports = {
       chainId: CHAIN_IDS.hardhat,
       blockGasLimit: 0x1fffffffffffff,
       allowUnlimitedContractSize: true,
-      forking: FORK ? {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: +BLOCK_NUMBER,
-      } : undefined,
+      forking: FORK
+        ? {
+            url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+            blockNumber: +BLOCK_NUMBER,
+          }
+        : undefined,
       saveDeployments: true,
       gas: 9e6,
       initialBaseFeePerGas: 0,

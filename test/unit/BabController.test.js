@@ -147,6 +147,5 @@ describe('BabController', function () {
         'only pause guardian and owner can update pause guardian',
       );
     });
-
   });
 });
