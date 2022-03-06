@@ -442,7 +442,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
-        require(BABL.balanceOf(address(this)) >= bondValueInBABL, ' Not enough BABL in the heart to bond');
+        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
         heartGarden.deposit(bondValueInBABL, 1, msg.sender, false);
     }
 
