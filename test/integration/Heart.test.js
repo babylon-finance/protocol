@@ -279,6 +279,25 @@ describe('Heart Unit Test', function () {
     });
   });
 
+  describe('bond assets', async function () {
+    it('normal signer cannot enter a new bond asset', async function () {
+      await expect(heart.connect(signer1).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 })).to
+        .be.reverted;
+    });
+
+    it('owner can enter a new bond asset', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 });
+      expect(await heart.bondAssets(cDAI.address)).to.equal(ethers.utils.parseEther('0.05'));
+    });
+
+    it('owner can update the discount of a bond asset', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 });
+      expect(await heart.bondAssets(cDAI.address)).to.equal(ethers.utils.parseEther('0.05'));
+      await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.03'), { gasPrice: 0 });
+      expect(await heart.bondAssets(cDAI.address)).to.equal(ethers.utils.parseEther('0.03'));
+    });
+  });
+
   describe('borrow fuse pool', async function () {
     it('will borrow DAI after lending BABL', async function () {
       const amountToLend = ethers.utils.parseEther('5000');
