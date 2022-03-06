@@ -213,6 +213,8 @@ interface ICoreGarden {
         address signer,
         bytes memory signature
     ) external;
+
+    function claimNFT() external;
 }
 
 interface IERC20Metadata {

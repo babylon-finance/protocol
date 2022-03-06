@@ -459,6 +459,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _sendRewardsInternal(signer, _babl, _profits);
     }
 
+
+    /**
+     * @notice
+     *   Allows Garden contributors to claim an NFT.
+     */
+    function claimNFT() external override {
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        IGardenNFT(controller.gardenNFT()).grantGardenNFT(msg.sender);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**

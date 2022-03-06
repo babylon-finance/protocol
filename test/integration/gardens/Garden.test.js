@@ -1524,6 +1524,46 @@ describe('Garden', function () {
     });
   });
 
+  describe('claimNFT', async function () {
+    it('claims NFT for a contributor', async function () {
+      const amountIn = eth(1000);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await dai.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      await garden.connect(signer3).claimNFT();
+
+      expect(await gardenNFT.balanceOf(signer3.address)).to.eq(1);
+    });
+
+    it('rejects if not a contributor', async function () {
+      const amountIn = eth(1000);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await dai.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), false);
+
+      await expect(garden.connect(signer2).claimNFT()
+            ).to.be.revertedWith('BAB#015');
+
+    });
+  });
+
   describe('addStrategy', async function () {
     it('should not be able to add an strategy unless there is a contributor', async function () {
       await expect(
