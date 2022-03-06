@@ -154,6 +154,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Asset to use to buy protocol wanted assets
     address public override assetForPurchases;
 
+    // Bond Assets with the discount
+    mapping(address => uint256) public override bondAssets;
+
     /* ============ Initializer ============ */
 
     /**
@@ -314,6 +317,17 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
+     * Updates the next asset to purchase assets from strategies at a premium
+     *
+     * @param _assetToBond              Bond to update
+     * @param _bondDiscount             Bond discount to apply 1e18
+     */
+    function updateBond(address _assetToBond, uint256 _bondDiscount) public override {
+        controller.onlyGovernanceOrEmergency();
+        bondAssets[_assetToBond] = _bondDiscount;
+    }
+
+    /**
      * Adds a BABL reward to be distributed weekly back to the heart garden
      *
      * @param _bablAmount             Total amount to distribute
@@ -410,6 +424,26 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy
         IERC20(WETH).safeTransfer(msg.sender, wethTraded);
+    }
+
+    /**
+     * Users can bond an asset that belongs to the program and receive a discount on hBABL.
+     * Note: Heart needs to have enough BABL to satisfy the discount.
+     * Note: User needs to approve the asset to bond first.
+     *
+     * @param _assetToBond                  Asset that the user wants to bond
+     * @param _amountToBond                 Amount to be bonded
+     */
+    function bondAsset(address _assetToBond, uint256 _amountToBond) external override {
+        require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
+        uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
+        // Total value adding the discount
+        uint256 bondValueInBABL = _amountToBond.preciseMul(priceInBABL).preciseMul(uint256(1e18).add(bondAssets[_assetToBond]));
+        // Get asset to bond from sender
+        IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
+        // Deposit on behalf of the user
+        require(BABL.balanceOf(address(this)) >= bondValueInBABL, ' Not enough BABL in the heart to bond');
+        heartGarden.deposit(bondValueInBABL, 1, msg.sender, false);
     }
 
     // solhint-disable-next-line

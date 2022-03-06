@@ -22,6 +22,8 @@ interface IHeart {
 
     function assetToCToken(address _asset) external view returns (address);
 
+    function bondAssets(address _asset) external view returns (uint256);
+
     function assetToLend() external view returns (address);
 
     function assetForPurchases() external view returns (address);
@@ -68,6 +70,8 @@ interface IHeart {
 
     function updateAssetToPurchase(address _purchaseAsset) external;
 
+    function updateBond(address _assetToBond, uint256 _bondDiscount) external;
+
     function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
 
     function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
@@ -79,4 +83,6 @@ interface IHeart {
     function setMinTradeAmount(address _asset, uint256 _minAmount) external;
 
     function setTradeSlippage(uint256 _tradeSlippage) external;
+
+    function bondAsset(address _assetToBond, uint256 _amountToBond) external;
 }
