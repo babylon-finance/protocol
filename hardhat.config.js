@@ -135,7 +135,7 @@ module.exports = {
                     stackAllocation: true,
                   },
                 }
-              : undefined,
+              : {},
           },
         },
       },
@@ -152,7 +152,7 @@ module.exports = {
                     stackAllocation: true,
                   },
                 }
-              : undefined,
+              : {},
           },
         },
       },
