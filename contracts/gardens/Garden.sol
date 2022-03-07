@@ -599,7 +599,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
-        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, balanceOf(_to), _amountIn);
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -728,6 +728,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             from == address(0) || to == address(0) || (controller.gardenTokensTransfersEnabled() && !privateGarden),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
+
+        if(from != address(0) && to != address(0)) {
+            uint256 fromBalance = balanceOf(from);
+            _updateContributorWithdrawalInfo(from, 0, fromBalance, fromBalance.sub(_amount), _amount);
+            _updateContributorDepositInfo(to, balanceOf(to), 0, _amount);
+        }
     }
 
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
@@ -775,11 +781,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _contributor,
         uint256 _amountOut,
         uint256 _previousBalance,
+        uint256 _balance,
         uint256 _tokensToBurn
     ) private {
         Contributor storage contributor = contributors[_contributor];
         // If withdrawn everything
-        if (balanceOf(_contributor) == 0) {
+        if (_balance == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;

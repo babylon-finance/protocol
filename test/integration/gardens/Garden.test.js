@@ -27,6 +27,7 @@ const {
   parse,
   from,
   eth,
+  getTimestamp
 } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
@@ -144,6 +145,48 @@ describe('Garden', function () {
       await expect(
         garden1.connect(signer1).addExtraCreators([signer3.getAddress(), ADDRESS_ZERO, ADDRESS_ZERO, ADDRESS_ZERO]),
       ).to.be.revertedWith('BAB#094');
+    });
+  });
+
+  describe.only('transfer garden tokens', async function () {
+    it('can transfer', async function () {
+      await fund([signer1.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, publicGardenStrategistsStewards: [true, true, true] });
+      await babController.connect(owner).enableGardenTokensTransfers();
+
+      const amount = await garden.balanceOf(signer1.address);
+      await garden.connect(signer1).transfer(signer2.address, amount);
+
+      const ts = await getTimestamp();
+
+      expect((await garden.getContributor(signer1.address)).map(o => o.toString())).to.eql(([
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            from(2)
+      ]).map(o => o.toString()));
+      expect((await garden.getContributor(signer2.address)).map(o => o.toString())).to.eql(([
+            ts,
+            ts,
+            from(0),
+            from(0),
+            from(0),
+            from(0),
+            eth(1000),
+            from(0),
+            from(0),
+            from(1)
+      ]).map(o => o.toString()));
+
+      expect(await garden.balanceOf(signer1.address)).to.eq(0);
+      expect(await garden.balanceOf(signer2.address)).to.eq(amount);
     });
   });
 
