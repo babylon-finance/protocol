@@ -179,7 +179,7 @@ describe('Garden', function () {
             from(0),
             from(0),
             from(0),
-            eth(1000),
+            eth(10000),
             from(0),
             from(0),
             from(1)
