@@ -1199,9 +1199,7 @@ describe('Garden', function () {
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
 
-      await garden
-        .connect(keeper)
-        .depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, wallet.address, sig);
+      await garden.connect(keeper).depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, wallet.address, sig);
 
       const [, , , , , principalAfter, ,] = await garden.getContributor(wallet.address);
 
@@ -1293,9 +1291,7 @@ describe('Garden', function () {
         const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
 
         await expect(() =>
-          garden
-            .connect(keeper)
-            .depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
+          garden.connect(keeper).depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
         ).to.changeTokenBalances(erc20, [keeper, garden, signer3], [fee, amountIn.sub(fee), amountIn.mul(-1)]);
 
         const supplyAfter = await garden.totalSupply();
@@ -1322,9 +1318,7 @@ describe('Garden', function () {
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
       await expect(
-        garden
-          .connect(signer3)
-          .depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
+        garden.connect(signer3).depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -1345,9 +1339,7 @@ describe('Garden', function () {
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
       await expect(
-        garden
-          .connect(keeper)
-          .depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
+        garden.connect(keeper).depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig),
       ).to.be.revertedWith('BAB#089');
     });
     // TODO: Test minAmountOut is respected
@@ -1543,9 +1535,7 @@ describe('Garden', function () {
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress());
 
-      await expect(garden.connect(signer2).claimNFT()
-            ).to.be.revertedWith('BAB#015');
-
+      await expect(garden.connect(signer2).claimNFT()).to.be.revertedWith('BAB#015');
     });
   });
 
@@ -1673,9 +1663,7 @@ describe('Garden', function () {
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, from(0), nonce, maxFee);
 
-      await garden
-        .connect(keeper)
-        .depositBySig(amountIn, from(0), nonce, maxFee, eth(3), fee, signer3.address, sig);
+      await garden.connect(keeper).depositBySig(amountIn, from(0), nonce, maxFee, eth(3), fee, signer3.address, sig);
     });
 
     it('decay grows slippage down in one year', async function () {
@@ -1743,9 +1731,7 @@ describe('Garden', function () {
       sig = await getDepositSig(garden.address, signer3, amountIn, from(0), nonce, maxFee);
 
       await expect(
-        garden
-          .connect(keeper)
-          .depositBySig(amountIn, from(0), nonce, maxFee, eth(2).add(1), fee, signer3.address, sig),
+        garden.connect(keeper).depositBySig(amountIn, from(0), nonce, maxFee, eth(2).add(1), fee, signer3.address, sig),
       ).to.be.revertedWith('BAB#118');
     });
 

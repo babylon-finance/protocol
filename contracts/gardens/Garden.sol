@@ -265,9 +265,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyKeeperAndFee(_fee, _maxFee);
 
         bytes32 hash =
-            keccak256(
-                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee)
-            )
+            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
                 .toEthSignedMessageHash();
 
         _onlyValidSigner(signer, _nonce);
@@ -454,7 +452,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         _sendRewardsInternal(signer, _babl, _profits);
     }
-
 
     /**
      * @notice
