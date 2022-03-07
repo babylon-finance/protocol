@@ -220,7 +220,7 @@ describe('deploy', function () {
       await canUnwindAllActiveStrategies();
     });
 
-    it.only('can execute stuck proposals', async () => {
+    it('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
 
@@ -275,7 +275,7 @@ describe('deploy', function () {
       await checkNAVStrategies();
     });
 
-    it('can execute stuck strategies', async () => {
+    it.only('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
