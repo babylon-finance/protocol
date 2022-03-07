@@ -164,14 +164,12 @@ interface ICoreGarden {
     function deposit(
         uint256 _reserveAssetQuantity,
         uint256 _minGardenTokenReceiveQuantity,
-        address _to,
-        bool mintNFT
+        address _to
     ) external payable;
 
     function depositBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        bool _mintNft,
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _pricePerShare,
