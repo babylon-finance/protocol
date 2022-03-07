@@ -26,7 +26,8 @@ const STUCK = [
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
-  '0x69B9a89083E2324079922e01557cAfb87cd90B09',
+  // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
+  '0x22de22A50b00333159C54BFc1b9C0507e4759487'
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -219,7 +220,7 @@ describe('deploy', function () {
       await canUnwindAllActiveStrategies();
     });
 
-    it.skip('can execute stuck proposals', async () => {
+    it.only('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
 
@@ -286,7 +287,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it.only('can finalize heart strategies and compound rewards', async () => {
+    it('can finalize heart strategies and compound rewards', async () => {
       const babl = await getERC20(addresses.tokens.BABL);
       const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
       const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
