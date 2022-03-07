@@ -94,37 +94,37 @@ async function depositFunds(address, garden) {
       const DAI = await getERC20(addresses.tokens.DAI);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await DAI.connect(signer3).approve(garden.address, eth('10000'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth('10000'), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(eth(10000), 1, signer3.getAddress());
       break;
     case addresses.tokens.USDC.toLowerCase():
       const USDC = await getERC20(addresses.tokens.USDC);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await USDC.connect(signer3).approve(garden.address, from(1e5 * 1e6), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(from(1e5 * 1e6), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(from(1e5 * 1e6), 1, signer3.getAddress());
       break;
     case addresses.tokens.WETH.toLowerCase():
       const WETH = await getERC20(addresses.tokens.WETH);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await WETH.connect(signer3).approve(garden.address, eth(3), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth(3), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(eth(3), 1, signer3.getAddress());
       break;
     case addresses.tokens.WBTC.toLowerCase():
       const WBTC = await getERC20(addresses.tokens.WBTC);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await WBTC.connect(signer3).approve(garden.address, from(1e8), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(from(1e8), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(from(1e8), 1, signer3.getAddress());
       break;
     case addresses.tokens.BABL.toLowerCase():
       const BABL = await getERC20(addresses.tokens.BABL);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await BABL.connect(signer3).approve(garden.address, eth('100'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress());
       break;
     case addresses.tokens.AAVE.toLowerCase():
       const AAVE = await getERC20(addresses.tokens.AAVE);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
       await AAVE.connect(signer3).approve(garden.address, eth('100'), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress(), false);
+      await garden.connect(signer3).deposit(eth('100'), 1, signer3.getAddress());
       break;
   }
 }
@@ -227,23 +227,21 @@ async function transferFunds(address) {
   }
 }
 
-function getDepositSigHash(garden, amountIn, minAmountOut, mintNft, nonce, maxFee) {
+function getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes(
-      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)',
-    ),
+    ethers.utils.toUtf8Bytes('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)'),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'address', 'uint256', 'uint256', 'bool', 'uint256', 'uint256'],
-    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, mintNft, nonce, maxFee],
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
+    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce, maxFee],
   );
 
   return ethers.utils.keccak256(payload);
 }
 
-async function getDepositSig(garden, signer, amountIn, minAmountOut, mintNft, nonce, maxFee) {
-  let payloadHash = getDepositSigHash(garden, amountIn, minAmountOut, mintNft, nonce, maxFee);
+async function getDepositSig(garden, signer, amountIn, minAmountOut, nonce, maxFee) {
+  let payloadHash = getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee);
 
   return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }

@@ -58,7 +58,7 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setGlobalPause(true);
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
@@ -69,14 +69,14 @@ describe('BabController', function () {
       await babController.connect(signer1).setSomePause([garden1.address], true);
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+        garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
           value: eth(),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
       expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(eth());
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
@@ -121,16 +121,16 @@ describe('BabController', function () {
     it('owner can unpause a garden', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
-      await garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+      await garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
         value: eth(),
       });
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([garden1.address], false);
-      garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), false, {
+      garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
         value: eth(),
       });
     });
