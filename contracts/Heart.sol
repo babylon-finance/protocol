@@ -447,7 +447,7 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
         BABL.approve(address(heartGarden), bondValueInBABL);
-        heartGarden.deposit(bondValueInBABL, 1, msg.sender, false);
+        heartGarden.deposit(bondValueInBABL, 1, msg.sender);
     }
 
     // solhint-disable-next-line
