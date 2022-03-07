@@ -17,10 +17,12 @@ describe('Heart Unit Test', function () {
   let owner;
   let treasury;
   let priceOracle;
+  let tokenIdentifier;
   let BABL;
   let WETH;
   let DAI;
   let CBABL;
+  let hBABL;
   let USDC;
   let cDAI;
   let voters;
@@ -40,12 +42,14 @@ describe('Heart Unit Test', function () {
       owner,
       keeper,
       priceOracle,
+      tokenIdentifier,
       treasury,
     } = await setupTests()());
     WETH = await getERC20(addresses.tokens.WETH);
     BABL = await getERC20(addresses.tokens.BABL);
     DAI = await getERC20(addresses.tokens.DAI);
     USDC = await getERC20(addresses.tokens.USDC);
+    hBABL = await getERC20(heartGarden.address);
     CBABL = await getERC20('0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
     token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
     governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
@@ -291,6 +295,38 @@ describe('Heart Unit Test', function () {
       expect(await heart.bondAssets(cDAI.address)).to.equal(ethers.utils.parseEther('0.05'));
       await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.03'), { gasPrice: 0 });
       expect(await heart.bondAssets(cDAI.address)).to.equal(ethers.utils.parseEther('0.03'));
+    });
+
+    it('user cannot bond asset that is not added', async function () {
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, { gasPrice: 0 })).to.be.reverted;
+    });
+
+    it('user cannot bond a small amount', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 });
+      const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
+      await cDAI.connect(whalecdaiSigner).transfer(signer1.address, 1, { gasPrice: 0 });
+      await cDAI.connect(signer1).approve(heart.address, 1, { gasPrice: 0 });
+      // Add fuse assets to token identifier
+      await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, { gasPrice: 0 })).to.be.reverted;
+    });
+
+    it.only('user can bond an appropriate amount and receive the discount', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 });
+      const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
+      const amount = ethers.utils.parseEther('20000');
+      await cDAI.connect(whalecdaiSigner).transfer(signer1.address, amount, { gasPrice: 0 });
+      const hBABLBalance = await hBABL.balanceOf(signer1.address);
+      // Add fuse assets to token identifier
+      await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      // User approves the heart
+      await cDAI.connect(signer1).approve(heart.address, amount, { gasPrice: 0 });
+      // Bond the asset
+      await heart.connect(signer1).bondAsset(cDAI.address, amount, { gasPrice: 0 });
+      expect(await hBABLBalance.balanceOf(signer1.address)).to.be.closeTo(
+        hBABLBalance.add(ethers.utils.parseEther('70')),
+        ethers.utils.parseEther('10'),
+      );
     });
   });
 

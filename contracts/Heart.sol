@@ -437,12 +437,16 @@ contract Heart is OwnableUpgradeable, IHeart {
     function bondAsset(address _assetToBond, uint256 _amountToBond) external override {
         require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
         uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
-        // Total value adding the discount
-        uint256 bondValueInBABL = _amountToBond.preciseMul(priceInBABL).preciseMul(uint256(1e18).add(bondAssets[_assetToBond]));
+        // Total value adding the premium
+        uint256 bondValueInBABL =
+        SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
+            priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+        );
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
+        BABL.approve(address(heartGarden), bondValueInBABL);
         heartGarden.deposit(bondValueInBABL, 1, msg.sender, false);
     }
 
