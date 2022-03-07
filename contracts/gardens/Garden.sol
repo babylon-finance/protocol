@@ -729,7 +729,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             Errors.GARDEN_TRANSFERS_DISABLED
         );
 
-        if(from != address(0) && to != address(0)) {
+        if (from != address(0) && to != address(0)) {
             uint256 fromBalance = balanceOf(from);
             _updateContributorWithdrawalInfo(from, 0, fromBalance, fromBalance.sub(_amount), _amount);
             _updateContributorDepositInfo(to, balanceOf(to), 0, _amount);

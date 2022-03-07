@@ -27,7 +27,7 @@ const {
   parse,
   from,
   eth,
-  getTimestamp
+  getTimestamp,
 } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
@@ -152,7 +152,10 @@ describe('Garden', function () {
     it('can transfer', async function () {
       await fund([signer1.address], { tokens: [addresses.tokens.DAI] });
 
-      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, publicGardenStrategistsStewards: [true, true, true] });
+      const garden = await createGarden({
+        reserveAsset: addresses.tokens.DAI,
+        publicGardenStrategistsStewards: [true, true, true],
+      });
       await babController.connect(owner).enableGardenTokensTransfers();
 
       const amount = await garden.balanceOf(signer1.address);
@@ -160,30 +163,14 @@ describe('Garden', function () {
 
       const ts = await getTimestamp();
 
-      expect((await garden.getContributor(signer1.address)).map(o => o.toString())).to.eql(([
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            from(2)
-      ]).map(o => o.toString()));
-      expect((await garden.getContributor(signer2.address)).map(o => o.toString())).to.eql(([
-            ts,
-            ts,
-            from(0),
-            from(0),
-            from(0),
-            from(0),
-            eth(10000),
-            from(0),
-            from(0),
-            from(1)
-      ]).map(o => o.toString()));
+      expect((await garden.getContributor(signer1.address)).map((o) => o.toString())).to.eql(
+        [from(0), from(0), from(0), from(0), from(0), from(0), from(0), from(0), from(0), from(2)].map((o) =>
+          o.toString(),
+        ),
+      );
+      expect((await garden.getContributor(signer2.address)).map((o) => o.toString())).to.eql(
+        [ts, ts, from(0), from(0), from(0), from(0), eth(10000), from(0), from(0), from(1)].map((o) => o.toString()),
+      );
 
       expect(await garden.balanceOf(signer1.address)).to.eq(0);
       expect(await garden.balanceOf(signer2.address)).to.eq(amount);
