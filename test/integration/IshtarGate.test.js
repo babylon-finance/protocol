@@ -135,7 +135,7 @@ describe.skip('IshtarGate', function () {
         );
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
-      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), false, {
+      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), {
         value: eth('1'),
       });
     });
@@ -209,7 +209,7 @@ describe.skip('IshtarGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await ishtarGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
-      await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), false, {
+      await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), {
         value: eth('1'),
       });
       await expect(
@@ -272,7 +272,7 @@ describe.skip('IshtarGate', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
     });
@@ -302,7 +302,7 @@ describe.skip('IshtarGate', function () {
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await expect(
-        newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), false, {
+        newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), {
           value: eth('1'),
         }),
       ).to.be.reverted;
@@ -361,7 +361,7 @@ describe.skip('IshtarGate', function () {
         .connect(signer1)
         .grantGardenAccessBatch(newGarden.address, [signer3.address], [1], { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
     });
