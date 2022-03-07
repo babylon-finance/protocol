@@ -148,7 +148,7 @@ describe('Garden', function () {
     });
   });
 
-  describe.only('transfer garden tokens', async function () {
+  describe('transfer garden tokens', async function () {
     it('can transfer', async function () {
       await fund([signer1.address], { tokens: [addresses.tokens.DAI] });
 
