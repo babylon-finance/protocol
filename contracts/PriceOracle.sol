@@ -144,11 +144,15 @@ contract PriceOracle is Ownable, IPriceOracle {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
         uint256 ctokenDecimals = ERC20(_asset).decimals();
         if (ERC20(_underlying).decimals() != ctokenDecimals) {
-          if (ERC20(_underlying).decimals() > ctokenDecimals) {
-              exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - ctokenDecimals));
-          } else {
-              exchangeRateNormalized = exchangeRateNormalized.mul(10**(ctokenDecimals - ERC20(_underlying).decimals()));
-          }
+            if (ERC20(_underlying).decimals() > ctokenDecimals) {
+                exchangeRateNormalized = exchangeRateNormalized.div(
+                    10**(ERC20(_underlying).decimals() - ctokenDecimals)
+                );
+            } else {
+                exchangeRateNormalized = exchangeRateNormalized.mul(
+                    10**(ctokenDecimals - ERC20(_underlying).decimals())
+                );
+            }
         }
         return exchangeRateNormalized;
     }

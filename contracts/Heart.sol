@@ -439,9 +439,9 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
         // Total value adding the premium
         uint256 bondValueInBABL =
-        SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
-            priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
-        );
+            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
+                priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+            );
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user

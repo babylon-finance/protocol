@@ -311,7 +311,7 @@ describe('Heart Unit Test', function () {
       await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, { gasPrice: 0 })).to.be.reverted;
     });
 
-    it.only('user can bond an appropriate amount and receive the discount', async function () {
+    it('user can bond an appropriate amount and receive the discount', async function () {
       await heart.connect(owner).updateBond(cDAI.address, ethers.utils.parseEther('0.05'), { gasPrice: 0 });
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
       const amount = ethers.utils.parseEther('20000');
@@ -323,7 +323,7 @@ describe('Heart Unit Test', function () {
       await cDAI.connect(signer1).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
       await heart.connect(signer1).bondAsset(cDAI.address, amount, { gasPrice: 0 });
-      expect(await hBABLBalance.balanceOf(signer1.address)).to.be.closeTo(
+      expect(await hBABL.balanceOf(signer1.address)).to.be.closeTo(
         hBABLBalance.add(ethers.utils.parseEther('70')),
         ethers.utils.parseEther('10'),
       );
