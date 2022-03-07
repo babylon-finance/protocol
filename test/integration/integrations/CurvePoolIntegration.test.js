@@ -168,8 +168,8 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pick(cryptofactorypools).forEach(({ name, pool }) => {
-      it(`can enter and exit the factory ${name} pool`, async function () {
-        if (pool !== addresses.curve.pools.cryptofactory.palstkaave) {
+      it.only(`can enter and exit the factory ${name} pool`, async function () {
+        if (pool === addresses.curve.pools.cryptofactory.palstkaave) {
           await testCurvePool(name, pool);
         }
       });
