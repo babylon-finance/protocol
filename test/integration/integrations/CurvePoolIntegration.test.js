@@ -168,7 +168,7 @@ describe('CurvePoolIntegrationTest', function () {
     });
 
     pick(cryptofactorypools).forEach(({ name, pool }) => {
-      it.only(`can enter and exit the factory ${name} pool`, async function () {
+      it(`can enter and exit the factory ${name} pool`, async function () {
         // block number is too young
         if (pool !== addresses.curve.pools.cryptofactory.palstkaave) {
           await testCurvePool(name, pool);
