@@ -1,25 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-/*
-    Original version by Synthetix.io
-    https://docs.synthetix.io/contracts/source/libraries/safedecimalmath
-
-    Adapted by Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
-
 pragma solidity 0.7.6;
 
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
@@ -148,25 +128,25 @@ library SafeDecimalMath {
 
     /**
      * Normalizing amount decimals between tokens
-     * @param assetFrom       ERC20 asset address
-     * @param assetTarget     ERC20 asset address
-     * @param quantity Value to normalize (e.g. capital)
+     * @param _from       ERC20 asset address
+     * @param _to     ERC20 asset address
+     * @param _amount Value _to normalize (e.g. capital)
      */
     function normalizeAmountTokens(
-        address assetFrom,
-        address assetTarget,
-        uint256 quantity
+        address _from,
+        address _to,
+        uint256 _amount
     ) internal view returns (uint256) {
-        uint256 tokenDecimals = _isETH(assetFrom) ? 18 : ERC20(assetFrom).decimals();
-        uint256 tokenDecimalsTarget = _isETH(assetTarget) ? 18 : ERC20(assetTarget).decimals();
-        require(tokenDecimals <= 18 && tokenDecimalsTarget <= 18, 'Unsupported decimals');
-        if (tokenDecimals == tokenDecimalsTarget) {
-            return quantity;
+        uint256 fromDecimals = _isETH(_from) ? 18 : ERC20(_from).decimals();
+        uint256 toDecimals = _isETH(_to) ? 18 : ERC20(_to).decimals();
+
+        if (fromDecimals == toDecimals) {
+            return _amount;
         }
-        if (tokenDecimalsTarget > tokenDecimals) {
-            return quantity.mul(10**(tokenDecimalsTarget.sub(tokenDecimals)));
+        if (toDecimals > fromDecimals) {
+            return _amount.mul(10**(toDecimals-(fromDecimals)));
         }
-        return quantity.div(10**(tokenDecimals.sub(tokenDecimalsTarget)));
+        return _amount.div(10**(fromDecimals-(toDecimals)));
     }
 
     function _isETH(address _address) internal pure returns (bool) {
