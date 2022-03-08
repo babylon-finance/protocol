@@ -652,7 +652,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](14);
+        uint256[] memory data = new uint256[](15);
         bool[] memory boolData = new bool[](2);
         data[0] = executedAt;
         data[1] = exitedAt;
@@ -670,6 +670,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         data[12] = startingGardenSupply;
         data[13] = endingGardenSupply;
+        data[14] = maxTradeSlippagePercentage;
         return (strategist, data, boolData);
     }
 
