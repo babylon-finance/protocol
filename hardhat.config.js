@@ -81,11 +81,8 @@ module.exports = {
             url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
             blockNumber: +BLOCK_NUMBER,
           }
-        : {
-            url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-            blockNumber: +BLOCK_NUMBER,
-          },
-      saveDeployments: true,
+        : undefined,
+      saveDeployments: false,
       gas: 9e6,
       initialBaseFeePerGas: 0,
     },
@@ -135,7 +132,7 @@ module.exports = {
                     stackAllocation: true,
                   },
                 }
-              : undefined,
+              : {},
           },
         },
       },
@@ -152,7 +149,7 @@ module.exports = {
                     stackAllocation: true,
                   },
                 }
-              : undefined,
+              : {},
           },
         },
       },

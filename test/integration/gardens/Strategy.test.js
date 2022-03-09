@@ -485,7 +485,7 @@ describe('Strategy', function () {
       await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
       // add extra WETH to repay keeper
-      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
+      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, {
         value: eth().mul(2),
       });
 
@@ -590,7 +590,7 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
-      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, false, {
+      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, {
         value: eth().mul(2),
       });
 

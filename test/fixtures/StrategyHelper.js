@@ -126,14 +126,12 @@ async function deposit(garden, signers) {
       amount,
       amount,
       signer.getAddress(),
-      false,
       isWeth
         ? {
             value: amount,
           }
         : {},
     );
-    // await garden.connect((await ethers.getSigners())[1]).processDeposit(signer.getAddress(), eth());
   }
 }
 
