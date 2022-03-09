@@ -49,7 +49,7 @@ describe('PickleJarIntegrationTest', function () {
   // logConvexPools();
 
   beforeEach(async () => {
-    ({ pickleJarIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ pickleJarIntegration } = await setupTests()());
   });
 
   describe('Pickle Jar Multigarden multiasset', function () {
@@ -60,13 +60,13 @@ describe('PickleJarIntegrationTest', function () {
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
       pick(addresses.pickle.jars).forEach(({ address, name }) => {
-        it(`can enter ${name} jar and receive the pToken`, async function () {
+        it(`can enter into direct ${name} jar and receive the pToken`, async function () {
           await depositIntoJar(address, token);
         });
       });
     });
     it(`cannot enter an invalid pool`, async function () {
-      await expect(tryDepositIntoJar(ADDRESS_ZERO, ADDRESS_ZERO, addresses.tokens.WETH)).to.be.reverted;
+      await expect(tryDepositIntoJar(ADDRESS_ZERO, addresses.tokens.WETH)).to.be.reverted;
     });
   });
 
@@ -90,8 +90,7 @@ describe('PickleJarIntegrationTest', function () {
     // Check NAV
     const nav = await strategyContract.getNAV();
     expect(nav).to.be.gt(amount.sub(amount.div(35)));
-
-    expect(await jar.balanceOf(strategyContract.address)).to.equal(0);
+    expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
     expect(await strategyContract.getNAV()).to.be.gte(nav);
@@ -118,6 +117,6 @@ describe('PickleJarIntegrationTest', function () {
       specificParams: [jarAddress, 0],
     });
 
-    await expect(executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] })).to.be.reverted;
+    await executeStrategy(strategyContract, { amount: STRATEGY_EXECUTE_MAP[token] });
   }
 });

@@ -64,7 +64,13 @@ contract PickleJarIntegration is PassiveIntegration {
         address _jar,
         uint256 _amount
     ) internal view override returns (uint256) {
-        return _amount.preciseDiv(IJar(_jar).getRatio());
+        // Normalize to 18 decimals
+        uint256 amoountNormalized = SafeDecimalMath.normalizeAmountTokens(
+            IJar(_jar).token(),
+            _jar,
+            _amount
+        );
+        return amoountNormalized.preciseDiv(IJar(_jar).getRatio());
     }
 
     function _getPricePerShare(
