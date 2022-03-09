@@ -61,7 +61,7 @@ describe('PickleJarIntegrationTest', function () {
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
       pick(addresses.pickle.jars).forEach((jar) => {
-        it.only(`can enter into ${name} jar and receive the pToken`, async function () {
+        it.only(`can enter into ${jar.name} jar from a ${name} garden`, async function () {
           await depositIntoJar(jar.address, token, jar);
         });
       });
