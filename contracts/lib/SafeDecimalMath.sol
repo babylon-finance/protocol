@@ -144,9 +144,9 @@ library SafeDecimalMath {
             return _amount;
         }
         if (toDecimals > fromDecimals) {
-            return _amount.mul(10**(toDecimals-(fromDecimals)));
+            return _amount.mul(10**(toDecimals - (fromDecimals)));
         }
-        return _amount.div(10**(fromDecimals-(toDecimals)));
+        return _amount.div(10**(fromDecimals - (toDecimals)));
     }
 
     function _isETH(address _address) internal pure returns (bool) {
