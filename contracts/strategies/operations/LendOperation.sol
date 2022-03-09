@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -121,7 +105,7 @@ contract LendOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes memory _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -136,8 +120,21 @@ contract LendOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
-        _tokenToTrade(_percentage, assetToken, msg.sender, _garden, _integration);
-        return (_garden.reserveAsset(), IERC20(_garden.reserveAsset()).balanceOf(msg.sender), 0);
+        // Change to weth if needed
+        if (assetToken == address(0)) {
+            assetToken = WETH;
+            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+        }
+        address rewardsToken = _getRewardToken(_integration);
+        // Only sell rewards when the strategy finalizes
+        if (rewardsToken != address(0) && _percentage == HUNDRED_PERCENT) {
+            uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(msg.sender);
+            // Add rewards
+            if (rewardsBalance > 1e16) {
+                IStrategy(msg.sender).trade(rewardsToken, rewardsBalance, assetToken, 70e15);
+            }
+        }
+        return (assetToken, IERC20(assetToken).balanceOf(msg.sender), 0);
     }
 
     /**
@@ -166,7 +163,7 @@ contract LendOperation is Operation {
         address rewardsToken = _getRewardToken(_integration);
         // Replace FuseLend
         if (_integration == 0x3D0160388eC9196ceA4fA57E020E11ae446b3c13) {
-            _integration = 0xD45af5912Ec965635fbd47D111444FA2BdCc54B4;
+            _integration = 0x68BE39E4357408f8c504ae1c25380bF132bd5555;
         }
         if (rewardsToken != address(0)) {
             uint256 rewardsAmount = ILendIntegration(_integration).getRewardsAccrued(msg.sender);
@@ -226,38 +223,6 @@ contract LendOperation is Operation {
             numTokensToRedeem,
             exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
         );
-    }
-
-    function _tokenToTrade(
-        uint256 _percentage,
-        address _assetToken,
-        address _sender,
-        IGarden _garden,
-        address _integration
-    ) internal {
-        address tokenToTradeFrom = _assetToken;
-        // if eth, convert it to weth
-        if (_assetToken == address(0)) {
-            tokenToTradeFrom = WETH;
-            IStrategy(_sender).handleWeth(true, _sender.balance);
-        }
-        if (tokenToTradeFrom != _garden.reserveAsset()) {
-            IStrategy(_sender).trade(
-                tokenToTradeFrom,
-                IERC20(tokenToTradeFrom).balanceOf(_sender),
-                _garden.reserveAsset(),
-                0
-            );
-        }
-        address rewardsToken = _getRewardToken(_integration);
-        // Only sell rewards when the strategy finalizes
-        if (rewardsToken != address(0) && _percentage == HUNDRED_PERCENT) {
-            uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(_sender);
-            // Add rewards
-            if (rewardsBalance > 1e16) {
-                IStrategy(_sender).trade(rewardsToken, rewardsBalance, _garden.reserveAsset(), 70e15);
-            }
-        }
     }
 
     function _getRemainingDebt(

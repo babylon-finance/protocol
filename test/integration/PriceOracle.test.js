@@ -10,7 +10,7 @@ const tokens = [
     name: 'CVX -> DAI',
     tokenIn: addresses.tokens.CVX,
     tokenOut: addresses.tokens.DAI,
-    value: from('28129902631569750455'),
+    value: from('18794294218941056819'),
   },
   {
     name: 'BABL -> DAI',

@@ -1,20 +1,4 @@
-/*
-    Copyright 2021 Babylon Finance.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -136,7 +120,7 @@ contract AddLiquidityOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -161,8 +145,8 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             _minAmountsOut
         );
-        // Exit Pool tokens
-        address reserveAsset = _garden.reserveAsset();
+        // Exit Pool tokens to a consolidated asset
+        address reserveAsset = WETH;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {

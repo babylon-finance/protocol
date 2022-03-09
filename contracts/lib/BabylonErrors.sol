@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
     Original version by Synthetix.io
     https://docs.synthetix.io/contracts/source/libraries/safedecimalmath

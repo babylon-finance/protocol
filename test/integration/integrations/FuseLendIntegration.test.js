@@ -114,7 +114,7 @@ describe('FuseLendIntegrationTest', function () {
       const NAV = await strategyContract.getNAV();
       const compAccrued = await fuseLendIntegration.getRewardsAccrued(strategyContract.address);
       const NAVafter = await strategyContract.getNAV();
-      expect(compAccrued).to.be.gte(eth('0.01'));
+      expect(compAccrued).to.be.gte(eth('0.005'));
       expect(NAVafter).to.be.gt(NAV);
     });
   });

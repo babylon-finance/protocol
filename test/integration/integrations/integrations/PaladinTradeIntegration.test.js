@@ -29,6 +29,7 @@ describe('PaladinTradeIntegrationTest', function () {
             integration: masterSwapper.address,
             specificParams: [palStkAAVE.address, 0],
             garden,
+            params: { maxTradeSlippagePercentage: eth(0.1) },
           });
 
           expect(await palStkAAVE.balanceOf(strategyContract.address)).to.equal(0);
@@ -36,9 +37,10 @@ describe('PaladinTradeIntegrationTest', function () {
           const amount = STRATEGY_EXECUTE_MAP[token];
           await executeStrategy(strategyContract, { amount });
           // Check NAV
-          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(15));
+          expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(10));
           const beforeBalance = await reserveContract.balanceOf(garden.address);
           expect(await palStkAAVE.balanceOf(strategyContract.address)).to.be.gt(0);
+
           await finalizeStrategy(strategyContract, 0);
           expect(0).to.eq(await assetContract.balanceOf(strategyContract.address));
           const newBalance = await palStkAAVE.balanceOf(strategyContract.address);

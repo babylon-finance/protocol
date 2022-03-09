@@ -1,8 +1,7 @@
 const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { DEFAULT_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
-const { GARDEN_PARAMS, ADDRESS_ZERO } = require('lib/constants');
+const { GARDEN_PARAMS, ADDRESS_ZERO, WETH_STRATEGY_PARAMS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
 const { increaseTime } = require('utils/test-helpers');
 
@@ -106,18 +105,18 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[1]).to.equal('Strategy Name'); // Name
 
       expect(strategyDetails[2][0]).to.equal(1); // Ops count
-      expect(strategyDetails[2][1]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Stake
-      expect(strategyDetails[2][2]).to.equal(DEFAULT_STRATEGY_PARAMS[1]); // Positive votes
+      expect(strategyDetails[2][1]).to.equal(WETH_STRATEGY_PARAMS.stake); // Stake
+      expect(strategyDetails[2][2]).to.equal(eth(0.1)); // Quorum
       expect(strategyDetails[2][3]).to.equal(0); // Negative votes
       expect(strategyDetails[2][4]).to.equal(0); // Capital Allocated
       expect(strategyDetails[2][5]).to.equal(0); // Capital Returned
-      expect(strategyDetails[2][6]).to.equal(DEFAULT_STRATEGY_PARAMS[2]); // Duration
-      expect(strategyDetails[2][7]).to.equal(DEFAULT_STRATEGY_PARAMS[3]); // Expected Return
-      expect(strategyDetails[2][8]).to.equal(DEFAULT_STRATEGY_PARAMS[0]); // Max Capital Requested
+      expect(strategyDetails[2][6]).to.equal(WETH_STRATEGY_PARAMS.strategyDuration); // Duration
+      expect(strategyDetails[2][7]).to.equal(WETH_STRATEGY_PARAMS.expectedReturn); // Expected Return
+      expect(strategyDetails[2][8]).to.equal(WETH_STRATEGY_PARAMS.maxCapitalRequested); // Max Capital Requested
       expect(strategyDetails[2][9]).to.be.gt(0); // Entered At
       expect(strategyDetails[2][10]).to.equal(0); // Get NAV
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
-      expect(strategyDetails[2][12]).to.equal(DEFAULT_STRATEGY_PARAMS[4]); // Max Allocation Percentage
+      expect(strategyDetails[2][12]).to.equal(WETH_STRATEGY_PARAMS.maxAllocationPercentage); // Max Allocation Percentage
       expect(strategyDetails[2][13]).to.equal(eth(0.05)); // maxAllocationPercentage
       expect(strategyDetails[2][14]).to.equal(eth(0.05)); // maxTradeSlippagePercentage
       expect(strategyDetails[2][15]).to.equal(0); // Strategy Rewards

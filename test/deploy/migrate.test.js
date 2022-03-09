@@ -143,7 +143,7 @@ describe('migrate', function () {
       await upgradeRD();
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const rewards2 = await distributor.getRewards(arkadGarden, creator, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -163,9 +163,7 @@ describe('migrate', function () {
     it('Unclaimed rewards are equivalent after new deposit by beta garden member (slippage in the future due to old c.power)', async () => {
       const rewards1 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       await upgradeRD();
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
       const rewards2 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -187,7 +185,7 @@ describe('migrate', function () {
       await upgradeRD();
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const rewards2 = await distributor.getRewards(arkadGarden, creator, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -207,9 +205,7 @@ describe('migrate', function () {
     it('Unclaimed rewards (old garden strategies) are 0 for new users depositing into a garden', async () => {
       await upgradeRD();
       const rewards1 = await distributor.getRewards(arkadGarden, wallets[0].address, [...strategies]);
-      await gardenContract
-        .connect(wallets[0])
-        .deposit(eth(2000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await gardenContract.connect(wallets[0]).deposit(eth(2000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       const rewards2 = await distributor.getRewards(arkadGarden, wallets[0].address, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       const rewards3 = await distributor.getRewards(arkadGarden, wallets[0].address, [...strategies]);
@@ -228,15 +224,15 @@ describe('migrate', function () {
       await upgradeRD();
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(200000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const rewards2 = await distributor.getRewards(arkadGarden, creator, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -256,17 +252,11 @@ describe('migrate', function () {
     it('Unclaimed rewards are equivalent after multi-big-deposit by beta garden member (slippage in the future due to old c.power)', async () => {
       const rewards1 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       await upgradeRD();
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(200000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(200000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
       const rewards2 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -383,7 +373,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(gardenMember)
-        .deposit(eth(10000), eth(1000), gardenMember.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(10000), eth(1000), gardenMember.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const rewards5 = await distributor.getRewards(arkadGarden, gardenMember.address, [...strategies]);
       // unclaimed rewards that are always deterministic (strategist/stewards -> both profit and BABL)
@@ -467,7 +457,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards4] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       // mining is delivering more BABL along the time
@@ -518,7 +508,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -588,7 +578,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -674,7 +664,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
@@ -739,7 +729,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, false, { gasPrice: 0 });
+      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
@@ -751,9 +741,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
@@ -765,9 +753,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract
-        .connect(wallets[0])
-        .deposit(eth(6000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await gardenContract.connect(wallets[0]).deposit(eth(6000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards5Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards5GardenMember] = await viewerContract.getContributionAndRewards(
@@ -856,7 +842,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, false, { gasPrice: 0 });
+      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
@@ -867,9 +853,7 @@ describe('migrate', function () {
         arkadGarden,
         wallets[0].address,
       );
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
         arkadGarden,
@@ -882,7 +866,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards5Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards5GardenMember] = await viewerContract.getContributionAndRewards(
@@ -968,7 +952,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, false, { gasPrice: 0 });
+      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
@@ -979,9 +963,7 @@ describe('migrate', function () {
         arkadGarden,
         wallets[0].address,
       );
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
@@ -995,7 +977,7 @@ describe('migrate', function () {
       await increaseTime(1);
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards5Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards5GardenMember] = await viewerContract.getContributionAndRewards(
@@ -1041,7 +1023,7 @@ describe('migrate', function () {
       // A new member joins with a big deposit and we want him to be using old SC
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards1Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards1GardenMember] = await viewerContract.getContributionAndRewards(
@@ -1064,7 +1046,7 @@ describe('migrate', function () {
         wallets[0].address,
       );
       await increaseTime(1);
-      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, false, { gasPrice: 0 });
+      await gardenContract.connect(creatorWallet).deposit(eth(2000), eth(1000), creator, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards3GardenMember] = await viewerContract.getContributionAndRewards(
@@ -1075,9 +1057,7 @@ describe('migrate', function () {
         arkadGarden,
         wallets[0].address,
       );
-      await gardenContract
-        .connect(gardenMember)
-        .deposit(eth(2000), eth(1000), gardenMember.address, false, { gasPrice: 0 });
+      await gardenContract.connect(gardenMember).deposit(eth(2000), eth(1000), gardenMember.address, { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards4Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards4GardenMember] = await viewerContract.getContributionAndRewards(
@@ -1090,7 +1070,7 @@ describe('migrate', function () {
       );
       await gardenContract
         .connect(wallets[0])
-        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(200000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards5Creator] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       const [, , estimateRewards5GardenMember] = await viewerContract.getContributionAndRewards(
@@ -1158,15 +1138,15 @@ describe('migrate', function () {
       const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(10);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(10);
       await gardenContract
         .connect(creatorWallet)
-        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), false, { gasPrice: 0 });
+        .deposit(eth(2000), eth(1000), creatorWallet.getAddress(), { gasPrice: 0 });
       await increaseTime(1);
       const [, , estimateRewards3] = await viewerContract.getContributionAndRewards(arkadGarden, creator);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
@@ -1229,9 +1209,7 @@ describe('migrate', function () {
     it('Pending rewards are deterministic != 0 for a new user and implement firewall-ing giving only proportional vs. strategy start time', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
       await upgradeRD();
-      await gardenContract
-        .connect(wallets[0])
-        .deposit(eth(2000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await gardenContract.connect(wallets[0]).deposit(eth(2000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       const [, , estimateRewards3] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
@@ -1318,9 +1296,7 @@ describe('migrate', function () {
     it('Pending rewards become zero if a new user leaves right after depositing', async () => {
       const [, , estimateRewards1] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
       await upgradeRD();
-      await gardenContract
-        .connect(wallets[0])
-        .deposit(eth(2000), eth(1000), wallets[0].getAddress(), false, { gasPrice: 0 });
+      await gardenContract.connect(wallets[0]).deposit(eth(2000), eth(1000), wallets[0].getAddress(), { gasPrice: 0 });
       await increaseBlock(1);
       const [, , estimateRewards2] = await viewerContract.getContributionAndRewards(arkadGarden, wallets[0].address);
       // The first checkpoint is created for the user -> we then know prev balance

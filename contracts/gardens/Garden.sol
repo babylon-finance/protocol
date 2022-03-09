@@ -1,16 +1,4 @@
-/*
- Copyright 2021 Babylon Finance.
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
+// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
 
@@ -30,6 +18,7 @@ import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
+import {SignatureChecker} from '../lib/SignatureChecker.sol';
 
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
@@ -67,6 +56,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
 
+    using SignatureChecker for address;
+
     /* ============ Events ============ */
 
     // DO NOT TOUCH for the love of GOD
@@ -96,7 +87,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 private constant TEN_PERCENT = 1e17;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
-        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,bool _mintNft,uint256 _nonce,uint256 _maxFee)');
+        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
         keccak256(
             'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256,_nonce,uint256 _maxFee,uint256 _withPenalty)'
@@ -249,41 +240,37 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _amountIn               Amount of the reserve asset that is received from contributor
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor
      * @param _to                     Address to mint Garden shares to
-     * @param _mintNft                Whether to mint NFT or not
      */
     function deposit(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        address _to,
-        bool _mintNft
+        address _to
     ) external payable override nonReentrant {
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
 
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _mintNft, _getPricePerShare(), minContribution);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution);
     }
 
     function depositBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        bool _mintNft,
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _pricePerShare,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
 
         bytes32 hash =
-            keccak256(
-                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _mintNft, _nonce, _maxFee)
-            )
+            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
                 .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
+
         _onlyValidSigner(signer, _nonce);
+
+        signer.isValidSignatureNow(hash, signature);
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
@@ -294,14 +281,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 _minAmountOut.sub(feeShares),
                 signer,
                 signer,
-                _mintNft,
                 _pricePerShare,
                 minContribution > _fee ? minContribution.sub(_fee) : 0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _mintNft, _pricePerShare, minContribution);
+            _internalDeposit(_amountIn, _minAmountOut, signer, signer, _pricePerShare, minContribution);
         }
     }
 
@@ -377,13 +363,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
 
-        address signer = _getWithdrawSigner(_amountIn, _minAmountOut, _nonce, _maxFee, _withPenalty, v, r, s);
+        _onlyValidSigner(signer, _nonce);
+
+        bytes32 hash =
+            keccak256(
+                abi.encode(
+                    WITHDRAW_BY_SIG_TYPEHASH,
+                    address(this),
+                    _amountIn,
+                    _minAmountOut,
+                    _nonce,
+                    _maxFee,
+                    _withPenalty
+                )
+            )
+                .toEthSignedMessageHash();
+
+        signer.isValidSignatureNow(hash, signature);
 
         _withdrawInternal(
             _amountIn,
@@ -435,20 +436,30 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        address signer,
+        bytes memory signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
         bytes32 hash =
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
         _onlyValidSigner(signer, _nonce);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
+
+        signer.isValidSignatureNow(hash, signature);
+
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
         _sendRewardsInternal(signer, _babl, _profits);
+    }
+
+    /**
+     * @notice
+     *   Allows Garden contributors to claim an NFT.
+     */
+    function claimNFT() external override {
+        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        IGardenNFT(controller.gardenNFT()).grantGardenNFT(msg.sender);
     }
 
     /* ============ External Getter Functions ============ */
@@ -610,40 +621,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         }
     }
 
-    function _getWithdrawSigner(
-        uint256 _amountIn,
-        uint256 _minAmountOut,
-        uint256 _nonce,
-        uint256 _maxFee,
-        bool _withPenalty,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal view returns (address) {
-        bytes32 hash =
-            keccak256(
-                abi.encode(
-                    WITHDRAW_BY_SIG_TYPEHASH,
-                    address(this),
-                    _amountIn,
-                    _minAmountOut,
-                    _nonce,
-                    _maxFee,
-                    _withPenalty
-                )
-            )
-                .toEthSignedMessageHash();
-        address signer = ECDSA.recover(hash, v, r, s);
-        _onlyValidSigner(signer, _nonce);
-        return signer;
-    }
-
     function _internalDeposit(
         uint256 _amountIn,
         uint256 _minAmountOut,
         address _to,
         address _from,
-        bool _mintNft,
         uint256 _pricePerShare,
         uint256 _minContribution
     ) private {
@@ -688,11 +670,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
-
-        // Mint the garden NFT
-        if (_mintNft) {
-            IGardenNFT(controller.gardenNFT()).grantGardenNFT(_to);
-        }
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }

@@ -1,7 +1,8 @@
 const { expect } = require('chai');
 // const { deployments } = require('hardhat');
-// const { increaseTime } = require('utils/test-helpers');
+const { getERC20, increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
+const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
@@ -25,8 +26,11 @@ const STUCK = [
   // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
-  '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4',
+  // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
+  '0x22de22A50b00333159C54BFc1b9C0507e4759487',
 ];
+
+const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
 
 describe('deploy', function () {
   let owner;
@@ -37,6 +41,16 @@ describe('deploy', function () {
   let valuer;
   let gardensNAV;
   let snapshotId;
+  let distributor;
+  let gnosis;
+
+  const getStrategyFuseRewards = async (_strategy) => {
+    const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
+    const rest = await lensPool.getUnclaimedRewardsByDistributors(_strategy, [
+      '0x3711c959d9732255dd5c0843622d8d364f143d73',
+    ]);
+    console.log('rest', await ethers.utils.formatEther(rest[1][0]));
+  };
 
   async function iterateStrategiesFromGardens(cb) {
     for (const garden of gardens) {
@@ -116,7 +130,7 @@ describe('deploy', function () {
           gasPrice: 0,
         });
 
-      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0);
+      await strategyContract.connect(keeper).finalizeStrategy(1, '', 0, { gasLimit: 30000000 });
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
 
@@ -139,8 +153,7 @@ describe('deploy', function () {
     }
   }
 
-  async function finalizeStuckStrategies() {
-    const strategies = STUCK;
+  async function finalizeStrategies(strategies) {
     for (const strategy of strategies) {
       const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
       const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
@@ -148,6 +161,14 @@ describe('deploy', function () {
       const name = await strategyNft.getStrategyName(strategy);
       await finalizeStrategy(strategyContract, name, reserveAsset);
     }
+  }
+
+  async function finalizeStuckStrategies() {
+    await finalizeStrategies(STUCK);
+  }
+
+  async function finalizeHeartStrategies() {
+    await finalizeStrategies(HEART_STRATEGIES);
   }
 
   async function checkNAVStrategies() {
@@ -166,7 +187,7 @@ describe('deploy', function () {
       } catch (error) {
         console.error(error);
       }
-      console.log(name, reserveAsset, nav.toString());
+      console.log(name, reserveAsset, ethers.utils.formatEther(nav));
     }
   }
 
@@ -188,7 +209,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, strategyNft, valuer, gardens } = await getContracts());
+      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
@@ -199,12 +220,17 @@ describe('deploy', function () {
       await canUnwindAllActiveStrategies();
     });
 
-    it.skip('can execute stuck proposals', async () => {
+    it('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
 
     it.skip('can allocate all active strategies', async () => {
       await canAllocateCapitalToAllActiveStrategies();
+    });
+
+    it('gets right NAV strategies', async () => {
+      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
+      await checkNAVStrategies();
     });
 
     it('can finalize all active strategies', async () => {
@@ -216,7 +242,7 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer } = await deployFixture());
+      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
@@ -244,19 +270,12 @@ describe('deploy', function () {
       }
     });
 
-    const getStrategyFuseRewards = async (_strategy) => {
-      const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
-      const rest = await lensPool.getUnclaimedRewardsByDistributors(_strategy, [
-        '0x3711c959d9732255dd5c0843622d8d364f143d73',
-      ]);
-      console.log('rest', await ethers.utils.formatEther(rest[1][0]));
-    };
-
     it('gets right NAV strategies', async () => {
+      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
       await checkNAVStrategies();
     });
 
-    it('can execute stuck strategies', async () => {
+    it.only('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
@@ -266,6 +285,53 @@ describe('deploy', function () {
 
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
+    });
+
+    it('can finalize heart strategies and compound rewards', async () => {
+      const babl = await getERC20(addresses.tokens.BABL);
+      const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
+      const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
+      const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
+      await increaseTime(ONE_DAY_IN_SECONDS * 40);
+      const gardenBalance = await babl.balanceOf(heartGarden.address);
+      const estimatedStrategistBABLStr1 = await distributor.estimateUserRewards(firstStrategy.address, gnosis.address);
+      const estimatedStrategistBABLStr2 = await distributor.estimateUserRewards(secondStrategy.address, gnosis.address);
+      const getRewardsStrategistBABL1 = await distributor.getRewards(heartGarden.address, gnosis.address, [
+        firstStrategy.address,
+        secondStrategy.address,
+      ]);
+      const strategistBalanceBefore = await babl.balanceOf(gnosis.address);
+
+      await finalizeHeartStrategies();
+      const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
+      const rewards = (await firstStrategy.strategyRewards()).add(await secondStrategy.strategyRewards());
+      const estimatedStrategistBABLStr11 = await distributor.estimateUserRewards(firstStrategy.address, gnosis.address);
+      const estimatedStrategistBABLStr21 = await distributor.estimateUserRewards(
+        secondStrategy.address,
+        gnosis.address,
+      );
+      const getRewardsStrategistBABL2 = await distributor.getRewards(heartGarden.address, gnosis.address, [
+        firstStrategy.address,
+        secondStrategy.address,
+      ]);
+      await expect(
+        heartGarden.connect(gnosis).claimReturns(await heartGarden.getFinalizedStrategies()),
+      ).to.be.revertedWith('BAB#082'); // No rewards to claim
+      const strategistBalanceAfter = await babl.balanceOf(gnosis.address);
+      expect(gardenBalanceAfter).to.be.closeTo(
+        gardenBalance
+          .add(await firstStrategy.capitalReturned())
+          .add(await secondStrategy.capitalReturned())
+          .add(rewards),
+        eth('100'),
+      );
+      expect(strategistBalanceAfter).to.eq(strategistBalanceBefore);
+      expect(estimatedStrategistBABLStr1[5]).to.be.gt(0);
+      expect(estimatedStrategistBABLStr1[6]).to.be.eq(estimatedStrategistBABLStr2[6]).to.eq(0); // No profitable strategy
+      expect(estimatedStrategistBABLStr2[5]).to.be.gt(0);
+      expect(estimatedStrategistBABLStr11[5]).to.be.eq(estimatedStrategistBABLStr21[5]).to.eq(0);
+      expect(getRewardsStrategistBABL2[5]).to.eq(getRewardsStrategistBABL1[5]).to.eq(0);
+      expect(getRewardsStrategistBABL2[6]).to.eq(getRewardsStrategistBABL1[6]).to.eq(0);
     });
 
     it('can finalize stuck strategies', async () => {

@@ -173,7 +173,7 @@ describe('rewards', function () {
       for (let signer of users) {
         await reserveContract.connect(signer).approve(garden.address, eth(9999999), { gasPrice: 0 });
         for (let j = 0; j < depositNum; j++) {
-          await garden.connect(signer).deposit(eth(0.1), eth(0.1), signer.getAddress(), false, {});
+          await garden.connect(signer).deposit(eth(0.1), eth(0.1), signer.getAddress(), {});
           await increaseTime(3600);
         }
       }

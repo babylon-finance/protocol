@@ -11,6 +11,7 @@ require('hardhat-docgen');
 require('hardhat-gas-reporter');
 require('hardhat-log-remover');
 require('hardhat-watcher');
+require('hardhat-spdx-license-identifier');
 
 require('@tenderly/hardhat-tenderly');
 require('solidity-coverage');
@@ -29,6 +30,7 @@ require('./lib/tasks/upgrade-beacon');
 require('./lib/tasks/upgrade-multisig');
 require('./lib/tasks/deploy-contract');
 require('./lib/tasks/tvl');
+require('./lib/tasks/vesting');
 require('./lib/tasks/users');
 require('./lib/tasks/gardens');
 require('./lib/tasks/stuck');
@@ -37,6 +39,9 @@ require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
+const COVERAGE = !!process.env.COVERAGE;
+
+const FORK = !!process.env.FORK;
 
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY || '';
 const DEPLOYER_PRIVATE_KEY =
@@ -46,7 +51,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14225000;
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14303000;
 
 const CHAIN_IDS = {
   hardhat: 1337,
@@ -71,11 +76,13 @@ module.exports = {
       chainId: CHAIN_IDS.hardhat,
       blockGasLimit: 0x1fffffffffffff,
       allowUnlimitedContractSize: true,
-      forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: +BLOCK_NUMBER,
-      },
-      saveDeployments: true,
+      forking: FORK
+        ? {
+            url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+            blockNumber: +BLOCK_NUMBER,
+          }
+        : undefined,
+      saveDeployments: false,
       gas: 9e6,
       initialBaseFeePerGas: 0,
     },
@@ -116,8 +123,16 @@ module.exports = {
         version: '0.7.6',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : {},
           },
         },
       },
@@ -125,8 +140,16 @@ module.exports = {
         version: '0.8.2',
         settings: {
           optimizer: {
-            enabled: OPTIMIZER,
+            enabled: OPTIMIZER && !COVERAGE,
             runs: 999,
+            details: COVERAGE
+              ? {
+                  yul: true,
+                  yulDetails: {
+                    stackAllocation: true,
+                  },
+                }
+              : {},
           },
         },
       },

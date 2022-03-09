@@ -1651,7 +1651,7 @@ describe.skip('RewardsDistributor', function () {
   });
   describe('Deterministic contributor share and balance along the time', async function () {
     it('getPriorBalance is zero if just deposited to avoid flash loans', async function () {
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
@@ -1665,7 +1665,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(priorBalance).to.be.equal(eth('0'));
     });
     it('getPriorBalance is the balance the next block after depositing', async function () {
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
@@ -1694,7 +1694,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(priorBalance).to.be.equal(eth('0'));
 
       // 1st deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
@@ -1715,7 +1715,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(priorBalance3).to.be.equal(eth('1'));
 
       // 2nd deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
@@ -1744,7 +1744,7 @@ describe.skip('RewardsDistributor', function () {
       );
       await expect(priorBalance1).to.be.equal(eth('0'));
       // 1st deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
@@ -1764,7 +1764,7 @@ describe.skip('RewardsDistributor', function () {
       );
       await expect(priorBalance3).to.be.equal(eth('1'));
       // 2nd deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), false, {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
@@ -1830,7 +1830,7 @@ describe.skip('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const gardenBalance = await garden1.totalSupply();
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 15);
@@ -1857,7 +1857,7 @@ describe.skip('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
@@ -1886,7 +1886,7 @@ describe.skip('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await finalizeStrategyImmediate(long1);
@@ -1912,7 +1912,7 @@ describe.skip('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await finalizeStrategyImmediate(long1);
@@ -1938,7 +1938,7 @@ describe.skip('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const gardenBalance = await garden1.totalSupply();
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1961,7 +1961,7 @@ describe.skip('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await weth.connect(signer3).approve(garden1.address, eth(5), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       const estimatedSigner3BABL1 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       await executeStrategy(long1, eth(1));
       // Quick in and out
@@ -1975,7 +1975,7 @@ describe.skip('RewardsDistributor', function () {
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const estimatedSigner3BABL4 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       // join again the garden just before finalization
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), false);
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
       await increaseTime(1);
       const estimatedSigner3BABL5 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       const gardenBalance = await garden1.totalSupply();
@@ -2224,7 +2224,7 @@ describe.skip('RewardsDistributor', function () {
       expect(signer1ShareLong32).to.be.equal(signer1ShareLong3);
       expect(signer1ShareLong42).to.be.equal(signer1ShareLong4);
       await weth.connect(signer1).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer1).deposit(eth(1), 1, signer1.getAddress(), false);
+      await garden1.connect(signer1).deposit(eth(1), 1, signer1.getAddress());
       // In the future it might be able to get the same user share that he deserve but will never take it
       // if running low on garden tokens or it does not create a new checkpoint (deposit or withdrawal)
       const signer1ShareLong13 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -2318,7 +2318,7 @@ describe.skip('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2343,7 +2343,7 @@ describe.skip('RewardsDistributor', function () {
       // Signer 2 claim rewards by sig
       await newGarden
         .connect(keeper)
-        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+        .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 });
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
       const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
@@ -2356,6 +2356,7 @@ describe.skip('RewardsDistributor', function () {
       expect(signer2BABLBalanceBefore).to.be.equal(0);
       expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
     });
+
     [
       {
         token: addresses.tokens.WETH,
@@ -2389,7 +2390,7 @@ describe.skip('RewardsDistributor', function () {
 
         const newGarden = await createGarden({ reserveAsset: token });
         await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
-        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false, { gasPrice: 0 });
+        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), { gasPrice: 0 });
 
         const [long1] = await createStrategies([{ garden: newGarden }]);
 
@@ -2416,7 +2417,7 @@ describe.skip('RewardsDistributor', function () {
         // Signer 2 claim rewards by sig
         await newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 });
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 });
         if (token === addresses.tokens.WETH) {
           signer2AssetBalanceAfter = await ethers.provider.getBalance(signer2.address);
         } else {
@@ -2451,7 +2452,7 @@ describe.skip('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2471,7 +2472,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(signer2)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#018');
     });
 
@@ -2486,7 +2487,7 @@ describe.skip('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2502,7 +2503,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
       // nonce 3 also fails
       nonce = 3;
@@ -2510,7 +2511,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
       // nonce 2 works
       nonce = 2;
@@ -2521,7 +2522,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
       // Now we check that nonce is been updated with the claimRewardsBySig
       // nonce is 3 at this point
@@ -2543,7 +2544,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
     });
     it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
@@ -2557,7 +2558,7 @@ describe.skip('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), false);
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2580,7 +2581,7 @@ describe.skip('RewardsDistributor', function () {
       await expect(
         newGarden
           .connect(keeper)
-          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, sig.v, sig.r, sig.s, { gasPrice: 0 }),
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
@@ -2746,7 +2747,7 @@ describe.skip('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
 
       // Mining program has to be enabled before the strategy starts its execution
 
@@ -2928,7 +2929,7 @@ describe.skip('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3053,7 +3054,7 @@ describe.skip('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3191,7 +3192,7 @@ describe.skip('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3319,7 +3320,7 @@ describe.skip('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), false);
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
@@ -3752,6 +3753,7 @@ describe.skip('RewardsDistributor', function () {
           .claimReturns([long1.address, long2.address, long3.address, long4.address, long5.address]),
       ).to.be.revertedWith('BAB#073');
     });
+
     it('A user cannot get rewards from strategies of 2 different gardens at the same time avoiding malicious bypassing of the claimedAt control (e.g. using claimedAtfrom different gardens over the same strategies)', async function () {
       // Mining program has to be enabled before the strategy starts its execution
 
@@ -3798,6 +3800,7 @@ describe.skip('RewardsDistributor', function () {
       ).to.be.revertedWith('BAB#073');
     });
   });
+
   describe('NFT stake in Gardens to boost BABL rewards', function () {
     it('can stake common prophet NFT in a garden to get 1% LP', async function () {
       const raul = await impersonateAddress('0x166D00d97AF29F7F6a8cD725F601023b843ade66');
