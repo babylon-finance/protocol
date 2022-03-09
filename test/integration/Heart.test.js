@@ -298,7 +298,7 @@ describe('Heart Unit Test', function () {
     });
 
     it('user cannot bond asset that is not added', async function () {
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, { gasPrice: 0 })).to.be.reverted;
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, { gasPrice: 0 })).to.be.reverted;
     });
 
     it('user cannot bond a small amount', async function () {
@@ -308,7 +308,7 @@ describe('Heart Unit Test', function () {
       await cDAI.connect(signer1).approve(heart.address, 1, { gasPrice: 0 });
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, { gasPrice: 0 })).to.be.reverted;
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, { gasPrice: 0 })).to.be.reverted;
     });
 
     it('user can bond an appropriate amount and receive the discount', async function () {
@@ -322,7 +322,7 @@ describe('Heart Unit Test', function () {
       // User approves the heart
       await cDAI.connect(signer1).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
-      await heart.connect(signer1).bondAsset(cDAI.address, amount, { gasPrice: 0 });
+      await heart.connect(signer1).bondAsset(cDAI.address, amount, 1, { gasPrice: 0 });
       expect(await hBABL.balanceOf(signer1.address)).to.be.closeTo(
         hBABLBalance.add(eth('70')),
         eth('10'),

@@ -25,6 +25,7 @@ import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
 import {IVoteToken} from './interfaces/IVoteToken.sol';
+import {IERC1271} from './interfaces/IERC1271.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
@@ -39,7 +40,7 @@ import {ControllerLib} from './lib/ControllerLib.sol';
  * Contract that assists The Heart of Babylon garden with BABL staking.
  *
  */
-contract Heart is OwnableUpgradeable, IHeart {
+contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     using SafeERC20 for IERC20;
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
@@ -434,7 +435,7 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _assetToBond                  Asset that the user wants to bond
      * @param _amountToBond                 Amount to be bonded
      */
-    function bondAsset(address _assetToBond, uint256 _amountToBond) external override {
+    function bondAsset(address _assetToBond, uint256 _amountToBond,         uint256 _minAmountOut) external override {
         require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
         uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
         // Total value adding the premium
@@ -446,8 +447,57 @@ contract Heart is OwnableUpgradeable, IHeart {
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
+
         BABL.approve(address(heartGarden), bondValueInBABL);
+
+        heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender);
+    }
+
+    /**
+     * Users can bond an asset that belongs to the program and receive a discount on hBABL.
+     * Note: Heart needs to have enough BABL to satisfy the discount.
+     * Note: User needs to approve the asset to bond first.
+     *
+     * @param _assetToBond                  Asset that the user wants to bond
+     * @param _amountToBond                 Amount to be bonded
+     */
+    function bondAssetBySig(address _assetToBond, uint256 _amountToBond,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature) external {
+        _onlyKeeper();
+        require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
+
+        uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
+        // Total value adding the premium
+        uint256 bondValueInBABL =
+            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
+                priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+            );
+        // Get asset to bond from sender
+        IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
+        // Deposit on behalf of the user
+        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
+
+        BABL.approve(address(heartGarden), bondValueInBABL);
+
         heartGarden.deposit(bondValueInBABL, 1, msg.sender);
+
+        heartGarden.depositBySig(
+         bondValueInBABL,
+         _minAmountOut,
+         _nonce,
+         _maxFee,
+         _pricePerShare,
+         _fee,
+         _signer,
+        _signature
+    );
+
     }
 
     // solhint-disable-next-line
@@ -489,6 +539,13 @@ contract Heart is OwnableUpgradeable, IHeart {
      */
     function getTotalStats() external view override returns (uint256[7] memory) {
         return totalStats;
+    }
+
+    /**
+     * Implements EIP-1271
+     */
+    function isValidSignature(bytes32 hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+        return  this.isValidSignature.selector;
     }
 
     /* ============ Internal Functions ============ */
