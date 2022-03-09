@@ -286,7 +286,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it.only('can finalize heart strategies and compound rewards', async () => {
+    it('can finalize heart strategies and compound rewards', async () => {
       const babl = await getERC20(addresses.tokens.BABL);
       const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
       const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
