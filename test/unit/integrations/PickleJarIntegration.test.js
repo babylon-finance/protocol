@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
+const { createStrategy, getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
@@ -9,6 +9,7 @@ const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/
 
 describe('PickleJarIntegrationTest', function () {
   let pickleJarIntegration;
+  let curvePoolIntegration;
   let signer1;
   let signer2;
   let signer3;
@@ -49,7 +50,7 @@ describe('PickleJarIntegrationTest', function () {
   // logConvexPools();
 
   beforeEach(async () => {
-    ({ pickleJarIntegration } = await setupTests()());
+    ({ pickleJarIntegration, curvePoolIntegration, signer1, signer2, signer3 } = await setupTests()());
   });
 
   describe('Pickle Jar Multigarden multiasset', function () {
@@ -59,9 +60,9 @@ describe('PickleJarIntegrationTest', function () {
       // { token: addresses.tokens.USDC, name: 'USDC' },
       // { token: addresses.tokens.WBTC, name: 'WBTC' },
     ].forEach(async ({ token, name }) => {
-      pick(addresses.pickle.jars).forEach(({ address, name }) => {
-        it(`can enter into direct ${name} jar and receive the pToken`, async function () {
-          await depositIntoJar(address, token);
+      pick(addresses.pickle.jars).forEach((jar) => {
+        it.only(`can enter into ${name} jar and receive the pToken`, async function () {
+          await depositIntoJar(jar.address, token, jar);
         });
       });
     });
@@ -70,22 +71,37 @@ describe('PickleJarIntegrationTest', function () {
     });
   });
 
-  async function depositIntoJar(jarAddress, token) {
+  async function depositIntoJar(jarAddress, token, jarObj) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
     const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
     const jar = await ethers.getContractAt('IJar', jarAddress);
 
-    const strategyContract = await getStrategy({
-      kind: 'vault',
-      state: 'vote',
-      integrations: pickleJarIntegration.address,
+    let integrations = pickleJarIntegration.address;
+    let params = [jarAddress, 0];
+    let strategyKind = 'vault';
+
+    // If needs to enter crv first
+    if (jarObj.crvpool) {
+      strategyKind = 'lpStack';
+      integrations = [curvePoolIntegration.address, pickleJarIntegration.address];
+      params = [jarObj.crvpool, 0, jarAddress, 0];
+    }
+
+    const strategyContract = await createStrategy(
+      strategyKind,
+      'vote',
+      [signer1, signer2, signer3],
+      integrations,
       garden,
-      specificParams: [jarAddress, 0],
-    });
+      false,
+      params,
+    );
+
     const amount = STRATEGY_EXECUTE_MAP[token];
     const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
+    console.log('before execute');
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
