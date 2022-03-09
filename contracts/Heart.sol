@@ -33,6 +33,8 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title Heart
  * @author Babylon Finance
@@ -434,9 +436,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * @param _assetToBond                  Asset that the user wants to bond
      * @param _amountToBond                 Amount to be bonded
+     * @param _minAmountOut                 Min amount of Heart garde shares to recieve
      */
-    function bondAsset(address _assetToBond, uint256 _amountToBond,         uint256 _minAmountOut) external override {
-        require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
+    function bondAsset(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _minAmountOut
+    ) external override {
+        require(bondAssets[_assetToBond] > 0, 'Bond > 0');
         uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
         // Total value adding the premium
         uint256 bondValueInBABL =
@@ -446,7 +453,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
-        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
+        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL');
 
         BABL.approve(address(heartGarden), bondValueInBABL);
 
@@ -461,43 +468,37 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _assetToBond                  Asset that the user wants to bond
      * @param _amountToBond                 Amount to be bonded
      */
-    function bondAssetBySig(address _assetToBond, uint256 _amountToBond,
+    function bondAssetBySig(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _pricePerShare,
         uint256 _fee,
         address _signer,
-        bytes memory _signature) external {
+        bytes memory _signature
+    ) external {
         _onlyKeeper();
-        require(bondAssets[_assetToBond] > 0, 'Not a valid bond');
+        require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
-        uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
-        // Total value adding the premium
-        uint256 bondValueInBABL =
-            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
-                priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
-            );
+        console.log('move BABL');
         // Get asset to bond from sender
-        IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
+        IERC20(_assetToBond).safeTransferFrom(_signer, address(this), _amountToBond);
         // Deposit on behalf of the user
-        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL in the heart to bond');
+        require(BABL.balanceOf(address(this)) >= _amountIn, 'Not enough BABL');
 
-        BABL.approve(address(heartGarden), bondValueInBABL);
+        BABL.approve(address(heartGarden), _amountIn);
 
-        heartGarden.deposit(bondValueInBABL, 1, msg.sender);
+        // Send tokens to the user so deposit into Heart garden works
+        IERC20(BABL).safeTransfer(_signer, _amountIn);
 
-        heartGarden.depositBySig(
-         bondValueInBABL,
-         _minAmountOut,
-         _nonce,
-         _maxFee,
-         _pricePerShare,
-         _fee,
-         _signer,
-        _signature
-    );
+        // Pay the fee to the Keeper
+        IERC20(BABL).safeTransfer(msg.sender, _fee);
 
+        console.log('deposit');
+        heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _pricePerShare, 0, _signer, _signature);
     }
 
     // solhint-disable-next-line
@@ -545,7 +546,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Implements EIP-1271
      */
     function isValidSignature(bytes32 hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
-        return  this.isValidSignature.selector;
+        return this.isValidSignature.selector;
     }
 
     /* ============ Internal Functions ============ */

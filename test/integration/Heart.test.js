@@ -5,11 +5,21 @@ const { getERC20, increaseBlock, increaseTime, proposalState, eth, from } = requ
 const { getVoters, getProposal, selfDelegation, claimTokens } = require('utils/gov-helpers');
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
+const {
+  createGarden,
+  getDepositSigHash,
+  getDepositSig,
+  getWithdrawSig,
+  getWithdrawSigHash,
+  transferFunds,
+  depositFunds,
+} = require('fixtures/GardenHelper');
 
-describe('Heart Unit Test', function () {
+describe.only('Heart', function () {
   let heartGarden;
   let heart;
   let signer1;
+  let signer3;
   let garden1;
   let garden2;
   let garden3;
@@ -30,12 +40,15 @@ describe('Heart Unit Test', function () {
   let governor;
   let heartGardenSigner;
   let feeDistributionWeights;
+  let babController;
 
   beforeEach(async () => {
     ({
+      babController,
       heartGarden,
       heart,
       signer1,
+      signer3,
       garden1,
       garden2,
       garden3,
@@ -153,7 +166,7 @@ describe('Heart Unit Test', function () {
     });
   });
 
-  describe('keeper', async function () {
+  describe('resolveGardenVotes', async function () {
     it('can resolve garden votes', async function () {
       await heart
         .connect(keeper)
@@ -279,10 +292,47 @@ describe('Heart Unit Test', function () {
     });
   });
 
-  describe('bond assets', async function () {
+  describe('bond asset by sig', async function () {
+    it('can bond asset by sig', async function () {
+      // make heart a keeper
+      await babController.connect(owner).addKeeper(heart.address);
+
+      await heart.connect(owner).updateBond(cDAI.address, eth(0.05));
+
+      const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
+      const amount = eth(20000);
+      const amountIn = eth(100);
+      const minAmountOut = eth(1);
+      const nonce = 0;
+      const maxFee = from(0);
+      const fee = from(0);
+
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+
+      const hBABLBalance = await hBABL.balanceOf(signer3.address);
+      // Add fuse assets to token identifier
+      await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      // User approves the Heart
+      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      // User approves the Heart garden
+      await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
+
+      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee);
+
+      // Bond the asset
+      await heart
+        .connect(keeper)
+        .bondAssetBySig(cDAI.address, amount, amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig, {
+          gasPrice: 0,
+        });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(hBABLBalance.add(eth(70)), eth(10));
+    });
+  });
+
+  describe('bond asset', async function () {
     it('normal signer cannot enter a new bond asset', async function () {
-      await expect(heart.connect(signer1).updateBond(cDAI.address, eth('0.05'), { gasPrice: 0 })).to
-        .be.reverted;
+      await expect(heart.connect(signer1).updateBond(cDAI.address, eth('0.05'), { gasPrice: 0 })).to.be.reverted;
     });
 
     it('owner can enter a new bond asset', async function () {
@@ -323,10 +373,7 @@ describe('Heart Unit Test', function () {
       await cDAI.connect(signer1).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
       await heart.connect(signer1).bondAsset(cDAI.address, amount, 1, { gasPrice: 0 });
-      expect(await hBABL.balanceOf(signer1.address)).to.be.closeTo(
-        hBABLBalance.add(eth('70')),
-        eth('10'),
-      );
+      expect(await hBABL.balanceOf(signer1.address)).to.be.closeTo(hBABLBalance.add(eth('70')), eth('10'));
     });
   });
 
@@ -355,9 +402,8 @@ describe('Heart Unit Test', function () {
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
-      await expect(
-        heart.connect(signer1).borrowFusePool(addresses.tokens.FRAX, eth('50000'), { gasPrice: 0 }),
-      ).to.be.reverted;
+      await expect(heart.connect(signer1).borrowFusePool(addresses.tokens.FRAX, eth('50000'), { gasPrice: 0 })).to.be
+        .reverted;
     });
   });
 
@@ -451,9 +497,7 @@ describe('Heart Unit Test', function () {
 
     it('will pump correctly with 3 ETH, 1000 DAI, 1000 USDC', async function () {
       const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
-      const amountInFees = ethers.utils
-        .parseEther('3')
-        .add(eth('2000').mul(wethPerDai).div(1e9).div(1e9));
+      const amountInFees = ethers.utils.parseEther('3').add(eth('2000').mul(wethPerDai).div(1e9).div(1e9));
       await WETH.connect(owner).transfer(heart.address, eth('3'));
       await DAI.connect(owner).transfer(heart.address, eth('1000'));
       await USDC.connect(owner).transfer(heart.address, 1000 * 1e6);
