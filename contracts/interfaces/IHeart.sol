@@ -84,5 +84,9 @@ interface IHeart {
 
     function setTradeSlippage(uint256 _tradeSlippage) external;
 
-    function bondAsset(address _assetToBond, uint256 _amountToBond,         uint256 _minAmountOut) external;
+    function bondAsset(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _minAmountOut
+    ) external;
 }

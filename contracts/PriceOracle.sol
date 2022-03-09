@@ -142,11 +142,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function getCompoundExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
-        return SafeDecimalMath.normalizeAmountTokens(
-            _underlying,
-            _asset,
-            exchangeRateNormalized
-        );
+        return SafeDecimalMath.normalizeAmountTokens(_underlying, _asset, exchangeRateNormalized);
     }
 
     function getCreamExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
