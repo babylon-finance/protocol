@@ -633,8 +633,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyNonZero(_to);
         _checkLastPricePerShare(_pricePerShare);
 
-        (bool canDeposit, , ) = _getUserPermission(_from);
-        _require(_isCreator(_to) || (canDeposit && _from == _to), Errors.USER_CANNOT_JOIN);
+        bool canDeposit = !privateGarden || IMardukGate(controller.mardukGate()).canJoinAGarden(address(this), _to);
+        _require(_isCreator(_to) || canDeposit, Errors.USER_CANNOT_JOIN);
 
         if (maxDepositLimit > 0) {
             // This is wrong; but calculate principal would be gas expensive
@@ -807,25 +807,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _depositOrWithdraw // true = deposit , false = withdraw
         );
         contributors[_contributor].nonce++;
-    }
-
-    /**
-     * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
-     */
-    function _getUserPermission(address _user)
-        internal
-        view
-        returns (
-            bool canDeposit,
-            bool canVote,
-            bool canCreateStrategy
-        )
-    {
-        IMardukGate mgate = IMardukGate(controller.mardukGate());
-        bool betaAccess = true;
-        canDeposit = (betaAccess && !privateGarden) || mgate.canJoinAGarden(address(this), _user);
-        canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
-        canCreateStrategy = (betaAccess && publicStrategists) || mgate.canAddStrategiesInAGarden(address(this), _user);
     }
 
     // Checks if an address is a creator
