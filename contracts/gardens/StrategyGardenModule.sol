@@ -199,6 +199,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             );
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stratParams[1]);
+        contributors[msg.sender].lockedBalance;
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;

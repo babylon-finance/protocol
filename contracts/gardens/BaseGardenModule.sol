@@ -47,17 +47,6 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
 
     /* ============ Structs ============ */
 
-    struct Contributor {
-        uint256 lastDepositAt;
-        uint256 initialDepositAt;
-        uint256 claimedAt;
-        uint256 claimedBABL;
-        uint256 claimedRewards;
-        uint256 withdrawnSince;
-        uint256 totalDeposits;
-        uint256 nonce;
-    }
-
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
@@ -91,7 +80,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     uint256 internal withdrawalsOpenUntil; // DEPRECATED
 
     // Contributors
-    mapping(address => Contributor) internal contributors;
+    mapping(address => IGarden.Contributor) internal contributors;
     uint256 internal totalContributors;
     uint256 internal maxContributors; // DEPRECATED
     uint256 internal maxDepositLimit; // Limits the amount of deposits

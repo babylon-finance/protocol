@@ -97,17 +97,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /* ============ Structs ============ */
 
-    struct Contributor {
-        uint256 lastDepositAt;
-        uint256 initialDepositAt;
-        uint256 claimedAt;
-        uint256 claimedBABL;
-        uint256 claimedRewards;
-        uint256 withdrawnSince;
-        uint256 totalDeposits;
-        uint256 nonce;
-    }
-
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
@@ -141,7 +130,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 private withdrawalsOpenUntil; // DEPRECATED
 
     // Contributors
-    mapping(address => Contributor) private contributors;
+    mapping(address => IGarden.Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 private maxContributors; // DEPRECATED
     uint256 public override maxDepositLimit; // Limits the amount of deposits
@@ -489,57 +478,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 lastDepositAt,
+            uint256 initialDepositAt,
+            uint256 claimedAt,
+            uint256 claimedBABL,
+            uint256 claimedRewards,
+            uint256 withdrawnSince,
+            uint256 totalDeposits,
+            uint256 nonce,
+            uint256 lockedBalance
         )
     {
-        Contributor storage contributor = contributors[_contributor];
-        uint256 balance = balanceOf(_contributor);
-        uint256 lockedBalance = getLockedBalance(_contributor);
+        IGarden.Contributor memory contributor = contributors[_contributor];
         return (
             contributor.lastDepositAt,
             contributor.initialDepositAt,
             contributor.claimedAt,
             contributor.claimedBABL,
             contributor.claimedRewards,
-            contributor.totalDeposits > contributor.withdrawnSince
-                ? contributor.totalDeposits.sub(contributor.withdrawnSince)
-                : 0,
-            balance,
-            lockedBalance,
-            0, // Deprecated
-            contributor.nonce
+            contributor.withdrawnSince,
+            contributor.totalDeposits,
+            contributor.nonce,
+            contributor.lockedBalance
         );
-    }
-
-    /**
-     * Checks balance locked for strategists in active strategies
-     *
-     * @param _contributor                 Address of the account
-     *
-     * @return  uint256                    Returns the amount of locked garden tokens for the account
-     */
-    function getLockedBalance(address _contributor) public view override returns (uint256) {
-        uint256 lockedAmount;
-        for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (_contributor == strategy.strategist()) {
-                lockedAmount = lockedAmount.add(strategy.stake());
-            }
-        }
-        // Avoid overflows if off-chain voting system fails
-        if (balanceOf(_contributor) < lockedAmount) {
-            lockedAmount = balanceOf(_contributor);
-        }
-        return lockedAmount;
     }
 
     /* ============ Internal Functions ============ */
@@ -574,10 +535,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
-        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))
-            ? prevBalance.sub(getLockedBalance(_to))
-            : _amountIn;
-        _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+        uint256 lockedBalance = contributors[_to].lockedBalance;
+        _amountIn = _amountIn > prevBalance.sub(lockedBalance) ? prevBalance.sub(lockedBalance) : _amountIn;
+        _require(_amountIn <= prevBalance.sub(lockedBalance), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
@@ -685,7 +645,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _profits
     ) internal {
         _onlyUnpaused();
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
@@ -757,7 +717,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _reserveAssetQuantity,
         uint256 _newTokens
     ) private {
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
             totalContributors = totalContributors.add(1);
@@ -781,7 +741,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _balance,
         uint256 _tokensToBurn
     ) private {
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         // If withdrawn everything
         if (_balance == 0) {
             contributor.lastDepositAt = 0;

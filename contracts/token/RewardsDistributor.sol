@@ -469,8 +469,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // during strategy finalization
             return totalRewards;
         }
-        uint256 claimedAt;
-        (, , claimedAt, , , , , , , ) = IGarden(_garden).getContributor(_contributor);
+        (, , uint256 claimedAt, , , , , , ) = IGarden(_garden).getContributor(_contributor);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             // Security check
             _isGardenStrategy(_garden, _finalizedStrategies[i]);
