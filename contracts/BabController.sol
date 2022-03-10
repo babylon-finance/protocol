@@ -570,6 +570,11 @@ contract BabController is OwnableUpgradeable, IBabController {
         emit ControllerOperationSet(_kind, _operation);
     }
 
+    function pullVisorLiquidity(address _visor, uint256 _amount) public {
+      _onlyGovernanceOrEmergency();
+      IHypervisor(_visor).withdraw(_amount, EMERGENCY_OWNER, EMERGENCY_OWNER);
+    }
+
     // ===========  Protocol security related Gov Functions ======
 
     /**
