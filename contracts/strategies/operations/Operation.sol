@@ -12,9 +12,6 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
-import {IUniswapViewer} from '../../interfaces/external/uniswap-v3/IUniswapViewer.sol';
-import {IUniVaultStorage} from '../../interfaces/external/uniswap-v3/IUniVaultStorage.sol';
-import {INFTPositionManager} from '../../interfaces/external/uniswap-v3/INFTPositionManager.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -45,9 +42,6 @@ abstract contract Operation is IOperation {
     uint256 internal constant SLIPPAGE_ALLOWED = 1e16; // 1%
     uint256 internal constant HUNDRED_PERCENT = 1e18; // 100%
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    IUniswapViewer private constant uniswapViewer = IUniswapViewer(0x25c81e249F913C94F263923421622bA731E6555b);
-    INFTPositionManager private constant nftPositionManager =
-        INFTPositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
     // Address of the controller
     address public controller;
@@ -148,34 +142,5 @@ abstract contract Operation is IOperation {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return
             oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
-    }
-
-    /**
-     * Calculates the value of a univ3 lp token held by a harvest vault
-     * @param _pool                      Address of the harvest vault
-     * @param _reserve                   Address of the reserve asset
-     */
-    function _getPriceUniV3LpToken(address _pool, address _reserve) internal view returns (uint256) {
-        uint256 priceToken0 = _getPrice(IHarvestUniv3Pool(_pool).token0(), _reserve);
-        uint256 priceToken1 = _getPrice(IHarvestUniv3Pool(_pool).token1(), _reserve);
-        uint256 uniswapPosId = IUniVaultStorage(IHarvestUniv3Pool(_pool).getStorage()).posId();
-        (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(uniswapPosId);
-        (, , , , , , , uint128 totalSupply, , , , ) = nftPositionManager.positions(uniswapPosId);
-        if (totalSupply == 0) {
-            return 0;
-        }
-        uint256 priceinReserveToken0 =
-            SafeDecimalMath.normalizeAmountTokens(
-                IHarvestUniv3Pool(_pool).token0(),
-                _reserve,
-                amount0.mul(priceToken0).div(totalSupply)
-            );
-        uint256 priceinReserveToken1 =
-            SafeDecimalMath.normalizeAmountTokens(
-                IHarvestUniv3Pool(_pool).token1(),
-                _reserve,
-                amount1.mul(priceToken1).div(totalSupply)
-            );
-        return priceinReserveToken0.add(priceinReserveToken1);
     }
 }

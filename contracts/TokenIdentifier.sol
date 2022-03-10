@@ -41,6 +41,8 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant LIDO_TOKEN = 7;
     uint8 private constant SUSHI_LP_TOKEN = 8;
     uint8 private constant UNIV2_LP_TOKEN = 9;
+    uint8 private constant HARVESTV3_LP_TOKEN = 10;
+    uint8 private constant VISOR_LP_TOKEN = 11;
 
     /* ============ State Variables ============ */
 
@@ -442,6 +444,10 @@ contract TokenIdentifier is ITokenIdentifier {
         if (keccak256(bytes(tokenOutSymbol)) == UNI_SYMBOL) {
             tokenOutType = UNIV2_LP_TOKEN;
         }
+
+        // Harvest v3 lp token
+
+        // Visor (univ3 lp token)
 
         return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
     }

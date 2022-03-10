@@ -10,6 +10,7 @@ const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/
 describe('PickleJarIntegrationTest', function () {
   let pickleJarIntegration;
   let curvePoolIntegration;
+  let sushiswapPoolIntegration;
   let signer1;
   let signer2;
   let signer3;
@@ -50,7 +51,14 @@ describe('PickleJarIntegrationTest', function () {
   // logConvexPools();
 
   beforeEach(async () => {
-    ({ pickleJarIntegration, curvePoolIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({
+      pickleJarIntegration,
+      curvePoolIntegration,
+      sushiswapPoolIntegration,
+      signer1,
+      signer2,
+      signer3,
+    } = await setupTests()());
   });
 
   describe('Pickle Jar Multigarden multiasset', function () {
@@ -87,6 +95,12 @@ describe('PickleJarIntegrationTest', function () {
       strategyKind = 'lpStack';
       integrations = [curvePoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.crvpool, 0, jarAddress, 0];
+    }
+    // If needs to enter crv first
+    if (jarObj.sushi) {
+      strategyKind = 'lpStack';
+      integrations = [sushiswapPoolIntegration.address, pickleJarIntegration.address];
+      params = [jarObj.sushi, 0, jarAddress, 0];
     }
 
     const strategyContract = await createStrategy(

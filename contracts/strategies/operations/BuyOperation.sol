@@ -100,6 +100,7 @@ contract BuyOperation is Operation {
     )
         external
         override
+        view
         onlyStrategy
         returns (
             address,
