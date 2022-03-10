@@ -149,7 +149,7 @@ describe('Garden', function () {
   });
 
   describe('transfer garden tokens', async function () {
-    it('can transfer', async function () {
+    it('can transfer to a non-contributor account', async function () {
       await fund([signer1.address], { tokens: [addresses.tokens.DAI] });
 
       const garden = await createGarden({
@@ -182,7 +182,7 @@ describe('Garden', function () {
       expect(claimedRewards).to.eq(0);
       expect(withdrawnSince).to.eq(0);
       expect(totalDeposits).to.eq(0);
-      expect(nonce).to.eq(2);
+      expect(nonce).to.eq(1);
       expect(lockedBalance).to.eq(0);
 
       [
@@ -204,7 +204,7 @@ describe('Garden', function () {
       expect(claimedRewards).to.eq(0);
       expect(withdrawnSince).to.eq(0);
       expect(totalDeposits).to.eq(0);
-      expect(nonce).to.eq(1);
+      expect(nonce).to.eq(0);
       expect(lockedBalance).to.eq(0);
 
       expect(await garden.balanceOf(signer1.address)).to.eq(0);

@@ -563,6 +563,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
         _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, balanceOf(_to), _amountIn);
+        contributors[_to].nonce++;
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -630,6 +631,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
+        contributors[_to].nonce++;
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
@@ -727,8 +729,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
         contributor.lastDepositAt = block.timestamp;
         // RD checkpoint for accurate rewards
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
-        // nonce update is done at _updateGardenPowerAndContributor
+        rewardsDistributor.updateGardenPowerAndContributor(
+            address(this),
+            _contributor,
+            _previousBalance,
+            _newTokens,
+            true // true = deposit , false = withdraw
+        );
     }
 
     /**
@@ -753,27 +760,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
         // RD checkpoint for accurate rewards
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
-        // nonce update is done at _updateGardenPowerAndContributor
-    }
-
-    /**
-     * Rewards Distributor checkpoint updater at deposits / withdrawals
-     */
-    function _updateGardenPowerAndContributor(
-        address _contributor,
-        uint256 _prevBalance,
-        uint256 _tokens,
-        bool _depositOrWithdraw
-    ) internal {
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
-            _prevBalance,
-            _tokens,
-            _depositOrWithdraw // true = deposit , false = withdraw
+            _previousBalance,
+            _tokensToBurn,
+            false // true = deposit , false = withdraw
         );
-        contributors[_contributor].nonce++;
     }
 
     /**
