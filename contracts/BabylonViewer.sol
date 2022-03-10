@@ -334,13 +334,7 @@ contract BabylonViewer {
         return (strategiesCreated, totalVotes);
     }
 
-    function getContributor(IGarden _garden, address _user)
-        internal
-        view
-        returns (
-            uint256[10] memory
-        )
-    {
+    function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
         (
             uint256 lastDepositAt,
             uint256 initialDepositAt,
@@ -352,7 +346,18 @@ contract BabylonViewer {
             ,
             uint256 lockedBalance
         ) = _garden.getContributor(_user);
-        return [ lastDepositAt, initialDepositAt, claimedAt, claimedBABL, claimedRewards, totalDeposits > withdrawnSince ? totalDeposits.sub(withdrawnSince) : 0, _garden.balanceOf(_user), lockedBalance, 0, getGardenUserAvgPricePerShare(_garden, _user) ];
+        return [
+            lastDepositAt,
+            initialDepositAt,
+            claimedAt,
+            claimedBABL,
+            claimedRewards,
+            totalDeposits > withdrawnSince ? totalDeposits.sub(withdrawnSince) : 0,
+            _garden.balanceOf(_user),
+            lockedBalance,
+            0,
+            getGardenUserAvgPricePerShare(_garden, _user)
+        ];
     }
 
     function getContributionAndRewards(IGarden _garden, address _user)

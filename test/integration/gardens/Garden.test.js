@@ -164,16 +164,16 @@ describe('Garden', function () {
       const ts = await getTimestamp();
 
       let [
-          lastDepositAt,
-            initialDepositAt,
-            claimedAt,
-            claimedBABL,
-            claimedRewards,
-            withdrawnSince,
-            totalDeposits,
-            nonce,
-            lockedBalance
-        ] = await garden.getContributor(signer1.address);
+        lastDepositAt,
+        initialDepositAt,
+        claimedAt,
+        claimedBABL,
+        claimedRewards,
+        withdrawnSince,
+        totalDeposits,
+        nonce,
+        lockedBalance,
+      ] = await garden.getContributor(signer1.address);
 
       expect(lastDepositAt).to.eq(0);
       expect(initialDepositAt).to.eq(0);
@@ -185,18 +185,17 @@ describe('Garden', function () {
       expect(nonce).to.eq(2);
       expect(lockedBalance).to.eq(0);
 
-
       [
-          lastDepositAt,
-            initialDepositAt,
-            claimedAt,
-            claimedBABL,
-            claimedRewards,
-            withdrawnSince,
-            totalDeposits,
-            nonce,
-            lockedBalance
-        ] = await garden.getContributor(signer2.address);
+        lastDepositAt,
+        initialDepositAt,
+        claimedAt,
+        claimedBABL,
+        claimedRewards,
+        withdrawnSince,
+        totalDeposits,
+        nonce,
+        lockedBalance,
+      ] = await garden.getContributor(signer2.address);
 
       expect(lastDepositAt).to.eq(ts);
       expect(initialDepositAt).to.eq(ts);
@@ -563,16 +562,7 @@ describe('Garden', function () {
       const gardenBalanceBefore = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(signer3.address);
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
@@ -588,16 +578,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsBefore.sub(totalDepositsAfter)).to.equal(minAmountOut);
       expect(totalDepositsAfter).to.equal(0);
     });
@@ -622,16 +603,7 @@ describe('Garden', function () {
       const gardenBalanceBefore = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(wallet.address);
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(wallet.address);
 
       amountIn = eth(1000);
       minAmountOut = from(1000 * 1e6);
@@ -647,16 +619,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceBefore.sub(gardenBalanceAfter)).to.equal(minAmountOut);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(wallet.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(wallet.address);
       expect(totalDepositsBefore.sub(totalDepositsAfter)).to.equal(minAmountOut);
       expect(totalDepositsAfter).to.equal(0);
     });
@@ -1175,16 +1138,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            lockedBalance,
-        ] = await garden1.getContributor(signer2.address);
+      const [, , , , , , , lockedBalance] = await garden1.getContributor(signer2.address);
 
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
       await expect(
@@ -1213,16 +1167,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [ONE_DAY_IN_SECONDS * 5]); // to bypass hardlock
       const beforeBalance = await garden1.balanceOf(signer2.address);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            lockedBalance,
-        ] = await garden1.getContributor(signer2.address);
+      const [, , , , , , , lockedBalance] = await garden1.getContributor(signer2.address);
 
       // Due to the strategy is under execution the withdrawal without penalty does not allow to withdraw the whole balance if votes had been compromised in the executing strategy
       await expect(
@@ -1271,17 +1216,7 @@ describe('Garden', function () {
 
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(signer3.address);
-
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(signer3.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
 
@@ -1295,17 +1230,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
     });
 
@@ -1331,22 +1256,11 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(wallet.address);
-
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(wallet.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
 
       await garden.connect(keeper).depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, wallet.address, sig);
-
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
@@ -1354,16 +1268,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(wallet.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(wallet.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
     });
 
@@ -1385,17 +1290,7 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(signer3.address);
 
       const sig = await getDepositSig(garden.address, signer3, amountIn, minAmountOut, nonce, maxFee);
 
@@ -1403,24 +1298,13 @@ describe('Garden', function () {
         .connect(keeper)
         .depositBySig(amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig);
 
-
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut.sub(eth(1000)));
 
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn.sub(fee));
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn.sub(fee));
     });
 
@@ -1538,17 +1422,7 @@ describe('Garden', function () {
       const gardenBalance = await dai.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(signer3.address);
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress());
 
@@ -1558,16 +1432,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await dai.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
 
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
     });
 
@@ -1586,19 +1451,8 @@ describe('Garden', function () {
       const gardenBalance = await usdc.balanceOf(garden.address);
       const supplyBefore = await garden.totalSupply();
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceBefore,
-            totalDepositsBefore,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceBefore, totalDepositsBefore, ,] = await garden.getContributor(signer3.address);
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress());
-
 
       const supplyAfter = await garden.totalSupply();
       expect(supplyAfter.sub(supplyBefore)).to.be.eq(minAmountOut);
@@ -1606,17 +1460,7 @@ describe('Garden', function () {
       const gardenBalanceAfter = await usdc.balanceOf(garden.address);
       expect(gardenBalanceAfter.sub(gardenBalance)).to.equal(amountIn);
 
-
-      const [
-            ,
-            ,
-            ,
-            ,
-            ,
-            withdrawnSinceAfter,
-            totalDepositsAfter,
-            ,
-        ] = await garden.getContributor(signer3.address);
+      const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
     });
 
