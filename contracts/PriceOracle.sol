@@ -284,7 +284,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             return _getPriceUniV2LpToken(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
         }
         if (tokenOutType == 7 || tokenOutType == 8) {
-            return getPrice(_tokenIn, WETH).preciseDiv(_getPriceUniV2LpToken(_tokenIn, WETH));
+            return getPrice(_tokenIn, WETH).preciseDiv(_getPriceUniV2LpToken(_tokenOut, WETH));
         }
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
@@ -634,25 +634,17 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
             uint256 price = getPrice(_denominator, asset);
-            // If the actual token doesn't have a price, use underlying as approx
-            if (price == 0) {
-                uint256 rate = 1e18;
-                if (rate != 0) {
-                    price = getPrice(_denominator, asset);
-                    price = price.preciseDiv(rate);
-                }
-            }
             uint256 balance = !_isETH(poolTokens[i]) ? ERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
             // Special case for weth in some pools
             if (poolTokens[i] == WETH && balance == 0) {
                 balance = _pool.balance;
             }
             if (price != 0 && balance != 0) {
-                result += SafeDecimalMath.normalizeAmountTokens(
+                result = result.add(SafeDecimalMath.normalizeAmountTokens(
                     asset,
                     _denominator,
-                    balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
-                );
+                    balance.preciseDiv(lpToken.totalSupply()).preciseDiv(price)
+                ));
             }
         }
         return result;

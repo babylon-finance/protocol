@@ -447,6 +447,10 @@ contract TokenIdentifier is ITokenIdentifier {
 
         // Harvest v3 lp token
 
+        // one inch
+
+        // pickle
+
         // Visor (univ3 lp token)
 
         return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
