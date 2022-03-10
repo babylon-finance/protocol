@@ -11,6 +11,7 @@ describe('PickleJarIntegrationTest', function () {
   let pickleJarIntegration;
   let curvePoolIntegration;
   let sushiswapPoolIntegration;
+  let uniswapPoolIntegration;
   let signer1;
   let signer2;
   let signer3;
@@ -55,6 +56,7 @@ describe('PickleJarIntegrationTest', function () {
       pickleJarIntegration,
       curvePoolIntegration,
       sushiswapPoolIntegration,
+      uniswapPoolIntegration,
       signer1,
       signer2,
       signer3,
@@ -96,11 +98,17 @@ describe('PickleJarIntegrationTest', function () {
       integrations = [curvePoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.crvpool, 0, jarAddress, 0];
     }
-    // If needs to enter crv first
+    // If needs to enter sushi first
     if (jarObj.sushi) {
       strategyKind = 'lpStack';
       integrations = [sushiswapPoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.sushi, 0, jarAddress, 0];
+    }
+    // If needs to enter univ2 first
+    if (jarObj.uni) {
+      strategyKind = 'lpStack';
+      integrations = [uniswapPoolIntegration.address, pickleJarIntegration.address];
+      params = [jarObj.uni, 0, jarAddress, 0];
     }
 
     const strategyContract = await createStrategy(
@@ -126,6 +134,7 @@ describe('PickleJarIntegrationTest', function () {
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
     expect(await strategyContract.getNAV()).to.be.gte(nav);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
+    console.log('before finalize');
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });
     expect(await jar.balanceOf(strategyContract.address)).to.equal(0);
 
