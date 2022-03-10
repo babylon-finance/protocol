@@ -118,6 +118,7 @@ describe('PickleJarIntegrationTest', function () {
     console.log('before execute');
     await executeStrategy(strategyContract, { amount });
     // Check NAV
+    console.log('after execute');
     const nav = await strategyContract.getNAV();
     expect(nav).to.be.gt(amount.sub(amount.div(35)));
     expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
