@@ -8,6 +8,7 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
@@ -269,6 +270,14 @@ contract PriceOracle is Ownable, IPriceOracle {
                 price = price.div(10**(18 - yvDecimals));
             }
             return price;
+        }
+
+        // univ2 or sushi
+        if (tokenInType == 7 || tokenInType == 8) {
+
+        }
+        if (tokenOutType == 7 || tokenOutType == 8) {
+
         }
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
@@ -558,6 +567,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         return 0;
     }
 
+
+
     function _getCurveDY(
         address _curvePool,
         uint256 i,
@@ -573,6 +584,73 @@ contract PriceOracle is Ownable, IPriceOracle {
                 revert('get dy failed');
             }
         }
+    }
+
+    /**
+     * Calculates the value of a univ3 lp token in the denominator asset
+     * @param _pool                      Address of the univ3 lp token
+     * @param _denominator               Address of the denominator asset
+     */
+    function _getPriceUniV3LpToken(address _pool, address _denominator) internal view returns (uint256) {
+        uint256 priceToken0 = _getPrice(IUniswapV3Pool(_pool).token0(), _denominator);
+        uint256 priceToken1 = _getPrice(IUniswapV3Pool(_pool).token1(), _denominator);
+        uint256 uniswapPosId = IUniVaultStorage(IUniswapV3Pool(_pool).getStorage()).posId();
+        (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(uniswapPosId);
+        (, , , , , , , uint128 totalSupply, , , , ) = nftPositionManager.positions(uniswapPosId);
+        if (totalSupply == 0) {
+            return 0;
+        }
+        uint256 priceinReserveToken0 =
+            SafeDecimalMath.normalizeAmountTokens(
+                IUniswapV3Pool(_pool).token0(),
+                _denominator,
+                amount0.mul(priceToken0).div(totalSupply)
+            );
+        uint256 priceinReserveToken1 =
+            SafeDecimalMath.normalizeAmountTokens(
+                IUniswapV3Pool(_pool).token1(),
+                _denominator,
+                amount1.mul(priceToken1).div(totalSupply)
+            );
+        return priceinReserveToken0.add(priceinReserveToken1);
+    }
+
+    /**
+     * Calculates the value of a univ2 lp token or sushi in denominator asset
+     * @param _pool                      Address of the univ2 style lp token
+     * @param _denominator               Address of the denominator asset
+     */
+    function _getPriceUniV2LpToken(address _pool, address _denominator) internal view returns (uint256) {
+        address[] memory poolTokens = new address[](2);
+        poolTokens[0] = IUniswapV2Pair(_pool).token0();
+        poolTokens[1] = IUniswapV2Pair(_pool).token1();
+        ERC20 lpToken = ERC20(_pool);
+        uint256 result = 0;
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
+            uint256 price = _getPrice(_denominator, asset);
+            // If the actual token doesn't have a price, use underlying as approx
+            if (price == 0) {
+                uint256 rate = 1e18;
+                if (rate != 0) {
+                    price = _getPrice(_denominator, asset);
+                    price = price.preciseDiv(rate);
+                }
+            }
+            uint256 balance = !_isETH(poolTokens[i]) ? ERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
+            // Special case for weth in some pools
+            if (poolTokens[i] == WETH && balance == 0) {
+                balance = _pool.balance;
+            }
+            if (price != 0 && balance != 0) {
+                result += SafeDecimalMath.normalizeAmountTokens(
+                    asset,
+                    _denominator,
+                    balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
+                );
+            }
+        }
+        return result;
     }
 
     function _getCurveDYUnderlying(
@@ -626,5 +704,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             hopTokens[list[i]] = true;
             hopTokensList.push(list[i]);
         }
+    }
+
+    function _isETH(address _address) internal pure returns (bool) {
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

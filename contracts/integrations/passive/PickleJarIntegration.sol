@@ -60,22 +60,13 @@ contract PickleJarIntegration is PassiveIntegration {
         return _jar;
     }
 
-    function _getExpectedShares(
-        address _jar,
-        uint256 _amount
-    ) internal view override returns (uint256) {
+    function _getExpectedShares(address _jar, uint256 _amount) internal view override returns (uint256) {
         // Normalize to 18 decimals
-        uint256 amoountNormalized = SafeDecimalMath.normalizeAmountTokens(
-            IJar(_jar).token(),
-            _jar,
-            _amount
-        );
+        uint256 amoountNormalized = SafeDecimalMath.normalizeAmountTokens(IJar(_jar).token(), _jar, _amount);
         return amoountNormalized.preciseDiv(IJar(_jar).getRatio());
     }
 
-    function _getPricePerShare(
-        address _jar
-    ) internal view override returns (uint256) {
+    function _getPricePerShare(address _jar) internal view override returns (uint256) {
         return IJar(_jar).getRatio();
     }
 

@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 
 import {IBabController} from './interfaces/IBabController.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
@@ -27,6 +28,8 @@ contract TokenIdentifier is ITokenIdentifier {
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IStETH private constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH private constant wstETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    bytes32 private constant SUSHI_SYMBOL = keccak256(bytes('SLP'));
+    bytes32 private constant UNI_SYMBOL = keccak256(bytes('UNI-V2'));
 
     // Token Types
     uint8 private constant COMP_TOKEN = 1;
@@ -36,6 +39,8 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant CURVE_LP_TOKEN = 5;
     uint8 private constant YEARN_TOKEN = 6;
     uint8 private constant LIDO_TOKEN = 7;
+    uint8 private constant SUSHI_LP_TOKEN = 8;
+    uint8 private constant UNIV2_LP_TOKEN = 9;
 
     /* ============ State Variables ============ */
 
@@ -419,6 +424,25 @@ contract TokenIdentifier is ITokenIdentifier {
         if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
             tokenOutType = LIDO_TOKEN;
         }
+
+        // Check sushi pairs (univ2)
+        string memory tokenInSymbol = ERC20(_tokenIn).symbol();
+        string memory tokenOutSymbol = ERC20(_tokenOut).symbol();
+
+        if (keccak256(bytes(tokenInSymbol)) == SUSHI_SYMBOL) {
+            tokenInType = SUSHI_LP_TOKEN;
+        }
+        if (keccak256(bytes(tokenOutSymbol)) == SUSHI_SYMBOL) {
+            tokenOutType = SUSHI_LP_TOKEN;
+        }
+        // Checks univ2
+        if (keccak256(bytes(tokenInSymbol)) == UNI_SYMBOL) {
+            tokenInType = UNIV2_LP_TOKEN;
+        }
+        if (keccak256(bytes(tokenOutSymbol)) == UNI_SYMBOL) {
+            tokenOutType = UNIV2_LP_TOKEN;
+        }
+
         return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
     }
 
