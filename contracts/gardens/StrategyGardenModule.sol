@@ -154,9 +154,11 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         if (address(this) == address(IHeart(controller.heart()).heartGarden()) && oldRewards < _newTotalAmount) {
             // Send difference if Heart Garden Strategy got less rewards
             rewardsDistributor.sendBABLToContributor(address(this), _newTotalAmount.sub(oldRewards));
-            int256 diff = int256(_newTotalAmount.sub(oldRewards));
-            absoluteReturns = absoluteReturns.add(diff);
         }
+        // update profit returns
+        int256 diff = int256(_newCapitalReturned.sub(IStrategy(_strategy).capitalReturned()));
+        absoluteReturns = absoluteReturns.add(diff);
+        // update BABL Mining strategy rewards
         IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
     }
 
