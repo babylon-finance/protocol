@@ -143,7 +143,11 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * @param _strategy   Address of the strategy to patch
      * @param _newTotalAmount  The new BABL rewards
      */
-    function updateStrategyRewards(address _strategy, uint256 _newTotalAmount) external override {
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalAmount,
+        uint256 _newCapitalReturned
+    ) external override {
         controller.onlyGovernanceOrEmergency();
         _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
         uint256 oldRewards = IStrategy(_strategy).strategyRewards();
@@ -151,7 +155,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             // Send difference if Heart Garden Strategy got less rewards
             rewardsDistributor.sendBABLToContributor(address(this), _newTotalAmount.sub(oldRewards));
         }
-        IStrategy(_strategy).updateStrategyRewards(_newTotalAmount);
+        IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
     }
 
     /**
