@@ -146,7 +146,8 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     function updateStrategyRewards(
         address _strategy,
         uint256 _newTotalAmount,
-        uint256 _newCapitalReturned
+        uint256 _newCapitalReturned,
+        uint256 _amountInjected
     ) external override {
         controller.onlyGovernanceOrEmergency();
         _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
@@ -154,7 +155,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         if (address(this) == address(IHeart(controller.heart()).heartGarden()) && oldRewards < _newTotalAmount) {
             // Send difference if Heart Garden Strategy got less rewards
             rewardsDistributor.sendBABLToContributor(address(this), _newTotalAmount.sub(oldRewards));
-            int256 diff = int256(_newTotalAmount.sub(oldRewards));
+            int256 diff = int256(_amountInjected);
             absoluteReturns = absoluteReturns.add(diff);
         }
         IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
