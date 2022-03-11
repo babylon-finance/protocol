@@ -34,6 +34,8 @@ interface IStrategy {
 
     function sweep(address _token, uint256 _newSlippage) external;
 
+    function updateStrategyRewards(uint256 _newTotalRewards) external;
+
     function setData(
         uint8[] calldata _opTypes,
         address[] calldata _opIntegrations,
