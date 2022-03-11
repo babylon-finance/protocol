@@ -375,7 +375,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Mark as finalized
         finalized = true;
         active = false;
