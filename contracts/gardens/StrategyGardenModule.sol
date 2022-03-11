@@ -143,7 +143,11 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * @param _strategy   Address of the strategy to patch
      * @param _newTotalAmount  The new BABL rewards
      */
-    function updateStrategyRewards(address _strategy, uint256 _newTotalAmount) external override {
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalAmount,
+        uint256 _newCapitalReturned
+    ) external override {
         controller.onlyGovernanceOrEmergency();
         _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
         uint256 oldRewards = IStrategy(_strategy).strategyRewards();
@@ -153,7 +157,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             int256 diff = int256(_newTotalAmount.sub(oldRewards));
             absoluteReturns = absoluteReturns.add(diff);
         }
-        IStrategy(_strategy).updateStrategyRewards(_newTotalAmount);
+        IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
     }
 
     /**

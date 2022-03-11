@@ -33,7 +33,11 @@ interface IStrategyGarden {
         bytes calldata _opEncodedDatas
     ) external;
 
-    function updateStrategyRewards(address _strategy, uint256 _newTotalAmount) external;
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalAmount,
+        uint256 _newCapitalReturned
+    ) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
 }

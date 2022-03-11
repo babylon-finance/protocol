@@ -27,7 +27,9 @@ const STUCK = [
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
   // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
-  '0x22de22A50b00333159C54BFc1b9C0507e4759487',
+  // '0x22de22A50b00333159C54BFc1b9C0507e4759487',
+  '0x73c7c6ec73d2244c04b87ec0e3e64c0bc04580e4', // Heart Garden str 1
+  '0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', // Heart Garden str 2
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -275,7 +277,7 @@ describe('deploy', function () {
       await checkNAVStrategies();
     });
 
-    it.only('can execute stuck strategies', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
@@ -336,6 +338,50 @@ describe('deploy', function () {
 
     it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
+    });
+
+    it.only('can update rewards of heart garden strategies', async () => {
+      const babl = await getERC20(addresses.tokens.BABL);
+      const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
+      const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
+      const heartGarden = await ethers.getContractAt('IGarden', await firstStrategy.garden());
+      const gardenBalanceBefore = await babl.balanceOf(heartGarden.address);
+      await finalizeHeartStrategies();
+      const str1RewardsBefore = await firstStrategy.strategyRewards();
+      const str2RewardsBefore = await secondStrategy.strategyRewards();
+      const str1CapitalReturned = await firstStrategy.capitalReturned();
+      const str2CapitalReturned = await secondStrategy.capitalReturned();
+      const nstr1CapitalAllocated = await firstStrategy.capitalAllocated();
+      const nstr2CapitalAllocated = await secondStrategy.capitalAllocated();
+      const newStr1CapitalReturned = nstr1CapitalAllocated.mul(104).div(100);
+      const newStr2CapitalReturned = nstr2CapitalAllocated.mul(104).div(100);
+
+      const gardenBalanceAfter = await babl.balanceOf(heartGarden.address);
+      expect(gardenBalanceAfter).to.be.closeTo(
+        gardenBalanceBefore
+          .add(str1CapitalReturned)
+          .add(str2CapitalReturned)
+          .add(str1RewardsBefore)
+          .add(str2RewardsBefore),
+        gardenBalanceAfter.div(100),
+      );
+      const newStr1Rewards = eth(621);
+      const newStr2Rewards = eth(608);
+      await heartGarden
+        .connect(gnosis)
+        .updateStrategyRewards(firstStrategy.address, newStr1Rewards, newStr1CapitalReturned);
+      await heartGarden
+        .connect(gnosis)
+        .updateStrategyRewards(secondStrategy.address, newStr2Rewards, newStr2CapitalReturned);
+      const newGardenBalanceAfter = await babl.balanceOf(heartGarden.address);
+      const diffStr1 = newStr1Rewards.sub(str1RewardsBefore);
+      const diffStr2 = newStr2Rewards.sub(str2RewardsBefore);
+      expect(newGardenBalanceAfter).to.be.closeTo(
+        gardenBalanceAfter.add(diffStr1).add(diffStr2),
+        newGardenBalanceAfter.div(100),
+      );
+      expect(newStr1CapitalReturned).to.be.eq(await firstStrategy.capitalReturned());
+      expect(newStr2CapitalReturned).to.be.eq(await secondStrategy.capitalReturned());
     });
   });
 });
