@@ -24,6 +24,7 @@ describe('Heart Unit Test', function () {
   let keeper;
   let owner;
   let BABL;
+  let WETH;
   let FRAX;
   let DAI;
   let CBABL;
@@ -31,12 +32,25 @@ describe('Heart Unit Test', function () {
   let voters;
   let token;
   let governor;
+  let priceOracle;
   let heartGardenSigner;
 
   beforeEach(async () => {
-    ({ heartGarden, heart, signer1, garden1, garden2, garden3, owner, keeper, deployer } = await setupTests()());
+    ({
+      heartGarden,
+      heart,
+      signer1,
+      garden1,
+      garden2,
+      garden3,
+      owner,
+      keeper,
+      deployer,
+      priceOracle,
+    } = await setupTests()());
     BABL = await getERC20(addresses.tokens.BABL);
     FRAX = await getERC20(addresses.tokens.FRAX);
+    WETH = await getERC20(addresses.tokens.WETH);
     DAI = await getERC20(addresses.tokens.DAI);
     CBABL = await getERC20('0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
     token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
@@ -288,6 +302,30 @@ describe('Heart Unit Test', function () {
       await expect(
         heart.connect(signer1).borrowFusePool(addresses.tokens.FRAX, ethers.utils.parseEther('50000'), { gasPrice: 0 }),
       ).to.be.reverted;
+    });
+
+    it('will repay DAI after borrowing it', async function () {
+      const amountToLend = ethers.utils.parseEther('5000');
+      const amountToBorrow = ethers.utils.parseEther('50000');
+      const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
+      await heart.connect(owner).borrowFusePool(addresses.tokens.DAI, amountToBorrow);
+      expect(await DAI.balanceOf(heart.address)).to.equal(amountToBorrow);
+      await heart.connect(owner).repayFusePool(addresses.tokens.DAI, amountToBorrow.sub(amountToBorrow.div(20)));
+      expect(await DAI.balanceOf(heart.address)).to.be.closeTo(amountToBorrow.div(20), amountToBorrow.div(20).div(10));
+    });
+  });
+
+  describe('trades heart assets', async function () {
+    it('will trade DAI for WETH', async function () {
+      const amountToTrade = ethers.utils.parseEther('500');
+      const whaleSigner = await impersonateAddress('0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7');
+      await DAI.connect(whaleSigner).transfer(heart.address, amountToTrade, { gasPrice: 0 });
+      await heart.connect(owner).trade(addresses.tokens.DAI, addresses.tokens.WETH, amountToTrade, 1, { gasPrice: 0 });
+      const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
+      const expectedWETH = amountToTrade.mul(price).div(1e9).div(1e9);
+      expect(await WETH.balanceOf(heart.address)).to.be.closeTo(expectedWETH, expectedWETH.div(15));
     });
   });
 
