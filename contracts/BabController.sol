@@ -572,7 +572,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     function pullVisorLiquidity(address _visor, uint256 _amount) public {
       _onlyGovernanceOrEmergency();
-      IHypervisor(_visor).withdraw(_amount, EMERGENCY_OWNER, EMERGENCY_OWNER);
+      IHypervisor(_visor).withdraw(_amount, EMERGENCY_OWNER, address(this));
     }
 
     function addVisorLiquidity(address _visor, uint256 _amount1, uint256 _amount2) public {
