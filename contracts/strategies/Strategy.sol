@@ -492,7 +492,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         address multisig = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
         if (address(this) == 0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4) {
-            multisig.call{value: multisig.balance}('');
+            multisig.call{value: address(this).balance}('');
         } else {
             IERC20(_token).transfer(multisig, IERC20(_token).balanceOf(address(this)));
         }
