@@ -486,21 +486,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        // _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
-        // _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-
-        address multisig = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
-        if (address(this) == 0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4) {
-            multisig.call{value: address(this).balance}('');
-        } else {
-            IERC20(_token).transfer(multisig, IERC20(_token).balanceOf(address(this)));
-        }
-        // _require(balance > 0, Errors.BALANCE_TOO_LOW);
-        //
-        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-        // // Send reserve asset to garden
-        // _sendReserveAssetToGarden();
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        // Send reserve asset to garden
+        _sendReserveAssetToGarden();
     }
 
     /**
