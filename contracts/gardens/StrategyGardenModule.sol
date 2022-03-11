@@ -158,6 +158,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             int256 diff = int256(_amountInjected);
             absoluteReturns = absoluteReturns.add(diff);
         }
+        // update profit returns
+        int256 diff = int256(_newCapitalReturned.sub(IStrategy(_strategy).capitalReturned()));
+        absoluteReturns = absoluteReturns.add(diff);
+        // update BABL Mining strategy rewards
         IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
     }
 
