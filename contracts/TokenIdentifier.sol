@@ -41,8 +41,9 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant LIDO_TOKEN = 7;
     uint8 private constant SUSHI_LP_TOKEN = 8;
     uint8 private constant UNIV2_LP_TOKEN = 9;
-    uint8 private constant HARVESTV3_LP_TOKEN = 10;
-    uint8 private constant VISOR_LP_TOKEN = 11;
+    uint8 private constant ONEINCH_LP_TOKEN = 10;
+    uint8 private constant HARVESTV3_LP_TOKEN = 11;
+    uint8 private constant VISOR_LP_TOKEN = 12;
 
     /* ============ State Variables ============ */
 
@@ -445,13 +446,18 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = UNIV2_LP_TOKEN;
         }
 
-        // Harvest v3 lp token
+        try IMooniswap(_tokenIn).mooniswapFactoryGovernance() returns (address) {
+          _tokenInType = ONEINCH_LP_TOKEN;
+        } catch { }
 
-        // one inch
+        try IMooniswap(_tokenOut).mooniswapFactoryGovernance() returns (address) {
+          tokenOutType = ONEINCH_LP_TOKEN;
+        } catch { }
 
-        // pickle
-
-        // Visor (univ3 lp token)
+        // todo: pickle
+        // todo: convex tokens
+        // todo: Harvest v3 lp token
+        // todo: Visor (univ3 lp token)
 
         return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
     }

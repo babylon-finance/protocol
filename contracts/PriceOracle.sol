@@ -279,11 +279,11 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        // univ2 or sushi
-        if (tokenInType == 8 || tokenInType == 9) {
+        // univ2 or sushi or mooniswap
+        if (tokenInType == 8 || tokenInType == 9 || tokenInType == 10) {
             return _getPriceUniV2LpToken(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
         }
-        if (tokenOutType == 8 || tokenOutType == 9) {
+        if (tokenOutType == 8 || tokenOutType == 9 || tokenInType == 10) {
             return getPrice(_tokenIn, WETH).preciseDiv(_getPriceUniV2LpToken(_tokenOut, WETH));
         }
 
