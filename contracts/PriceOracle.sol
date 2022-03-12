@@ -640,11 +640,13 @@ contract PriceOracle is Ownable, IPriceOracle {
                 balance = _pool.balance;
             }
             if (price != 0 && balance != 0) {
-                result = result.add(SafeDecimalMath.normalizeAmountTokens(
-                    asset,
-                    _denominator,
-                    balance.preciseDiv(lpToken.totalSupply()).preciseDiv(price)
-                ));
+                result = result.add(
+                    SafeDecimalMath.normalizeAmountTokens(
+                        asset,
+                        _denominator,
+                        balance.preciseDiv(lpToken.totalSupply()).preciseDiv(price)
+                    )
+                );
             }
         }
         return result;

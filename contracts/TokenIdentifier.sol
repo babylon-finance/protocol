@@ -447,12 +447,12 @@ contract TokenIdentifier is ITokenIdentifier {
         }
 
         try IMooniswap(_tokenIn).mooniswapFactoryGovernance() returns (address) {
-          _tokenInType = ONEINCH_LP_TOKEN;
-        } catch { }
+            _tokenInType = ONEINCH_LP_TOKEN;
+        } catch {}
 
         try IMooniswap(_tokenOut).mooniswapFactoryGovernance() returns (address) {
-          tokenOutType = ONEINCH_LP_TOKEN;
-        } catch { }
+            tokenOutType = ONEINCH_LP_TOKEN;
+        } catch {}
 
         // todo: pickle
         // todo: convex tokens
