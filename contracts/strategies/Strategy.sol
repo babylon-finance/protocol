@@ -486,13 +486,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _require(balance > 0, Errors.BALANCE_TOO_LOW);
-
         _trade(_token, balance, garden.reserveAsset(), _newSlippage);
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
@@ -577,6 +572,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function handleWeth(bool _isDeposit, uint256 _wethAmount) public override {
         _onlyOperation();
         _handleWeth(_isDeposit, _wethAmount);
+    }
+
+    /** PRIVILEGE FUNCTION
+     * Update strategy rewards by governance through garden
+     * @param _newTotalRewards   New total rewards
+     */
+    function updateStrategyRewards(uint256 _newTotalRewards, uint256 _newCapitalReturned) external override {
+        _require(msg.sender == address(garden), Errors.STRATEGY_GARDEN_MISMATCH);
+        strategyRewards = _newTotalRewards;
+        capitalReturned = _newCapitalReturned;
     }
 
     /* ============ External Getter Functions ============ */
@@ -1070,4 +1075,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV21 is Strategy {}
+contract StrategyV22 is Strategy {}
