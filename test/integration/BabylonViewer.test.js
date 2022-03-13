@@ -106,7 +106,7 @@ describe('Babylon Viewer', function () {
 
       expect(strategyDetails[2][0]).to.equal(1); // Ops count
       expect(strategyDetails[2][1]).to.equal(WETH_STRATEGY_PARAMS.stake); // Stake
-      expect(strategyDetails[2][2]).to.equal(eth(0.1)); // Quorum
+      expect(strategyDetails[2][2]).to.equal(0); // Quorum
       expect(strategyDetails[2][3]).to.equal(0); // Negative votes
       expect(strategyDetails[2][4]).to.equal(0); // Capital Allocated
       expect(strategyDetails[2][5]).to.equal(0); // Capital Returned

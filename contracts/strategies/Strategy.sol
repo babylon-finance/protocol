@@ -5,6 +5,7 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -257,9 +258,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         expectedReturn = _expectedReturn;
-
-        votes[_strategist] = _stake.toInt256();
-        totalPositiveVotes = _stake;
     }
 
     /* ============ External Functions ============ */
