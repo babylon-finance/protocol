@@ -1,5 +1,5 @@
 const { deployments } = require('hardhat');
-const { GARDEN_PARAMS, BABL_GARDEN_PARAMS, USDC_GARDEN_PARAMS } = require('lib/constants.js');
+const { GARDEN_PARAMS, BABL_GARDEN_PARAMS } = require('lib/constants.js');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { fund } = require('lib/whale');
@@ -206,21 +206,6 @@ async function setUpFixture(
       {},
     );
 
-  await babController
-    .connect(signer1)
-    .createGarden(
-      addresses.tokens.USDC,
-      'Absolute USDC Return [beta]',
-      'EYFA',
-      'http...',
-      0,
-      USDC_GARDEN_PARAMS,
-      ethers.BigNumber.from(5e3 * 1e6),
-      [false, false, false],
-      [0, 0, 0],
-      {},
-    );
-
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('IGarden', gardens[0]);
@@ -234,8 +219,6 @@ async function setUpFixture(
   const heartGarden = await ethers.getContractAt('IGarden', gardens[4]);
 
   const aaveGarden = await ethers.getContractAt('IGarden', gardens[5]);
-
-  const usdcGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
   // Set the heart
   await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
@@ -314,7 +297,6 @@ async function setUpFixture(
     garden4,
     heartGarden,
     aaveGarden,
-    usdcGarden,
 
     strategy11,
     strategy21,
