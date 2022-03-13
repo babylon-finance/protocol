@@ -189,12 +189,13 @@ contract BorrowOperation is Operation {
         }
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, borrowToken);
         uint256 price = _getPrice(_garden.reserveAsset(), borrowToken);
-        // if there are liquidations
-        uint256 borrowTokenBalance = IERC20(borrowToken).balanceOf(msg.sender);
+        // if there are liquidations or it is the last op (borrowings not used)
+        uint256 borrowTokenBalance = IERC20(borrowToken == address(0) ? WETH : borrowToken).balanceOf(msg.sender);
         if (borrowTokenBalance > 0) {
-            tokensOwed = tokensOwed.sub(borrowTokenBalance);
+            tokensOwed = tokensOwed >= borrowTokenBalance ? tokensOwed.sub(borrowTokenBalance) : 0;
         }
         uint256 NAV =
+            tokensOwed == 0 ? 0 :
             SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
 
         return (NAV, false);

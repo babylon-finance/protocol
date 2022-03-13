@@ -722,7 +722,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
-        address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             // _getOpDecodedData guarantee backward compatibility with OpData
@@ -736,22 +735,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     negativeNav = negativeNav.add(opNAV);
                 }
             } catch {}
-        }
-        uint256 lastOp = opTypes.length - 1;
-        if (opTypes[lastOp] == 4) {
-            // Backward compatibility
-            // pointer to the starting byte of the ethereum token address
-            address token =
-                opDatas.length > 0
-                    ? opDatas[lastOp]
-                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12);
-            uint256 borrowBalance = IERC20(token == address(0) ? WETH : token).balanceOf(address(this));
-            if (borrowBalance > 0) {
-                uint256 price = _getPrice(reserveAsset, token);
-                positiveNav = positiveNav.add(
-                    SafeDecimalMath.normalizeAmountTokens(token, reserveAsset, borrowBalance).preciseDiv(price)
-                );
-            }
         }
         if (negativeNav > positiveNav) {
             // Underwater, will display using operation NAV

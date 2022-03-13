@@ -229,8 +229,10 @@ contract LendOperation is Operation {
 
     function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {
         // Change to weth if needed
-        if (_borrowToken == address(0) && address(msg.sender).balance > 0) {
-            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+        if (_borrowToken == address(0)) {
+            if (address(msg.sender).balance > 0) {
+              IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+            }
             _borrowToken = WETH;
         }
         // Trade borrow token (from liquidations)
