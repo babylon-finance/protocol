@@ -22,6 +22,11 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
 
+  if (deployment.newlyDeployed) {
+    console.log(`Adding operation ${contract}(${deployment.address}) to BabController`);
+    await (await controller.setOperation(4, deployment.address, { ...(await getGasPrice()) })).wait();
+  }
+
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
