@@ -1681,6 +1681,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // strategyDetails[11]: distanceValue
         // strategyDetails[12]: startingGardenSupply
         // strategyDetails[13]: endingGardenSupply
+        // strategyDetails[14]: maxTradeSlippagePercentage
         // profitData array mapping:
         // profitData[0]: profit
         // profitData[1]: distance
@@ -1692,7 +1693,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
-        strategyDetails[7] = IStrategy(_strategy).getNAV();
+        uint256 strategyNav = IStrategy(_strategy).getNAV();
+        // We estimate final returns substracting slippage
+        strategyDetails[7] = strategyNav.sub(strategyNav.preciseMul(strategyDetails[14]));
         profitData[0] = strategyDetails[7] >= strategyDetails[6];
         profitData[1] = strategyDetails[7] >= strategyDetails[8];
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
