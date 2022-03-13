@@ -195,8 +195,11 @@ contract BorrowOperation is Operation {
             tokensOwed = tokensOwed >= borrowTokenBalance ? tokensOwed.sub(borrowTokenBalance) : 0;
         }
         uint256 NAV =
-            tokensOwed == 0 ? 0 :
-            SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
+            tokensOwed == 0
+                ? 0
+                : SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(
+                    price
+                );
 
         return (NAV, false);
     }

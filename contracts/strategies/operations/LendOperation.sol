@@ -231,7 +231,7 @@ contract LendOperation is Operation {
         // Change to weth if needed
         if (_borrowToken == address(0)) {
             if (address(msg.sender).balance > 0) {
-              IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
             }
             _borrowToken = WETH;
         }
