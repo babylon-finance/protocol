@@ -19,7 +19,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, ethers.utils.parseEther('0.35'), '0xC7125E3A2925877C7371d579D29dAe4729Ac9033'],
+    args: [controller.address, ethers.utils.parseEther('0.40'), '0xC7125E3A2925877C7371d579D29dAe4729Ac9033'],
     log: true,
     ...(await getGasPrice()),
   });
