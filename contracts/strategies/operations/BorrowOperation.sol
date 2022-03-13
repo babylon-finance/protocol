@@ -117,8 +117,12 @@ contract BorrowOperation is Operation {
     ) internal view returns (uint256) {
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
+        // Use the % max we can borrow (maxCollateral)
+        // Use the % of the collateral asset
         uint256 amountToBorrow =
-            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
+            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
+                IBorrowIntegration(_integration).getCollateralFactor(_asset)
+            );
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
     }

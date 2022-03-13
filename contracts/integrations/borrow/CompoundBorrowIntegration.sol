@@ -118,6 +118,12 @@ contract CompoundBorrowIntegration is BorrowIntegration {
         return liquidity;
     }
 
+    function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
+        ICToken ctoken = ICToken(assetToCToken[_assetToken]);
+        (, uint256 collateral) = IComptroller(comptroller).markets(address(ctoken));
+        return collateral;
+    }
+
     /* ============ Overriden Functions ============ */
 
     function _overrideMappings(IComptroller _comptroller) private {
