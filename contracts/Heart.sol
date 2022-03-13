@@ -687,6 +687,6 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 }
 
-contract HeartV2 is Heart {
+contract HeartV3 is Heart {
     constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }
