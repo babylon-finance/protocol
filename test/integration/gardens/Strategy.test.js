@@ -12,8 +12,10 @@ const {
   injectFakeProfits,
   deposit,
   DEFAULT_STRATEGY_PARAMS,
+  USDC_GARDEN_PARAMS,
 } = require('fixtures/StrategyHelper.js');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { impersonateAddress } = require('lib/rpc');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
@@ -31,6 +33,7 @@ describe('Strategy', function () {
   let signer3;
   let garden1;
   let garden2;
+  let usdcGarden;
   let strategy11;
   let strategy21;
   let wethToken;
@@ -68,6 +71,7 @@ describe('Strategy', function () {
       signer1,
       garden1,
       garden2,
+      usdcGarden,
       treasury,
       heart,
       strategy11,
@@ -192,6 +196,44 @@ describe('Strategy', function () {
       const [, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
       expect(address).to.equal(strategyCandidate.address);
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.equal(ethers.BigNumber.from(0));
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
+    it('should push correct decimals for voting (18) for a USDC Garden', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'dataset',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        usdcGarden,
+      );
+      const totalPositiveVotes = await strategyContract.totalPositiveVotes();
+      const stake = await strategyContract.stake(); // stake of 100 USDC;
+      const signer1Balance = await usdcGarden.balanceOf(signer1.getAddress());
+      const signer2Balance = await usdcGarden.balanceOf(signer2.getAddress());
+      // The stake is counted as votes of the strategists (in 18 decimals)
+      expect(totalPositiveVotes).to.eq(stake.mul(10 ** (18 - 6))); // 18 decimals for garden tokens and 6 for reserveAsset
+
+      await strategyContract
+        .connect(keeper)
+        .resolveVoting([signer1.getAddress(), signer2.getAddress()], [signer1Balance, signer2Balance], 42, {
+          gasPrice: 0,
+        });
+
+      expect(await strategyContract.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
+      expect(await strategyContract.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
+
+      const [address, , , , totalPositiveVotes2, totalNegativeVotes] = await strategyContract.getStrategyDetails();
+      // The whole balance is counted as votes of the strategists replacing stake
+      expect(totalPositiveVotes2).to.eq(signer1Balance);
+      expect(totalNegativeVotes).to.equal(0);
+
+      const [, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
