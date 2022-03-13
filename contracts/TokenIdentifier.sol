@@ -8,6 +8,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {IMooniswap} from './interfaces/external/1inch/IMooniswap.sol';
 import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
 import {IWstETH} from './interfaces/external/lido/IWstETH.sol';
@@ -447,7 +448,7 @@ contract TokenIdentifier is ITokenIdentifier {
         }
 
         try IMooniswap(_tokenIn).mooniswapFactoryGovernance() returns (address) {
-            _tokenInType = ONEINCH_LP_TOKEN;
+            tokenInType = ONEINCH_LP_TOKEN;
         } catch {}
 
         try IMooniswap(_tokenOut).mooniswapFactoryGovernance() returns (address) {
