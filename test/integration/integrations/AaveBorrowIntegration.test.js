@@ -125,7 +125,7 @@ describe('AaveBorrowIntegrationTest', function () {
   });
 
   describe('Aave Borrow', function () {
-    pick(GARDENS).forEach(({ token, name }) => {
+    pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
       it(`gets NAV of a borrow/lend strategy at ${name} garden`, async function () {
         const strategyContract = await supplyBorrowStrategyNAV(DAI, WETH, token);
         const nav = await strategyContract.getNAV();

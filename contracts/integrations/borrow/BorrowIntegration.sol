@@ -63,6 +63,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
 
     /* ============ External Functions ============ */
     // Governance function
+    // Max Borrow Factor
     function updateMaxCollateralFactor(uint256 _newMaxCollateralFactor)
         external
         override
@@ -70,6 +71,14 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         onlySystemContract
     {
         maxCollateralFactor = _newMaxCollateralFactor;
+    }
+
+    /**
+     * Returns the collateral factor of an asset
+     * @param _assetToken Asset to get the collateral factor
+     */
+    function getCollateralFactor(address _assetToken) external view override returns (uint256) {
+        return _getCollateralFactor(_assetToken);
     }
 
     /**
@@ -345,6 +354,8 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         require(false, 'This method must be overriden');
         return address(0);
     }
+
+    function _getCollateralFactor(address _asset) internal view virtual returns (uint256);
 
     function _getSpender(
         address /* asset */
