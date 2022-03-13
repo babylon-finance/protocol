@@ -134,6 +134,8 @@ contract LendOperation is Operation {
                 IStrategy(msg.sender).trade(rewardsToken, rewardsBalance, assetToken, 70e15);
             }
         }
+        // Liquidations
+        _tradeLiquidationsToAsset(_borrowToken, assetToken);
         return (assetToken, IERC20(assetToken).balanceOf(msg.sender), 0);
     }
 
@@ -223,6 +225,18 @@ contract LendOperation is Operation {
             numTokensToRedeem,
             exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
         );
+    }
+
+    function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {
+        // Change to weth if needed
+        if (_borrowToken == address(0) && address(msg.sender).balance > 0) {
+            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+            _borrowToken = WETH;
+        }
+        // Trade borrow token (from liquidations)
+        if (IERC20(_borrowToken).balanceOf(msg.sender) > 1e6) {
+            IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
+        }
     }
 
     function _getRemainingDebt(
