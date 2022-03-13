@@ -258,10 +258,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         expectedReturn = _expectedReturn;
-        // Stake normalization for voting
-        uint256 stakeVotes = _stake.mul(10**(uint256(18).sub(ERC20Upgradeable(garden.reserveAsset()).decimals())));
-        votes[_strategist] = stakeVotes.toInt256();
-        totalPositiveVotes = stakeVotes;
     }
 
     /* ============ External Functions ============ */
