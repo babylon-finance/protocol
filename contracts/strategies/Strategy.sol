@@ -675,7 +675,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[13] = endingGardenSupply;
         if (executedAt > 0 && exitedAt == 0) {
             uint256 endAt = executedAt.add(duration);
-            uint256 remaining = endAt > block.timestamp ? endAt.sub(block.timestamp).preciseDiv(duration) : 1e18;
+            uint256 remaining = endAt > block.timestamp ? (uint256(1e18).sub(endAt.sub(block.timestamp).preciseDiv(duration))) : 1e18;
             data[14] = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(7e17); //70%
         } else {
             data[14] = 0;
