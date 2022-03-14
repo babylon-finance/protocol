@@ -545,6 +545,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
         uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
+        if (i == j) return 0;
         if (underlying) {
             price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
         } else {
