@@ -41,6 +41,7 @@ describe('deploy', function () {
   let gardensNAV;
   let snapshotId;
   let distributor;
+  let priceOracle;
   let gnosis;
 
   const getStrategyFuseRewards = async (_strategy) => {
@@ -208,7 +209,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
+      ({ owner, gov, priceOracle, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
@@ -241,7 +242,13 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
+      ({ owner, gov, keeper, priceOracle, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
+    });
+
+    it('can get price of AAVE', async () => {
+      const price = await priceOracle.getPrice(addresses.tokens.WETH, addresses.tokens.AAVE);
+      console.log('price', ethers.utils.formatEther(price));
+      expect(price).to.be.gt(0);
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
