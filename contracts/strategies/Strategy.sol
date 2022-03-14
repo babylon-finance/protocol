@@ -673,7 +673,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         data[12] = startingGardenSupply;
         data[13] = endingGardenSupply;
-        data[14] = maxTradeSlippagePercentage;
+        if (executedAt > 0 && exitedAt == 0) {
+            uint256 remaining = executedAt.add(duration).sub(block.timestamp).preciseDiv(duration);
+            data[14] = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(7e17); //70%
+        } else {
+            data[14] = 0;
+        }
         return (strategist, data, boolData);
     }
 
