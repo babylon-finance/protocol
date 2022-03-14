@@ -1693,10 +1693,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         }
         // Strategy has not finished yet, lets try to estimate its mining rewards
         // As the strategy has not ended we replace the capital returned value by the NAV
-        uint256 strategyNav = IStrategy(_strategy).getNAV();
-        // We estimate final returns substracting a portion of the maxSlippage set by strategist
-        // If maxTradeSlippage is set to 3% we substract a 20% of 3%, which is 0.6%
-        strategyDetails[7] = strategyNav.sub(strategyNav.preciseMul(strategyDetails[14].preciseMul(2e17)));
+        strategyDetails[7] = IStrategy(_strategy).getNAV();
         profitData[0] = strategyDetails[7] >= strategyDetails[6];
         profitData[1] = strategyDetails[7] >= strategyDetails[8];
         strategyDetails[10] = profitData[0] ? strategyDetails[7].sub(strategyDetails[6]) : 0; // no profit
