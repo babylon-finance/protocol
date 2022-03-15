@@ -5,6 +5,7 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -257,9 +258,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         expectedReturn = _expectedReturn;
-
-        votes[_strategist] = _stake.toInt256();
-        totalPositiveVotes = _stake;
     }
 
     /* ============ External Functions ============ */
@@ -675,7 +673,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         data[12] = startingGardenSupply;
         data[13] = endingGardenSupply;
-        data[14] = maxTradeSlippagePercentage;
+        if (executedAt > 0 && exitedAt == 0) {
+            uint256 endAt = executedAt.add(duration);
+            uint256 remaining =
+                endAt > block.timestamp ? (uint256(1e18).sub(endAt.sub(block.timestamp).preciseDiv(duration))) : 1e18;
+            data[14] = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(7e17); //70%
+        } else {
+            data[14] = 0;
+        }
         return (strategist, data, boolData);
     }
 
@@ -1059,4 +1064,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV22 is Strategy {}
+contract StrategyV24 is Strategy {}

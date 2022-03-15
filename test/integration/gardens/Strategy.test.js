@@ -142,7 +142,7 @@ describe('Strategy', function () {
       expect(strategist).to.equal(signer1.address);
       expect(stake).to.equal(eth('0.1'));
 
-      expect(totalPositiveVotes).to.equal(eth('0.1'));
+      expect(totalPositiveVotes).to.equal(0);
       expect(totalNegativeVotes).to.equal(0);
 
       expect(operationsCount).to.equal(1);
