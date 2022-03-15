@@ -328,4 +328,6 @@ library Errors {
     uint256 internal constant PRICE_PER_SHARE_WRONG = 118;
     // Heart asset to purchase is same
     uint256 internal constant HEART_ASSET_PURCHASE_INVALID = 119;
+    // Only Heart Garden
+    uint256 internal constant ONLY_HEART_GARDEN = 120;
 }

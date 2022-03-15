@@ -208,6 +208,8 @@ interface ICoreGarden {
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
+    function claimAndStakeReturns(uint256 _minAmountOut, address[] calldata _finalizedStrategies) external;
+
     function claimRewardsBySig(
         uint256 _babl,
         uint256 _profits,
@@ -216,6 +218,27 @@ interface ICoreGarden {
         uint256 _fee,
         address signer,
         bytes memory signature
+    ) external;
+
+    function claimAndStakeRewardsBySig(
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _nonceHeart,
+        uint256 _maxFee,
+        uint256 _fee,
+        uint256 _pricePerShare,
+        address signer,
+        bytes memory signature
+    ) external;
+
+    function stakeRewardsFromGarden(
+        address _contributor,
+        uint256 _babl,
+        uint256 _minAmountOut,
+        uint256 _nonceHeart,
+        uint256 _pricePerShare
     ) external;
 
     function claimNFT() external;
