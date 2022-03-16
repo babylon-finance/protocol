@@ -219,22 +219,6 @@ describe('deploy', function () {
       await canUnwindAllActiveStrategies();
     });
 
-    it.only('check heart debt position', async () => {
-      const comptroller = await ethers.getContractAt('IComptroller', '0xc7125e3a2925877c7371d579d29dae4729ac9033');
-      const liquidity = await comptroller.getAccountLiquidity('0x51e6775b7be2ea1d20ca02cfeeb04453366e72c8');
-      const cBABL = await ethers.getContractAt('ICToken', '0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
-      const bablPosition = await cBABL.getAccountSnapshot('0x51e6775b7be2ea1d20ca02cfeeb04453366e72c8');
-      const cbablMarket = await comptroller.markets('0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
-      const cTokenBalance = bablPosition[1];
-      const bablPrice = await priceOracle.getPrice(addresses.tokens.BABL, addresses.tokens.DAI);
-      const bablCollateral = cTokenBalance.mul(bablPosition[3]).div(eth());
-      console.log('babl Price', ethers.utils.formatEther(bablPrice));
-      const maxAmountsDaiBorrowable = bablCollateral.mul(bablPrice).div(eth()).mul(cbablMarket[1]).div(eth());
-      console.log('babl as collateral', ethers.utils.formatEther(bablCollateral));
-      console.log('max amout dai borrowable', ethers.utils.formatEther(maxAmountsDaiBorrowable));
-      console.log('liquidity', ethers.utils.formatEther(liquidity[1]));
-    });
-
     it('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
