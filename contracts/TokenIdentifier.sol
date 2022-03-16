@@ -448,11 +448,11 @@ contract TokenIdentifier is ITokenIdentifier {
         if (tokenInType == 0) {
             string memory tokenInSymbol = ERC20(_tokenIn).symbol();
             if (keccak256(bytes(tokenInSymbol)) == SUSHI_SYMBOL) {
-              tokenInType = SUSHI_LP_TOKEN;
+                tokenInType = SUSHI_LP_TOKEN;
             }
             // Checks univ2
             if (keccak256(bytes(tokenInSymbol)) == UNI_SYMBOL) {
-              tokenInType = UNIV2_LP_TOKEN;
+                tokenInType = UNIV2_LP_TOKEN;
             }
         }
         if (tokenOutType == 0) {
