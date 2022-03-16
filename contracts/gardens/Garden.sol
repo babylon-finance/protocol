@@ -564,8 +564,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      *   to stake user BABL rewards as deposits into the Heart Garden.
      * @dev
      *   Should be called only by Gardens and has to be different garden from the Heart Garden.
-     *   It should be last part (2/2) of a multi-call tx after keeper calls claimAndStakeRewardsBySig
-     *   on behalf of user meta-tx or after the user call claimAndStakeReturns on a garden.
+     *   It should be first part (1/2) of a multi-call tx
+     *   after it, BABL rewards are sent from RD to the Heart Garden (2/2)
+     *   It is used either by claimAndStakeReturns (by user) or claimAndStakeRewardsBySig (by keeper).
      *
      * @param _contributor     Signer of the tx
      * @param _babl            BABL rewards from mining program.
