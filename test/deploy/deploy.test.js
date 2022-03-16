@@ -35,7 +35,6 @@ describe('deploy', function () {
   let owner;
   let gov;
   let keeper;
-  let priceOracle;
   let gardens;
   let strategyNft;
   let valuer;
@@ -209,7 +208,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, priceOracle, strategyNft, valuer, gardens, distributor } = await getContracts());
+      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
