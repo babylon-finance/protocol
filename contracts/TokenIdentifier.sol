@@ -402,14 +402,24 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = SYNTH_TOKEN;
         }
 
-        // Curve LP Token
-        address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenIn);
-        if (crvPool != address(0)) {
-            tokenInType = CURVE_LP_TOKEN;
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
-        crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenOut);
-        if (crvPool != address(0)) {
-            tokenOutType = CURVE_LP_TOKEN;
+
+        if (tokenInType == 0) {
+            // Curve LP Token
+            address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            if (crvPool != address(0)) {
+                tokenInType = CURVE_LP_TOKEN;
+            }
+        }
+
+        if (tokenOutType == 0) {
+            address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            if (crvPool != address(0)) {
+                tokenOutType = CURVE_LP_TOKEN;
+            }
         }
 
         // Yearn vaults
@@ -429,22 +439,35 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = LIDO_TOKEN;
         }
 
-        // Check sushi pairs (univ2)
-        string memory tokenInSymbol = ERC20(_tokenIn).symbol();
-        string memory tokenOutSymbol = ERC20(_tokenOut).symbol();
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
+        }
 
-        if (keccak256(bytes(tokenInSymbol)) == SUSHI_SYMBOL) {
-            tokenInType = SUSHI_LP_TOKEN;
+        // Check sushi pairs (univ2)
+        if (tokenInType == 0) {
+            string memory tokenInSymbol = ERC20(_tokenIn).symbol();
+            if (keccak256(bytes(tokenInSymbol)) == SUSHI_SYMBOL) {
+              tokenInType = SUSHI_LP_TOKEN;
+            }
+            // Checks univ2
+            if (keccak256(bytes(tokenInSymbol)) == UNI_SYMBOL) {
+              tokenInType = UNIV2_LP_TOKEN;
+            }
         }
-        if (keccak256(bytes(tokenOutSymbol)) == SUSHI_SYMBOL) {
-            tokenOutType = SUSHI_LP_TOKEN;
+        if (tokenOutType == 0) {
+            string memory tokenOutSymbol = ERC20(_tokenOut).symbol();
+            if (keccak256(bytes(tokenOutSymbol)) == SUSHI_SYMBOL) {
+                tokenOutType = SUSHI_LP_TOKEN;
+            }
+            if (keccak256(bytes(tokenOutSymbol)) == UNI_SYMBOL) {
+                tokenOutType = UNIV2_LP_TOKEN;
+            }
         }
-        // Checks univ2
-        if (keccak256(bytes(tokenInSymbol)) == UNI_SYMBOL) {
-            tokenInType = UNIV2_LP_TOKEN;
-        }
-        if (keccak256(bytes(tokenOutSymbol)) == UNI_SYMBOL) {
-            tokenOutType = UNIV2_LP_TOKEN;
+
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
 
         try IMooniswap(_tokenIn).mooniswapFactoryGovernance() returns (address) {
