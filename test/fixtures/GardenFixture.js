@@ -89,6 +89,13 @@ async function setUpFixture(
     ],
   });
 
+  // fund with local hardhat BABL Token created to create a Test Heart Garden of local BABL reserveAsset
+  const treasurySigner = await impersonateAddress(treasury.address);
+  await bablToken.connect(owner).enableTokensTransfers();
+  const amount = eth('1000');
+  await bablToken.connect(treasurySigner).transfer(signer1.address, amount, { gasPrice: 0 });
+  await bablToken.connect(signer1).approve(babController.address, amount, { gasPrice: 0 });
+
   const TOKEN_MAP = {
     [addresses.tokens.WETH]: weth,
     [addresses.tokens.DAI]: dai,
@@ -206,6 +213,21 @@ async function setUpFixture(
       {},
     );
 
+  await babController
+    .connect(signer1)
+    .createGarden(
+      bablToken.address,
+      'The Test Heart of Babylon',
+      'hBABL',
+      'http...',
+      5,
+      BABL_GARDEN_PARAMS,
+      eth('200'),
+      [true, false, false],
+      [0, 0, 0],
+      {},
+    );
+
   const gardens = await babController.getGardens();
 
   const garden1 = await ethers.getContractAt('IGarden', gardens[0]);
@@ -220,8 +242,13 @@ async function setUpFixture(
 
   const aaveGarden = await ethers.getContractAt('IGarden', gardens[5]);
 
+  const heartTestGarden = await ethers.getContractAt('IGarden', gardens[6]);
+
   // Set the heart
   await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
+
+  // Set the heart garden
+  await heart.connect(owner).setHeartGardenAddress(heartGarden.address, { gasPrice: 0 });
 
   // Grants community access
   for (let i = 0; i < gardens.length; i += 1) {
@@ -297,6 +324,7 @@ async function setUpFixture(
     garden4,
     heartGarden,
     aaveGarden,
+    heartTestGarden,
 
     strategy11,
     strategy21,
