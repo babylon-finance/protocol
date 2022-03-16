@@ -119,12 +119,18 @@ contract BorrowOperation is Operation {
         // % of the total collateral value in the borrow token
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
+        uint256 percentage;
+        try IBorrowIntegration(_integration).getCollateralFactor(_asset) returns (uint256 collateralPctg) {
+            percentage = collateralPctg;
+        } catch {
+            percentage = 1e18; // 100%
+        }
         uint256 amountToBorrow =
             _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
-                IBorrowIntegration(_integration).getCollateralFactor(_asset)
+                percentage
             );
-        uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
-        return normalizedAmount;
+
+        return SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
     }
 
     /**
