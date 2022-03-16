@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -97,7 +96,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
     bytes32 private constant STAKE_REWARDS_BY_SIG_TYPEHASH =
         keccak256(
-            'RewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee)'
+            'StakeRewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee)'
         );
 
     /* ============ Structs ============ */
@@ -435,7 +434,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         );
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
-        _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
         // Make BABL Mining staking as deposit to Heart Garden
         IGarden heartGarden = IGarden(address(IHeart(controller.heart()).heartGarden()));
         (, , , , , , , , , uint256 _nonceHeart) = heartGarden.getContributor(msg.sender);
@@ -446,6 +444,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _nonceHeart, // nonceHeart
             0
         ); // pricePerShare to be calculated during tx
+        // sendRewardsInternal must go after stakeRewardsFromGarden to avoid issues with pricePerShare
+        _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
     }
 
     /**
@@ -546,8 +546,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
-        // Send BABL rewards to Heart Garden on behalf (user stake) and profit rewards (reserveAsset) to user wallet
-        _sendRewardsInternal(signer, _babl, _profits, true); // true = stake babl rewards, false = no stake
         // Make accounting of deposit of BABL into Heart Garden
         IGarden(address(IHeart(controller.heart()).heartGarden())).stakeRewardsFromGarden(
             signer,
@@ -556,6 +554,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _nonceHeart,
             _pricePerShare
         );
+        // Send BABL rewards to Heart Garden on behalf (user stake) and profit rewards (reserveAsset) to user wallet
+        _sendRewardsInternal(signer, _babl, _profits, true); // true = stake babl rewards, false = no stake
     }
 
     /**
@@ -584,18 +584,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address heartGarden = address(IHeart(controller.heart()).heartGarden());
         _require(controller.isGarden(msg.sender) && msg.sender != heartGarden, Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == heartGarden, Errors.ONLY_HEART_GARDEN);
-        (, , uint256 claimedAt, , , , , , , ) = IGarden(msg.sender).getContributor(_contributor);
-        // Security check that this tx is part of a multi-tx during a user claimAndStake flow
-        _require(claimedAt == block.timestamp, Errors.INVALID_SIGNER);
         _onlyValidSigner(_contributor, _nonceHeart);
-        if (_pricePerShare == 0) {
-            // claimAndStakeReturns standard user tx
-            // pricePerShare is 0 as default as it needs to be calculated on chain
-            // gas expensive
-            _pricePerShare = _getPricePerShare();
-        }
-        // Staking is in BABL (amountIn == _babl == _stakingAmount)
-        _internalDeposit(_babl, _minAmountOut, _contributor, _contributor, _pricePerShare, minContribution, _babl);
+        // Staking is in BABL
+        _internalDeposit(
+            _babl,
+            _minAmountOut,
+            _contributor,
+            _contributor,
+            _pricePerShare == 0 ? _getPricePerShare() : _pricePerShare,
+            minContribution,
+            _babl
+        );
     }
 
     /**
