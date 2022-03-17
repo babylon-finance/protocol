@@ -83,7 +83,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private constant baseThreshold = 1000;
-    int24 private constant INITIAL_TWAP_DEVIATION = 700; // locally for testing. It should be halved in main
+    int24 private constant INITIAL_TWAP_DEVIATION = 800; // locally for testing. It should be halved in main
 
     /* ============ State Variables ============ */
 
@@ -498,7 +498,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         // Normalize to reserve asset
         if (denominator != _reserveAsset) {
-            uint256 price = getPrice(denominator, _reserveAsset);
+            uint256 price = _getUniV3PriceNaive(denominator, _reserveAsset);
             // price is always in 18 decimals
             // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
             // normalization into reserveAsset decimals
