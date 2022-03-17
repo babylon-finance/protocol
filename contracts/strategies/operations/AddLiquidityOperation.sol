@@ -191,58 +191,23 @@ contract AddLiquidityOperation is Operation {
         address pool = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         pool = IPoolIntegration(_integration).getPool(pool);
         IERC20 lpToken = IERC20(IPoolIntegration(_integration).getLPToken(pool));
-        // Get price from pool
-        uint256 price = 0;
+        // Get price multiplier if needed (harvestv3)
+        uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
+        require(price != 0, 'Could not price lp token');
         try IPoolIntegration(_integration).getPricePerShare(_data) returns (uint256 pricePerShare) {
-            price = pricePerShare;
+            if (pricePerShare != 0) {
+                price = pricePerShare.preciseMul(price);
+            }
         } catch {}
-        if (price != 0) {
-            return (
-                lpToken.balanceOf(msg.sender).preciseMul(
-                    price.preciseMul(_getPriceUniV3LpToken(pool, _garden.reserveAsset()))
-                ),
-                true
-            );
-        }
-        // Price lp token directly if possible
-        price = _getPrice(address(lpToken), _garden.reserveAsset());
-        if (price != 0) {
-            return (
-                SafeDecimalMath.normalizeAmountTokens(
-                    address(lpToken),
-                    _garden.reserveAsset(),
-                    lpToken.balanceOf(msg.sender).preciseMul(price)
-                ),
-                true
-            );
-        }
         uint256 NAV;
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, true);
-        for (uint256 i = 0; i < poolTokens.length; i++) {
-            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
-            price = _getPrice(_garden.reserveAsset(), asset);
-            // If the actual token doesn't have a price, use underlying as approx
-            if (price == 0) {
-                uint256 rate;
-                (asset, rate) = IPoolIntegration(_integration).getUnderlyingAndRate(_data, i);
-                if (rate != 0) {
-                    price = _getPrice(_garden.reserveAsset(), asset);
-                    price = price.preciseDiv(rate);
-                }
-            }
-            uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).balanceOf(pool) : pool.balance;
-            // Special case for weth in some pools
-            if (poolTokens[i] == WETH && balance == 0) {
-                balance = pool.balance;
-            }
-            if (price != 0 && balance != 0) {
-                NAV += SafeDecimalMath.normalizeAmountTokens(
-                    asset,
-                    _garden.reserveAsset(),
-                    balance.mul(lpToken.balanceOf(msg.sender)).div(lpToken.totalSupply()).preciseDiv(price)
-                );
-            }
-        }
+        // Price lp token through price oracle
+        NAV = NAV.add(
+            SafeDecimalMath.normalizeAmountTokens(
+                address(lpToken),
+                _garden.reserveAsset(),
+                lpToken.balanceOf(msg.sender).preciseMul(price)
+            )
+        );
         // get rewards if hanging around
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {

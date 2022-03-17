@@ -171,7 +171,7 @@ describe('OneInchPoolIntegrationTest', function () {
           token1: addresses.tokens.USDC,
         }, // DAI-USDC pool
       ]).forEach(({ pool, symbol, token0, token1 }) => {
-        it(`can enter and exit the ${symbol} at One Inch pool from a ${name} Garden`, async function () {
+        it.skip(`can enter and exit the ${symbol} at One Inch pool from a ${name} Garden`, async function () {
           const poolAddress = await ethers.getContractAt('IMooniswap', pool);
           await transferFunds(token);
 
