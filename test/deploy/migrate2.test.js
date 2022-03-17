@@ -30,15 +30,15 @@ describe('migrate', function () {
   let gardenMember2;
   let strategist;
 
-  async function upgradeRD() {
+  /* async function upgradeRD() {
     const signers = await ethers.getSigners();
     const signer = signers[0];
     const distributorNewImpl = await deploy('RewardsDistributor', {
       from: signer.address,
     });
     const proxyAdmin = await ethers.getContractAt('ProxyAdmin', '0x0C085fd8bbFD78db0107bF17047E8fa906D871DC', gnosis);
-    await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address);
-  }
+    await proxyAdmin.upgrade(distributor.address, distributorNewImpl.address); 
+  }*/
 
   function normalizeToken(amount) {
     return amount.div(ethers.utils.parseEther('0.001')).toNumber() / 1000;
@@ -120,6 +120,45 @@ describe('migrate', function () {
       for (const user of users) {
         const rewards = await distributor.getRewards(affectedGarden, user, [...strategies]);
         const [, , estimateRewards] = await viewerContract.getContributionAndRewards(affectedGarden, user);
+        console.log('AFTER FIX UNCLAIMED', user, rewards.toString());
+        console.log('AFTER FIX ESTIMATED', user, estimateRewards.toString());
+        fixBABL = fixBABL.add(from(rewards[5]));
+        fixEstimateBABL = fixEstimateBABL.add(from(estimateRewards[5]));
+      }
+      console.log('Fixed rewards....', fixBABL.toString());
+      console.log('Fixed estimate rewards....', fixEstimateBABL.toString());
+    });
+    it.only('user rewards support', async () => {
+      const garden = '0xB5bD20248cfe9480487CC0de0d72D0e19eE0AcB6';
+      const users = ['0x2c59900B9442b7A865F93219c04f553a0D7BD003'];
+      // const strategies = ['0x4f85dD417d19058cA81564f41572fb90D2F7e935','0x07DEbD22bCa7d010E53fc8ec23E8ADc3a516eC08', '0x6b9398A256E78616C4C8DceE52B8AA0F0518E268','0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0', '0xd24A10741E6A0e7b48669629722fF194Bfa472Bb'];
+      const strategies = ['0x4f85dD417d19058cA81564f41572fb90D2F7e935', '0x07DEbD22bCa7d010E53fc8ec23E8ADc3a516eC08'];
+      // const users = (await getUsers(affectedGarden)).map((u) => u.address);
+      // const strategies = await gardenContract.getFinalizedStrategies();
+      let BABL = from(0);
+      let estimateBABL = from(0);
+      let fixBABL = from(0);
+      let fixEstimateBABL = from(0);
+      for (const user of users) {
+        const rewards = await distributor.getRewards(garden, user, [...strategies]);
+        const [, , estimateRewards] = await viewerContract.getContributionAndRewards(garden, user);
+        console.log('BEFORE FIX UNCLAIMED', user, rewards.toString());
+        console.log('BEFORE FIX ESTIMATED', user, estimateRewards.toString());
+        BABL = BABL.add(from(rewards[5]));
+        estimateBABL = estimateBABL.add(from(estimateRewards[5]));
+      }
+      console.log('Rewards....', BABL.toString());
+      console.log('Estimate rewards....', estimateBABL.toString());
+
+      /* for (let i = 0; i < 20; i++) {
+        console.log('user rewards %i', i, (await distributor.getRewards(garden, users[0], [...strategies])).toString())
+        await increaseTime(ONE_DAY_IN_SECONDS * 5);
+      } */
+      await distributor.connect(gnosis).migrateAddressToCheckpoints(users, true);
+      await increaseTime(1);
+      for (const user of users) {
+        const rewards = await distributor.getRewards(garden, user, [...strategies]);
+        const [, , estimateRewards] = await viewerContract.getContributionAndRewards(garden, user);
         console.log('AFTER FIX UNCLAIMED', user, rewards.toString());
         console.log('AFTER FIX ESTIMATED', user, estimateRewards.toString());
         fixBABL = fixBABL.add(from(rewards[5]));
