@@ -465,11 +465,6 @@ contract TokenIdentifier is ITokenIdentifier {
             }
         }
 
-        // Early exit
-        if (tokenInType > 0 && tokenOutType > 0) {
-            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
-        }
-
         // todo: mooniswap
         // todo: pickle
         // todo: convex tokens
