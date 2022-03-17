@@ -470,14 +470,7 @@ contract TokenIdentifier is ITokenIdentifier {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
 
-        // try IMooniswap(_tokenIn).mooniswapFactoryGovernance() returns (address) {
-        //     tokenInType = ONEINCH_LP_TOKEN;
-        // } catch {}
-        //
-        // try IMooniswap(_tokenOut).mooniswapFactoryGovernance() returns (address) {
-        //     tokenOutType = ONEINCH_LP_TOKEN;
-        // } catch {}
-
+        // todo: mooniswap
         // todo: pickle
         // todo: convex tokens
         // todo: Harvest v3 lp token
