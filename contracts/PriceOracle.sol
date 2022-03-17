@@ -592,35 +592,6 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     /**
-     * Calculates the value of a harvest univ3 lp token in the denominator asset
-     * @param _pool                      Address of the univ3 lp token
-     * @param _denominator               Address of the denominator asset
-     */
-    // function _getPriceHarvestUniV3LpToken(address _pool, address _denominator) internal view returns (uint256) {
-    //     uint256 priceToken0 = getPrice(IHarvestUniv3Pool(_pool).token0(), _denominator);
-    //     uint256 priceToken1 = getPrice(IHarvestUniv3Pool(_pool).token1(), _denominator);
-    //     uint256 uniswapPosId = IUniVaultStorage(IHarvestUniv3Pool(_pool).getStorage()).posId();
-    //     (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(uniswapPosId);
-    //     (, , , , , , , uint128 totalSupply, , , , ) = nftPositionManager.positions(uniswapPosId);
-    //     if (totalSupply == 0) {
-    //         return 0;
-    //     }
-    //     uint256 priceinReserveToken0 =
-    //         SafeDecimalMath.normalizeAmountTokens(
-    //             IUniswapV3Pool(_pool).token0(),
-    //             _denominator,
-    //             amount0.mul(priceToken0).div(totalSupply)
-    //         );
-    //     uint256 priceinReserveToken1 =
-    //         SafeDecimalMath.normalizeAmountTokens(
-    //             IUniswapV3Pool(_pool).token1(),
-    //             _denominator,
-    //             amount1.mul(priceToken1).div(totalSupply)
-    //         );
-    //     return priceinReserveToken0.add(priceinReserveToken1);
-    // }
-
-    /**
      * Calculates the value of a univ2 lp token or sushi in denominator asset
      * @param _pool                      Address of the univ2 style lp token
      * @param _denominator               Address of the denominator asset
