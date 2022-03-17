@@ -154,6 +154,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Asset to use to buy protocol wanted assets
     address public override assetForPurchases;
 
+    // Value Amount for protect purchases in DAI
+    uint256 private constant PROTECT_BUY_AMOUNT_DAI = 2e21;
+
     /* ============ Initializer ============ */
 
     /**
@@ -445,6 +448,28 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy
         IERC20(WETH).safeTransfer(msg.sender, wethTraded);
+    }
+
+    /**
+     * Heart will protect and buyback BABL whenever the price dips below the intended price protection.
+     * Note: Asset for purchases needs to be setup and have enough balance.
+     *
+     * @param _bablPriceProtectionAt        BABL Price in DAI to protect
+     */
+    function protectBABL(uint256 _bablPriceProtectionAt) external override {
+        _onlyKeeper();
+        require(assetForPurchases != address(0), 'Asset for purchases not set');
+        uint256 bablPrice = IPriceOracle(controller.priceOracle()).getPrice(address(BABL), address(DAI));
+        require(_bablPriceProtectionAt > 0 && bablPrice <= _bablPriceProtectionAt, 'Price is now above target');
+        uint256 pricePurchasingAsset = IPriceOracle(controller.priceOracle()).getPrice(assetForPurchases, address(DAI));
+        require(
+            pricePurchasingAsset.preciseMul(IERC20(assetForPurchases).balanceOf(address(this))) >=
+                PROTECT_BUY_AMOUNT_DAI,
+            'Not enough assets to protect and buy'
+        );
+        uint256 bablBought = _trade(assetForPurchases, address(BABL), PROTECT_BUY_AMOUNT_DAI);
+        totalStats[2] = totalStats[2].add(bablBought);
+        emit BablBuyback(block.timestamp, PROTECT_BUY_AMOUNT_DAI, bablBought);
     }
 
     // solhint-disable-next-line
