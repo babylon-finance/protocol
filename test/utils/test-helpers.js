@@ -87,7 +87,7 @@ function pick(arr) {
 
 function skipIfFast() {
   let FAST = process.env.FAST;
-  return !!FAST ? describe.skip: describe;
+  return !!FAST ? describe.skip : describe;
 }
 
 module.exports = {
