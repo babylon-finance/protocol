@@ -200,8 +200,8 @@ describe('CompoundBorrowIntegrationTest', function () {
   });
 
   describe('Compound Borrow Multigarden multiasset', function () {
-    it(`should fail trying to supply DAI and borrow DAI at Compound in a ${name} Garden`, async function () {
-      await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
+    it(`should fail trying to supply DAI and borrow DAI at Compound in a WETH Garden`, async function () {
+      await trySupplyBorrowStrategy(DAI, DAI, addresses.tokens.WETH, 'There is no collateral locked');
     });
 
     pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
