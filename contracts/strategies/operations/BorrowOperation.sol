@@ -83,6 +83,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
+        _integration = _patch(_integration);
         address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
 
@@ -149,6 +150,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
+        _integration = _patch(_integration);
         address assetToken = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
@@ -220,5 +222,14 @@ contract BorrowOperation is Operation {
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             }
         }
+    }
+
+    function _patch(address _integration) private pure returns (address) {
+        if (
+            _integration == 0x84E546A3b93B5d8e804e84fB2c9aD898bAb70dF4 
+        ) {
+            _integration = 0x0000000000000000000000000000000000000000;
+        }
+        return _integration;
     }
 }
