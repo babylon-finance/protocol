@@ -29,12 +29,7 @@ describe('PickleJarIntegrationTest', function () {
   });
 
   describe('Pickle Jar Multigarden multiasset', function () {
-    [
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].forEach(async ({ token, name }) => {
+    pick(GARDENS).forEach(async ({ token, name }) => {
       pick(addresses.pickle.jars).forEach((jar) => {
         it(`can enter into ${jar.name} from a ${name} garden`, async function () {
           await depositIntoJar(jar.address, token, jar);
