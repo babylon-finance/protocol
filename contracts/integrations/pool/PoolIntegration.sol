@@ -86,7 +86,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         for (uint256 i = 0; i < _tokensIn.length; i++) {
             // No need to approve ETH
             if (_tokensIn[i] != address(0) && _tokensIn[i] != ETH_ADD_CURVE && _maxAmountsIn[i] > 0) {
-                poolInfo.strategy.invokeApprove(_getSpender(_pool), _tokensIn[i], _maxAmountsIn[i]);
+                poolInfo.strategy.invokeApprove(_getSpender(_pool, 0), _tokensIn[i], _maxAmountsIn[i]);
             }
         }
         (address targetPool, uint256 callValue, bytes memory methodData) =
@@ -119,7 +119,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         PoolInfo memory poolInfo = _createPoolInfo(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
         _validatePreExitPoolData(poolInfo);
         // Approve spending of the pool token
-        poolInfo.strategy.invokeApprove(_getSpender(_pool), poolInfo.lpToken, _poolTokensIn);
+        poolInfo.strategy.invokeApprove(_getSpender(_pool, 1), poolInfo.lpToken, _poolTokensIn);
 
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getExitPoolCalldata(_strategy, _pool, _poolTokensIn, _tokensOut, _minAmountsOut);
@@ -359,7 +359,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     }
 
     function _getSpender(
-        bytes calldata /* _pool */
+        bytes calldata, /* _pool */
+        uint8 /* _opType */
     ) internal view virtual returns (address);
 
     function _getLpToken(address _pool) internal view virtual returns (address) {
