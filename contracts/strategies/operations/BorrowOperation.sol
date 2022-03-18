@@ -225,9 +225,7 @@ contract BorrowOperation is Operation {
     }
 
     function _patch(address _integration) private pure returns (address) {
-        if (
-            _integration == 0x84E546A3b93B5d8e804e84fB2c9aD898bAb70dF4 
-        ) {
+        if (_integration == 0x84E546A3b93B5d8e804e84fB2c9aD898bAb70dF4) {
             _integration = 0x0000000000000000000000000000000000000000;
         }
         return _integration;
