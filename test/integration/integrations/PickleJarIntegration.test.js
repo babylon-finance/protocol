@@ -5,7 +5,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 const { increaseTime, getERC20, pick, eth } = require('utils/test-helpers');
-const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { GARDENS, STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('PickleJarIntegrationTest', function () {
   let pickleJarIntegration;

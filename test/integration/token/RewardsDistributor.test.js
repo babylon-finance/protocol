@@ -5,6 +5,7 @@ const { fund } = require('lib/whale');
 const { ONE_DAY_IN_SECONDS, GARDEN_PARAMS_STABLE, USDC_GARDEN_PARAMS, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const {
   pick,
+  skipIfFast,
   increaseBlock,
   increaseTime,
   normalizeDecimals,
@@ -102,7 +103,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-describe.skip('RewardsDistributor', function () {
+skipIfFast('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;

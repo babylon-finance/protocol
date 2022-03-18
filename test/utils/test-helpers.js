@@ -85,8 +85,14 @@ function pick(arr) {
   return !!FAST ? arr.slice(0, 1) : arr;
 }
 
+function skipIfFast() {
+  let FAST = process.env.FAST;
+  return !!FAST ? describe.skip: describe;
+}
+
 module.exports = {
   pick,
+  skipIfFast,
   getERC20,
   increaseTime,
   increaseTime,

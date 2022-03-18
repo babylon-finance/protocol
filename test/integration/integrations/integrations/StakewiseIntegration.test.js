@@ -38,7 +38,7 @@ describe('StakewiseIntegrationTest', function () {
     });
 
     describe('enter and exit operation', function () {
-      pick(GARDENS.slice(0, 1)).forEach(({ token, name }) => {
+      pick(GARDENS).forEach(({ token, name }) => {
         it(`can enter and exit sETH2 staking from a ${name} garden`, async function () {
           await transferFunds(token);
           const garden = await createGarden({ reserveAsset: token });
