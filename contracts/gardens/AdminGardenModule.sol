@@ -193,6 +193,15 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         extraCreators[3] = _newCreators[3];
     }
 
+    /*
+     * Governance can mark a garden as verified
+     * @param _verifiedCategory   New verified category
+     */
+    function verifyGarden(uint8 _verifiedCategory) external override {
+        controller.onlyGovernanceOrEmergency();
+        verifiedCategory = _verifiedCategory;
+    }
+
     /**
      * Makes a previously private garden public
      */

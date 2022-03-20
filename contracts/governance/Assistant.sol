@@ -6,13 +6,7 @@ pragma abicoder v2;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
-
-import 'hardhat/console.sol';
-
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
-import {IHypervisor} from '../interfaces/IHypervisor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 
 import {ControllerLib} from '../lib/ControllerLib.sol';
@@ -35,14 +29,7 @@ contract Assistant is OwnableUpgradeable {
 
     /* ============ External Functions ============ */
 
-    function startBondingProgram() external {
-        IBabController controller = IBabController(0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F);
-
-        require(msg.sender == controller.owner(), 'not valid sender');
-
-        IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
-        BABL.safeTransfer(controller.heart(), 11000e18);
-    }
+    function setupUIGovernor() external {}
 
     /* ============ External Getter Functions ============ */
     /* ============ Internal Only Function ============ */
