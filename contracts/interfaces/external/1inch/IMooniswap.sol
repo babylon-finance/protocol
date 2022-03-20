@@ -9,6 +9,8 @@ interface IMooniswap is IERC20 {
 
     function tokens(uint256 i) external view returns (IERC20);
 
+    function mooniswapFactoryGovernance() external view returns (address);
+
     function getBalanceForAddition(IERC20 token) external view returns (uint256);
 
     function getBalanceForRemoval(IERC20 token) external view returns (uint256);

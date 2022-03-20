@@ -17,7 +17,7 @@ describe('PaladinTradeIntegrationTest', function () {
 
   describe('Paladin Trade', function () {
     describe('enter and exit operation', function () {
-      pick([...GARDENS]).forEach(({ token, name }) => {
+      pick(GARDENS).forEach(({ token, name }) => {
         it(`can get palStkAAVE from a ${name} garden`, async function () {
           await transferFunds(token);
           const garden = await createGarden({ reserveAsset: token });
