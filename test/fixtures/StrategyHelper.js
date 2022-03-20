@@ -396,7 +396,7 @@ async function getStrategy({
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const [, , , signer1, signer2, signer3] = await ethers.getSigners();
   const gardens = await babController.getGardens();
-  garden = garden || (await ethers.getContractAt('IGarden', gardens.slice(-1)[0]));
+  garden = garden || (await ethers.getContractAt('IGarden', gardens.slice(-2)[0]));
   const reserveAsset = await garden.reserveAsset();
 
   params = { ...STRATEGY_PARAMS_MAP[reserveAsset], ...params };
