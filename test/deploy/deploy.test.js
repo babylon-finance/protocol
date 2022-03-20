@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 // const { deployments } = require('hardhat');
-const { getERC20, increaseTime } = require('utils/test-helpers');
+const { getERC20, increaseTime, from } = require('utils/test-helpers');
 // const { deploy } = deployments;
 const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 const addresses = require('lib/addresses');
@@ -8,6 +8,7 @@ const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
+const { ADDRESS_ZERO } = require('../../lib/constants');
 
 const STUCK = [
   // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
@@ -336,6 +337,80 @@ describe('deploy', function () {
 
     it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
+    });
+    it.only('getPastEvents for prophets staking', async () => {
+      const provider = new ethers.providers.JsonRpcProvider();
+      const abi = ['Stake(address indexed _owner, address indexed _target, uint256 _tokenId)'];
+      const prophets = '0x26231A65EF80706307BbE71F032dc1e5Bf28ce43';
+      const owner = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
+      const prophetsContract = await ethers.getContractAt('IProphets', prophets, owner);
+      let eventFilter = prophetsContract.filters.Stake();
+      let events = await prophetsContract.queryFilter(eventFilter, 0, 13757641);
+      // Dec 7th 2021 1638864000
+      // Block Number 13757640 (Dec-07-2021 09:00:31 AM +UTC)
+      const users = [];
+      const prophetsid = [];
+      const targets = [];
+      const blockNumbers = []; 
+      // Users left
+      const usersLeft = [];
+      const usersSoldProphet = [];
+      const usersCancelStake = [];
+      // console.log('events length', events.length.toString());
+      // console.log('users', events[0]);
+      for (let i = 0; i < events.length; i++) {
+        // console.log('user %s', i, events[i].args._owner);
+        let reStaked = false;
+        const user = events[i].args._owner;
+        const target = await ethers.getContractAt('IGarden', events[i].args._target, owner);
+        const prophet = events[i].args._tokenId;
+        const balance1 = await target.balanceOf(user);
+        let balance2 = from(0);
+        const prophetsAttr = await prophetsContract.getStakedProphetAttrs(user, target.address);
+        if (prophetsAttr[6].gt(1638864000)) {
+          // console.log('stake not valid - event after deadline Dec 7th', prophetsAttr[6].toString(), '1638864000', user);
+          continue;
+        }
+        // check if still the owner 
+        const newOwner = await prophetsContract.ownerOf(prophet);
+        if (events[i].args._owner !== newOwner) {
+          // User sold its prophet, such Stake event is not longer valid for original user
+          usersSoldProphet.push(events[i].args._owner);
+          continue;
+        }
+        const newTarget = await ethers.getContractAt('IGarden', await prophetsContract.targetOf(prophet), owner);
+        if (newTarget.address === ADDRESS_ZERO) {
+          // console.log('user re-staked into ZERO ADDRESS');
+          usersCancelStake.push(events[i].args._owner);
+          continue;
+        }
+        if (newTarget.address !== target.address) {
+          // console.log('user re-staked prophet targets', target.address, newTarget.address);
+          balance2 = await newTarget.balanceOf(user);
+          // console.log('user re-staked prophet balances', balance1.toString(), balance2.toString());
+          reStaked = true;
+        }
+        if (balance1.lte(eth(0.05)) && balance2.lte(eth(0.05))) {
+          // console.log('user to be removed', user, balance1.toString(), balance2.toString());
+          usersLeft.push(events[i].args._owner);
+          continue;
+        }
+        console.log('%s block %s user %s id %s restaked? %s garden %s bal1 %s bal2 %s', i, events[i].blockNumber, events[i].args._owner, prophet, reStaked, reStaked ? newTarget.address : target.address, balance1.toString(), balance2.toString());
+        users.push(events[i].args._owner);
+        prophetsid.push(prophet);
+        targets.push(reStaked ? newTarget.address : target.address);
+        blockNumbers.push(events[i].blockNumber);
+      }
+      console.log('users staking prophet correctly', ...users);
+      console.log('prophets staked correctly', prophetsid.toString());
+      console.log('targets of correct staking', targets);
+      console.log('blockNumbers', blockNumbers.toString());
+      console.log('');
+      console.log('users left withdrawing all balance', usersLeft);
+      console.log('');
+      console.log('users sold prophet', usersSoldProphet);
+      console.log('');
+      console.log('users cancel stake (address(0))', usersCancelStake);
     });
   });
 });
