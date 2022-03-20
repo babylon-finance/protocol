@@ -45,7 +45,7 @@ describe('SynthetixTradeIntegration', function () {
         ],
       },
     ]).forEach(({ token, name, pairs }) => {
-      pairs.forEach(({ asset, symbol }) => {
+      pick(pairs).forEach(({ asset, symbol }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === asset) return;
 

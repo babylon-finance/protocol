@@ -2,14 +2,14 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
-const { increaseTime, eth } = require('utils/test-helpers');
+const { increaseTime, eth, skipIfFast } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
 const MULTISIG_BALANCE = eth().mul(23000);
 const REGISTRY_BALANCE = eth().mul(305000);
 
-describe.skip('BABLToken contract', function () {
+skipIfFast('BABLToken contract', function () {
   let owner;
   let signer1;
   let signer2;

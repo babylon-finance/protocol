@@ -439,23 +439,6 @@ describe('Strategy', function () {
       expect(nav).to.be.closeTo(eth().mul(1), eth().div(30));
     });
 
-    it('should get the NAV value of a OneInchPool strategy', async function () {
-      // const daiWethOneInchPair = await ethers.getContractAt('IMooniswap', addresses.oneinch.pools.wethdai);
-      const strategyContract = await createStrategy(
-        'lp',
-        'active',
-        [signer1, signer2, signer3],
-        oneInchPoolIntegration.address,
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [addresses.oneinch.pools.wethdai, 0],
-      );
-
-      const nav = await strategyContract.getNAV();
-      expect(await strategyContract.capitalAllocated()).to.equal(eth());
-      expect(nav).to.be.closeTo(eth().mul(1), eth().div(20));
-    });
-
     it('should get the NAV value of a UniswapPool strategy', async function () {
       const strategyContract = await createStrategy(
         'lp',

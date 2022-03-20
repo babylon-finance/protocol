@@ -13,7 +13,6 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
-import {Safe3296} from '../lib/Safe3296.sol';
 import {Errors, _require} from '../lib/BabylonErrors.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -47,10 +46,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     using SafeDecimalMath for int256;
     using Math for uint256;
     using Math for int256;
-    using Safe3296 for uint256;
-    using Safe3296 for int256;
-    using Safe3296 for uint96;
-    using Safe3296 for uint32;
 
     /* ========== Events ========== */
 
@@ -985,7 +980,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
-        SafeERC20.safeTransfer(babltoken, _to, Safe3296.safe96(bablToSend, 'overflow 96 bits'));
+        SafeERC20.safeTransfer(babltoken, _to, bablToSend);
         return bablToSend;
     }
 
@@ -1119,7 +1114,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 
     /**
-     * Gets the contributor power from one timestamp to the other
+     * Guess the contributor power in a past timestamp (it is kept for smoother transition)
+     * Will be deprecated soon, kept only for beta users and old strategies not migrated
+     * Still used but only for betaUser && oldStrategy && users not migrated
      * @param _garden       Address of the garden where the contributor belongs to
      * @param _contributor  Address of the contributor
      * @param _time         Timestamp to check power
@@ -1275,6 +1272,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Boost BABL Rewards in case of a staked NFT prophet
+     * It considers a proportional % in case of staking happened after strategy execution
      * @param _garden           Garden address
      * @param _contributor      Contributor address
      * @param _rewards          Precalculated rewards array
@@ -1657,6 +1655,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         return _contributorBABL;
     }
 
+    /**
+     * Get an estimation of strategy BABL rewards for active strategies in the mining program
+     * @param _strategy        Address of the strategy to estimate BABL rewards
+     * Returns the strategist, strategyDetails needed as well as profit data
+     */
     function _estimateStrategyRewards(address _strategy)
         internal
         view
@@ -1747,6 +1750,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         );
     }
 
+    /**
+     * Harvest rewards of all epochs during estimation for each strategy
+     * @param _strategyPower        Accumulated strategy power per epoch
+     * @param _protocolPower        Accumulated protocol power per epoch
+     * @param _startingQuarter      Starting quarter for calculations
+     * @param _numQuarters          Total number of quarters for the calculation
+     * @return the baseline estimated rewards for the strategy
+     */
     function _harvestStrategyRewards(
         uint256[] memory _strategyPower,
         uint256[] memory _protocolPower,
@@ -1776,6 +1787,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Apply specific BABL mining weights to baseline BABL mining rewards based on mining benchmark params
+     * Benchmark creates 3 different segments to differentiate between bad, break even or good strategies
      * @param _returned           Strategy capital returned
      * @param _allocated          Strategy capital allocated
      * @param _rewards            Strategy baseline BABL rewards
@@ -1835,6 +1847,15 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             );
     }
 
+    /**
+     * Update pending power for each strategy and epoch during estimation
+     * @param _powerToUpdate        Current power to be updated per epoch (power is principal x time)
+     * @param _numQuarters          Total number of quarters for the calculation
+     * @param _startingQuarter      Starting quarter (epoch)
+     * @param _updatedAt            Updated timestamp
+     * @param _principal            Principal of the strategy or protocol to update power
+     * @return the updating power
+     */
     function _updatePendingPower(
         uint256[] memory _powerToUpdate,
         uint256 _numQuarters,
