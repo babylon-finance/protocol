@@ -13,8 +13,9 @@ const {
 const { getContractFactory } = require('@nomiclabs/hardhat-ethers/types');
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
+const { fund } = require('lib/whale');
 
-describe('Heart Unit Test', function () {
+describe('Heart', function () {
   let heartGarden;
   let heart;
   let signer1;
@@ -326,6 +327,25 @@ describe('Heart Unit Test', function () {
       const price = await priceOracle.connect(owner).getPrice(addresses.tokens.DAI, addresses.tokens.WETH);
       const expectedWETH = amountToTrade.mul(price).div(1e9).div(1e9);
       expect(await WETH.balanceOf(heart.address)).to.be.closeTo(expectedWETH, expectedWETH.div(15));
+    });
+  });
+
+  describe.only('protectBABL', async function () {
+    describe('protects if BABL price is lower than threshold', async function () {
+      [
+        { name: 'USDC', token: addresses.tokens.USDC, slippage: eth(0.01) },
+        { name: 'DAI', token: addresses.tokens.DAI, slippage: eth(0.01)  },
+        { name: 'FEI', token: addresses.tokens.FEI, slippage: eth(0.5)  },
+      ].forEach(({ token, name, slippage }) => {
+        it(`with ${name} as purchase asset`, async function () {
+          const price = await priceOracle.getPrice(addresses.tokens.BABL, token);
+
+          await fund([heart.address]);
+
+          await heart.connect(owner).updateAssetToPurchase(token);
+          await heart.connect(keeper).protectBABL(price.add(1), price, eth(), slippage);
+        });
+      });
     });
   });
 

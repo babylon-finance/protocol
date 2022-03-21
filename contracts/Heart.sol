@@ -32,6 +32,8 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title Heart
  * @author Babylon Finance
@@ -334,11 +336,11 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Updates the min amount to trade a specific asset
      *
      * @param _asset                Asset to edit the min amount
-     * @param _minAmount            New min amount
+     * @param _minAmountOut            New min amount
      */
-    function setMinTradeAmount(address _asset, uint256 _minAmount) external override {
+    function setMinTradeAmount(address _asset, uint256 _minAmountOut) external override {
         controller.onlyGovernanceOrEmergency();
-        minAmounts[_asset] = _minAmount;
+        minAmounts[_asset] = _minAmountOut;
     }
 
     /**
@@ -408,18 +410,18 @@ contract Heart is OwnableUpgradeable, IHeart {
     * @param _fromAsset                  Asset to exchange
     * @param _toAsset                    Asset to receive
     * @param _fromAmount                 Amount of asset to exchange
-    * @param _minAmount                  Min amount of received asset
+    * @param _minAmountOut                  Min amount of received asset
     */
     function trade(
         address _fromAsset,
         address _toAsset,
         uint256 _fromAmount,
-        uint256 _minAmount
+        uint256 _minAmountOut
     ) external override {
         controller.onlyGovernanceOrEmergency();
         require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, 'Not enough asset to trade');
         uint256 boughtAmount = _trade(_fromAsset, _toAsset, _fromAmount);
-        require(boughtAmount >= _minAmount, 'Too much slippage');
+        require(boughtAmount >= _minAmountOut, 'Too much slippage');
     }
 
     /**
@@ -455,20 +457,49 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Note: Asset for purchases needs to be setup and have enough balance.
      *
      * @param _bablPriceProtectionAt        BABL Price in DAI to protect
+     * @param _bablPrice                    Market price of BABL in DAI
+     * @param _purchaseAssetPrice           Price of purchase asset in DAI
+     * @param _slippage                     Trade slippage on UinV3 to control amount of arb
      */
-    function protectBABL(uint256 _bablPriceProtectionAt) external override {
+    function protectBABL(
+        uint256 _bablPriceProtectionAt,
+        uint256 _bablPrice,
+        uint256 _purchaseAssetPrice,
+        uint256 _slippage
+    ) external override {
         _onlyKeeper();
         require(assetForPurchases != address(0), 'Asset for purchases not set');
-        uint256 bablPrice = IPriceOracle(controller.priceOracle()).getPrice(address(BABL), address(DAI));
-        require(_bablPriceProtectionAt > 0 && bablPrice <= _bablPriceProtectionAt, 'Price is now above target');
-        uint256 pricePurchasingAsset = IPriceOracle(controller.priceOracle()).getPrice(assetForPurchases, address(DAI));
+        require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, 'Price is above target');
+
+        console.log(_purchaseAssetPrice);
+        console.log(IERC20(assetForPurchases).balanceOf(address(this)));
         require(
-            pricePurchasingAsset.preciseMul(IERC20(assetForPurchases).balanceOf(address(this))) >=
-                PROTECT_BUY_AMOUNT_DAI,
-            'Not enough assets to protect and buy'
+            SafeDecimalMath.normalizeAmountTokens(
+                assetForPurchases,
+                address(DAI),
+                _purchaseAssetPrice.preciseMul(IERC20(assetForPurchases).balanceOf(address(this)))
+            ) >= PROTECT_BUY_AMOUNT_DAI,
+            'Not enough to protect'
         );
-        uint256 bablBought = _trade(assetForPurchases, address(BABL), PROTECT_BUY_AMOUNT_DAI);
+
+        uint256 exactAmount = PROTECT_BUY_AMOUNT_DAI.preciseDiv(_bablPrice);
+        uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(_slippage == 0 ? tradeSlippage : _slippage));
+
+        uint256 bablBought =
+            _trade(
+                assetForPurchases,
+                address(BABL),
+                SafeDecimalMath.normalizeAmountTokens(
+                    address(DAI),
+                    assetForPurchases,
+                    PROTECT_BUY_AMOUNT_DAI.preciseDiv(_purchaseAssetPrice)
+                ),
+                minAmountOut,
+                address(WETH)
+            );
+
         totalStats[2] = totalStats[2].add(bablBought);
+
         emit BablBuyback(block.timestamp, PROTECT_BUY_AMOUNT_DAI, bablBought);
     }
 
@@ -660,10 +691,37 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
+
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(tradeSlippage));
+        uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(tradeSlippage));
+
+        return _trade(_tokenIn, _tokenOut, _amount, minAmountOut, address(0));
+    }
+
+    /**
+     * Trades _tokenIn to _tokenOut using Uniswap V3
+     *
+     * @param _tokenIn             Token that is sold
+     * @param _tokenOut            Token that is purchased
+     * @param _amount              Amount of tokenin to sell
+     * @param _minAmountOut        Min amount of tokens out to recive
+     * @param _hopToken            Hop token to use for UniV3 trade
+     */
+    function _trade(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amount,
+        uint256 _minAmountOut,
+        address _hopToken
+    ) private returns (uint256) {
+        console.log(_tokenIn);
+        console.log(_tokenOut);
+        console.log(_amount);
+        console.log(_minAmountOut);
+        console.log(_hopToken);
+
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
@@ -672,16 +730,19 @@ contract Heart is OwnableUpgradeable, IHeart {
             (_tokenIn == address(FRAX) && _tokenOut != address(DAI)) ||
             (_tokenOut == address(FRAX) && _tokenIn != address(DAI))
         ) {
-            address hopToken = address(DAI);
-            uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, hopToken);
-            uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, hopToken);
-            path = abi.encodePacked(_tokenIn, fee0, hopToken, fee1, _tokenOut);
+            _hopToken = address(DAI);
+        }
+        if (_hopToken != address(0)) {
+            uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _hopToken);
+            uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, _hopToken);
+            path = abi.encodePacked(_tokenIn, fee0, _hopToken, fee1, _tokenOut);
         } else {
             uint24 fee = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut);
             path = abi.encodePacked(_tokenIn, fee, _tokenOut);
         }
+
         ISwapRouter.ExactInputParams memory params =
-            ISwapRouter.ExactInputParams(path, address(this), block.timestamp, _amount, minAmountExpected);
+            ISwapRouter.ExactInputParams(path, address(this), block.timestamp, _amount, _minAmountOut);
         return swapRouter.exactInput(params);
     }
 
