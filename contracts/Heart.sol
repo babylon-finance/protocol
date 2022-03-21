@@ -32,8 +32,6 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Heart
  * @author Babylon Finance
@@ -460,19 +458,19 @@ contract Heart is OwnableUpgradeable, IHeart {
      * @param _bablPrice                    Market price of BABL in DAI
      * @param _purchaseAssetPrice           Price of purchase asset in DAI
      * @param _slippage                     Trade slippage on UinV3 to control amount of arb
+     * @param _hopToken            Hop token to use for UniV3 trade
      */
     function protectBABL(
         uint256 _bablPriceProtectionAt,
         uint256 _bablPrice,
         uint256 _purchaseAssetPrice,
-        uint256 _slippage
+        uint256 _slippage,
+        address _hopToken
     ) external override {
         _onlyKeeper();
         require(assetForPurchases != address(0), 'Asset for purchases not set');
         require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, 'Price is above target');
 
-        console.log(_purchaseAssetPrice);
-        console.log(IERC20(assetForPurchases).balanceOf(address(this)));
         require(
             SafeDecimalMath.normalizeAmountTokens(
                 assetForPurchases,
@@ -495,7 +493,7 @@ contract Heart is OwnableUpgradeable, IHeart {
                     PROTECT_BUY_AMOUNT_DAI.preciseDiv(_purchaseAssetPrice)
                 ),
                 minAmountOut,
-                address(WETH)
+                _hopToken != address(0) ? _hopToken : address(WETH)
             );
 
         totalStats[2] = totalStats[2].add(bablBought);
@@ -716,11 +714,6 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 _minAmountOut,
         address _hopToken
     ) private returns (uint256) {
-        console.log(_tokenIn);
-        console.log(_tokenOut);
-        console.log(_amount);
-        console.log(_minAmountOut);
-        console.log(_hopToken);
 
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
@@ -735,7 +728,20 @@ contract Heart is OwnableUpgradeable, IHeart {
         if (_hopToken != address(0)) {
             uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _hopToken);
             uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, _hopToken);
-            path = abi.encodePacked(_tokenIn, fee0, _hopToken, fee1, _tokenOut);
+            // Have to use WETH for BABL because the most liquid pari is WETH/BABL
+            if (_tokenOut == address(BABL) && _hopToken != address(WETH)) {
+                path = abi.encodePacked(
+                    _tokenIn,
+                    fee0,
+                    _hopToken,
+                    fee1,
+                    address(WETH),
+                    _getUniswapPoolFeeWithHighestLiquidity(address(WETH), _tokenOut),
+                    _tokenOut
+                );
+            } else {
+                path = abi.encodePacked(_tokenIn, fee0, _hopToken, fee1, _tokenOut);
+            }
         } else {
             uint24 fee = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut);
             path = abi.encodePacked(_tokenIn, fee, _tokenOut);

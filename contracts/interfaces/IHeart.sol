@@ -78,7 +78,8 @@ interface IHeart {
         uint256 _bablPriceProtectionAt,
         uint256 _bablPrice,
         uint256 _pricePurchasingAsset,
-        uint256 _slippage
+        uint256 _slippage,
+        address _hopToken
     ) external;
 
     function trade(
