@@ -24,7 +24,7 @@ describe('BIP11', function () {
       await deployFixture();
     });
 
-    it.only('can execute bip', async () => {
+    it('can execute bip', async () => {
       const signers = await ethers.getSigners();
       const signer = signers[0];
 

@@ -172,8 +172,8 @@ interface ICoreGarden {
     /* ============ Write ============ */
 
     function deposit(
-        uint256 _reserveAssetQuantity,
-        uint256 _minGardenTokenReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address _to
     ) external payable;
 
@@ -189,8 +189,8 @@ interface ICoreGarden {
     ) external;
 
     function withdraw(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address payable _to,
         bool _withPenalty,
         address _unwindStrategy
