@@ -36,6 +36,8 @@ async function setUpFixture(
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
+  const pickleJarIntegration = await getContract('PickleJarIntegration');
+  const gammaIntegration = await getContract('GammaIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
   const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
@@ -76,6 +78,7 @@ async function setUpFixture(
   const owner = await impersonateAddress(timelockController.address);
   await signer4.sendTransaction({ to: owner.address, value: ethers.utils.parseEther('5') });
 
+  console.log('before funds');
   await fund([owner.address, signer1.address, signer2.address, signer3.address], {
     tokens: [
       addresses.tokens.USDC,
@@ -261,6 +264,8 @@ async function setUpFixture(
     treasury,
     heart,
     rewardsDistributor,
+    pickleJarIntegration,
+    gammaIntegration,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
     balancerIntegration,

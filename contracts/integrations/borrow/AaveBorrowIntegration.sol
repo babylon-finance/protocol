@@ -7,6 +7,7 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ILendingPool} from '../../interfaces/external/aave/ILendingPool.sol';
 import {IProtocolDataProvider} from '../../interfaces/external/aave/IProtocolDataProvider.sol';
 import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {BorrowIntegration} from './BorrowIntegration.sol';
 
@@ -18,6 +19,7 @@ import {BorrowIntegration} from './BorrowIntegration.sol';
  */
 contract AaveBorrowIntegration is BorrowIntegration {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider =
@@ -87,6 +89,11 @@ contract AaveBorrowIntegration is BorrowIntegration {
             // uint256 healthFactor
             lendingPool.getUserAccountData(_strategy);
         return borrowingPower;
+    }
+
+    function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
+        (, , uint256 collateral, , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
+        return collateral.mul(1e14);
     }
 
     /* ============ Internal Functions ============ */

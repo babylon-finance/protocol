@@ -108,7 +108,8 @@ contract UniswapPoolIntegration is PoolIntegration {
     }
 
     function _getSpender(
-        bytes calldata /* _pool */
+        bytes calldata, /* _pool */
+        uint8 /* _opType */
     ) internal view override returns (address) {
         return address(uniRouter);
     }

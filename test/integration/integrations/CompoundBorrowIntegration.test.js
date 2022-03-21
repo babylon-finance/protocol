@@ -186,11 +186,11 @@ describe('CompoundBorrowIntegrationTest', function () {
         DEFAULT_STRATEGY_PARAMS,
         [DAI.address, 0, ADDRESS_ZERO, 0],
       );
-
       await executeStrategy(strategyContract);
       expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
       const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
       expect(collateral).to.be.gt(eth('1930'));
+      expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(50));
       expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
       const beforeExitingWeth = await WETH.balanceOf(garden1.address);
       await finalizeStrategy(strategyContract);
@@ -200,7 +200,11 @@ describe('CompoundBorrowIntegrationTest', function () {
   });
 
   describe('Compound Borrow Multigarden multiasset', function () {
-    pick(GARDENS).forEach(({ token, name }) => {
+    it(`should fail trying to supply DAI and borrow DAI at Compound in a WETH Garden`, async function () {
+      await trySupplyBorrowStrategy(DAI, DAI, addresses.tokens.WETH, 'There is no collateral locked');
+    });
+
+    pick(GARDENS.slice(0, 3)).forEach(({ token, name }) => {
       it(`can supply DAI and borrow USDC at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, USDC, token);
       });
@@ -219,18 +223,6 @@ describe('CompoundBorrowIntegrationTest', function () {
 
       it(`can supply WETH and borrow DAI at Compound in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
-      });
-
-      it(`should fail trying to supply DAI and borrow DAI at Compound in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
-      });
-
-      it(`should fail trying to supply WETH and borrow WETH at Compound in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
-      });
-
-      it(`should fail trying to supply USDC and borrow USDC at Compound in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(USDC, USDC, token, 'There is no collateral locked');
       });
     });
   });

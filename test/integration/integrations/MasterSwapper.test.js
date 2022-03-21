@@ -82,7 +82,7 @@ describe('MasterSwapper', function () {
         ],
       },
     ]).forEach(({ token, name, pairs }) => {
-      pairs.forEach(({ to, symbol, synth }) => {
+      pick(pairs).forEach(({ to, symbol, synth }) => {
         it(`exchange ${name}->${symbol} in ${name} garden`, async function () {
           if (token === to) return;
 

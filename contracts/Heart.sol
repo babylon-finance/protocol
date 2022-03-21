@@ -399,6 +399,41 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
+     * Repays Heart fuse pool position
+     * Note: We must have the asset in the heart
+     *
+     * @param _borrowedAsset              Borrowed asset that we want to pay
+     * @param _amountToRepay              Amount of asset to transfer
+     */
+    function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external override {
+        controller.onlyGovernanceOrEmergency();
+        address cToken = assetToCToken[_borrowedAsset];
+        IERC20(_borrowedAsset).approve(cToken, _amountToRepay);
+        require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, 'Not enough to repay');
+    }
+
+    /**
+    * Trades one asset for another in the heart
+    * Note: We must have the _fromAsset _fromAmount available.
+
+    * @param _fromAsset                  Asset to exchange
+    * @param _toAsset                    Asset to receive
+    * @param _fromAmount                 Amount of asset to exchange
+    * @param _minAmount                  Min amount of received asset
+    */
+    function trade(
+        address _fromAsset,
+        address _toAsset,
+        uint256 _fromAmount,
+        uint256 _minAmount
+    ) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, 'Not enough asset to trade');
+        uint256 boughtAmount = _trade(_fromAsset, _toAsset, _fromAmount);
+        require(boughtAmount >= _minAmount, 'Too much slippage');
+    }
+
+    /**
      * Strategies can sell wanted assets by the protocol to the heart.
      * Heart will buy them using borrowings in stables.
      * Heart returns WETH so master swapper will take it from there.
@@ -646,7 +681,10 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
         bytes memory path;
-        if (_tokenIn == address(FRAX) || _tokenOut == address(FRAX)) {
+        if (
+            (_tokenIn == address(FRAX) && _tokenOut != address(DAI)) ||
+            (_tokenOut == address(FRAX) && _tokenIn != address(DAI))
+        ) {
             address hopToken = address(DAI);
             uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, hopToken);
             uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, hopToken);
@@ -687,6 +725,6 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 }
 
-contract HeartV2 is Heart {
+contract HeartV3 is Heart {
     constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }

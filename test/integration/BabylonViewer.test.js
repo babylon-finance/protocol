@@ -106,7 +106,7 @@ describe('Babylon Viewer', function () {
 
       expect(strategyDetails[2][0]).to.equal(1); // Ops count
       expect(strategyDetails[2][1]).to.equal(WETH_STRATEGY_PARAMS.stake); // Stake
-      expect(strategyDetails[2][2]).to.equal(eth(0.1)); // Quorum
+      expect(strategyDetails[2][2]).to.equal(0); // Quorum
       expect(strategyDetails[2][3]).to.equal(0); // Negative votes
       expect(strategyDetails[2][4]).to.equal(0); // Capital Allocated
       expect(strategyDetails[2][5]).to.equal(0); // Capital Returned
@@ -118,7 +118,7 @@ describe('Babylon Viewer', function () {
       expect(strategyDetails[2][11]).to.equal(0); // Rewards
       expect(strategyDetails[2][12]).to.equal(WETH_STRATEGY_PARAMS.maxAllocationPercentage); // Max Allocation Percentage
       expect(strategyDetails[2][13]).to.equal(eth(0.05)); // maxAllocationPercentage
-      expect(strategyDetails[2][14]).to.equal(eth(0.05)); // maxTradeSlippagePercentage
+      expect(strategyDetails[2][14]).to.equal(eth(0.09)); // maxTradeSlippagePercentage
       expect(strategyDetails[2][15]).to.equal(0); // Strategy Rewards
 
       expect(strategyDetails[3][0]).to.equal(false); // Active

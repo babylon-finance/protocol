@@ -117,8 +117,12 @@ contract BorrowOperation is Operation {
     ) internal view returns (uint256) {
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
+        // Use the % max we can borrow (maxCollateral)
+        // Use the % of the collateral asset
         uint256 amountToBorrow =
-            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor());
+            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
+                IBorrowIntegration(_integration).getCollateralFactor(_asset)
+            );
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
     }
@@ -185,8 +189,18 @@ contract BorrowOperation is Operation {
         }
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, borrowToken);
         uint256 price = _getPrice(_garden.reserveAsset(), borrowToken);
+        // if there are liquidations or it is the last op (borrowings not used)
+        uint256 borrowTokenBalance = IERC20(borrowToken == address(0) ? WETH : borrowToken).balanceOf(msg.sender);
+        if (borrowTokenBalance > 0) {
+            tokensOwed = tokensOwed >= borrowTokenBalance ? tokensOwed.sub(borrowTokenBalance) : 0;
+        }
         uint256 NAV =
-            SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(price);
+            tokensOwed == 0
+                ? 0
+                : SafeDecimalMath.normalizeAmountTokens(borrowToken, _garden.reserveAsset(), tokensOwed).preciseDiv(
+                    price
+                );
+
         return (NAV, false);
     }
 

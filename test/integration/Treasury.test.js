@@ -7,6 +7,7 @@ const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const {
   pick,
+  skipIfFast,
   increaseTime,
   normalizeDecimals,
   getERC20,
@@ -29,7 +30,7 @@ describe('Treasury', function () {
     await fund([treasury.address]);
   });
 
-  describe('sendTreasuryFunds', async function () {
+  skipIfFast('sendTreasuryFunds', async function () {
     pick([
       { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
       { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },

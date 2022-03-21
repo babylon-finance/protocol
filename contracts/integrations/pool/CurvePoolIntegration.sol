@@ -149,7 +149,10 @@ contract CurvePoolIntegration is PoolIntegration {
         return curveMetaRegistry.isPool(poolAddress);
     }
 
-    function _getSpender(bytes calldata _pool) internal view override returns (address) {
+    function _getSpender(
+        bytes calldata _pool,
+        uint8 /* _opType */
+    ) internal view override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         if (poolToDeposit[poolAddress] != address(0)) {
             poolAddress = poolToDeposit[poolAddress];

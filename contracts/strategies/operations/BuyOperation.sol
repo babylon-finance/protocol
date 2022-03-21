@@ -99,6 +99,7 @@ contract BuyOperation is Operation {
         address /* _integration */
     )
         external
+        view
         override
         onlyStrategy
         returns (
