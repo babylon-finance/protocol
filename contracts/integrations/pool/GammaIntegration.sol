@@ -99,15 +99,6 @@ contract GammaIntegration is PoolIntegration {
 
     function _getSpender(bytes calldata _pool, uint8 _opType) internal pure override returns (address) {
         address visor = BytesLib.decodeOpDataAddress(_pool);
-        if (_opType == 0) {
-            // These two old visors need to approve the proxy
-            if (
-                visor == 0xf6eeCA73646ea6A5c878814e6508e87facC7927C ||
-                visor == 0xc86B1e7FA86834CaC1468937cdd53ba3cCbC1153
-            ) {
-                return address(depositProxy);
-            }
-        }
         return visor;
     }
 
