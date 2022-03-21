@@ -97,8 +97,8 @@ describe('Heart', function () {
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.DAI);
       expect(await heart.connect(owner).lastPumpAt()).to.equal(0);
       expect(await heart.connect(owner).lastVotesAt()).to.equal(0);
-      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(0);
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(0);
+      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(300));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(5000));
       const fees = await heart.connect(owner).getFeeDistributionWeights();
       expect(fees[0]).to.equal(eth(0.1));
       expect(fees[1]).to.equal(eth(0.3));
@@ -123,7 +123,7 @@ describe('Heart', function () {
     it('can add a reward to distribute weekly', async function () {
       await BABL.connect(owner).approve(heart.address, eth(5000));
       await heart.connect(owner).addReward(eth(5000), eth(400));
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(5000));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(10000));
       expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(400));
     });
 
@@ -131,7 +131,7 @@ describe('Heart', function () {
       await BABL.connect(owner).approve(heart.address, eth(8000));
       await heart.connect(owner).addReward(eth(5000), eth(400));
       await heart.connect(owner).addReward(eth(3000), eth(100));
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(8000));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(13000));
       expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(100));
     });
 
@@ -241,38 +241,6 @@ describe('Heart', function () {
       );
     });
 
-    it('heart does increase its voting power by each new BABL received as it self delegated in constructor', async function () {
-      const heartVotingPower1 = await token.getCurrentVotes(heart.address);
-      const heartSigner = await impersonateAddress(heart.address);
-      const heartGardenBalance = await token.balanceOf(heartGarden.address);
-      const voterBalance = await token.balanceOf(voters[0].address);
-      // get heart garden delegation
-      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
-      const heartVotingPower2 = await token.getCurrentVotes(heart.address);
-      // remove delegation
-      await token.connect(heartGardenSigner).delegate(heartGarden.address, { gasPrice: 0 });
-      const heartVotingPower3 = await token.getCurrentVotes(heart.address);
-      // get out of vesting
-      await increaseTime(ONE_YEAR_IN_SECONDS * 3);
-      // By a simple transfer its gets voting power as it self delegated during constructor
-      // If not self-delegated its own balance will never count unless heart self-delegates
-      await token.connect(voters[0]).transfer(heart.address, await token.balanceOf(voters[0].address), { gasPrice: 0 });
-      const heartVotingPower4 = await token.getCurrentVotes(heart.address);
-      // return BABL back
-      await token
-        .connect(heartSigner)
-        .transfer(voters[0].address, await token.balanceOf(heart.address), { gasPrice: 0 });
-      const heartVotingPower5 = await token.getCurrentVotes(heart.address);
-      // receive BABL from voter again
-      await token.connect(voters[0]).transfer(heart.address, await token.balanceOf(voters[0].address), { gasPrice: 0 });
-      const heartVotingPower6 = await token.getCurrentVotes(heart.address);
-      expect(heartVotingPower1).to.eq(0);
-      expect(heartVotingPower2).to.eq(heartGardenBalance);
-      expect(heartVotingPower3).to.eq(0);
-      expect(heartVotingPower4).to.eq(voterBalance);
-      expect(heartVotingPower5).to.eq(0);
-      expect(heartVotingPower6).to.eq(voterBalance);
-    });
   });
 
   describe('lend fuse pool', async function () {
@@ -288,7 +256,7 @@ describe('Heart', function () {
     });
 
     it('will revert if called by non owner', async function () {
-      const amountToLend = eth('5000');
+      const amountToLend = eth(5000);
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await expect(heart.connect(signer1).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 })).to.be

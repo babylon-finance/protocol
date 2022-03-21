@@ -622,8 +622,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     /**
      * Lends an amount of WETH converting it first to the pool asset that is the lowest (except BABL)
      *
-     * @param _fromAsset             Which asset to convert
-     * @param _fromAmount             Total amount of weth to lend
+     * @param _fromAsset            Which asset to convert
+     * @param _fromAmount           Total amount of weth to lend
      * @param _lendAsset            Address of the asset to lend
      */
     function _lendFusePool(
