@@ -89,6 +89,14 @@ contract HeartViewer {
         );
     }
 
+    function getBondDiscounts(address[] calldata _assets) external view returns (uint256[] memory) {
+        uint[] memory discounts = new uint[](_assets.length);
+        for (uint256 i = 0; i < _assets.length; i++) {
+          discounts[i] = heart.bondAssets(_assets[i]);
+        }
+        return discounts;
+    }
+
     function getGovernanceProposals(uint256[] calldata _ids)
         external
         view
