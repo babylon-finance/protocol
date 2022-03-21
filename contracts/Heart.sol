@@ -714,7 +714,6 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 _minAmountOut,
         address _hopToken
     ) private returns (uint256) {
-
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);

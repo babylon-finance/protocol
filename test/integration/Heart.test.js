@@ -240,7 +240,6 @@ describe('Heart', function () {
         'GovernorCompatibilityBravo: vote already cast',
       );
     });
-
   });
 
   describe('lend fuse pool', async function () {
