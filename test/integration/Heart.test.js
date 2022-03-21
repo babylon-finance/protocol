@@ -15,7 +15,7 @@ const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 const { fund } = require('lib/whale');
 
-describe.only('Heart', function () {
+describe('Heart', function () {
   let heartGarden;
   let heart;
   let signer1;
