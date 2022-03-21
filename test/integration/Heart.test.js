@@ -334,8 +334,8 @@ describe('Heart', function () {
     describe('protects if BABL price is lower than threshold', async function () {
       [
         { name: 'USDC', token: addresses.tokens.USDC, slippage: eth(0.01) },
-        { name: 'DAI', token: addresses.tokens.DAI, slippage: eth(0.01)  },
-        { name: 'FEI', token: addresses.tokens.FEI, slippage: eth(0.5)  },
+        { name: 'DAI', token: addresses.tokens.DAI, slippage: eth(0.01) },
+        { name: 'FEI', token: addresses.tokens.FEI, slippage: eth(0.5) },
       ].forEach(({ token, name, slippage }) => {
         it(`with ${name} as purchase asset`, async function () {
           const price = await priceOracle.getPrice(addresses.tokens.BABL, token);
