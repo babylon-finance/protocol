@@ -29,6 +29,8 @@ interface ITokenIdentifier {
 
     function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external;
 
+    function updateVisor(address[] calldata _vaults, bool[] calldata _values) external;
+
     function updateSynth(address[] calldata _synths, bool[] calldata _values) external;
 
     function updateCreamPair(address[] calldata _creamTokens, address[] calldata _underlyings) external;

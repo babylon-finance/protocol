@@ -59,6 +59,8 @@ contract TokenIdentifier is ITokenIdentifier {
     mapping(address => bool) public synths;
     // Mapping of yearn vaults
     mapping(address => bool) public vaults;
+    // Mapping of gamma visors
+    mapping(address => bool) public visors;
 
     /* ============ Modifiers ============ */
 
@@ -298,6 +300,10 @@ contract TokenIdentifier is ITokenIdentifier {
         vaults[0x6Ede7F19df5df6EF23bD5B9CeDb651580Bdf56Ca] = true; // Curve BUSD Pool yVault
         vaults[0x2994529C0652D127b7842094103715ec5299bBed] = true; // yearn Curve.fi yDAI/yUSDC/yUSDT/yBUSD
         vaults[0xD6Ea40597Be05c201845c0bFd2e96A60bACde267] = true; // Curve Compound Pool yVault
+
+        visors[0x52cE16B1F37Ea7BE4352B29fcDE3331E225380FF] = true; // BABL-ETH Visor
+        visors[0xf6eeCA73646ea6A5c878814e6508e87facC7927C] = true; // GAMMA-ETH Visor
+        visors[0xc86B1e7FA86834CaC1468937cdd53ba3cCbC1153] = true; // FLOAT-ETH Visor
     }
 
     /* ============ External Functions ============ */
@@ -334,6 +340,13 @@ contract TokenIdentifier is ITokenIdentifier {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _cTokens.length; i++) {
             cTokenToAsset[_cTokens[i]] = _underlyings[i];
+        }
+    }
+
+    function updateVisor(address[] calldata _visors, bool[] calldata _values) external override {
+        controller.onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _visors.length; i++) {
+            visors[_visors[i]] = _values[i];
         }
     }
 
@@ -402,6 +415,15 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = SYNTH_TOKEN;
         }
 
+        // Checks visor
+        if (visors[_tokenIn]) {
+            tokenInType = VISOR_LP_TOKEN;
+        }
+
+        if (visors[_tokenOut]) {
+            tokenOutType = VISOR_LP_TOKEN;
+        }
+
         // Early exit
         if (tokenInType > 0 && tokenOutType > 0) {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
@@ -423,11 +445,11 @@ contract TokenIdentifier is ITokenIdentifier {
         }
 
         // Yearn vaults
-        if (_isYearnVault(_tokenIn)) {
+        if (vaults[_tokenIn]) {
             tokenInType = YEARN_TOKEN;
         }
 
-        if (_isYearnVault(_tokenOut)) {
+        if (vaults[_tokenOut]) {
             tokenOutType = YEARN_TOKEN;
         }
 
@@ -475,8 +497,4 @@ contract TokenIdentifier is ITokenIdentifier {
     }
 
     /* ============ Internal Functions ============ */
-
-    function _isYearnVault(address _token) private view returns (bool) {
-        return vaults[_token];
-    }
 }

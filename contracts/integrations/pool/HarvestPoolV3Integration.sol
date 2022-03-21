@@ -110,7 +110,10 @@ contract HarvestPoolV3Integration is PoolIntegration {
         return IHarvestUniv3Pool(poolAddress).totalSupply() > 0;
     }
 
-    function _getSpender(bytes calldata _pool) internal pure override returns (address) {
+    function _getSpender(
+        bytes calldata _pool,
+        uint8 /* _opType */
+    ) internal pure override returns (address) {
         address poolAddress = BytesLib.decodeOpDataAddress(_pool);
         return poolAddress;
     }
