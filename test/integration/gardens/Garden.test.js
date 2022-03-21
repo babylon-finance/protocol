@@ -1819,6 +1819,24 @@ describe('Garden', function () {
     });
   });
 
+  describe('verify garden', async function () {
+    it('governance can update verification category', async function () {
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+      expect(await garden.verifiedCategory()).to.eq(0);
+      await garden.connect(owner).verifyGarden(1);
+      expect(await garden.verifiedCategory()).to.eq(1);
+    });
+
+    it('creator cannot update verification category', async function () {
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+      await expect(garden.connect(signer1).verifyGarden(1)).to.be.reverted;
+    });
+  });
+
   describe('avg share price per user', async function () {
     pick(GARDENS).forEach(({ token, name }) => {
       it(`should get the avg share price of a user in ${name} garden`, async function () {
