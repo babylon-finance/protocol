@@ -290,7 +290,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         _onlyValidSigner(_signer, _nonce);
 
-        _signer.isValidSignatureNow(hash, _signature);
+        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
@@ -406,7 +406,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             )
                 .toEthSignedMessageHash();
 
-        _signer.isValidSignatureNow(hash, _signature);
+        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
 
         _withdrawInternal(
             _amountIn,
@@ -470,7 +470,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyValidSigner(_signer, _nonce);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
 
-        _signer.isValidSignatureNow(hash, _signature);
+        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
 
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
