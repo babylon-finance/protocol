@@ -276,7 +276,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
-        address _to
+        address _to,
         uint256 _pricePerShare,
         uint256 _fee,
         address _signer,
@@ -299,7 +299,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _internalDeposit(
                 _amountIn.sub(_fee),
                 _minAmountOut.sub(feeShares),
-                _signer,
+                _to,
                 _signer,
                 _pricePerShare,
                 minContribution > _fee ? minContribution.sub(_fee) : 0
@@ -307,7 +307,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, _signer, _signer, _pricePerShare, minContribution);
+            _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution);
         }
     }
 
