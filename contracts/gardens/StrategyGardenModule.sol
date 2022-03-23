@@ -219,8 +219,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     ) external override {
         _onlyUnpaused();
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-        (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
-        _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
+        bool canCreateStrategy =
+            publicStrategists ||
+                IMardukGate(controller.mardukGate()).canAddStrategiesInAGarden(address(this), msg.sender);
+        _require(canCreateStrategy, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         address strategy =
             IStrategyFactory(controller.strategyFactory()).createStrategy(
@@ -277,24 +279,5 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     function _liquidReserve() private view returns (uint256) {
         uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
-    }
-
-    /**
-     * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
-     */
-    function _getUserPermission(address _user)
-        internal
-        view
-        returns (
-            bool canDeposit,
-            bool canVote,
-            bool canCreateStrategy
-        )
-    {
-        IMardukGate mgate = IMardukGate(controller.mardukGate());
-        bool betaAccess = true;
-        canDeposit = (betaAccess && !privateGarden) || mgate.canJoinAGarden(address(this), _user);
-        canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
-        canCreateStrategy = (betaAccess && publicStrategists) || mgate.canAddStrategiesInAGarden(address(this), _user);
     }
 }
