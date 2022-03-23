@@ -210,6 +210,22 @@ describe('Garden', function () {
       expect(await garden.balanceOf(signer1.address)).to.eq(0);
       expect(await garden.balanceOf(signer2.address)).to.eq(amount);
     });
+
+    it('fail to transfer locked tokens', async function () {
+      await fund([signer1.address], { tokens: [addresses.tokens.WETH] });
+
+      const garden = await createGarden({
+        reserveAsset: addresses.tokens.WETH,
+        publicGardenStrategistsStewards: [true, true, true],
+      });
+      await babController.connect(owner).enableGardenTokensTransfers();
+
+      const strategy = await getStrategy();
+
+      const amount = await garden.balanceOf(signer1.address);
+      await expect(garden.connect(signer1).transfer(signer2.address, amount)).to.be.revertedWith('BAB#007');
+
+    });
   });
 
   describe('transfer creator rights', async function () {
