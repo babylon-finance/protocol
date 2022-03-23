@@ -273,7 +273,7 @@ describe.only('Heart', function () {
     });
   });
 
-  describe('bond asset by sig', async function () {
+  describe.only('bond asset by sig', async function () {
     it('can bond asset by sig', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);
@@ -281,33 +281,49 @@ describe.only('Heart', function () {
       await heart.connect(owner).updateBond(cDAI.address, eth(0.05));
 
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
-      const amount = eth(20000);
-      const amountIn = eth(100);
-      const minAmountOut = eth(1);
+      const amountToBond = eth(1000);
+      const priceInBABL = eth(0.1);
+      const amountIn = amountToBond
+        .mul(priceInBABL)
+        .mul(eth(1.05)).div(eth())
+        .div(eth());
+      const minAmountOut = amountIn;
       const nonce = 0;
       const maxFee = from(0);
       const fee = from(0);
 
-      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amountToBond, { gasPrice: 0 });
 
-      const hBABLBalance = await hBABL.balanceOf(signer3.address);
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       // User approves the Heart
-      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      await cDAI.connect(signer3).approve(heart.address, amountToBond, { gasPrice: 0 });
       // User approves the Heart garden
       await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
 
-      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee);
+      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee, signer3.address);
 
       // Bond the asset
       await heart
         .connect(keeper)
-        .bondAssetBySig(cDAI.address, amount, amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig, {
-          gasPrice: 0,
-        });
+        .bondAssetBySig(
+          cDAI.address,
+          amountToBond,
+          amountIn,
+          minAmountOut,
+          nonce,
+          maxFee,
+          priceInBABL,
+          eth(),
+          fee,
+          signer3.address,
+          sig,
+          {
+            gasPrice: 0,
+          },
+        );
 
-      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(hBABLBalance.add(eth(70)), eth(10));
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, 0);
     });
   });
 

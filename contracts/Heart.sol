@@ -414,7 +414,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external override {
         controller.onlyGovernanceOrEmergency();
         address cToken = assetToCToken[_borrowedAsset];
-        IERC20(_borrowedAsset).approve(cToken, _amountToRepay);
+        IERC20(_borrowedAsset).safeApprove(cToken, _amountToRepay);
         require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, 'Not enough to repay');
     }
 
@@ -482,18 +482,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _minAmountOut
     ) external override {
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
-        uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
         // Total value adding the premium
-        uint256 bondValueInBABL =
-            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
-                priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
-            );
+        uint256 bondValueInBABL = _bondToBABL(_assetToBond, _amountToBond, IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL)));
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL');
 
-        BABL.approve(address(heartGarden), bondValueInBABL);
+        BABL.safeApprove(address(heartGarden), bondValueInBABL);
 
         heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender);
     }
@@ -513,30 +509,34 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        uint256 _priceInBABL,
         uint256 _pricePerShare,
         uint256 _fee,
-        address _signer,
+        address _contributor,
         bytes memory _signature
     ) external {
         _onlyKeeper();
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
         console.log('move BABL');
-        // Get asset to bond from sender
-        IERC20(_assetToBond).safeTransferFrom(_signer, address(this), _amountToBond);
+        // Get asset to bond from contributor
+        IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= _amountIn, 'Not enough BABL');
 
-        BABL.approve(address(heartGarden), _amountIn);
+        // verify that _amountIn is correct compare to _amountToBond
+        console.log(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL));
+        console.log(_amountIn);
+        require(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL) == _amountIn, 'wrong amount of BABL');
 
-        // Send tokens to the user so deposit into Heart garden works
-        IERC20(BABL).safeTransfer(_signer, _amountIn);
+        BABL.safeApprove(address(heartGarden), _amountIn);
 
         // Pay the fee to the Keeper
+        require(_fee <= _maxFee, 'Fee too high');
         IERC20(BABL).safeTransfer(msg.sender, _fee);
 
         console.log('deposit');
-        heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _pricePerShare, 0, _signer, _signature);
+        heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _contributor, _pricePerShare, 0, address(this), _signature);
     }
 
     /**
@@ -635,10 +635,15 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Implements EIP-1271
      */
     function isValidSignature(bytes32 hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+        console.log('check sig');
         return this.isValidSignature.selector;
     }
 
     /* ============ Internal Functions ============ */
+
+    function _bondToBABL(address _assetToBond, uint256 _amountToBond, uint256 _priceInBABL) private returns (uint256) {
+       return SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul( _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond])));
+    }
 
     /**
      * Consolidates all reserve asset fees to weth
@@ -682,8 +687,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         // Buy BABL again with half to add 50/50
         uint256 wethToDeposit = _wethBalance.preciseMul(5e17);
         uint256 bablTraded = _trade(address(WETH), address(BABL), wethToDeposit); // 50%
-        BABL.approve(address(visor), bablTraded);
-        WETH.approve(address(visor), wethToDeposit);
+        BABL.safeApprove(address(visor), bablTraded);
+        IERC20(WETH).safeApprove(address(visor), wethToDeposit);
         uint256 oldTreasuryBalance = visor.balanceOf(treasury);
         uint256 shares = visor.deposit(wethToDeposit, bablTraded, treasury);
         _require(
@@ -743,7 +748,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             IWETH(WETH).withdraw(_fromAmount);
             ICEther(cToken).mint{value: _fromAmount}();
         } else {
-            IERC20(_lendAsset).approve(cToken, assetToLendBalance);
+            IERC20(_lendAsset).safeApprove(cToken, assetToLendBalance);
             ICToken(cToken).mint(assetToLendBalance);
         }
         uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
