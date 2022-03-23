@@ -275,7 +275,7 @@ describe('Heart', function () {
     });
   });
 
-  describe.only('bond asset by sig', async function () {
+  describe('bond asset by sig', async function () {
     it('can bond asset by sig', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);

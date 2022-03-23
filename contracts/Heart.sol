@@ -34,7 +34,6 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
-import 'hardhat/console.sol';
 
 /**
  * @title Heart
@@ -522,15 +521,12 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _onlyKeeper();
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
-        console.log('move BABL');
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= _amountIn, 'Not enough BABL');
 
         // verify that _amountIn is correct compare to _amountToBond
-        console.log(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL));
-        console.log(_amountIn);
         require(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL) == _amountIn, 'wrong amount of BABL');
 
         BABL.safeApprove(address(heartGarden), _amountIn);
@@ -539,10 +535,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         require(_fee <= _maxFee, 'Fee too high');
         IERC20(BABL).safeTransfer(msg.sender, _fee);
 
-        console.log('deposit');
         // grant permission to deposit
         signer = _contributor;
-        console.log(signer);
         heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _contributor, _pricePerShare, 0, address(this), _signature);
         // revoke permission to deposit
         signer = address(0);
@@ -644,8 +638,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Implements EIP-1271
      */
     function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
-        console.log('check sig');
-        console.log(ECDSA.recover(_hash, _signature));
         return ECDSA.recover(_hash, _signature) == signer ? this.isValidSignature.selector : bytes4(0);
     }
 
