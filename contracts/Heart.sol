@@ -154,6 +154,9 @@ contract Heart is OwnableUpgradeable, IHeart {
     // Asset to use to buy protocol wanted assets
     address public override assetForPurchases;
 
+    // Value Amount for protect purchases in DAI
+    uint256 private constant PROTECT_BUY_AMOUNT_DAI = 2e21;
+
     /* ============ Initializer ============ */
 
     /**
@@ -331,11 +334,11 @@ contract Heart is OwnableUpgradeable, IHeart {
      * Updates the min amount to trade a specific asset
      *
      * @param _asset                Asset to edit the min amount
-     * @param _minAmount            New min amount
+     * @param _minAmountOut            New min amount
      */
-    function setMinTradeAmount(address _asset, uint256 _minAmount) external override {
+    function setMinTradeAmount(address _asset, uint256 _minAmountOut) external override {
         controller.onlyGovernanceOrEmergency();
-        minAmounts[_asset] = _minAmount;
+        minAmounts[_asset] = _minAmountOut;
     }
 
     /**
@@ -385,6 +388,41 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 
     /**
+     * Repays Heart fuse pool position
+     * Note: We must have the asset in the heart
+     *
+     * @param _borrowedAsset              Borrowed asset that we want to pay
+     * @param _amountToRepay              Amount of asset to transfer
+     */
+    function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external override {
+        controller.onlyGovernanceOrEmergency();
+        address cToken = assetToCToken[_borrowedAsset];
+        IERC20(_borrowedAsset).approve(cToken, _amountToRepay);
+        require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, 'Not enough to repay');
+    }
+
+    /**
+    * Trades one asset for another in the heart
+    * Note: We must have the _fromAsset _fromAmount available.
+
+    * @param _fromAsset                  Asset to exchange
+    * @param _toAsset                    Asset to receive
+    * @param _fromAmount                 Amount of asset to exchange
+    * @param _minAmountOut                  Min amount of received asset
+    */
+    function trade(
+        address _fromAsset,
+        address _toAsset,
+        uint256 _fromAmount,
+        uint256 _minAmountOut
+    ) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, 'Not enough asset to trade');
+        uint256 boughtAmount = _trade(_fromAsset, _toAsset, _fromAmount);
+        require(boughtAmount >= _minAmountOut, 'Too much slippage');
+    }
+
+    /**
      * Strategies can sell wanted assets by the protocol to the heart.
      * Heart will buy them using borrowings in stables.
      * Heart returns WETH so master swapper will take it from there.
@@ -410,6 +448,57 @@ contract Heart is OwnableUpgradeable, IHeart {
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
         // Send weth back to the strategy
         IERC20(WETH).safeTransfer(msg.sender, wethTraded);
+    }
+
+    /**
+     * Heart will protect and buyback BABL whenever the price dips below the intended price protection.
+     * Note: Asset for purchases needs to be setup and have enough balance.
+     *
+     * @param _bablPriceProtectionAt        BABL Price in DAI to protect
+     * @param _bablPrice                    Market price of BABL in DAI
+     * @param _purchaseAssetPrice           Price of purchase asset in DAI
+     * @param _slippage                     Trade slippage on UinV3 to control amount of arb
+     * @param _hopToken            Hop token to use for UniV3 trade
+     */
+    function protectBABL(
+        uint256 _bablPriceProtectionAt,
+        uint256 _bablPrice,
+        uint256 _purchaseAssetPrice,
+        uint256 _slippage,
+        address _hopToken
+    ) external override {
+        _onlyKeeper();
+        require(assetForPurchases != address(0), 'Asset for purchases not set');
+        require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, 'Price is above target');
+
+        require(
+            SafeDecimalMath.normalizeAmountTokens(
+                assetForPurchases,
+                address(DAI),
+                _purchaseAssetPrice.preciseMul(IERC20(assetForPurchases).balanceOf(address(this)))
+            ) >= PROTECT_BUY_AMOUNT_DAI,
+            'Not enough to protect'
+        );
+
+        uint256 exactAmount = PROTECT_BUY_AMOUNT_DAI.preciseDiv(_bablPrice);
+        uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(_slippage == 0 ? tradeSlippage : _slippage));
+
+        uint256 bablBought =
+            _trade(
+                assetForPurchases,
+                address(BABL),
+                SafeDecimalMath.normalizeAmountTokens(
+                    address(DAI),
+                    assetForPurchases,
+                    PROTECT_BUY_AMOUNT_DAI.preciseDiv(_purchaseAssetPrice)
+                ),
+                minAmountOut,
+                _hopToken != address(0) ? _hopToken : address(WETH)
+            );
+
+        totalStats[2] = totalStats[2].add(bablBought);
+
+        emit BablBuyback(block.timestamp, PROTECT_BUY_AMOUNT_DAI, bablBought);
     }
 
     // solhint-disable-next-line
@@ -533,8 +622,8 @@ contract Heart is OwnableUpgradeable, IHeart {
     /**
      * Lends an amount of WETH converting it first to the pool asset that is the lowest (except BABL)
      *
-     * @param _fromAsset             Which asset to convert
-     * @param _fromAmount             Total amount of weth to lend
+     * @param _fromAsset            Which asset to convert
+     * @param _fromAmount           Total amount of weth to lend
      * @param _lendAsset            Address of the asset to lend
      */
     function _lendFusePool(
@@ -600,25 +689,65 @@ contract Heart is OwnableUpgradeable, IHeart {
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _tokenOut);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
+
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_tokenIn, _tokenOut, _amount.preciseMul(pricePerTokenUnit));
-        uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(tradeSlippage));
+        uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(tradeSlippage));
+
+        return _trade(_tokenIn, _tokenOut, _amount, minAmountOut, address(0));
+    }
+
+    /**
+     * Trades _tokenIn to _tokenOut using Uniswap V3
+     *
+     * @param _tokenIn             Token that is sold
+     * @param _tokenOut            Token that is purchased
+     * @param _amount              Amount of tokenin to sell
+     * @param _minAmountOut        Min amount of tokens out to recive
+     * @param _hopToken            Hop token to use for UniV3 trade
+     */
+    function _trade(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amount,
+        uint256 _minAmountOut,
+        address _hopToken
+    ) private returns (uint256) {
         ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
         // Approve the router to spend token in.
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amount);
         bytes memory path;
-        if (_tokenIn == address(FRAX) || _tokenOut == address(FRAX)) {
-            address hopToken = address(DAI);
-            uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, hopToken);
-            uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, hopToken);
-            path = abi.encodePacked(_tokenIn, fee0, hopToken, fee1, _tokenOut);
+        if (
+            (_tokenIn == address(FRAX) && _tokenOut != address(DAI)) ||
+            (_tokenOut == address(FRAX) && _tokenIn != address(DAI))
+        ) {
+            _hopToken = address(DAI);
+        }
+        if (_hopToken != address(0)) {
+            uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _hopToken);
+            uint24 fee1 = _getUniswapPoolFeeWithHighestLiquidity(_tokenOut, _hopToken);
+            // Have to use WETH for BABL because the most liquid pari is WETH/BABL
+            if (_tokenOut == address(BABL) && _hopToken != address(WETH)) {
+                path = abi.encodePacked(
+                    _tokenIn,
+                    fee0,
+                    _hopToken,
+                    fee1,
+                    address(WETH),
+                    _getUniswapPoolFeeWithHighestLiquidity(address(WETH), _tokenOut),
+                    _tokenOut
+                );
+            } else {
+                path = abi.encodePacked(_tokenIn, fee0, _hopToken, fee1, _tokenOut);
+            }
         } else {
             uint24 fee = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _tokenOut);
             path = abi.encodePacked(_tokenIn, fee, _tokenOut);
         }
+
         ISwapRouter.ExactInputParams memory params =
-            ISwapRouter.ExactInputParams(path, address(this), block.timestamp, _amount, minAmountExpected);
+            ISwapRouter.ExactInputParams(path, address(this), block.timestamp, _amount, _minAmountOut);
         return swapRouter.exactInput(params);
     }
 
@@ -649,6 +778,6 @@ contract Heart is OwnableUpgradeable, IHeart {
     }
 }
 
-contract HeartV2 is Heart {
+contract HeartV3 is Heart {
     constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }

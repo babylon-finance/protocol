@@ -52,6 +52,8 @@ interface IHypervisor {
 
     function token1() external view returns (IERC20);
 
+    function pool() external view returns (address);
+
     function balanceOf(address) external view returns (uint256);
 
     function approve(address, uint256) external returns (bool);

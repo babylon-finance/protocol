@@ -8,9 +8,11 @@ import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
+import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
@@ -18,8 +20,12 @@ import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
+import {IHarvestUniv3Pool} from './interfaces/external/harvest/IHarvestUniv3Pool.sol';
 import {ICurvePoolV3DY} from './interfaces/external/curve/ICurvePoolV3DY.sol';
 import {IUniswapV2Router} from './interfaces/external/uniswap/IUniswapV2Router.sol';
+import {IUniswapViewer} from './interfaces/external/uniswap-v3/IUniswapViewer.sol';
+import {IUniVaultStorage} from './interfaces/external/uniswap-v3/IUniVaultStorage.sol';
+import {INFTPositionManager} from './interfaces/external/uniswap-v3/INFTPositionManager.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
 import {IYearnRegistry} from './interfaces/external/yearn/IYearnRegistry.sol';
@@ -53,6 +59,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     ISnxExchangeRates internal constant snxEchangeRates = ISnxExchangeRates(0xd69b189020EF614796578AfE4d10378c5e7e1138);
     IUniswapV2Router internal constant uniRouterV2 = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     IYearnRegistry private constant yearnRegistry = IYearnRegistry(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
+    IUniswapViewer private constant uniswapViewer = IUniswapViewer(0x25c81e249F913C94F263923421622bA731E6555b);
+    INFTPositionManager private constant nftPositionManager =
+        INFTPositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
     address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -75,7 +84,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private constant baseThreshold = 1000;
-    int24 private constant INITIAL_TWAP_DEVIATION = 700; // locally for testing. It should be halved in main
+    int24 private constant INITIAL_TWAP_DEVIATION = 800; // locally for testing. It should be halved in main
 
     /* ============ State Variables ============ */
 
@@ -269,6 +278,22 @@ contract PriceOracle is Ownable, IPriceOracle {
                 price = price.div(10**(18 - yvDecimals));
             }
             return price;
+        }
+
+        // univ2 or sushi or mooniswap
+        if (tokenInType == 8 || tokenInType == 9 || tokenInType == 10) {
+            return _getPriceUniV2LpToken(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
+        }
+        if (tokenOutType == 8 || tokenOutType == 9 || tokenInType == 10) {
+            return getPrice(_tokenIn, WETH).preciseDiv(_getPriceUniV2LpToken(_tokenOut, WETH));
+        }
+
+        // Gamma/Visor LP Tokens
+        if (tokenInType == 12) {
+            return _getPriceVisorLPToken(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
+        }
+        if (tokenOutType == 12) {
+            return getPrice(_tokenIn, WETH).preciseDiv(_getPriceVisorLPToken(_tokenOut, WETH));
         }
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
@@ -482,7 +507,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         // Normalize to reserve asset
         if (denominator != _reserveAsset) {
-            uint256 price = getPrice(denominator, _reserveAsset);
+            uint256 price = _getUniV3PriceNaive(denominator, _reserveAsset);
             // price is always in 18 decimals
             // preciseMul returns in the same decimals than liquidityInReserve, so we have to normalize into reserve Asset decimals
             // normalization into reserveAsset decimals
@@ -545,6 +570,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
         uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
+        if (i == j) return 0;
         if (underlying) {
             price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
         } else {
@@ -573,6 +599,85 @@ contract PriceOracle is Ownable, IPriceOracle {
                 revert('get dy failed');
             }
         }
+    }
+
+    /**
+     * Calculates the value of a univ2 lp token or sushi in denominator asset
+     * @param _pool                      Address of the univ2 style lp token
+     * @param _denominator               Address of the denominator asset
+     */
+    function _getPriceUniV2LpToken(address _pool, address _denominator) internal view returns (uint256) {
+        address[] memory poolTokens = new address[](2);
+        poolTokens[0] = IUniswapV2Pair(_pool).token0();
+        poolTokens[1] = IUniswapV2Pair(_pool).token1();
+        ERC20 lpToken = ERC20(_pool);
+        uint256 result = 0;
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
+            uint256 price = getPrice(_denominator, asset);
+            uint256 balance = !_isETH(poolTokens[i]) ? ERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
+            // Special case for weth in some pools
+            if (poolTokens[i] == WETH && balance == 0) {
+                balance = _pool.balance;
+            }
+            if (price != 0 && balance != 0) {
+                result = result.add(
+                    SafeDecimalMath.normalizeAmountTokens(
+                        asset,
+                        _denominator,
+                        balance.preciseDiv(lpToken.totalSupply()).preciseDiv(price)
+                    )
+                );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Calculates the value of a visor univ3 lp token
+     * @param _visor                     Address of the gama visor
+     * @param _reserve                   Address of the reserve to price tokens in
+     */
+    function _getPriceVisorLPToken(address _visor, address _reserve) internal view returns (uint256) {
+        uint256 totalSupply = IHypervisor(_visor).totalSupply();
+        if (totalSupply == 0) {
+            return 0;
+        }
+        (uint256 amount0, uint256 amount1) = IHypervisor(_visor).getTotalAmounts();
+        return _getPriceUniV3Pool(IUniswapV3Pool(IHypervisor(_visor).pool()), _reserve, totalSupply, amount0, amount1);
+    }
+
+    /**
+     * Calculates the price of a Univ3 wrapped ERC-20 based on supply and amounts
+     * @param _pool                      Address of the univ3 pool
+     * @param _reserve                   Address of the reserve to denominate the price in
+     * @param _totalSupply               Total Supply of the ERC-20 wrapper
+     * @param _amount0                   Total Amount of the first token
+     * @param _amount1                   Toatl Amount of the second token
+     */
+    function _getPriceUniV3Pool(
+        IUniswapV3Pool _pool,
+        address _reserve,
+        uint256 _totalSupply,
+        uint256 _amount0,
+        uint256 _amount1
+    ) internal view returns (uint256) {
+        uint256 priceToken0 = _getPrice(_pool.token0(), _reserve, false);
+        uint256 priceToken1 = _getPrice(_pool.token1(), _reserve, false);
+
+        uint256 priceinReserveToken0 =
+            SafeDecimalMath.normalizeAmountTokens(
+                _pool.token0(),
+                _reserve,
+                _amount0.mul(priceToken0).div(_totalSupply)
+            );
+        uint256 priceinReserveToken1 =
+            SafeDecimalMath.normalizeAmountTokens(
+                _pool.token1(),
+                _reserve,
+                _amount1.mul(priceToken1).div(_totalSupply)
+            );
+        return priceinReserveToken0.add(priceinReserveToken1);
     }
 
     function _getCurveDYUnderlying(
@@ -626,5 +731,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             hopTokens[list[i]] = true;
             hopTokensList.push(list[i]);
         }
+    }
+
+    function _isETH(address _address) internal pure returns (bool) {
+        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }

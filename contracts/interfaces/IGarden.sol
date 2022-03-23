@@ -33,6 +33,12 @@ interface IStrategyGarden {
         bytes calldata _opEncodedDatas
     ) external;
 
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalAmount,
+        uint256 _newCapitalReturned
+    ) external;
+
     function payKeeper(address payable _keeper, uint256 _fee) external;
 }
 
@@ -67,6 +73,8 @@ interface IAdminGarden {
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
 
     function updateGardenParams(uint256[11] memory _newParams) external;
+
+    function verifyGarden(uint8 _verifiedCategory) external;
 }
 
 /**
@@ -107,6 +115,8 @@ interface ICoreGarden {
         );
 
     function reserveAsset() external view returns (address);
+
+    function verifiedCategory() external view returns (uint8);
 
     function totalContributors() external view returns (uint256);
 

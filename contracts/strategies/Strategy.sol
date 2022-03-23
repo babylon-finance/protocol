@@ -5,6 +5,7 @@ import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
@@ -257,9 +258,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         rewardsDistributor = IRewardsDistributor(IBabController(controller).rewardsDistributor());
         expectedReturn = _expectedReturn;
-
-        votes[_strategist] = _stake.toInt256();
-        totalPositiveVotes = _stake;
     }
 
     /* ============ External Functions ============ */
@@ -375,7 +373,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Mark as finalized
         finalized = true;
         active = false;
@@ -486,13 +484,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         _onlyUnpaused();
-        _require(_token != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(_token != garden.reserveAsset(), Errors.CANNOT_SWEEP_RESERVE_ASSET);
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _require(balance > 0, Errors.BALANCE_TOO_LOW);
-
         _trade(_token, balance, garden.reserveAsset(), _newSlippage);
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
@@ -579,6 +572,16 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _handleWeth(_isDeposit, _wethAmount);
     }
 
+    /** PRIVILEGE FUNCTION
+     * Update strategy rewards by governance through garden
+     * @param _newTotalRewards   New total rewards
+     */
+    function updateStrategyRewards(uint256 _newTotalRewards, uint256 _newCapitalReturned) external override {
+        _require(msg.sender == address(garden), Errors.STRATEGY_GARDEN_MISMATCH);
+        strategyRewards = _newTotalRewards;
+        capitalReturned = _newCapitalReturned;
+    }
+
     /* ============ External Getter Functions ============ */
 
     /**
@@ -652,7 +655,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             bool[] memory
         )
     {
-        uint256[] memory data = new uint256[](14);
+        uint256[] memory data = new uint256[](15);
         bool[] memory boolData = new bool[](2);
         data[0] = executedAt;
         data[1] = exitedAt;
@@ -670,6 +673,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
         data[12] = startingGardenSupply;
         data[13] = endingGardenSupply;
+        if (executedAt > 0 && exitedAt == 0) {
+            uint256 endAt = executedAt.add(duration);
+            uint256 remaining =
+                endAt > block.timestamp ? (uint256(1e18).sub(endAt.sub(block.timestamp).preciseDiv(duration))) : 1e18;
+            data[14] = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(7e17); //70%
+        } else {
+            data[14] = 0;
+        }
         return (strategist, data, boolData);
     }
 
@@ -722,7 +733,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
-        address reserveAsset = garden.reserveAsset();
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
             // _getOpDecodedData guarantee backward compatibility with OpData
@@ -736,22 +746,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     negativeNav = negativeNav.add(opNAV);
                 }
             } catch {}
-        }
-        uint256 lastOp = opTypes.length - 1;
-        if (opTypes[lastOp] == 4) {
-            // Backward compatibility
-            // pointer to the starting byte of the ethereum token address
-            address token =
-                opDatas.length > 0
-                    ? opDatas[lastOp]
-                    : BytesLib.decodeOpDataAddressAssembly(opEncodedData, (64 * lastOp) + 12);
-            uint256 borrowBalance = IERC20(token == address(0) ? WETH : token).balanceOf(address(this));
-            if (borrowBalance > 0) {
-                uint256 price = _getPrice(reserveAsset, token);
-                positiveNav = positiveNav.add(
-                    SafeDecimalMath.normalizeAmountTokens(token, reserveAsset, borrowBalance).preciseDiv(price)
-                );
-            }
         }
         if (negativeNav > positiveNav) {
             // Underwater, will display using operation NAV
@@ -1070,4 +1064,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV20 is Strategy {}
+contract StrategyV24 is Strategy {}

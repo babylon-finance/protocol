@@ -98,7 +98,7 @@ contract BabylonViewer {
             bool[4] memory,
             address[] memory,
             address[] memory,
-            uint256[12] memory,
+            uint256[13] memory,
             uint256[10] memory,
             uint256[3] memory
         )
@@ -148,7 +148,8 @@ contract BabylonViewer {
                 garden.minLiquidityAsset(),
                 garden.totalKeeperFees().add(garden.keeperDebt()),
                 garden.pricePerShareDecayRate(),
-                garden.pricePerShareDelta()
+                garden.pricePerShareDelta(),
+                garden.verifiedCategory()
             ],
             [
                 principal,

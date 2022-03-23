@@ -15,7 +15,6 @@ const STUCK = [
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED
   // '0x702c284Cd32F842bE450f5e5C9DE48f14303F1C8', // Long TOKE. Reason: Error: execution reverted: BAB#098
   // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
-
   // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
   // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
   // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
@@ -27,7 +26,7 @@ const STUCK = [
   // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
   // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
-  '0x22de22A50b00333159C54BFc1b9C0507e4759487',
+  // '0x22de22A50b00333159C54BFc1b9C0507e4759487',
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -36,6 +35,7 @@ describe('deploy', function () {
   let owner;
   let gov;
   let keeper;
+  let priceOracle;
   let gardens;
   let strategyNft;
   let valuer;
@@ -209,7 +209,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
+      ({ owner, gov, keeper, priceOracle, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
@@ -275,7 +275,7 @@ describe('deploy', function () {
       await checkNAVStrategies();
     });
 
-    it.only('can execute stuck strategies', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 

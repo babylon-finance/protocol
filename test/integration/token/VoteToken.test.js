@@ -2,12 +2,12 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
 const { ONE_DAY_IN_SECONDS } = require('lib/constants');
-const { increaseTime, eth } = require('utils/test-helpers');
+const { increaseTime, eth, skipIfFast } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.skip('VoteToken', function () {
+skipIfFast('VoteToken', function () {
   let owner;
   let signer1;
   let signer2;
