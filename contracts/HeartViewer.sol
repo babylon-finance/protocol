@@ -90,9 +90,9 @@ contract HeartViewer {
     }
 
     function getBondDiscounts(address[] calldata _assets) external view returns (uint256[] memory) {
-        uint[] memory discounts = new uint[](_assets.length);
+        uint256[] memory discounts = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-          discounts[i] = heart.bondAssets(_assets[i]);
+            discounts[i] = heart.bondAssets(_assets[i]);
         }
         return discounts;
     }

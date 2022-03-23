@@ -82,7 +82,6 @@ contract GammaIntegration is PoolIntegration {
     {
         address visorAddress = BytesLib.decodeOpDataAddress(_pool);
         uint256 totalSupply = IHypervisor(visorAddress).totalSupply();
-        address pool = IHypervisor(visorAddress).pool();
         (uint256 amount0, uint256 amount1) = IHypervisor(visorAddress).getTotalAmounts();
         uint256[] memory result = new uint256[](2);
         result[0] = amount0.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
@@ -97,7 +96,7 @@ contract GammaIntegration is PoolIntegration {
         return IHypervisor(visorAddress).totalSupply() > 0;
     }
 
-    function _getSpender(bytes calldata _pool, uint8 _opType) internal pure override returns (address) {
+    function _getSpender(bytes calldata _pool, uint8 /* _opType */) internal pure override returns (address) {
         address visor = BytesLib.decodeOpDataAddress(_pool);
         return visor;
     }
@@ -123,7 +122,7 @@ contract GammaIntegration is PoolIntegration {
         uint256[] calldata _maxAmountsIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -168,7 +167,7 @@ contract GammaIntegration is PoolIntegration {
         uint256[] calldata _minAmountsOut
     )
         internal
-        view
+        pure
         override
         returns (
             address,

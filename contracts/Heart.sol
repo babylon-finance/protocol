@@ -471,7 +471,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * @param _assetToBond                  Asset that the user wants to bond
      * @param _amountToBond                 Amount to be bonded
-     * @param _minAmountOut                 Min amount of Heart garde shares to recieve
+     * @param _minAmountOut                 Min amount of Heart garden shares to recieve
      */
     function bondAsset(
         address _assetToBond,
@@ -665,7 +665,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Lends an amount of WETH converting it first to the pool asset that is the lowest (except BABL)
      *
      * @param _fromAsset             Which asset to convert
-     * @param _fromAmount             Total amount of weth to lend
+     * @param _fromAmount            Total amount of weth to lend
      * @param _lendAsset            Address of the asset to lend
      */
     function _lendFusePool(
