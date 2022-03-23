@@ -34,8 +34,6 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title BaseGarden
  *

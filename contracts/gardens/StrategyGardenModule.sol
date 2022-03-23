@@ -38,7 +38,6 @@ import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 import {BaseGardenModule} from './BaseGardenModule.sol';
 import {ControllerLib} from '../lib/ControllerLib.sol';
 
-import 'hardhat/console.sol';
 
 /**
  * @title StrategyGardenModule
