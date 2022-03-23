@@ -17,7 +17,7 @@ const {
 
 const { fund } = require('lib/whale');
 
-describe.only('Heart', function () {
+describe('Heart', function () {
   let heartGarden;
   let heart;
   let signer1;
@@ -47,9 +47,11 @@ describe.only('Heart', function () {
   let heartGardenSigner;
   let feeDistributionWeights;
   let babController;
+  let gardenValuer;
 
   beforeEach(async () => {
     ({
+      gardenValuer,
       treasury,
       heartGarden,
       babController,
@@ -273,7 +275,7 @@ describe.only('Heart', function () {
     });
   });
 
-  describe.only('bond asset by sig', async function () {
+  describe('bond asset by sig', async function () {
     it('can bond asset by sig', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);
@@ -283,10 +285,7 @@ describe.only('Heart', function () {
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
       const amountToBond = eth(1000);
       const priceInBABL = eth(0.1);
-      const amountIn = amountToBond
-        .mul(priceInBABL)
-        .mul(eth(1.05)).div(eth())
-        .div(eth());
+      const amountIn = amountToBond.mul(priceInBABL).mul(eth(1.05)).div(eth()).div(eth());
       const minAmountOut = amountIn;
       const nonce = 0;
       const maxFee = from(0);
@@ -301,7 +300,16 @@ describe.only('Heart', function () {
       // User approves the Heart garden
       await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
 
-      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee, signer3.address);
+      console.log(signer3.address);
+      const sig = await getDepositSig(
+        heartGarden.address,
+        signer3,
+        amountIn,
+        minAmountOut,
+        nonce,
+        maxFee,
+        signer3.address,
+      );
 
       // Bond the asset
       await heart
@@ -361,16 +369,21 @@ describe.only('Heart', function () {
     it('user can bond an appropriate amount and receive the discount', async function () {
       await heart.connect(owner).updateBond(cDAI.address, eth('0.05'), { gasPrice: 0 });
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
-      const amount = eth('20000');
-      await cDAI.connect(whalecdaiSigner).transfer(signer1.address, amount, { gasPrice: 0 });
-      const hBABLBalance = await hBABL.balanceOf(signer1.address);
+      const amount = eth(20000);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      const price = await priceOracle.getPrice(cDAI.address, addresses.tokens.BABL);
+      const minAmountOut = amount.mul(price).mul(eth(1.05)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
+      console.log('minAmountOut', minAmountOut.toString());
+
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
       // User approves the heart
-      await cDAI.connect(signer1).approve(heart.address, amount, { gasPrice: 0 });
+      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
-      await heart.connect(signer1).bondAsset(cDAI.address, amount, 1, { gasPrice: 0 });
-      expect(await hBABL.balanceOf(signer1.address)).to.be.closeTo(hBABLBalance.add(eth('70')), eth('10'));
+      await heart.connect(signer3).bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), { gasPrice: 0 });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
     });
   });
 

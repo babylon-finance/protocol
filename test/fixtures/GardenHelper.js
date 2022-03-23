@@ -229,7 +229,9 @@ async function transferFunds(address) {
 
 function getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee, to) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee,address _to)'),
+    ethers.utils.toUtf8Bytes(
+      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee,address _to)',
+    ),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(

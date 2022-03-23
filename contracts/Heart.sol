@@ -7,6 +7,7 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -32,8 +33,6 @@ import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
-
-import 'hardhat/console.sol';
 
 /**
  * @title Heart
@@ -162,6 +161,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     // Bond Assets with the discount
     mapping(address => uint256) public override bondAssets;
+
+    // EIP-1271 signer
+    address signer;
 
     /* ============ Initializer ============ */
 
@@ -483,7 +485,12 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     ) external override {
         require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, 'Bond > 0');
         // Total value adding the premium
-        uint256 bondValueInBABL = _bondToBABL(_assetToBond, _amountToBond, IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL)));
+        uint256 bondValueInBABL =
+            _bondToBABL(
+                _assetToBond,
+                _amountToBond,
+                IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL))
+            );
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
@@ -518,25 +525,31 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _onlyKeeper();
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
-        console.log('move BABL');
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
         require(BABL.balanceOf(address(this)) >= _amountIn, 'Not enough BABL');
 
         // verify that _amountIn is correct compare to _amountToBond
-        console.log(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL));
-        console.log(_amountIn);
         require(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL) == _amountIn, 'wrong amount of BABL');
 
         BABL.safeApprove(address(heartGarden), _amountIn);
 
-        // Pay the fee to the Keeper
-        require(_fee <= _maxFee, 'Fee too high');
-        IERC20(BABL).safeTransfer(msg.sender, _fee);
-
-        console.log('deposit');
-        heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _contributor, _pricePerShare, 0, address(this), _signature);
+        // grant permission to deposit
+        signer = _contributor;
+        heartGarden.depositBySig(
+            _amountIn,
+            _minAmountOut,
+            _nonce,
+            _maxFee,
+            _contributor,
+            _pricePerShare,
+            _fee,
+            address(this),
+            _signature
+        );
+        // revoke permission to deposit
+        signer = address(0);
     }
 
     /**
@@ -634,15 +647,21 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     /**
      * Implements EIP-1271
      */
-    function isValidSignature(bytes32 hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
-        console.log('check sig');
-        return this.isValidSignature.selector;
+    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+        return ECDSA.recover(_hash, _signature) == signer ? this.isValidSignature.selector : bytes4(0);
     }
 
     /* ============ Internal Functions ============ */
 
-    function _bondToBABL(address _assetToBond, uint256 _amountToBond, uint256 _priceInBABL) private returns (uint256) {
-       return SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul( _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond])));
+    function _bondToBABL(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _priceInBABL
+    ) private returns (uint256) {
+        return
+            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
+                _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+            );
     }
 
     /**

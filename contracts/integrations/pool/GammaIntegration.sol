@@ -96,7 +96,10 @@ contract GammaIntegration is PoolIntegration {
         return IHypervisor(visorAddress).totalSupply() > 0;
     }
 
-    function _getSpender(bytes calldata _pool, uint8 /* _opType */) internal pure override returns (address) {
+    function _getSpender(
+        bytes calldata _pool,
+        uint8 /* _opType */
+    ) internal pure override returns (address) {
         address visor = BytesLib.decodeOpDataAddress(_pool);
         return visor;
     }
