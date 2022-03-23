@@ -297,8 +297,6 @@ describe('Heart', function () {
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       // User approves the Heart
       await cDAI.connect(signer3).approve(heart.address, amountToBond, { gasPrice: 0 });
-      // User approves the Heart garden
-      await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
 
       console.log(signer3.address);
       const sig = await getDepositSig(
