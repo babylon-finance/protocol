@@ -197,9 +197,19 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Governance can mark a garden as verified
      * @param _verifiedCategory   New verified category
      */
-    function verifyGarden(uint8 _verifiedCategory) external override {
+    function verifyGarden(uint256 _verifiedCategory) external override {
         controller.onlyGovernanceOrEmergency();
         verifiedCategory = _verifiedCategory;
+    }
+
+    /*
+     * Creator can reset the garden hardlock for all users
+     * @param _hardlockStartsAt       New global hardlock starts at
+     */
+    function resetHardlock(uint256 _hardlockStartsAt) external override {
+        _onlyCreator(msg.sender);
+        _require(_hardlockStartsAt <= block.timestamp, Errors.RESET_HARDLOCK_INVALID);
+        hardlockStartsAt = _hardlockStartsAt;
     }
 
     /**

@@ -74,7 +74,9 @@ interface IAdminGarden {
 
     function updateGardenParams(uint256[11] memory _newParams) external;
 
-    function verifyGarden(uint8 _verifiedCategory) external;
+    function verifyGarden(uint256 _verifiedCategory) external;
+
+    function resetHardlock(uint256 _hardlockStartsAt) external;
 }
 
 /**
@@ -117,7 +119,9 @@ interface ICoreGarden {
 
     function reserveAsset() external view returns (address);
 
-    function verifiedCategory() external view returns (uint8);
+    function verifiedCategory() external view returns (uint256);
+
+    function hardlockStartsAt() external view returns (uint256);
 
     function totalContributors() external view returns (uint256);
 

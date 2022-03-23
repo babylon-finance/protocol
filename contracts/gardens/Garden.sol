@@ -194,7 +194,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 public override pricePerShareDelta;
 
     // Whether or not governance has verified and the category
-    uint8 public override verifiedCategory;
+    uint256 public override verifiedCategory;
+
+    // Variable that overrides the depositLock with a global one
+    uint256 public override hardlockStartsAt;
 
     /* ============ Modifiers ============ */
 
@@ -407,10 +410,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
         // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
+        _require(block.timestamp.sub(_getLastDepositAt(msg.sender)) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6]);
@@ -572,7 +572,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 prevBalance = balanceOf(_to);
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
-        _require(block.timestamp.sub(contributors[_to].lastDepositAt) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        _require(block.timestamp.sub(_getLastDepositAt(_to)) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
 
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
@@ -886,6 +886,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         _require(extraCreators[_index] == address(0), Errors.NEW_CREATOR_MUST_NOT_EXIST);
         extraCreators[_index] = _newCreator;
+    }
+
+    function _getLastDepositAt(address _to) private view returns (uint256) {
+        return hardlockStartsAt > contributors[_to].lastDepositAt ? hardlockStartsAt : contributors[_to].lastDepositAt;
     }
 }
 
