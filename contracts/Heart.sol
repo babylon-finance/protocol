@@ -648,7 +648,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Implements EIP-1271
      */
     function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
-        return ECDSA.recover(_hash, _signature) == signer ? this.isValidSignature.selector : bytes4(0);
+        address recovered = ECDSA.recover(_hash, _signature);
+        return recovered == signer && recovered != address(0) ? this.isValidSignature.selector : bytes4(0);
     }
 
     /* ============ Internal Functions ============ */
