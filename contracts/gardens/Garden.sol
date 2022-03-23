@@ -255,11 +255,28 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution);
     }
 
+    /**
+     * @notice
+     *   Deposits the _amountIn in reserve asset into the garden. Gurantee to
+     *   recieve at least _minAmountOut.
+     * @param _amountIn               Amount of the reserve asset that is received from contributor.
+     * @param _minAmountOut           Min amount of Garden shares to receive by contributor.
+     * @param _nonce                  Current nonce to prevent replay attacks.
+     * @param _maxFee                 Max fee user is willing to pay keeper. Fee is
+     *                                substracted from the withdrawn amount. Fee is
+     *                                expressed in reserve asset.
+     * @param _pricePerShare          Price per share of the garden calculated off-chain by Keeper.
+     * @param _to                     Address to mint shares to.
+     * @param _fee                    Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _signer                 The user to who signed the signature.
+     * @param _signature              Signature by the user to verify deposit parmas.
+     */
     function depositBySig(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        address _to
         uint256 _pricePerShare,
         uint256 _fee,
         address _signer,
@@ -355,6 +372,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _pricePerShare   Price per share of the garden calculated off-chain by Keeper.
      * @param _strategyNAV     NAV of the strategy to unwind.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _signer          The user to who signed the signature
+     * @param _signature       Signature by the user to verify withdraw parmas.
      */
     function withdrawBySig(
         uint256 _amountIn,
@@ -432,6 +451,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      *                         substracted from user wallet in reserveAsset. Fee is
      *                         expressed in reserve asset.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _signer          The user to who signed the signature
+     * @param _signature       Signature by the user to verify claim parmas.
      */
     function claimRewardsBySig(
         uint256 _babl,
