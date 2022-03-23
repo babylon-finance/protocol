@@ -214,7 +214,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     /**
      * Check if is a valid _signer with a valid nonce
      */
-    function _onlyValidSigner(address _signer, uint256 _nonce, bytes32 _hash , bytes memory _signature) private view {
+    function _onlyValidSigner(
+        address _signer,
+        uint256 _nonce,
+        bytes32 _hash,
+        bytes memory _signature
+    ) private view {
         _require(contributors[_signer].nonce == _nonce, Errors.INVALID_NONCE);
         // to prevent replay attacks
         _require(_signer.isValidSignatureNow(_hash, _signature), Errors.INVALID_SIGNER);
@@ -284,7 +289,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyKeeperAndFee(_fee, _maxFee);
 
         bytes32 hash =
-            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee, _to))
+            keccak256(
+                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee, _to)
+            )
                 .toEthSignedMessageHash();
 
         _onlyValidSigner(_signer, _nonce, hash, _signature);
@@ -387,7 +394,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes memory _signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
-
 
         bytes32 hash =
             keccak256(

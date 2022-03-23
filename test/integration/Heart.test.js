@@ -301,7 +301,15 @@ describe('Heart', function () {
       await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
 
       console.log(signer3.address);
-      const sig = await getDepositSig(heartGarden.address, signer3, amountIn, minAmountOut, nonce, maxFee, signer3.address);
+      const sig = await getDepositSig(
+        heartGarden.address,
+        signer3,
+        amountIn,
+        minAmountOut,
+        nonce,
+        maxFee,
+        signer3.address,
+      );
 
       // Bond the asset
       await heart

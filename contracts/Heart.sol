@@ -34,7 +34,6 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
-
 /**
  * @title Heart
  * @author Babylon Finance
@@ -486,7 +485,12 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     ) external override {
         require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, 'Bond > 0');
         // Total value adding the premium
-        uint256 bondValueInBABL = _bondToBABL(_assetToBond, _amountToBond, IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL)));
+        uint256 bondValueInBABL =
+            _bondToBABL(
+                _assetToBond,
+                _amountToBond,
+                IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL))
+            );
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
@@ -537,7 +541,17 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         // grant permission to deposit
         signer = _contributor;
-        heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _contributor, _pricePerShare, 0, address(this), _signature);
+        heartGarden.depositBySig(
+            _amountIn,
+            _minAmountOut,
+            _nonce,
+            _maxFee,
+            _contributor,
+            _pricePerShare,
+            0,
+            address(this),
+            _signature
+        );
         // revoke permission to deposit
         signer = address(0);
     }
@@ -643,8 +657,15 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     /* ============ Internal Functions ============ */
 
-    function _bondToBABL(address _assetToBond, uint256 _amountToBond, uint256 _priceInBABL) private returns (uint256) {
-       return SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul( _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond])));
+    function _bondToBABL(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _priceInBABL
+    ) private returns (uint256) {
+        return
+            SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
+                _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+            );
     }
 
     /**
