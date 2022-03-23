@@ -224,7 +224,6 @@ describe('Garden', function () {
 
       const amount = await garden.balanceOf(signer1.address);
       await expect(garden.connect(signer1).transfer(signer2.address, amount)).to.be.revertedWith('BAB#007');
-
     });
   });
 
