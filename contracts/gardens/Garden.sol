@@ -197,6 +197,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Base slippage for pricePerShare of the garden
     uint256 public override pricePerShareDelta;
 
+    // Whether or not governance has verified and the category
+    uint8 public override verifiedCategory;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {

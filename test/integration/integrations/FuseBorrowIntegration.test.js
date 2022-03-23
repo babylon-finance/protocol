@@ -45,9 +45,9 @@ describe('FuseBorrowIntegrationTest', function () {
     const amount = STRATEGY_EXECUTE_MAP[token].mul(7);
     await executeStrategy(strategyContract, { amount });
     // Check NAV
-    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
     expect(await asset1.balanceOf(strategyContract.address)).to.eq(0);
     expect(await asset2.balanceOf(strategyContract.address)).to.be.gt(0);
+    expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(30));
     expect(await fuseBorrowIntegration.getBorrowBalance(strategyContract.address, asset2Address)).to.be.gt(0);
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
@@ -111,6 +111,10 @@ describe('FuseBorrowIntegrationTest', function () {
   });
 
   describe('Fuse Borrow Multigarden multiasset', function () {
+    it(`should fail trying to supply BABL and borrow BABL at Fuse in a WETH Garden`, async function () {
+      await trySupplyBorrowStrategy(BABL, BABL, addresses.tokens.WETH, 'There is no collateral locked');
+    });
+
     pick(GARDENS).forEach(({ token, name }) => {
       it(`can supply DAI and borrow FRAX at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(DAI, FRAX, token);
@@ -130,18 +134,6 @@ describe('FuseBorrowIntegrationTest', function () {
 
       it(`can supply ETH and borrow DAI at Fuse in a ${name} Garden`, async function () {
         await supplyBorrowStrategy(WETH, DAI, token);
-      });
-
-      it(`should fail trying to supply DAI and borrow DAI at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(DAI, DAI, token, 'There is no collateral locked');
-      });
-
-      it(`should fail trying to supply ETH and borrow ETH at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(WETH, WETH, token, 'There is no collateral locked');
-      });
-
-      it(`should fail trying to supply BABL and borrow BABL at Fuse in a ${name} Garden`, async function () {
-        await trySupplyBorrowStrategy(BABL, BABL, token, 'There is no collateral locked');
       });
     });
   });

@@ -12,6 +12,7 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
+import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
@@ -285,6 +286,14 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         if (tokenOutType == 8 || tokenOutType == 9 || tokenInType == 10) {
             return getPrice(_tokenIn, WETH).preciseDiv(_getPriceUniV2LpToken(_tokenOut, WETH));
+        }
+
+        // Gamma/Visor LP Tokens
+        if (tokenInType == 12) {
+            return _getPriceVisorLPToken(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
+        }
+        if (tokenOutType == 12) {
+            return getPrice(_tokenIn, WETH).preciseDiv(_getPriceVisorLPToken(_tokenOut, WETH));
         }
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
@@ -622,6 +631,53 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
         }
         return result;
+    }
+
+    /**
+     * Calculates the value of a visor univ3 lp token
+     * @param _visor                     Address of the gama visor
+     * @param _reserve                   Address of the reserve to price tokens in
+     */
+    function _getPriceVisorLPToken(address _visor, address _reserve) internal view returns (uint256) {
+        uint256 totalSupply = IHypervisor(_visor).totalSupply();
+        if (totalSupply == 0) {
+            return 0;
+        }
+        (uint256 amount0, uint256 amount1) = IHypervisor(_visor).getTotalAmounts();
+        return _getPriceUniV3Pool(IUniswapV3Pool(IHypervisor(_visor).pool()), _reserve, totalSupply, amount0, amount1);
+    }
+
+    /**
+     * Calculates the price of a Univ3 wrapped ERC-20 based on supply and amounts
+     * @param _pool                      Address of the univ3 pool
+     * @param _reserve                   Address of the reserve to denominate the price in
+     * @param _totalSupply               Total Supply of the ERC-20 wrapper
+     * @param _amount0                   Total Amount of the first token
+     * @param _amount1                   Toatl Amount of the second token
+     */
+    function _getPriceUniV3Pool(
+        IUniswapV3Pool _pool,
+        address _reserve,
+        uint256 _totalSupply,
+        uint256 _amount0,
+        uint256 _amount1
+    ) internal view returns (uint256) {
+        uint256 priceToken0 = _getPrice(_pool.token0(), _reserve, false);
+        uint256 priceToken1 = _getPrice(_pool.token1(), _reserve, false);
+
+        uint256 priceinReserveToken0 =
+            SafeDecimalMath.normalizeAmountTokens(
+                _pool.token0(),
+                _reserve,
+                _amount0.mul(priceToken0).div(_totalSupply)
+            );
+        uint256 priceinReserveToken1 =
+            SafeDecimalMath.normalizeAmountTokens(
+                _pool.token1(),
+                _reserve,
+                _amount1.mul(priceToken1).div(_totalSupply)
+            );
+        return priceinReserveToken0.add(priceinReserveToken1);
     }
 
     function _getCurveDYUnderlying(

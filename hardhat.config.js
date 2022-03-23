@@ -37,6 +37,7 @@ require('./lib/tasks/stuck');
 require('./lib/tasks/mining');
 require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
+require('./lib/tasks/fuse');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 const COVERAGE = !!process.env.COVERAGE;
@@ -51,7 +52,7 @@ const OWNER_PRIVATE_KEY =
   process.env.OWNER_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
 
 const defaultNetwork = 'hardhat';
-const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14357000;
+const BLOCK_NUMBER = process.env.BLOCK_NUMBER || 14426000;
 
 const CHAIN_IDS = {
   hardhat: 1337,

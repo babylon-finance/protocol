@@ -10,7 +10,7 @@ module.exports = async ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
-  const contract = 'PickleJarIntegration';
+  const contract = 'GammaIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
 
@@ -21,11 +21,11 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
   if (deployment.newlyDeployed) {
-    console.log(`Adding pickle jar integration ${contract}(${deployment.address})`);
+    console.log(`Adding gamma integration ${contract}(${deployment.address})`);
   }
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
 };
 
-module.exports.tags = ['PickleJar'];
+module.exports.tags = ['GammaIntegration'];
