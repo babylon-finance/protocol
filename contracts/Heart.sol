@@ -478,7 +478,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _amountToBond,
         uint256 _minAmountOut
     ) external override {
-        require(bondAssets[_assetToBond] > 0, 'Bond > 0');
+        require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, 'Bond > 0');
         uint256 priceInBABL = IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL));
         // Total value adding the premium
         uint256 bondValueInBABL =
