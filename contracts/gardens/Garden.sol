@@ -87,7 +87,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 private constant TEN_PERCENT = 1e17;
 
     bytes32 private constant DEPOSIT_BY_SIG_TYPEHASH =
-        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee)');
+        keccak256('DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee,address _to)');
     bytes32 private constant WITHDRAW_BY_SIG_TYPEHASH =
         keccak256(
             'WithdrawBySig(uint256 _amountIn,uint256 _minAmountOut,uint256,_nonce,uint256 _maxFee,uint256 _withPenalty)'
@@ -214,11 +214,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     /**
      * Check if is a valid _signer with a valid nonce
      */
-    function _onlyValidSigner(address _signer, uint256 _nonce) private view {
-        // Used in by sig
-        _require(_signer != address(0), Errors.INVALID_SIGNER);
-        // to prevent replay attacks
+    function _onlyValidSigner(address _signer, uint256 _nonce, bytes32 _hash , bytes memory _signature) private view {
         _require(contributors[_signer].nonce == _nonce, Errors.INVALID_NONCE);
+        // to prevent replay attacks
+        _require(_signer.isValidSignatureNow(_hash, _signature), Errors.INVALID_SIGNER);
     }
 
     function _onlyNonZero(address _address) private pure {
@@ -285,12 +284,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyKeeperAndFee(_fee, _maxFee);
 
         bytes32 hash =
-            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee))
+            keccak256(abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee, _to))
                 .toEthSignedMessageHash();
 
-        _onlyValidSigner(_signer, _nonce);
+        _onlyValidSigner(_signer, _nonce, hash, _signature);
 
-        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
         if (_fee > 0) {
@@ -390,7 +388,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
 
-        _onlyValidSigner(_signer, _nonce);
 
         bytes32 hash =
             keccak256(
@@ -406,7 +403,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             )
                 .toEthSignedMessageHash();
 
-        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
+        _onlyValidSigner(_signer, _nonce, hash, _signature);
 
         _withdrawInternal(
             _amountIn,
@@ -467,10 +464,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes32 hash =
             keccak256(abi.encode(REWARDS_BY_SIG_TYPEHASH, address(this), _babl, _profits, _nonce, _maxFee))
                 .toEthSignedMessageHash();
-        _onlyValidSigner(_signer, _nonce);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
 
-        _require(_signer.isValidSignatureNow(hash, _signature), Errors.INVALID_SIGNER);
+        _onlyValidSigner(_signer, _nonce, hash, _signature);
 
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
