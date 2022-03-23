@@ -78,6 +78,14 @@ interface IHeart {
 
     function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external;
 
+    function protectBABL(
+        uint256 _bablPriceProtectionAt,
+        uint256 _bablPrice,
+        uint256 _pricePurchasingAsset,
+        uint256 _slippage,
+        address _hopToken
+    ) external;
+
     function trade(
         address _fromAsset,
         address _toAsset,

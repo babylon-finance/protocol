@@ -15,6 +15,8 @@ const {
   depositFunds,
 } = require('fixtures/GardenHelper');
 
+const { fund } = require('lib/whale');
+
 describe.only('Heart', function () {
   let heartGarden;
   let heart;
@@ -26,16 +28,18 @@ describe.only('Heart', function () {
   let keeper;
   let owner;
   let treasury;
-  let priceOracle;
   let tokenIdentifier;
   let BABL;
+  let FEI;
   let WETH;
   let FRAX;
   let DAI;
+  let WBTC;
   let CBABL;
   let hBABL;
   let USDC;
   let cDAI;
+  let deployer;
   let voters;
   let token;
   let governor;
@@ -46,8 +50,9 @@ describe.only('Heart', function () {
 
   beforeEach(async () => {
     ({
-      babController,
+      treasury,
       heartGarden,
+      babController,
       heart,
       signer1,
       signer3,
@@ -59,7 +64,6 @@ describe.only('Heart', function () {
       deployer,
       priceOracle,
       tokenIdentifier,
-      treasury,
     } = await setupTests()());
     WETH = await getERC20(addresses.tokens.WETH);
     BABL = await getERC20(addresses.tokens.BABL);
@@ -67,6 +71,8 @@ describe.only('Heart', function () {
     DAI = await getERC20(addresses.tokens.DAI);
     USDC = await getERC20(addresses.tokens.USDC);
     hBABL = await getERC20(heartGarden.address);
+    FEI = await getERC20(addresses.tokens.FEI);
+    WBTC = await getERC20(addresses.tokens.WBTC);
     CBABL = await getERC20('0x812eedc9eba9c428434fd3ce56156b4e23012ebc');
     token = await ethers.getContractAt('BABLToken', '0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74');
     governor = await ethers.getContractAt('BabylonGovernor', '0xBEC3de5b14902C660Bd2C7EfD2F259998424cc24');
@@ -83,8 +89,8 @@ describe.only('Heart', function () {
     const visor = await ethers.getContractAt('IHypervisor', '0xF19F91d7889668A533F14d076aDc187be781a458');
     await visor.connect(visorOwner).appendList([heart.address], { gasPrice: 0 });
     // Adds weekly rewards
-    await BABL.connect(owner).approve(heart.address, eth('5000'));
-    await heart.connect(owner).addReward(eth('5000'), eth('300'));
+    await BABL.connect(owner).approve(heart.address, eth(5000));
+    await heart.connect(owner).addReward(eth(5000), eth(300));
   });
 
   describe('can call getter methods', async function () {
@@ -101,8 +107,8 @@ describe.only('Heart', function () {
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.DAI);
       expect(await heart.connect(owner).lastPumpAt()).to.equal(0);
       expect(await heart.connect(owner).lastVotesAt()).to.equal(0);
-      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth('300'));
-      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth('5000'));
+      expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(300));
+      expect(await heart.connect(owner).bablRewardLeft()).to.equal(eth(5000));
       const fees = await heart.connect(owner).getFeeDistributionWeights();
       expect(fees[0]).to.equal(eth(0.1));
       expect(fees[1]).to.equal(eth(0.3));
@@ -244,35 +250,6 @@ describe.only('Heart', function () {
         'GovernorCompatibilityBravo: vote already cast',
       );
     });
-
-    it('heart does increase its voting power by each new BABL received as it self delegated in constructor', async function () {
-      const heartBalance = await token.getCurrentVotes(heart.address);
-      expect(heartBalance).to.eq(eth('5000'));
-      const heartSigner = await impersonateAddress(heart.address);
-      const heartGardenBalance = await token.balanceOf(heartGarden.address);
-      const voterBalance = await token.balanceOf(voters[0].address);
-      // get heart garden delegation
-      await token.connect(heartGardenSigner).delegate(heart.address, { gasPrice: 0 });
-      const heartVotingPower2 = await token.getCurrentVotes(heart.address);
-      expect(heartVotingPower2).to.eq(heartGardenBalance.add(heartBalance));
-      // remove delegation
-      await token.connect(heartGardenSigner).delegate(heartGarden.address, { gasPrice: 0 });
-      const heartVotingPower3 = await token.getCurrentVotes(heart.address);
-      expect(heartVotingPower3).to.eq(heartBalance);
-      // get out of vesting
-      await increaseTime(ONE_YEAR_IN_SECONDS * 3);
-      // By a simple transfer its gets voting power as it self delegated during constructor
-      // If not self-delegated its own balance will never count unless heart self-delegates
-      await token.connect(voters[0]).transfer(heart.address, await token.balanceOf(voters[0].address), { gasPrice: 0 });
-      const heartVotingPower4 = await token.getCurrentVotes(heart.address);
-      expect(heartVotingPower4).to.eq(voterBalance.add(heartBalance));
-      // return BABL back
-      await token
-        .connect(heartSigner)
-        .transfer(voters[0].address, await token.balanceOf(heart.address), { gasPrice: 0 });
-      const heartVotingPower5 = await token.getCurrentVotes(heart.address);
-      expect(heartVotingPower5).to.eq(0);
-    });
   });
 
   describe('lend fuse pool', async function () {
@@ -288,7 +265,7 @@ describe.only('Heart', function () {
     });
 
     it('will revert if called by non owner', async function () {
-      const amountToLend = eth('5000');
+      const amountToLend = eth(5000);
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await expect(heart.connect(signer1).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 })).to.be
@@ -296,7 +273,7 @@ describe.only('Heart', function () {
     });
   });
 
-  describe('bond asset by sig', async function () {
+  describe.only('bond asset by sig', async function () {
     it('can bond asset by sig', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);
@@ -304,33 +281,49 @@ describe.only('Heart', function () {
       await heart.connect(owner).updateBond(cDAI.address, eth(0.05));
 
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
-      const amount = eth(20000);
-      const amountIn = eth(100);
-      const minAmountOut = eth(1);
+      const amountToBond = eth(1000);
+      const priceInBABL = eth(0.1);
+      const amountIn = amountToBond
+        .mul(priceInBABL)
+        .mul(eth(1.05)).div(eth())
+        .div(eth());
+      const minAmountOut = amountIn;
       const nonce = 0;
       const maxFee = from(0);
       const fee = from(0);
 
-      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amountToBond, { gasPrice: 0 });
 
-      const hBABLBalance = await hBABL.balanceOf(signer3.address);
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       // User approves the Heart
-      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      await cDAI.connect(signer3).approve(heart.address, amountToBond, { gasPrice: 0 });
       // User approves the Heart garden
       await BABL.connect(signer3).approve(heartGarden.address, amountIn, { gasPrice: 0 });
 
-      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee);
+      const sig = await getDepositSig(heart.address, signer3, amountIn, minAmountOut, nonce, maxFee, signer3.address);
 
       // Bond the asset
       await heart
         .connect(keeper)
-        .bondAssetBySig(cDAI.address, amount, amountIn, minAmountOut, nonce, maxFee, eth(), fee, signer3.address, sig, {
-          gasPrice: 0,
-        });
+        .bondAssetBySig(
+          cDAI.address,
+          amountToBond,
+          amountIn,
+          minAmountOut,
+          nonce,
+          maxFee,
+          priceInBABL,
+          eth(),
+          fee,
+          signer3.address,
+          sig,
+          {
+            gasPrice: 0,
+          },
+        );
 
-      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(hBABLBalance.add(eth(70)), eth(10));
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, 0);
     });
   });
 
@@ -411,8 +404,8 @@ describe.only('Heart', function () {
     });
 
     it('will repay DAI after borrowing it', async function () {
-      const amountToLend = ethers.utils.parseEther('5000');
-      const amountToBorrow = ethers.utils.parseEther('50000');
+      const amountToLend = eth('5000');
+      const amountToBorrow = eth('50000');
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
@@ -425,7 +418,7 @@ describe.only('Heart', function () {
 
   describe('trades heart assets', async function () {
     it('will trade DAI for WETH', async function () {
-      const amountToTrade = ethers.utils.parseEther('500');
+      const amountToTrade = eth('500');
       const whaleSigner = await impersonateAddress('0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7');
       await DAI.connect(whaleSigner).transfer(heart.address, amountToTrade, { gasPrice: 0 });
       await heart.connect(owner).trade(addresses.tokens.DAI, addresses.tokens.WETH, amountToTrade, 1, { gasPrice: 0 });
@@ -498,8 +491,89 @@ describe.only('Heart', function () {
       heartBABLBalanceBeforePump.add(bablBought.div(2)).add(await heart.weeklyRewardAmount()),
     );
   }
+  describe('protectBABL', async function () {
+    describe('protects if BABL price is lower than threshold', async function () {
+      [
+        { name: 'USDC', token: addresses.tokens.USDC, slippage: eth(0.02), hop: addresses.tokens.WETH },
+        { name: 'DAI', token: addresses.tokens.DAI, slippage: eth(0.02), hop: addresses.tokens.WETH },
+        { name: 'FEI', token: addresses.tokens.FEI, slippage: eth(0.5), hop: addresses.tokens.USDC },
+      ].forEach(({ token, name, slippage, hop }) => {
+        it(`with ${name} as purchase asset`, async function () {
+          const price = await priceOracle.getPrice(addresses.tokens.BABL, token);
+
+          await fund([heart.address]);
+
+          await heart.connect(owner).updateAssetToPurchase(token);
+          await heart.connect(keeper).protectBABL(price.add(1), price, eth(), slippage, hop);
+        });
+      });
+    });
+  });
 
   describe('pump', async function () {
+    async function pumpAmount(amountInFees) {
+      const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
+      await heart
+        .connect(keeper)
+        .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
+
+      const wethTreasuryBalanceBeforePump = await WETH.balanceOf(treasury.address);
+      const bablTreasuryBalanceBeforePump = await BABL.balanceOf(treasury.address);
+      const heartBABLBalanceBeforePump = await BABL.balanceOf(heartGarden.address);
+      const balanceGarden1BeforePump = await WETH.balanceOf(garden1.address);
+      const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
+      const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
+      const fuseBalanceDAIBeforePump = await cDAI.getCash();
+      await heart.connect(signer1).pump();
+      const statsAfterPump = await heart.getTotalStats();
+      // Check the total fees is 3 WETH
+      expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
+      // Check that we sent exactly 0.3 WETH to treasury and stat is right
+      expect((await WETH.balanceOf(treasury.address)).sub(wethTreasuryBalanceBeforePump)).to.be.closeTo(
+        amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
+        eth(0.01),
+      );
+      expect(statsAfterPump[1]).to.be.closeTo(
+        amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9),
+        amountInFees.mul(feeDistributionWeights[0]).div(1e9).div(1e9).div(100),
+      );
+      // Checks buybacks
+      const bablBought = statsAfterPump[2];
+      expect(await BABL.balanceOf(heartGarden.address)).to.be.gte(heartBABLBalanceBeforePump.add(bablBought.div(2)));
+      expect(await BABL.balanceOf(treasury.address)).to.be.gte(bablTreasuryBalanceBeforePump.add(bablBought.div(2)));
+      // Checks liquidity
+      expect(statsAfterPump[3]).to.be.closeTo(
+        amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9),
+        amountInFees.mul(feeDistributionWeights[2]).div(1e9).div(1e9).div(100),
+      );
+      // Checks garden seed investments
+      const totalPumpedGardens = amountInFees.mul(feeDistributionWeights[3]).div(1e9).div(1e9);
+      expect(statsAfterPump[4]).to.be.closeTo(totalPumpedGardens, totalPumpedGardens.div(100));
+      expect(await WETH.balanceOf(garden1.address)).to.be.closeTo(
+        balanceGarden1BeforePump.add(totalPumpedGardens.div(3)),
+        eth(0.01),
+      );
+      expect(await WETH.balanceOf(garden2.address)).to.be.closeTo(
+        balanceGarden2BeforePump.add(totalPumpedGardens.div(3)),
+        eth(0.01),
+      );
+      expect(await WETH.balanceOf(garden3.address)).to.be.closeTo(
+        balanceGarden3BeforePump.add(totalPumpedGardens.div(3)),
+        eth(0.01),
+      );
+      // Checks fuse pool
+      const amountLentToFuse = amountInFees.mul(feeDistributionWeights[4]).div(1e9).div(1e9);
+      expect(statsAfterPump[5]).to.be.closeTo(amountLentToFuse, amountLentToFuse.div(100));
+      expect(await cDAI.getCash()).to.be.closeTo(
+        fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth())),
+        fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()).div(100)),
+      );
+      // Checks weekly rewards
+      expect(await heart.bablRewardLeft()).to.equal(eth(4700));
+      expect(await BABL.balanceOf(heartGarden.address)).to.be.equal(
+        heartBABLBalanceBeforePump.add(bablBought.div(2)).add(await heart.weeklyRewardAmount()),
+      );
+    }
     it('will revert if garden address has not been set', async function () {
       await expect(heart.connect(signer1).pump()).to.be.reverted;
     });
@@ -510,7 +584,7 @@ describe.only('Heart', function () {
     });
 
     it('will pump correctly with 3 WETH', async function () {
-      const amountInFees = eth('3');
+      const amountInFees = eth(3);
       await WETH.connect(owner).transfer(heart.address, amountInFees);
       await pumpAmount(amountInFees);
     });
@@ -525,9 +599,9 @@ describe.only('Heart', function () {
 
     it('will pump correctly with 3 ETH, 1000 DAI, 1000 USDC', async function () {
       const wethPerDai = await priceOracle.connect(owner).getPrice(DAI.address, WETH.address);
-      const amountInFees = ethers.utils.parseEther('3').add(eth('2000').mul(wethPerDai).div(1e9).div(1e9));
-      await WETH.connect(owner).transfer(heart.address, eth('3'));
-      await DAI.connect(owner).transfer(heart.address, eth('1000'));
+      const amountInFees = eth(3).add(eth(2000).mul(wethPerDai).div(1e9).div(1e9));
+      await WETH.connect(owner).transfer(heart.address, eth(3));
+      await DAI.connect(owner).transfer(heart.address, eth(1000));
       await USDC.connect(owner).transfer(heart.address, 1000 * 1e6);
       await pumpAmount(amountInFees);
     });

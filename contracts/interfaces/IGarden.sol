@@ -182,9 +182,10 @@ interface ICoreGarden {
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        address _to,
         uint256 _pricePerShare,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
@@ -206,7 +207,7 @@ interface ICoreGarden {
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
@@ -218,7 +219,7 @@ interface ICoreGarden {
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
