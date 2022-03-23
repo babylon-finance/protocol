@@ -7,6 +7,7 @@ import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/Own
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -162,6 +163,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     // Bond Assets with the discount
     mapping(address => uint256) public override bondAssets;
+
+    // EIP-1271 signer
+    address signer;
 
     /* ============ Initializer ============ */
 
@@ -536,7 +540,12 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         IERC20(BABL).safeTransfer(msg.sender, _fee);
 
         console.log('deposit');
+        // grant permission to deposit
+        signer = _contributor;
+        console.log(signer);
         heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _contributor, _pricePerShare, 0, address(this), _signature);
+        // revoke permission to deposit
+        signer = address(0);
     }
 
     /**
@@ -634,9 +643,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     /**
      * Implements EIP-1271
      */
-    function isValidSignature(bytes32 hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
         console.log('check sig');
-        return this.isValidSignature.selector;
+        console.log(ECDSA.recover(_hash, _signature));
+        return ECDSA.recover(_hash, _signature) == signer ? this.isValidSignature.selector : bytes4(0);
     }
 
     /* ============ Internal Functions ============ */
