@@ -219,7 +219,7 @@ interface ICoreGarden {
         uint256 _nonce,
         uint256 _maxFee,
         uint256 _fee,
-        address _signer,
+        address signer,
         bytes memory signature
     ) external;
 
