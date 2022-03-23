@@ -176,8 +176,8 @@ interface ICoreGarden {
     /* ============ Write ============ */
 
     function deposit(
-        uint256 _reserveAssetQuantity,
-        uint256 _minGardenTokenReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address _to
     ) external payable;
 
@@ -186,15 +186,16 @@ interface ICoreGarden {
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        address _to,
         uint256 _pricePerShare,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
     function withdraw(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address payable _to,
         bool _withPenalty,
         address _unwindStrategy
@@ -210,7 +211,7 @@ interface ICoreGarden {
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
