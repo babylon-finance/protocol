@@ -214,8 +214,9 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     ) external override {
         _onlyUnpaused();
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-        bool canCreateStrategy = publicStrategists ||
-            IMardukGate(controller.mardukGate()).canAddStrategiesInAGarden(address(this), msg.sender);
+        bool canCreateStrategy =
+            publicStrategists ||
+                IMardukGate(controller.mardukGate()).canAddStrategiesInAGarden(address(this), msg.sender);
         _require(canCreateStrategy, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         address strategy =

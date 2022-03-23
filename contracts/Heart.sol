@@ -539,7 +539,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         heartGarden.depositBySig(_amountIn, _minAmountOut, _nonce, _maxFee, _pricePerShare, 0, _signer, _signature);
     }
 
-   /**
+    /**
      * Heart will protect and buyback BABL whenever the price dips below the intended price protection.
      * Note: Asset for purchases needs to be setup and have enough balance.
      *
