@@ -481,7 +481,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function bondAsset(
         address _assetToBond,
         uint256 _amountToBond,
-        uint256 _minAmountOut
+        uint256 _minAmountOut,
+        address _referrer
     ) external override {
         require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, 'Bond > 0');
         // Total value adding the premium
@@ -498,7 +499,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         BABL.safeApprove(address(heartGarden), bondValueInBABL);
 
-        heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender);
+        heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender, _referrer);
     }
 
     /**
@@ -520,8 +521,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _pricePerShare,
         uint256 _fee,
         address _contributor,
+        address _referrer,
         bytes memory _signature
-    ) external {
+    ) external override {
         _onlyKeeper();
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
@@ -546,6 +548,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             _pricePerShare,
             _fee,
             address(this),
+            _referrer,
             _signature
         );
         // revoke permission to deposit

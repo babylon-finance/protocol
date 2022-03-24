@@ -31,6 +31,12 @@ interface IBabController {
 
     function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;
 
+    function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external;
+
+    function addAffiliateReward(address _user, uint256 _reserveAmount) external;
+
+    function claimRewards() external;
+
     function editPriceOracle(address _priceOracle) external;
 
     function editMardukGate(address _mardukGate) external;
@@ -128,6 +134,10 @@ interface IBabController {
     function isGarden(address _garden) external view returns (bool);
 
     function protocolWantedAssets(address _wantedAsset) external view returns (bool);
+
+    function gardenAffiliateRates(address _wantedAsset) external view returns (uint);
+
+    function affiliateRewards(address _user) external view returns (uint);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 

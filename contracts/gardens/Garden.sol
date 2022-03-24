@@ -250,16 +250,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _amountIn               Amount of the reserve asset that is received from contributor
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor
      * @param _to                     Address to mint Garden shares to
+     * @param _referrer               The user that referred the deposit
      */
     function deposit(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        address _to
+        address _to,
+        address _referrer
     ) external payable override nonReentrant {
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
 
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution, _referrer);
     }
 
     /**
@@ -276,6 +278,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _to                     Address to mint shares to.
      * @param _fee                    Actual fee keeper demands. Have to be less than _maxFee.
      * @param _signer                 The user to who signed the signature.
+     * @param _referrer               The user that referred the deposit
      * @param _signature              Signature by the user to verify deposit parmas.
      */
     function depositBySig(
@@ -287,6 +290,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _pricePerShare,
         uint256 _fee,
         address _signer,
+        address _referrer,
         bytes memory _signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
@@ -310,12 +314,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 _to,
                 _signer,
                 _pricePerShare,
-                minContribution > _fee ? minContribution.sub(_fee) : 0
+                minContribution > _fee ? minContribution.sub(_fee) : 0,
+                _referrer
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
         } else {
-            _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution);
+            _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution, _referrer);
         }
     }
 
@@ -653,7 +658,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _to,
         address _from,
         uint256 _pricePerShare,
-        uint256 _minContribution
+        uint256 _minContribution,
+        address _referrer
     ) private {
         _onlyUnpaused();
         _onlyNonZero(_to);
@@ -694,6 +700,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         // mint shares
         _mint(_to, sharesToMint);
+
+        // Referral program
+        if (_referrer != address(0)) {
+            controller.addAffiliateReward(_from, _amountIn);
+        }
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
 
