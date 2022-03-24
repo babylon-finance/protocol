@@ -256,7 +256,12 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
-        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender, address(0));
+        IGarden(newGarden).deposit{value: msg.value}(
+            _initialContribution,
+            _initialContribution,
+            msg.sender,
+            address(0)
+        );
         // Avoid gas cost if default sharing values are provided (0,0,0)
         if (_profitSharing[0] != 0 || _profitSharing[1] != 0 || _profitSharing[2] != 0) {
             IRewardsDistributor(rewardsDistributor).setProfitRewards(

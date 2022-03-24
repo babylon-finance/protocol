@@ -135,9 +135,9 @@ interface IBabController {
 
     function protocolWantedAssets(address _wantedAsset) external view returns (bool);
 
-    function gardenAffiliateRates(address _wantedAsset) external view returns (uint);
+    function gardenAffiliateRates(address _wantedAsset) external view returns (uint256);
 
-    function affiliateRewards(address _user) external view returns (uint);
+    function affiliateRewards(address _user) external view returns (uint256);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 
