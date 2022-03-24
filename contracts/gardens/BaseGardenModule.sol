@@ -144,7 +144,10 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     uint256 internal pricePerShareDelta;
 
     // Whether or not governance has verified and the category
-    uint8 internal verifiedCategory;
+    uint256 internal verifiedCategory;
+
+    // Variable that overrides the depositLock with a global one
+    uint256 internal hardlockStartsAt;
 
     /* ============ Modifiers ============ */
 

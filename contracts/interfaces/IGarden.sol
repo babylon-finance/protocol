@@ -74,7 +74,9 @@ interface IAdminGarden {
 
     function updateGardenParams(uint256[11] memory _newParams) external;
 
-    function verifyGarden(uint8 _verifiedCategory) external;
+    function verifyGarden(uint256 _verifiedCategory) external;
+
+    function resetHardlock(uint256 _hardlockStartsAt) external;
 }
 
 /**
@@ -117,7 +119,9 @@ interface ICoreGarden {
 
     function reserveAsset() external view returns (address);
 
-    function verifiedCategory() external view returns (uint8);
+    function verifiedCategory() external view returns (uint256);
+
+    function hardlockStartsAt() external view returns (uint256);
 
     function totalContributors() external view returns (uint256);
 
@@ -172,8 +176,8 @@ interface ICoreGarden {
     /* ============ Write ============ */
 
     function deposit(
-        uint256 _reserveAssetQuantity,
-        uint256 _minGardenTokenReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address _to
     ) external payable;
 
@@ -182,15 +186,16 @@ interface ICoreGarden {
         uint256 _minAmountOut,
         uint256 _nonce,
         uint256 _maxFee,
+        address _to,
         uint256 _pricePerShare,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 
     function withdraw(
-        uint256 _gardenTokenQuantity,
-        uint256 _minReserveReceiveQuantity,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
         address payable _to,
         bool _withPenalty,
         address _unwindStrategy
@@ -206,7 +211,7 @@ interface ICoreGarden {
         uint256 _pricePerShare,
         uint256 _strategyNAV,
         uint256 _fee,
-        address signer,
+        address _signer,
         bytes memory signature
     ) external;
 

@@ -328,6 +328,8 @@ library Errors {
     uint256 internal constant PRICE_PER_SHARE_WRONG = 118;
     // Heart asset to purchase is same
     uint256 internal constant HEART_ASSET_PURCHASE_INVALID = 119;
+    // Reset hardlock bigger than timestamp
+    uint256 internal constant RESET_HARDLOCK_INVALID = 120;
     // Only Heart Garden
-    uint256 internal constant ONLY_HEART_GARDEN = 120;
+    uint256 internal constant ONLY_HEART_GARDEN = 121;
 }
