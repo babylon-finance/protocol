@@ -332,4 +332,8 @@ library Errors {
     uint256 internal constant RESET_HARDLOCK_INVALID = 120;
     // Only Heart Garden
     uint256 internal constant ONLY_HEART_GARDEN = 121;
+    // Only Keeper or Active Garden
+    uint256 internal constant ONLY_KEEPER_OR_ACTIVE_GARDEN = 122;
+    // Max BABL Cap to claim by sig
+    uint256 internal constant MAX_BABL_CAP_REACHED = 123;
 }

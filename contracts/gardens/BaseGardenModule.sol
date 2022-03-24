@@ -149,6 +149,9 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     // Variable that overrides the depositLock with a global one
     uint256 internal hardlockStartsAt;
 
+    // EIP-1271 signer
+    address private signer;
+
     /* ============ Modifiers ============ */
 
     /* ============ Constructor ============ */

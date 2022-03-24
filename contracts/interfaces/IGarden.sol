@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC1271} from '../interfaces/IERC1271.sol';
 
 import {IBabController} from './IBabController.sol';
 
@@ -236,18 +237,10 @@ interface ICoreGarden {
         uint256 _nonce,
         uint256 _nonceHeart,
         uint256 _maxFee,
-        uint256 _fee,
         uint256 _pricePerShare,
-        address signer,
-        bytes memory signature
-    ) external;
-
-    function stakeRewardsFromGarden(
-        address _contributor,
-        uint256 _babl,
-        uint256 _minAmountOut,
-        uint256 _nonceHeart,
-        uint256 _pricePerShare
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature
     ) external;
 
     function claimNFT() external;
@@ -257,4 +250,4 @@ interface IERC20Metadata {
     function name() external view returns (string memory);
 }
 
-interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {}
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata, IERC1271 {}

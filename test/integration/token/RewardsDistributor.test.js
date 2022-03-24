@@ -38,6 +38,7 @@ const {
   transferFunds,
   depositFunds,
   getRewardsSig,
+  getDepositSig,
   getRewardsSigHash,
   getStakeRewardsSig,
 } = require('fixtures/GardenHelper');
@@ -51,7 +52,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-skipIfFast('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -2039,7 +2040,6 @@ skipIfFast('RewardsDistributor', function () {
       expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceBefore = await ethers.provider.getBalance(signer2.address);
-      // Fee is going to be paid by burning garden tokens
       const signer2GardenBalanceBefore = await newGarden.balanceOf(signer2.address);
       // BABL Balance
       const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
@@ -2050,6 +2050,7 @@ skipIfFast('RewardsDistributor', function () {
       const maxFee = 1;
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+
       // Signer 2 claim rewards by sig
       await newGarden
         .connect(keeper)
@@ -2065,6 +2066,105 @@ skipIfFast('RewardsDistributor', function () {
       expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
       expect(signer2BABLBalanceBefore).to.be.equal(0);
       expect(signer2BABLBalanceAfter).to.be.equal(rewardsSigner2[5]);
+    });
+    it('can claimReturns above cap', async function () {
+      const signerBABLBalanceBefore = await bablToken.balanceOf(signer1.address);
+      const cap = eth(5500);
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
+
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      await finalizeStrategyAfterQuarter(long2);
+      const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      expect(rewardsSigner1[5]).to.be.gt(cap);
+      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore);
+      // We claim our tokens and check that they are received properly
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.not.reverted;
+      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore.add(rewardsSigner1[5]));
+    });
+    it('can NOT claimRewardsBySig above cap ', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const babl = eth(5501); // above max cap
+      const profits = eth();
+      const nonce = 1;
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+
+      // Signer 2 claim rewards by sig
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#123');
+    });
+    it('can NOT claimRewardsAndStakeBySig above cap ', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const babl = eth(5501); // above max cap
+      const profits = eth();
+      const nonce = 1;
+      const maxFee = 1;
+      const fee = 1;
+      const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
+      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+      // We create the signature equivalent to depositBySig
+      const sig = await getDepositSig(
+        heartTestGarden.address,
+        signer2,
+        babl,
+        minAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        signer2.address,
+      );
+      // Signer 2 claim rewards and stake by sig
+      await weth.connect(signer2).approve(newGarden.address, fee, {
+        gasPrice: 0,
+      });
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimAndStakeRewardsBySig(
+            babl,
+            profits,
+            minAmountOut,
+            nonce,
+            heartGardenUserNonce,
+            maxFee,
+            pricePerShare,
+            fee,
+            signer2.address,
+            sig,
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('BAB#123');
     });
     it('can claimAndStakeRewardsBySig into the Heart Garden', async function () {
       const amountIn = eth();
@@ -2103,18 +2203,17 @@ skipIfFast('RewardsDistributor', function () {
       const maxFee = 1;
       const fee = 1;
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
-
-      // We create the signature
-      const sig = await getStakeRewardsSig(
-        newGarden.address,
+      // We create the signature equivalent to depositBySig
+      const sig = await getDepositSig(
+        heartTestGarden.address,
         signer2,
         totalBabl,
-        totalProfits,
         stakeMinAmountOut,
-        newGardenUserNonce,
         heartGardenUserNonce,
         maxFee,
+        signer2.address,
       );
+
       const signer2HeartGardenBalanceBefore = await heartTestGarden.balanceOf(signer2.address);
       // Signer 2 claim and stake rewards by sig
       await newGarden
@@ -2126,12 +2225,13 @@ skipIfFast('RewardsDistributor', function () {
           newGardenUserNonce,
           heartGardenUserNonce,
           maxFee,
-          fee,
           pricePerShare,
+          fee,
           signer2.address,
           sig,
           { gasPrice: 0 },
         );
+
       const signer2HeartGardenBalanceAfter = await heartTestGarden.balanceOf(signer2.address);
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceAfter = await ethers.provider.getBalance(signer2.address);
@@ -2209,6 +2309,7 @@ skipIfFast('RewardsDistributor', function () {
         await newGarden
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 });
+
         if (token === addresses.tokens.WETH) {
           signer2AssetBalanceAfter = await ethers.provider.getBalance(signer2.address);
         } else {
@@ -2416,7 +2517,7 @@ skipIfFast('RewardsDistributor', function () {
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
     });
-    it('can avoid race condition between claimRewardsBySig and claimReturns', async function () {
+    it('can avoid replay attack between claimRewardsBySig and claimReturns', async function () {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
 
@@ -2452,6 +2553,239 @@ skipIfFast('RewardsDistributor', function () {
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
+    });
+    it('can mitigate replay attack between claimReturns and claimAndStakeRewardsBySig', async function () {
+      // We use depositBySig signature for claimAndStakeBySig as it is to avoid deposit signature complexity
+      // It means that only one nonce can be used, that is the heart garden nonce where the user is depositing
+      // In addition to this, profits set aside cannot be part of the signature as well
+      // so it is a risk if keeper introduces wrong profit data (i.e. decimals in reserveAsset)
+      // It also introduces a risk of replay-attack as nonce is a calldata param not part of the signature
+      // We have the assumption that keeper is not malicious but
+      // there can be some edge cases where keeper might unintentional delay grabbing the user nonce
+      // so it might take the following nonce with previous signed data,
+      // so that tx should not go through as it will execute, keeper should cancel all secondary tx's
+      // and wait few blocks until processing a new dapp claim tx
+      // It is unlikely but it might happen so we introduced a CLAIM HARD LOCK of 15 mins
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
+
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth());
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const newGardenUserData = await newGarden.getContributor(signer2.address);
+      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const stakeMinAmountOut = minAmountOut;
+      const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
+      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+
+      const maxFee = 1;
+      const fee = 1;
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+      // We create the signature equivalent to depositBySig
+      const sigStake = await getDepositSig(
+        heartTestGarden.address,
+        signer2,
+        babl,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        signer2.address,
+      );
+      // User signs it and is sent to accountant keeper for processing
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(0);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
+
+      // The user claim by standard tx
+      await newGarden.connect(signer2).claimReturns([long1.address]);
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
+
+      // Signer 2 claim and stake rewards by sig trying a replay attack with old signature but new nonce
+      // (Simulates keeper processing late the original tx but taking the next garden nonce)
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimAndStakeRewardsBySig(
+            babl,
+            profits,
+            stakeMinAmountOut,
+            newGardenUserNonce.add(1),
+            heartGardenUserNonce,
+            maxFee,
+            pricePerShare,
+            fee,
+            signer2.address,
+            sigStake,
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('BAB#012');
+      // We check claim hard lock
+      // It is set to 15 mins for claim and stake by sig only
+      // It is a mitigation countermeasure
+      await increaseTime(900);
+      // The following should never happen (executing a tx with old rewards signed data but updated garden nonce)
+      await expect(
+        newGarden.connect(keeper).claimAndStakeRewardsBySig(
+          babl,
+          profits,
+          stakeMinAmountOut,
+          newGardenUserNonce.add(1), // unintentional race condition by dapp/keeper getting garden 1 nonce data a bit late
+          heartGardenUserNonce,
+          maxFee,
+          pricePerShare,
+          fee,
+          signer2.address,
+          sigStake,
+          { gasPrice: 0 },
+        ),
+      ).to.be.not.reverted;
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(babl);
+    });
+    it('can mitigate replay attack between claimRewardsBySig and claimAndStakeRewardsBySig', async function () {
+      // We use depositBySig signature for claimAndStakeBySig as it is to avoid deposit signature complexity
+      // It means that only one nonce can be used, that is the heart garden nonce where the user is depositing
+      // In addition to this, profits set aside cannot be part of the signature as well
+      // so it is a risk if keeper introduces wrong profit data (i.e. decimals in reserveAsset)
+      // It also introduces a risk of replay-attack as nonce is a calldata param not part of the signature
+      // We have the assumption that keeper is not malicious but
+      // there can be some edge cases where keeper might unintentional delay grabbing the user nonce
+      // so it might take the following nonce with previous signed data,
+      // so that tx should not go through as it will execute, keeper should cancel all secondary tx's
+      // and wait few blocks until processing a new dapp claim tx
+      // It is unlikely but it might happen so we introduced a CLAIM HARD LOCK of 15 mins
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const [long1] = await createStrategies([{ garden: newGarden }]);
+
+      await executeStrategy(long1, eth());
+      await injectFakeProfits(long1, eth().mul(200));
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
+      const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
+
+      const babl = rewardsSigner2[5];
+      const profits = rewardsSigner2[6];
+      const newGardenUserData = await newGarden.getContributor(signer2.address);
+      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const stakeMinAmountOut = minAmountOut;
+      const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
+      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+
+      const maxFee = 1;
+      const fee = 1;
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+      // We create the signature of claimRewardsBySig
+      const sigRewards = await getRewardsSig(newGarden.address, signer2, babl, profits, newGardenUserNonce, maxFee);
+      // We create the signature equivalent to depositBySig
+      const sigStake = await getDepositSig(
+        heartTestGarden.address,
+        signer2,
+        babl,
+        stakeMinAmountOut,
+        heartGardenUserNonce,
+        maxFee,
+        signer2.address,
+      );
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(0);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
+
+      // It also claim its token rewards by sig so the accountant is in process with nonce = 2
+      await newGarden
+        .connect(keeper)
+        .claimRewardsBySig(babl, profits, newGardenUserNonce, maxFee, fee, signer2.address, sigRewards, {
+          gasPrice: 0,
+        });
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
+
+      // Signer 2 claim and stake rewards by sig trying a replay attack with old nonce
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimAndStakeRewardsBySig(
+            babl,
+            profits,
+            stakeMinAmountOut,
+            newGardenUserNonce,
+            heartGardenUserNonce,
+            maxFee,
+            pricePerShare,
+            fee,
+            signer2.address,
+            sigStake,
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('BAB#089');
+      // We check claim hard lock
+      // It is set to 15 mins for claim and stake by sig only
+      await increaseTime(898);
+      await expect(
+        newGarden.connect(keeper).claimAndStakeRewardsBySig(
+          babl,
+          profits,
+          stakeMinAmountOut,
+          newGardenUserNonce.add(1), // unintentional race condition by dapp/keeper getting garden 1 nonce data a bit late
+          heartGardenUserNonce,
+          maxFee,
+          pricePerShare,
+          fee,
+          signer2.address,
+          sigStake,
+          { gasPrice: 0 },
+        ),
+      ).to.be.revertedWith('BAB#012');
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
+      await increaseTime(1);
+      // The following should never happen (executing a tx with old rewards signed data but updated garden nonce)
+      await expect(
+        newGarden.connect(keeper).claimAndStakeRewardsBySig(
+          babl,
+          profits,
+          stakeMinAmountOut,
+          newGardenUserNonce.add(1), // unintentional race condition by dapp/keeper getting garden 1 nonce data a bit late
+          heartGardenUserNonce,
+          maxFee,
+          pricePerShare,
+          fee,
+          signer2.address,
+          sigStake,
+          { gasPrice: 0 },
+        ),
+      ).to.be.not.reverted;
+      expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(babl);
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);

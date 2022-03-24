@@ -30,6 +30,7 @@ import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
+import {IERC1271} from '../interfaces/IERC1271.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
@@ -39,7 +40,7 @@ import {VTableBeacon} from '../proxy/VTableBeacon.sol';
  *
  * User facing features of Garden plus BeaconProxy
  */
-contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGarden {
+contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGarden, IERC1271 {
     using SafeCast for int256;
     using SignedSafeMath for int256;
     using PreciseUnitMath for int256;
@@ -94,10 +95,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         );
     bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
         keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
-    bytes32 private constant STAKE_REWARDS_BY_SIG_TYPEHASH =
-        keccak256(
-            'StakeRewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee)'
-        );
+
+    uint256 private constant CLAIM_STAKE_HARD_LOCK = 900; // 15min
+    uint256 private constant SAFE_BABL_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
 
     /* ============ Structs ============ */
 
@@ -203,6 +203,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that overrides the depositLock with a global one
     uint256 public override hardlockStartsAt;
 
+    // EIP-1271 signer
+    address private signer;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -215,6 +218,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      */
     function _onlyKeeperAndFee(uint256 _fee, uint256 _maxFee) private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+    }
+
+    function _onlyKeeperOrGardenAndFee(uint256 _fee, uint256 _maxFee) private view {
+        _require(
+            controller.isValidKeeper(msg.sender) || controller.isGarden(msg.sender),
+            Errors.ONLY_KEEPER_OR_ACTIVE_GARDEN
+        );
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
     }
 
@@ -263,7 +274,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
 
-        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution, 0);
+        _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution);
     }
 
     /**
@@ -293,14 +304,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _signer,
         bytes memory _signature
     ) external override nonReentrant {
-        _onlyKeeperAndFee(_fee, _maxFee);
+        _onlyKeeperOrGardenAndFee(_fee, _maxFee);
 
         bytes32 hash =
             keccak256(
                 abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee, _to)
             )
                 .toEthSignedMessageHash();
-
         _onlyValidSigner(_signer, _nonce, hash, _signature);
 
         // If a Keeper fee is greater than zero then reduce user shares to
@@ -314,8 +324,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 _to,
                 _signer,
                 _pricePerShare,
-                minContribution > _fee ? minContribution.sub(_fee) : 0,
-                0
+                minContribution > _fee ? minContribution.sub(_fee) : 0
             );
             // pay Keeper the fee
             IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
@@ -459,18 +468,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         );
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
-        // Make BABL Mining staking as deposit to Heart Garden
         IGarden heartGarden = IGarden(address(IHeart(controller.heart()).heartGarden()));
-        (, , , , , , , , , uint256 _nonceHeart) = heartGarden.getContributor(msg.sender);
-        heartGarden.stakeRewardsFromGarden(
-            msg.sender,
-            rewards[5], // amountIn
-            _minAmountOut, // minAmountOut
-            _nonceHeart, // nonceHeart
-            0
-        ); // pricePerShare to be calculated during tx
-        // sendRewardsInternal must go after stakeRewardsFromGarden to avoid issues with pricePerShare
+        // User non BABL rewards are sent to user wallet (_profits)
+        // User BABL rewards are sent to this garden from RD to stake them into Heart Garden
+        // on behalf of user
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
+        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
+        // Deposit on behalf of the user
+        _require(bablToken.balanceOf(address(this)) >= rewards[5], Errors.BALANCE_TOO_LOW);
+        bablToken.safeApprove(address(heartGarden), rewards[5]);
+        heartGarden.deposit(rewards[5], _minAmountOut, msg.sender);
     }
 
     /**
@@ -508,10 +515,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_fee > 0, Errors.FEE_TOO_LOW);
 
         _onlyValidSigner(_signer, _nonce, hash, _signature);
-
+        _require(_babl <= SAFE_BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
-        _sendRewardsInternal(_signer, _babl, _profits);
+        _sendRewardsInternal(_signer, _babl, _profits, false);
     }
 
     /**
@@ -526,15 +533,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
      * @param _minAmountOut    Minimum hBABL as part of the Heart Garden BABL staking
-     * @param _nonce           Current nonce to prevent replay attacks.
+     * @param _nonce           Current nonce of user in the claiming garden at to prevent replay attacks.
      * @param _nonceHeart      Current nonce of user in Heart Garden to prevent replay attacks.
      * @param _maxFee          Max fee user is willing to pay keeper. Fee is
      *                         substracted from user wallet in reserveAsset. Fee is
      *                         expressed in reserve asset.
      * @param _fee             Actual fee keeper demands. Have to be less than _maxFee.
      * @param _pricePerShare   Price per share of Heart Garden
-     * @param signer           Signer of the tx
-     * @param signature        Signature of signer
+     * @param _signer          Signer of the tx
+     * @param _signature       Signature of signer
      */
     function claimAndStakeRewardsBySig(
         uint256 _babl,
@@ -543,83 +550,58 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _nonce,
         uint256 _nonceHeart,
         uint256 _maxFee,
-        uint256 _fee,
         uint256 _pricePerShare,
-        address signer,
-        bytes memory signature
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
+        // claim and stake uses depositBySig signature
+        IGarden heartGarden = IHeart(controller.heart()).heartGarden();
         bytes32 hash =
             keccak256(
                 abi.encode(
-                    STAKE_REWARDS_BY_SIG_TYPEHASH,
-                    address(this),
+                    DEPOSIT_BY_SIG_TYPEHASH,
+                    address(heartGarden),
                     _babl,
-                    _profits,
                     _minAmountOut,
-                    _nonce,
                     _nonceHeart,
-                    _maxFee
+                    _maxFee,
+                    _signer
                 )
             )
                 .toEthSignedMessageHash();
-        _onlyValidSigner(signer, _nonce);
+        _onlyValidSigner(_signer, _nonce, hash, _signature);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
-
-        signer.isValidSignatureNow(hash, signature);
+        _require(_babl <= SAFE_BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
 
         // pay to Keeper the fee to execute the tx on behalf
-        IERC20(reserveAsset).safeTransferFrom(signer, msg.sender, _fee);
-        // Make accounting of deposit of BABL into Heart Garden
-        IGarden(address(IHeart(controller.heart()).heartGarden())).stakeRewardsFromGarden(
-            signer,
-            _babl, // amountIn
-            _minAmountOut, // minAmountOut
-            _nonceHeart,
-            _pricePerShare
-        );
-        // Send BABL rewards to Heart Garden on behalf (user stake) and profit rewards (reserveAsset) to user wallet
-        _sendRewardsInternal(signer, _babl, _profits, true); // true = stake babl rewards, false = no stake
-    }
+        IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
 
-    /**
-     * @notice
-     *   PRIVILEGE FUNCTION for Gardens
-     *   to stake user BABL rewards as deposits into the Heart Garden.
-     * @dev
-     *   Should be called only by Gardens and has to be different garden from the Heart Garden.
-     *   It should be first part (1/2) of a multi-call tx
-     *   after it, BABL rewards are sent from RD to the Heart Garden (2/2)
-     *   It is used either by claimAndStakeReturns (by user) or claimAndStakeRewardsBySig (by keeper).
-     *
-     * @param _contributor     Signer of the tx
-     * @param _babl            BABL rewards from mining program.
-     * @param _minAmountOut    Minimum hBABL as part of the Heart Garden BABL staking
-     * @param _nonceHeart      Current nonce of user in Heart Garden to prevent replay attacks.
-     * @param _pricePerShare   Price per share of Heart Garden
-     */
-
-    function stakeRewardsFromGarden(
-        address _contributor,
-        uint256 _babl,
-        uint256 _minAmountOut,
-        uint256 _nonceHeart,
-        uint256 _pricePerShare
-    ) external override nonReentrant {
-        address heartGarden = address(IHeart(controller.heart()).heartGarden());
-        _require(controller.isGarden(msg.sender) && msg.sender != heartGarden, Errors.ONLY_ACTIVE_GARDEN);
-        _require(address(this) == heartGarden, Errors.ONLY_HEART_GARDEN);
-        _onlyValidSigner(_contributor, _nonceHeart);
-        // Staking is in BABL
-        _internalDeposit(
+        // User non BABL rewards are sent to user wallet (_profits)
+        // User BABL rewards are sent to this garden from RD to later stake them into Heart Garden
+        // on behalf of the user
+        _sendRewardsInternal(_signer, _babl, _profits, true); // true = stake babl rewards, false = no stake
+        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
+        // Deposit on behalf of the user
+        require(bablToken.balanceOf(address(this)) >= _babl, 'Not enough BABL');
+        bablToken.safeApprove(address(heartGarden), _babl);
+        // grant permission to deposit
+        signer = _signer;
+        // Now this garden makes a deposit on Heart Garden on behalf of user
+        heartGarden.depositBySig(
             _babl,
             _minAmountOut,
-            _contributor,
-            _contributor,
-            _pricePerShare == 0 ? _getPricePerShare() : _pricePerShare,
-            minContribution,
-            _babl
+            _nonceHeart,
+            _maxFee,
+            _signer,
+            _pricePerShare,
+            0,
+            address(this),
+            _signature
         );
+        // revoke permission to deposit
+        signer = address(0);
     }
 
     /**
@@ -629,6 +611,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function claimNFT() external override {
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
         IGardenNFT(controller.gardenNFT()).grantGardenNFT(msg.sender);
+    }
+
+    /**
+     * Implements EIP-1271
+     */
+    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+        return
+            ECDSA.recover(_hash, _signature) == signer && signer != address(0)
+                ? this.isValidSignature.selector
+                : bytes4(0);
     }
 
     /* ============ External Getter Functions ============ */
@@ -796,8 +788,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _to,
         address _from,
         uint256 _pricePerShare,
-        uint256 _minContribution,
-        uint256 _stakingAmount
+        uint256 _minContribution
     ) private {
         _onlyUnpaused();
         _onlyNonZero(_to);
@@ -814,22 +805,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
-        if (_stakingAmount == 0) {
-            // We handle transfers here only if not a staking operation (stakingAmount == 0)
-            // If reserve asset is WETH and user sent ETH then wrap it
-            if (reserveAsset == WETH && msg.value > 0) {
-                IWETH(WETH).deposit{value: msg.value}();
-            } else {
-                // Transfer ERC20 to the garden
-                IERC20(reserveAsset).safeTransferFrom(_from, address(this), _amountIn);
-            }
+        // We handle transfers here only if not a staking operation (stakingAmount == 0)
+        // If reserve asset is WETH and user sent ETH then wrap it
+        if (reserveAsset == WETH && msg.value > 0) {
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            // Transfer ERC20 to the garden
+            IERC20(reserveAsset).safeTransferFrom(_from, address(this), _amountIn);
         }
 
         // Make sure we received the correct amount of reserve asset
         // If it is a staking tx, stakingAmount has been deposited by RD before
         _require(
-            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore).add(_stakingAmount) ==
-                _amountIn,
+            IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,
             Errors.MSG_VALUE_DO_NOT_MATCH
         );
 
@@ -867,7 +855,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
         // Avoid replay attack between claimRewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
-        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
+        _require(
+            block.timestamp > contributor.claimedAt.add(_stake ? CLAIM_STAKE_HARD_LOCK : 0),
+            Errors.ALREADY_CLAIMED
+        );
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
@@ -876,11 +867,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             emit RewardsForContributor(_contributor, _profits);
         }
         if (_babl > 0) {
-            uint256 bablSent =
-                rewardsDistributor.sendBABLToContributor(
-                    _stake ? address(IHeart(controller.heart()).heartGarden()) : _contributor,
-                    _babl
-                );
+            // If _stake = true, the BABL is sent first to this garden
+            // then it is deposited into Heart Garden on behalf of user
+            uint256 bablSent = rewardsDistributor.sendBABLToContributor(_stake ? address(this) : _contributor, _babl);
             contributor.claimedBABL = contributor.claimedBABL.add(bablSent); // BABL Rewards claimed properly
             emit BABLRewardsForContributor(_contributor, bablSent);
         }
