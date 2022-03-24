@@ -261,16 +261,21 @@ contract BabylonViewer {
     struct PartialGardenInfo {
         string name;
         bool isPublic;
-        uint verified;
-        uint contributors;
+        uint256 verified;
+        uint256 contributors;
         address reserveAsset;
+        uint256 nav;
     }
 
-    function getGardensUser(address _user, uint256 _offset) external view returns (
-      address[] memory,
-      bool[] memory,
-      PartialGardenInfo[] memory
-    ) {
+    function getGardensUser(address _user, uint256 _offset)
+        external
+        view
+        returns (
+            address[] memory,
+            bool[] memory,
+            PartialGardenInfo[] memory
+        )
+    {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](50);
         bool[] memory hasUserDeposited = new bool[](50);
@@ -285,7 +290,14 @@ contract BabylonViewer {
                 hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
                 resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[i] = PartialGardenInfo(garden.name(), !garden.privateGarden(), garden.verifiedCategory(), garden.totalContributors(), garden.reserveAsset());
+                data[i] = PartialGardenInfo(
+                    garden.name(),
+                    !garden.privateGarden(),
+                    garden.verifiedCategory(),
+                    garden.totalContributors(),
+                    garden.reserveAsset(),
+                    garden.totalSupply().mul(garden.lastPricePerShare())
+                );
             }
         }
         return (userGardens, hasUserDeposited, data);
