@@ -523,6 +523,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         bytes memory _signature
     ) external {
         _onlyKeeper();
+        require(_fee <= _maxFee, 'Fee too high');
         require(bondAssets[_assetToBond] > 0, 'Bond > 0');
 
         // Get asset to bond from contributor
@@ -535,6 +536,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         BABL.safeApprove(address(heartGarden), _amountIn);
 
+         // Pay the fee to the Keeper
+        IERC20(BABL).safeTransfer(msg.sender, _fee);
+
         // grant permission to deposit
         signer = _contributor;
         heartGarden.depositBySig(
@@ -544,7 +548,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             _maxFee,
             _contributor,
             _pricePerShare,
-            _fee,
+            0,
             address(this),
             _signature
         );
