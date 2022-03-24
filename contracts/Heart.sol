@@ -215,7 +215,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
-        _require(wethBalance >= 3e18, Errors.HEART_MINIMUM_FEES);
+        _require(wethBalance >= 15e17, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
