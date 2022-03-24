@@ -259,12 +259,13 @@ contract BabylonViewer {
     }
 
     struct PartialGardenInfo {
+        address address;
         string name;
-        bool isPublic;
+        bool publicLP;
         uint256 verified;
-        uint256 contributors;
+        uint256 totalContributors;
         address reserveAsset;
-        uint256 nav;
+        uint256 netAssetValue;
     }
 
     function getGardensUser(address _user, uint256 _offset)
@@ -291,6 +292,7 @@ contract BabylonViewer {
                 resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
                 data[i] = PartialGardenInfo(
+                    gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
                     garden.verifiedCategory(),
