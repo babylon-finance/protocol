@@ -113,14 +113,17 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         _onlyStrategy();
 
         // burn stategist stake
+        address strategist = IStrategy(msg.sender).strategist();
         if (_burningAmount > 0) {
-            address strategist = IStrategy(msg.sender).strategist();
             if (_burningAmount >= balanceOf(strategist)) {
                 // Avoid underflow condition
                 _burningAmount = balanceOf(strategist);
             }
             _burn(strategist, _burningAmount);
         }
+        contributors[strategist].lockedBalance = contributors[strategist].lockedBalance.sub(
+            IStrategy(msg.sender).stake()
+        );
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
 
@@ -229,6 +232,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             );
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stratParams[1]);
+        contributors[msg.sender].lockedBalance = contributors[msg.sender].lockedBalance.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;

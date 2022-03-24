@@ -100,7 +100,7 @@
     "test:unit": "yarn compile && OPTIMIZER=false mocha --require @babel/register --require hardhat/register ./test/unit/** --timeout 9999999 --recursive --parallel --exit",
     "test:integration": "yarn compile && OPTIMIZER=false FORK=true mocha --require @babel/register --require hardhat/register ./test/integration/** --timeout 9999999 --recursive --parallel --exit",
     "test:integration:fast": "yarn compile && FAST=true FORK=true OPTIMIZER=false mocha --require @babel/register --require hardhat/register ./test/integration/** --timeout 9999999 --recursive --parallel --exit",
-    "gas-report": "REPORT_GAS=1 hardhat test --network hardhat --max-memory 8096",
+    "gas-report": "FORK=true REPORT_GAS=1 hardhat test --network hardhat --max-memory 8096",
     "estimate-size": "yarn compile && hardhat size-contracts --max-memory 8096",
     "coverage": "COVERAGE=true hardhat coverage --max-memory 8096",
     "tvl": "hardhat tvl --network mainnet",
