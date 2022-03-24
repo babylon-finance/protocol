@@ -105,16 +105,15 @@ interface ICoreGarden {
         external
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 lastDepositAt,
+            uint256 initialDepositAt,
+            uint256 claimedAt,
+            uint256 claimedBABL,
+            uint256 claimedRewards,
+            uint256 withdrawnSince,
+            uint256 totalDeposits,
+            uint256 nonce,
+            uint256 lockedBalance
         );
 
     function reserveAsset() external view returns (address);
@@ -158,8 +157,6 @@ interface ICoreGarden {
     function getFinalizedStrategies() external view returns (address[] memory);
 
     function strategyMapping(address _strategy) external view returns (bool);
-
-    function getLockedBalance(address _contributor) external view returns (uint256);
 
     function keeperDebt() external view returns (uint256);
 
@@ -236,4 +233,16 @@ interface IERC20Metadata {
     function name() external view returns (string memory);
 }
 
-interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {}
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {
+    struct Contributor {
+        uint256 lastDepositAt;
+        uint256 initialDepositAt;
+        uint256 claimedAt;
+        uint256 claimedBABL;
+        uint256 claimedRewards;
+        uint256 withdrawnSince;
+        uint256 totalDeposits;
+        uint256 nonce;
+        uint256 lockedBalance;
+    }
+}
