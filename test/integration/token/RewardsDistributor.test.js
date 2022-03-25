@@ -2724,7 +2724,6 @@ skipIfFast('RewardsDistributor', function () {
         maxFee,
         signer2.address,
       );
-      console.log('check 1');
 
       expect(await bablToken.balanceOf(signer2.address)).to.eq(0);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
@@ -2735,7 +2734,6 @@ skipIfFast('RewardsDistributor', function () {
         .claimRewardsBySig(babl, profits, newGardenUserNonce, maxFee, fee, signer2.address, sigRewards, {
           gasPrice: 0,
         });
-      console.log('check 2');
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
 
@@ -2757,7 +2755,6 @@ skipIfFast('RewardsDistributor', function () {
             { gasPrice: 0 },
           ),
       ).to.be.revertedWith('BAB#089');
-      console.log('check 3');
 
       // no need of hardlock claim hard lock
       await increaseTime(898);
@@ -2776,12 +2773,10 @@ skipIfFast('RewardsDistributor', function () {
           { gasPrice: 0 },
         ),
       ).to.be.revertedWith('BAB#088');
-      console.log('check 4');
 
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
       await increaseTime(1);
-      console.log('check 5');
 
       // The following should never happen (executing a tx with old rewards signed data but updated garden nonce)
       await expect(
@@ -2799,7 +2794,6 @@ skipIfFast('RewardsDistributor', function () {
           { gasPrice: 0 },
         ),
       ).to.be.revertedWith('BAB#088');
-      console.log('check 6');
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
     });

@@ -73,6 +73,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     event RewardsForContributor(address indexed _contributor, uint256 indexed _amount);
     event BABLRewardsForContributor(address indexed _contributor, uint256 _rewards);
+    event StakeBABLRewards(address indexed _contributor, uint256 _babl);
 
     /* ============ Constants ============ */
 
@@ -476,6 +477,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
         _approveBABL(address(heartGarden), rewards[5]);
         heartGarden.deposit(rewards[5], _minAmountOut, msg.sender, address(0));
+        emit StakeBABLRewards(msg.sender, rewards[5]);
     }
 
     /**
@@ -554,7 +556,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes memory _signature
     ) external override nonReentrant {
         _onlyKeeperAndFee(_fee, _maxFee);
-        // claim and stake uses depositBySig signature
         IGarden heartGarden = IHeart(controller.heart()).heartGarden();
         bytes32 hash =
             keccak256(
@@ -600,6 +601,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         );
         // revoke permission to deposit
         signer = address(0);
+        emit StakeBABLRewards(_signer, _babl);
     }
 
     /**
