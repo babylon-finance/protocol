@@ -227,23 +227,23 @@ async function transferFunds(address) {
   }
 }
 
-function getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee, to) {
+function getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee, to, referrer) {
   const DEPOSIT_BY_SIG_TYPEHASH = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(
-      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee,address _to)',
+      'DepositBySig(uint256 _amountIn,uint256 _minAmountOut,uint256 _nonce,uint256 _maxFee,address _to,address _referrer)',
     ),
   );
 
   let payload = ethers.utils.defaultAbiCoder.encode(
-    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'address'],
-    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce, maxFee, to],
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'address', 'address'],
+    [DEPOSIT_BY_SIG_TYPEHASH, garden, amountIn, minAmountOut, nonce, maxFee, to, referrer],
   );
 
   return ethers.utils.keccak256(payload);
 }
 
-async function getDepositSig(garden, signer, amountIn, minAmountOut, nonce, maxFee, to) {
-  let payloadHash = getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee, to);
+async function getDepositSig(garden, signer, amountIn, minAmountOut, nonce, maxFee, to, referrer) {
+  let payloadHash = getDepositSigHash(garden, amountIn, minAmountOut, nonce, maxFee, to, referrer);
 
   return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }
