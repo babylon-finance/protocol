@@ -458,10 +458,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // User BABL rewards are sent to this garden from RD to stake them into Heart Garden
         // on behalf of user
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
-        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
-        // Deposit on behalf of the user
-        _require(bablToken.balanceOf(address(this)) >= rewards[5], Errors.BALANCE_TOO_LOW);
-        bablToken.safeApprove(address(heartGarden), rewards[5]);
+
         heartGarden.deposit(rewards[5], _minAmountOut, msg.sender);
     }
 
@@ -585,7 +582,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _maxFee,
             _signer,
             _pricePerShare,
-            0, // already paid
             address(this),
             _signature
         );
@@ -607,7 +603,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      *                                expressed in reserve asset.
      * @param _pricePerShare          Price per share of the garden calculated off-chain by Keeper.
      * @param _to                     Address to mint shares to.
-     * @param _fee                    Actual fee keeper demands. Have to be less than _maxFee.
      * @param _signer                 The user to who signed the signature.
      * @param _signature              Signature by the user to verify deposit parmas.
      */
@@ -620,12 +615,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _maxFee,
         address _to,
         uint256 _pricePerShare,
-        uint256 _fee,
         address _signer,
         bytes memory _signature
     ) external override nonReentrant {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
 
         bytes32 hash =
             keccak256(
