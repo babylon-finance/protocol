@@ -399,7 +399,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(_user != address(0) && _reserveAmount > 0, 'User and/or amount invalid');
         if (gardenAffiliateRates[msg.sender] > 0) {
             affiliateRewards[_user] = affiliateRewards[_user].add(
-                _reserveAmount.mul(gardenAffiliateRates[msg.sender]).div(1e18)
+                _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender])
             );
         }
     }
