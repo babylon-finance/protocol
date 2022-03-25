@@ -259,7 +259,7 @@ contract BabylonViewer {
     }
 
     struct PartialGardenInfo {
-        address address;
+        address addr;
         string name;
         bool publicLP;
         uint256 verified;
@@ -303,17 +303,6 @@ contract BabylonViewer {
             }
         }
         return (userGardens, hasUserDeposited, data);
-    }
-
-    function getGardenUserAvgPricePerShare(address _garden, address _user) public view returns (uint256) {
-        IGarden garden = IGarden(_garden);
-        uint256[] memory contribution = new uint256[](2);
-        (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
-
-        // Avg price per user share = deposits / garden tokens
-        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
-        // contributor[1] -> Balance (Garden tokens) with 18 decimals
-        return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
     /**
@@ -390,7 +379,7 @@ contract BabylonViewer {
                 _user,
                 garden.getFinalizedStrategies()
             );
-        contribution[9] = getGardenUserAvgPricePerShare(_garden, _user);
+        contribution[9] = _getGardenUserAvgPricePerShare(_garden, _user);
         pendingRewards = _estimateUserRewards(_user, garden.getStrategies());
         return (contribution, totalRewards, pendingRewards);
     }
@@ -420,6 +409,17 @@ contract BabylonViewer {
 
     function _getGardenProfitSharing(address _garden) private view returns (uint256[3] memory) {
         return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
+    }
+
+    function _getGardenUserAvgPricePerShare(address _garden, address _user) private view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        uint256[] memory contribution = new uint256[](2);
+        (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
+
+        // Avg price per user share = deposits / garden tokens
+        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
+        // contributor[1] -> Balance (Garden tokens) with 18 decimals
+        return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
     }
 
     function _getUniswapHighestLiquidity(address _sendToken, address _reserveAsset) private view returns (uint256) {
