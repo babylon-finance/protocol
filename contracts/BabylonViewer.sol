@@ -433,16 +433,7 @@ contract BabylonViewer {
     function _getGardenUserAvgPricePerShare(address _garden, address _user) private view returns (uint256) {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](2);
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            uint256 totalDeposits,
-            ,
-         ) = garden.getContributor(_user);
+        (, , , , , , uint256 totalDeposits, , ) = garden.getContributor(_user);
 
         // Avg price per user share = deposits / garden tokens
         return totalDeposits > 0 ? totalDeposits.preciseDiv(garden.balanceOf(_user)) : 0;
