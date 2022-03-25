@@ -369,6 +369,7 @@ async function setUpFixture(
     usdc,
     weth,
     wbtc,
+    babl,
 
     TOKEN_MAP,
 

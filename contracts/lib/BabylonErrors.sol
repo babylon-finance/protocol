@@ -330,8 +330,10 @@ library Errors {
     uint256 internal constant HEART_ASSET_PURCHASE_INVALID = 119;
     // Reset hardlock bigger than timestamp
     uint256 internal constant RESET_HARDLOCK_INVALID = 120;
+    // Invalid referrer
+    uint256 internal constant INVALID_REFERRER = 121;
     // Only Heart Garden
-    uint256 internal constant ONLY_HEART_GARDEN = 121;
+    uint256 internal constant ONLY_HEART_GARDEN = 122;
     // Max BABL Cap to claim by sig
-    uint256 internal constant MAX_BABL_CAP_REACHED = 122;
+    uint256 internal constant MAX_BABL_CAP_REACHED = 123;
 }

@@ -176,7 +176,8 @@ interface ICoreGarden {
     function deposit(
         uint256 _amountIn,
         uint256 _minAmountOut,
-        address _to
+        address _to,
+        address _referrer
     ) external payable;
 
     function depositBySig(
@@ -188,6 +189,7 @@ interface ICoreGarden {
         uint256 _pricePerShare,
         uint256 _fee,
         address _signer,
+        address _referrer,
         bytes memory signature
     ) external;
 
