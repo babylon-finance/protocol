@@ -309,7 +309,7 @@ skipIfFast('RewardsDistributor', function () {
       expect(slippageFactor2[14]).to.lt(slippageFactor3[14]);
       expect(slippageFactor3[14]).to.lt(slippageFactor4[14]);
       expect(slippageFactor3[14]).to.be.closeTo(slippageFactor4[14].div(2), slippageFactor4[14].div(25));
-      expect(maxTradeSlippagePercentage.mul(70).div(100)).to.eq(slippageFactor4[14]);
+      expect(maxTradeSlippagePercentage.mul(40).div(100)).to.eq(slippageFactor4[14]);
       expect(rewards).to.be.closeTo(estimatedBABL4, rewards.div(25)); // 4% due to slippage applied to estimates
     });
     it('should estimate BABL rewards correctly in case of 2 strategies one starting after the first one', async function () {
