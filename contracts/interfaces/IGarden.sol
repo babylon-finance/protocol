@@ -240,6 +240,20 @@ interface ICoreGarden {
         bytes memory _signature
     ) external;
 
+    function stakeBySig(
+        uint256 _amountIn,
+        uint256 _profits,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _nonceHeart,
+        uint256 _maxFee,
+        address _to,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature
+    ) external;
+
     function claimNFT() external;
 }
 

@@ -96,7 +96,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     bytes32 private constant REWARDS_BY_SIG_TYPEHASH =
         keccak256('RewardsBySig(uint256 _babl,uint256 _profits,uint256 _nonce,uint256 _maxFee)');
 
-    uint256 private constant CLAIM_STAKE_HARD_LOCK = 900; // 15min
+    bytes32 private constant STAKE_REWARDS_BY_SIG_TYPEHASH =
+        keccak256(
+            'StakeRewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee,address _to)'
+        );
+
     uint256 private constant SAFE_BABL_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
 
     /* ============ Structs ============ */
@@ -210,14 +214,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
     }
 
-    function _onlyKeeperOrGardenAndFee(uint256 _fee, uint256 _maxFee) private view {
-        _require(
-            controller.isValidKeeper(msg.sender) || controller.isGarden(msg.sender),
-            Errors.ONLY_KEEPER_OR_ACTIVE_GARDEN
-        );
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
-    }
-
     /**
      * Check if is a valid _signer with a valid nonce
      */
@@ -293,7 +289,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _signer,
         bytes memory _signature
     ) external override nonReentrant {
-        _onlyKeeperOrGardenAndFee(_fee, _maxFee);
+        _onlyKeeperAndFee(_fee, _maxFee);
 
         bytes32 hash =
             keccak256(
@@ -550,10 +546,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes32 hash =
             keccak256(
                 abi.encode(
-                    DEPOSIT_BY_SIG_TYPEHASH,
+                    STAKE_REWARDS_BY_SIG_TYPEHASH,
                     address(heartGarden),
                     _babl,
+                    _profits,
                     _minAmountOut,
+                    _nonce,
                     _nonceHeart,
                     _maxFee,
                     _signer
@@ -578,19 +576,77 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // grant permission to deposit
         signer = _signer;
         // Now this garden makes a deposit on Heart Garden on behalf of user
-        heartGarden.depositBySig(
+        heartGarden.stakeBySig(
             _babl,
+            _profits,
             _minAmountOut,
+            _nonce,
             _nonceHeart,
             _maxFee,
             _signer,
             _pricePerShare,
-            0,
+            0, // already paid
             address(this),
             _signature
         );
+        console.log('Garden:: check 8');
         // revoke permission to deposit
         signer = address(0);
+    }
+
+    /**
+     * @notice
+     *   Deposits the _amountIn in reserve asset into the garden. Gurantee to
+     *   recieve at least _minAmountOut.
+     * @param _amountIn               Amount of the reserve asset that is received from contributor.
+     * @param _profits               Amount of the reserve asset that is received from contributor.
+     * @param _minAmountOut           Min amount of Garden shares to receive by contributor.
+     * @param _nonce                  Current nonce to prevent replay attacks.
+     * @param _nonceHeart             Current nonce to prevent replay attacks.
+     * @param _maxFee                 Max fee user is willing to pay keeper. Fee is
+     *                                substracted from the withdrawn amount. Fee is
+     *                                expressed in reserve asset.
+     * @param _pricePerShare          Price per share of the garden calculated off-chain by Keeper.
+     * @param _to                     Address to mint shares to.
+     * @param _fee                    Actual fee keeper demands. Have to be less than _maxFee.
+     * @param _signer                 The user to who signed the signature.
+     * @param _signature              Signature by the user to verify deposit parmas.
+     */
+    function stakeBySig(
+        uint256 _amountIn,
+        uint256 _profits,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _nonceHeart,
+        uint256 _maxFee,
+        address _to,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature
+    ) external override nonReentrant {
+        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+
+        bytes32 hash =
+            keccak256(
+                abi.encode(
+                    STAKE_REWARDS_BY_SIG_TYPEHASH,
+                    address(this),
+                    _amountIn,
+                    _profits,
+                    _minAmountOut,
+                    _nonce,
+                    _nonceHeart,
+                    _maxFee,
+                    _to
+                )
+            )
+                .toEthSignedMessageHash();
+        _onlyValidSigner(_signer, _nonceHeart, hash, _signature);
+
+        // Keeper fee must have been paid in the original garden
+        _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution);
     }
 
     /**
@@ -817,10 +873,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
         // Avoid replay attack between claimRewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
-        _require(
-            block.timestamp > contributor.claimedAt.add(_stake ? CLAIM_STAKE_HARD_LOCK : 0),
-            Errors.ALREADY_CLAIMED
-        );
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly

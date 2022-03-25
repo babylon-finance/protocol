@@ -38,8 +38,6 @@ const {
   transferFunds,
   depositFunds,
   getRewardsSig,
-  getDepositSig,
-  getRewardsSigHash,
   getStakeRewardsSig,
 } = require('fixtures/GardenHelper');
 
@@ -52,7 +50,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-skipIfFast('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -2113,12 +2111,11 @@ skipIfFast('RewardsDistributor', function () {
         newGarden
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
-      ).to.be.revertedWith('BAB#123');
+      ).to.be.revertedWith('BAB#122');
     });
     it('can NOT claimRewardsAndStakeBySig above cap ', async function () {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
-
       await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
 
       const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
@@ -2133,14 +2130,16 @@ skipIfFast('RewardsDistributor', function () {
       const maxFee = 1;
       const fee = 1;
       const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
-      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const heartGardenUserNonce = heartGardenUserData[7]; // heart garden user nonce
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       // We create the signature equivalent to depositBySig
-      const sig = await getDepositSig(
+      const sig = await getStakeRewardsSig(
         heartTestGarden.address,
         signer2,
         babl,
+        profits,
         minAmountOut,
+        nonce,
         heartGardenUserNonce,
         maxFee,
         signer2.address,
@@ -2165,7 +2164,7 @@ skipIfFast('RewardsDistributor', function () {
             sig,
             { gasPrice: 0 },
           ),
-      ).to.be.revertedWith('BAB#123');
+      ).to.be.revertedWith('BAB#122');
     });
     it('can claimAndStakeRewardsBySig into the Heart Garden', async function () {
       const amountIn = eth();
@@ -2197,19 +2196,21 @@ skipIfFast('RewardsDistributor', function () {
       const totalProfits = rewardsSigner2[6];
       // nonce is 4 as it deposited twice in 2 gardens before
       const newGardenUserData = await newGarden.getContributor(signer2.address);
-      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const newGardenUserNonce = newGardenUserData[7]; // new garden user nonce
       const stakeMinAmountOut = minAmountOut;
       const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
-      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const heartGardenUserNonce = heartGardenUserData[7]; // heart garden user nonce
       const maxFee = 1;
       const fee = 1;
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
       // We create the signature equivalent to depositBySig
-      const sig = await getDepositSig(
+      const sig = await getStakeRewardsSig(
         heartTestGarden.address,
         signer2,
         totalBabl,
+        totalProfits,
         stakeMinAmountOut,
+        newGardenUserNonce,
         heartGardenUserNonce,
         maxFee,
         signer2.address,
@@ -2309,7 +2310,7 @@ skipIfFast('RewardsDistributor', function () {
         const babl = rewardsSigner2[5];
         const profits = rewardsSigner2[6];
         const newGardenUserData = await newGarden.getContributor(signer2.address);
-        const nonce = newGardenUserData[9]; // new garden user nonce
+        const nonce = newGardenUserData[7]; // new garden user nonce
         const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
         // Should have enough remaining allowance (at least the fee) - we need to be sure before the tx
         await erc20.connect(signer2).approve(newGarden.address, fee, { gasPrice: 0 });
@@ -2482,7 +2483,7 @@ skipIfFast('RewardsDistributor', function () {
       let babl = rewardsSigner2[5];
       let profits = rewardsSigner2[6];
       const newGardenUserData = await newGarden.getContributor(signer2.address);
-      const userNonce = newGardenUserData[9]; // new garden user nonce
+      const userNonce = newGardenUserData[7]; // new garden user nonce
       let nonce = userNonce.sub(1); // prev nonce
       const maxFee = 1;
       const fee = 1;
@@ -2568,18 +2569,7 @@ skipIfFast('RewardsDistributor', function () {
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
     });
-    it('can mitigate replay attack between claimReturns and claimAndStakeRewardsBySig', async function () {
-      // We use depositBySig signature for claimAndStakeBySig as it is to avoid deposit signature complexity
-      // It means that only one nonce can be used, that is the heart garden nonce where the user is depositing
-      // In addition to this, profits set aside cannot be part of the signature as well
-      // so it is a risk if keeper introduces wrong profit data (i.e. decimals in reserveAsset)
-      // It also introduces a risk of replay-attack as nonce is a calldata param not part of the signature
-      // We have the assumption that keeper is not malicious but
-      // there can be some edge cases where keeper might unintentional delay grabbing the user nonce
-      // so it might take the following nonce with previous signed data,
-      // so that tx should not go through as it will execute, keeper should cancel all secondary tx's
-      // and wait few blocks until processing a new dapp claim tx
-      // It is unlikely but it might happen so we introduced a CLAIM HARD LOCK of 15 mins
+    it('can avoid a replay attack between claimReturns and claimAndStakeRewardsBySig', async function () {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
 
@@ -2602,10 +2592,10 @@ skipIfFast('RewardsDistributor', function () {
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
       const newGardenUserData = await newGarden.getContributor(signer2.address);
-      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const newGardenUserNonce = newGardenUserData[7]; // new garden user nonce
       const stakeMinAmountOut = minAmountOut;
       const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
-      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const heartGardenUserNonce = heartGardenUserData[7]; // heart garden user nonce
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
 
       const maxFee = 1;
@@ -2614,11 +2604,13 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
       // We create the signature equivalent to depositBySig
-      const sigStake = await getDepositSig(
+      const sigStake = await getStakeRewardsSig(
         heartTestGarden.address,
         signer2,
         babl,
+        profits,
         stakeMinAmountOut,
+        newGardenUserNonce,
         heartGardenUserNonce,
         maxFee,
         signer2.address,
@@ -2650,7 +2642,7 @@ skipIfFast('RewardsDistributor', function () {
             sigStake,
             { gasPrice: 0 },
           ),
-      ).to.be.revertedWith('BAB#012');
+      ).to.be.revertedWith('BAB#088');
       // We check claim hard lock
       // It is set to 15 mins for claim and stake by sig only
       // It is a mitigation countermeasure
@@ -2670,22 +2662,11 @@ skipIfFast('RewardsDistributor', function () {
           sigStake,
           { gasPrice: 0 },
         ),
-      ).to.be.not.reverted;
+      ).to.be.revertedWith('BAB#088');
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
-      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
     });
-    it('can mitigate replay attack between claimRewardsBySig and claimAndStakeRewardsBySig', async function () {
-      // We use depositBySig signature for claimAndStakeBySig as it is to avoid deposit signature complexity
-      // It means that only one nonce can be used, that is the heart garden nonce where the user is depositing
-      // In addition to this, profits set aside cannot be part of the signature as well
-      // so it is a risk if keeper introduces wrong profit data (i.e. decimals in reserveAsset)
-      // It also introduces a risk of replay-attack as nonce is a calldata param not part of the signature
-      // We have the assumption that keeper is not malicious but
-      // there can be some edge cases where keeper might unintentional delay grabbing the user nonce
-      // so it might take the following nonce with previous signed data,
-      // so that tx should not go through as it will execute, keeper should cancel all secondary tx's
-      // and wait few blocks until processing a new dapp claim tx
-      // It is unlikely but it might happen so we introduced a CLAIM HARD LOCK of 15 mins
+    it('can avoid replay attack between claimRewardsBySig and claimAndStakeRewardsBySig', async function () {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
 
@@ -2715,10 +2696,10 @@ skipIfFast('RewardsDistributor', function () {
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
       const newGardenUserData = await newGarden.getContributor(signer2.address);
-      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const newGardenUserNonce = newGardenUserData[7]; // new garden user nonce
       const stakeMinAmountOut = minAmountOut;
       const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
-      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const heartGardenUserNonce = heartGardenUserData[7]; // heart garden user nonce
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
 
       const maxFee = 1;
@@ -2729,15 +2710,19 @@ skipIfFast('RewardsDistributor', function () {
       // We create the signature of claimRewardsBySig
       const sigRewards = await getRewardsSig(newGarden.address, signer2, babl, profits, newGardenUserNonce, maxFee);
       // We create the signature equivalent to depositBySig
-      const sigStake = await getDepositSig(
+      const sigStake = await getStakeRewardsSig(
         heartTestGarden.address,
         signer2,
         babl,
+        profits,
         stakeMinAmountOut,
+        newGardenUserNonce,
         heartGardenUserNonce,
         maxFee,
         signer2.address,
       );
+      console.log('check 1');
+
       expect(await bablToken.balanceOf(signer2.address)).to.eq(0);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
 
@@ -2747,6 +2732,7 @@ skipIfFast('RewardsDistributor', function () {
         .claimRewardsBySig(babl, profits, newGardenUserNonce, maxFee, fee, signer2.address, sigRewards, {
           gasPrice: 0,
         });
+      console.log('check 2');
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
 
@@ -2768,8 +2754,9 @@ skipIfFast('RewardsDistributor', function () {
             { gasPrice: 0 },
           ),
       ).to.be.revertedWith('BAB#089');
-      // We check claim hard lock
-      // It is set to 15 mins for claim and stake by sig only
+      console.log('check 3');
+
+      // no need of hardlock claim hard lock
       await increaseTime(898);
       await expect(
         newGarden.connect(keeper).claimAndStakeRewardsBySig(
@@ -2785,10 +2772,14 @@ skipIfFast('RewardsDistributor', function () {
           sigStake,
           { gasPrice: 0 },
         ),
-      ).to.be.revertedWith('BAB#012');
+      ).to.be.revertedWith('BAB#088');
+      console.log('check 4');
+
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
       expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
       await increaseTime(1);
+      console.log('check 5');
+
       // The following should never happen (executing a tx with old rewards signed data but updated garden nonce)
       await expect(
         newGarden.connect(keeper).claimAndStakeRewardsBySig(
@@ -2804,9 +2795,10 @@ skipIfFast('RewardsDistributor', function () {
           sigStake,
           { gasPrice: 0 },
         ),
-      ).to.be.not.reverted;
+      ).to.be.revertedWith('BAB#088');
+      console.log('check 6');
       expect(await bablToken.balanceOf(signer2.address)).to.eq(babl);
-      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(babl);
+      expect(await heartTestGarden.balanceOf(signer2.address)).to.eq(0);
     });
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 2 strategies (1 with positive profits and other without them) within a quarter', async function () {
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
