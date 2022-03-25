@@ -824,7 +824,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_amountIn >= _minContribution, Errors.MIN_CONTRIBUTION);
 
         uint256 reserveAssetBalanceBefore = IERC20(reserveAsset).balanceOf(address(this));
-        // We handle transfers here only if not a staking operation (stakingAmount == 0)
         // If reserve asset is WETH and user sent ETH then wrap it
         if (reserveAsset == WETH && msg.value > 0) {
             IWETH(WETH).deposit{value: msg.value}();
@@ -834,7 +833,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         }
 
         // Make sure we received the correct amount of reserve asset
-        // If it is a staking tx, stakingAmount has been deposited by RD before
         _require(
             IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetBalanceBefore) == _amountIn,
             Errors.MSG_VALUE_DO_NOT_MATCH
