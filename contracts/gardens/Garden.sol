@@ -589,7 +589,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             address(this),
             _signature
         );
-        console.log('Garden:: check 8');
         // revoke permission to deposit
         signer = address(0);
     }
