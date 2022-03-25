@@ -104,6 +104,22 @@ interface IHeart {
     function bondAsset(
         address _assetToBond,
         uint256 _amountToBond,
-        uint256 _minAmountOut
+        uint256 _minAmountOut,
+        address _referrer
+    ) external;
+
+    function bondAssetBySig(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _maxFee,
+        uint256 _priceInBABL,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        address _contributor,
+        address _referrer,
+        bytes memory _signature
     ) external;
 }

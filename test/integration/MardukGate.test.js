@@ -134,7 +134,7 @@ describe.skip('MardukGate', function () {
         );
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
-      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), {
+      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
     });
@@ -160,7 +160,7 @@ describe.skip('MardukGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await newGarden.connect(signer2).transferCreatorRights(ADDRESS_ZERO, 0);
-      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), {
+      await newGarden.connect(signer2).deposit(eth('1'), 1, signer2.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
     });
@@ -280,7 +280,7 @@ describe.skip('MardukGate', function () {
       const gardens = await babController.getGardens();
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
       await mardukGate.connect(signer2).setGardenAccess(signer1.address, newGarden.address, 3, { gasPrice: 0 });
-      await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), {
+      await newGarden.connect(signer1).deposit(eth('1'), 1, signer1.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       await expect(
@@ -369,7 +369,7 @@ describe.skip('MardukGate', function () {
 
       await mardukGate.connect(signer1).setGardenAccess(signer3.address, newGarden.address, 1, { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
     });
@@ -399,7 +399,7 @@ describe.skip('MardukGate', function () {
       const newGarden = await ethers.getContractAt('IGarden', gardens[gardens.length - 1]);
 
       await expect(
-        newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), {
+        newGarden.connect(WALLET_ADDRESSES[4]).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
           value: eth('1'),
         }),
       ).to.be.reverted;
@@ -485,7 +485,7 @@ describe.skip('MardukGate', function () {
         .connect(signer1)
         .grantGardenAccessBatch(newGarden.address, [signer3.address], [1], { gasPrice: 0 });
 
-      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await newGarden.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
     });

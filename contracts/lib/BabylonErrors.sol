@@ -332,4 +332,6 @@ library Errors {
     uint256 internal constant RESET_HARDLOCK_INVALID = 120;
     // Claim garden NFT
     uint256 internal constant CLAIM_GARDEN_NFT = 121;
+    // Invalid referrer
+    uint256 internal constant INVALID_REFERRER = 122;
 }
