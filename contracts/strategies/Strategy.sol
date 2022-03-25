@@ -768,9 +768,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /* ============ Internal Functions ============ */
 
     function _setStake(uint256 _stake, address _strategist) internal {
+        (, , , , , , , , uint256 lockedBalance) = garden.getContributor(_strategist);
         _require(
-            _stake > 0 &&
-                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
+            _stake > 0 && IERC20(address(garden)).balanceOf(_strategist).sub(lockedBalance) >= _stake,
             Errors.TOKENS_STAKED
         );
         stake = _stake;

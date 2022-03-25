@@ -101,17 +101,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /* ============ Structs ============ */
 
-    struct Contributor {
-        uint256 lastDepositAt;
-        uint256 initialDepositAt;
-        uint256 claimedAt;
-        uint256 claimedBABL;
-        uint256 claimedRewards;
-        uint256 withdrawnSince;
-        uint256 totalDeposits;
-        uint256 nonce;
-    }
-
     /* ============ State Variables ============ */
 
     // Reserve Asset of the garden
@@ -145,7 +134,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 private withdrawalsOpenUntil; // DEPRECATED
 
     // Contributors
-    mapping(address => Contributor) private contributors;
+    mapping(address => IGarden.Contributor) private contributors;
     uint256 public override totalContributors;
     uint256 private maxContributors; // DEPRECATED
     uint256 public override maxDepositLimit; // Limits the amount of deposits
@@ -650,57 +639,29 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 lastDepositAt,
+            uint256 initialDepositAt,
+            uint256 claimedAt,
+            uint256 claimedBABL,
+            uint256 claimedRewards,
+            uint256 withdrawnSince,
+            uint256 totalDeposits,
+            uint256 nonce,
+            uint256 lockedBalance
         )
     {
-        Contributor storage contributor = contributors[_contributor];
-        uint256 balance = balanceOf(_contributor);
-        uint256 lockedBalance = getLockedBalance(_contributor);
+        IGarden.Contributor memory contributor = contributors[_contributor];
         return (
             contributor.lastDepositAt,
             contributor.initialDepositAt,
             contributor.claimedAt,
             contributor.claimedBABL,
             contributor.claimedRewards,
-            contributor.totalDeposits > contributor.withdrawnSince
-                ? contributor.totalDeposits.sub(contributor.withdrawnSince)
-                : 0,
-            balance,
-            lockedBalance,
-            0, // Deprecated
-            contributor.nonce
+            contributor.withdrawnSince,
+            contributor.totalDeposits,
+            contributor.nonce,
+            contributor.lockedBalance
         );
-    }
-
-    /**
-     * Checks balance locked for strategists in active strategies
-     *
-     * @param _contributor                 Address of the account
-     *
-     * @return  uint256                    Returns the amount of locked garden tokens for the account
-     */
-    function getLockedBalance(address _contributor) public view override returns (uint256) {
-        uint256 lockedAmount;
-        for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (_contributor == strategy.strategist()) {
-                lockedAmount = lockedAmount.add(strategy.stake());
-            }
-        }
-        // Avoid overflows if off-chain voting system fails
-        if (balanceOf(_contributor) < lockedAmount) {
-            lockedAmount = balanceOf(_contributor);
-        }
-        return lockedAmount;
     }
 
     /* ============ Internal Functions ============ */
@@ -735,10 +696,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
         // any amountIn higher than user balance is treated as withdrawAll
-        _amountIn = _amountIn > prevBalance.sub(getLockedBalance(_to))
-            ? prevBalance.sub(getLockedBalance(_to))
-            : _amountIn;
-        _require(_amountIn <= prevBalance.sub(getLockedBalance(_to)), Errors.TOKENS_STAKED);
+        uint256 lockedBalance = contributors[_to].lockedBalance;
+        _amountIn = _amountIn > prevBalance.sub(lockedBalance) ? prevBalance.sub(lockedBalance) : _amountIn;
+        _require(_amountIn <= prevBalance.sub(lockedBalance), Errors.TOKENS_STAKED);
 
         uint256 amountOut = _sharesToReserve(_amountIn, _pricePerShare);
 
@@ -763,7 +723,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
-        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, _amountIn);
+        _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, balanceOf(_to), _amountIn);
+        contributors[_to].nonce++;
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
@@ -832,6 +793,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _mint(_to, sharesToMint);
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
+        contributors[_to].nonce++;
 
         emit GardenDeposit(_to, _minAmountOut, _amountIn, block.timestamp);
     }
@@ -849,7 +811,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bool _stake
     ) internal {
         _onlyUnpaused();
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
@@ -885,15 +847,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     // Disable garden token transfers. Allow minting and burning.
     function _beforeTokenTransfer(
-        address from,
-        address to,
+        address _from,
+        address _to,
         uint256 _amount
     ) internal virtual override {
-        super._beforeTokenTransfer(from, to, _amount);
+        super._beforeTokenTransfer(_from, _to, _amount);
         _require(
-            from == address(0) || to == address(0) || (controller.gardenTokensTransfersEnabled() && !privateGarden),
+            _from == address(0) || _to == address(0) || (controller.gardenTokensTransfersEnabled() && !privateGarden),
             Errors.GARDEN_TRANSFERS_DISABLED
         );
+
+        if (_from != address(0) && _to != address(0)) {
+            uint256 fromBalance = balanceOf(_from);
+
+            uint256 lockedBalance = contributors[_from].lockedBalance;
+            _require(fromBalance.sub(lockedBalance) >= _amount, Errors.TOKENS_STAKED);
+
+            _updateContributorWithdrawalInfo(_from, 0, fromBalance, fromBalance.sub(_amount), _amount);
+            _updateContributorDepositInfo(_to, balanceOf(_to), 0, _amount);
+        }
     }
 
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
@@ -917,21 +889,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function _updateContributorDepositInfo(
         address _contributor,
         uint256 _previousBalance,
-        uint256 _reserveAssetQuantity,
-        uint256 _newTokens
+        uint256 _amountIn,
+        uint256 _sharesIn
     ) private {
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
         if (_previousBalance == 0 || contributor.initialDepositAt == 0) {
             totalContributors = totalContributors.add(1);
             contributor.initialDepositAt = block.timestamp;
         }
         // We make checkpoints around contributor deposits to give the right rewards afterwards
-        contributor.totalDeposits = contributor.totalDeposits.add(_reserveAssetQuantity);
+        contributor.totalDeposits = contributor.totalDeposits.add(_amountIn);
         contributor.lastDepositAt = block.timestamp;
         // RD checkpoint for accurate rewards
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _newTokens, true);
-        // nonce update is done at _updateGardenPowerAndContributor
+        rewardsDistributor.updateGardenPowerAndContributor(
+            address(this),
+            _contributor,
+            _previousBalance,
+            _sharesIn,
+            true // true = deposit , false = withdraw
+        );
     }
 
     /**
@@ -941,11 +918,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _contributor,
         uint256 _amountOut,
         uint256 _previousBalance,
+        uint256 _balance,
         uint256 _tokensToBurn
     ) private {
-        Contributor storage contributor = contributors[_contributor];
+        IGarden.Contributor storage contributor = contributors[_contributor];
         // If withdrawn everything
-        if (balanceOf(_contributor) == 0) {
+        if (_balance == 0) {
             contributor.lastDepositAt = 0;
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
@@ -955,27 +933,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
         }
         // RD checkpoint for accurate rewards
-        _updateGardenPowerAndContributor(_contributor, _previousBalance, _tokensToBurn, false);
-        // nonce update is done at _updateGardenPowerAndContributor
-    }
-
-    /**
-     * Rewards Distributor checkpoint updater at deposits / withdrawals
-     */
-    function _updateGardenPowerAndContributor(
-        address _contributor,
-        uint256 _prevBalance,
-        uint256 _tokens,
-        bool _depositOrWithdraw
-    ) internal {
         rewardsDistributor.updateGardenPowerAndContributor(
             address(this),
             _contributor,
-            _prevBalance,
-            _tokens,
-            _depositOrWithdraw // true = deposit , false = withdraw
+            _previousBalance,
+            _tokensToBurn,
+            false // true = deposit , false = withdraw
         );
-        contributors[_contributor].nonce++;
     }
 
     // Checks if an address is a creator
