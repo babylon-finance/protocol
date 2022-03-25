@@ -50,7 +50,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-skipIfFast('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -2027,7 +2027,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
       await executeStrategy(long1, eth());
       await executeStrategy(long2, eth());
@@ -2097,7 +2097,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const babl = eth(5501); // above max cap
       const profits = eth();
       const nonce = 1;
@@ -2110,7 +2110,7 @@ skipIfFast('RewardsDistributor', function () {
         newGarden
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
-      ).to.be.revertedWith('BAB#122');
+      ).to.be.revertedWith('BAB#123');
     });
     it('can NOT claimRewardsAndStakeBySig above cap ', async function () {
       const amountIn = eth();
@@ -2122,7 +2122,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const babl = eth(5501); // above max cap
       const profits = eth();
       const nonce = 1;
@@ -2163,7 +2163,7 @@ skipIfFast('RewardsDistributor', function () {
             sig,
             { gasPrice: 0 },
           ),
-      ).to.be.revertedWith('BAB#122');
+      ).to.be.revertedWith('BAB#123');
     });
     it('can claimAndStakeRewardsBySig into the Heart Garden', async function () {
       const amountIn = eth();
@@ -2175,7 +2175,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
 
       await executeStrategy(long1, { amount: eth() });
@@ -2376,7 +2376,9 @@ skipIfFast('RewardsDistributor', function () {
 
         const newGarden = await createGarden({ reserveAsset: token });
         await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
-        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), { gasPrice: 0 });
+        await newGarden
+          .connect(signer2)
+          .deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO, { gasPrice: 0 });
         const [long1] = await createStrategies([{ garden: newGarden }]);
         await executeStrategy(long1, eth());
         await injectFakeProfits(long1, eth().mul(200));
@@ -2468,7 +2470,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1, long2, long3] = await createStrategies([
         { garden: newGarden },
         { garden: newGarden },
@@ -2581,7 +2583,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2678,7 +2680,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1, long2, long3] = await createStrategies([
         { garden: newGarden },
         { garden: newGarden },

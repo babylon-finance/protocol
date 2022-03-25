@@ -474,8 +474,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // User BABL rewards are sent to this garden from RD to stake them into Heart Garden
         // on behalf of user
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
-
-        heartGarden.deposit(rewards[5], _minAmountOut, msg.sender);
+        _approveBABL(address(heartGarden), rewards[5]);
+        heartGarden.deposit(rewards[5], _minAmountOut, msg.sender, address(0));
     }
 
     /**
@@ -582,10 +582,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // User BABL rewards are sent to this garden from RD to later stake them into Heart Garden
         // on behalf of the user
         _sendRewardsInternal(_signer, _babl, _profits, true); // true = stake babl rewards, false = no stake
-        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
-        // Deposit on behalf of the user
-        require(bablToken.balanceOf(address(this)) >= _babl, 'Not enough BABL');
-        bablToken.safeApprove(address(heartGarden), _babl);
+        _approveBABL(address(heartGarden), _babl);
         // grant permission to deposit
         signer = _signer;
         // Now this garden makes a deposit on Heart Garden on behalf of user
@@ -607,10 +604,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /**
      * @notice
-     *   Deposits the _amountIn in reserve asset into the garden. Gurantee to
-     *   recieve at least _minAmountOut.
+     *   Deposits the _amountIn in reserve asset into the garden. Guarantee to
+     *   receive at least _minAmountOut.
      * @param _amountIn               Amount of the reserve asset that is received from contributor.
-     * @param _profits               Amount of the reserve asset that is received from contributor.
+     * @param _profits                Amount of the reserve asset that is received from contributor.
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor.
      * @param _nonce                  Current nonce to prevent replay attacks.
      * @param _nonceHeart             Current nonce to prevent replay attacks.
@@ -620,7 +617,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _pricePerShare          Price per share of the garden calculated off-chain by Keeper.
      * @param _to                     Address to mint shares to.
      * @param _signer                 The user to who signed the signature.
-     * @param _signature              Signature by the user to verify deposit parmas.
+     * @param _signature              Signature by the user to verify deposit params.
      */
     function stakeBySig(
         uint256 _amountIn,
@@ -635,6 +632,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes memory _signature
     ) external override nonReentrant {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
 
         bytes32 hash =
             keccak256(
@@ -654,7 +652,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _onlyValidSigner(_signer, _nonceHeart, hash, _signature);
 
         // Keeper fee must have been paid in the original garden
-        _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution);
+        _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution, address(0));
     }
 
     /**
@@ -949,6 +947,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // Send reserve asset
             IERC20(reserveAsset).safeTransfer(_to, _amount);
         }
+    }
+
+    /**
+     * Approves BABL staking amount for claim and stake rewards
+     * Only used to approve Heart Garden to stake
+     */
+    function _approveBABL(address _garden, uint256 _amount) internal {
+        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
+        _require(bablToken.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
+        bablToken.safeApprove(address(_garden), _amount);
     }
 
     /**

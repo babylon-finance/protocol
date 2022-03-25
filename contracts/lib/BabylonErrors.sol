@@ -336,4 +336,6 @@ library Errors {
     uint256 internal constant ONLY_HEART_GARDEN = 122;
     // Max BABL Cap to claim by sig
     uint256 internal constant MAX_BABL_CAP_REACHED = 123;
+    // Not enough BABL
+    uint256 internal constant NOT_ENOUGH_BABL = 124;
 }
