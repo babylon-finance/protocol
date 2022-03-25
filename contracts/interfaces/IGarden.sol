@@ -72,7 +72,7 @@ interface IAdminGarden {
 
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
 
-    function updateGardenParams(uint256[11] memory _newParams) external;
+    function updateGardenParams(uint256[12] memory _newParams) external;
 
     function verifyGarden(uint256 _verifiedCategory) external;
 

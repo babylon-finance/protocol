@@ -149,8 +149,10 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _gardenParams[7],
             _gardenParams[8],
             _gardenParams[9],
-            _gardenParams[10]
+            _gardenParams[10],
+            0 // stack overflow otherwise
         );
+        canMintNftAfter = _gardenParams[11];
     }
 
     /* ============ External Functions ============ */
@@ -249,7 +251,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[11] memory _newParams) external override {
+    function updateGardenParams(uint256[12] memory _newParams) external override {
         _onlyCreator(msg.sender);
         _updateGardenParams(
             _newParams[0], // uint256 _maxDepositLimit
@@ -262,7 +264,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _newParams[7], // uint256 _maxStrategyDuration,
             _newParams[8], // uint256 _minVoters
             _newParams[9], // uint256 _pricePerShareDecayRate
-            _newParams[10] // uint256 _pricePerShareDelta
+            _newParams[10], // uint256 _pricePerShareDelta
+            _newParams[11] //  uint256 _canMintNftAfter
         );
     }
 
@@ -299,6 +302,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _minVoters                   The minimum amount of voters needed for quorum
      * @param _pricePerShareDecayRate      Decay rate of price per share
      * @param _pricePerShareDelta          Base slippage for price per share
+     * @param _canMintNftAfter             Can mint nft after secs
      */
     function _updateGardenParams(
         uint256 _maxDepositLimit,
@@ -311,7 +315,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         uint256 _maxStrategyDuration,
         uint256 _minVoters,
         uint256 _pricePerShareDecayRate,
-        uint256 _pricePerShareDelta
+        uint256 _pricePerShareDelta,
+        uint256 _canMintNftAfter
     ) private {
         _require(
             _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
@@ -342,6 +347,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         depositHardlock = _depositHardlock;
         pricePerShareDecayRate = _pricePerShareDecayRate;
         pricePerShareDelta = _pricePerShareDelta;
+        canMintNftAfter = _canMintNftAfter;
     }
 
     // Checks if an address is a creator
