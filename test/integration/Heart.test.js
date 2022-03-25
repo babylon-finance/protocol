@@ -307,7 +307,7 @@ describe('Heart', function () {
         nonce,
         maxFee,
         signer3.address,
-        ADDRESS_ZERO
+        ADDRESS_ZERO,
       );
 
       // Bond the asset

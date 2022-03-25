@@ -288,7 +288,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         bytes32 hash =
             keccak256(
-                abi.encode(DEPOSIT_BY_SIG_TYPEHASH, address(this), _amountIn, _minAmountOut, _nonce, _maxFee, _to, _referrer)
+                abi.encode(
+                    DEPOSIT_BY_SIG_TYPEHASH,
+                    address(this),
+                    _amountIn,
+                    _minAmountOut,
+                    _nonce,
+                    _maxFee,
+                    _to,
+                    _referrer
+                )
             )
                 .toEthSignedMessageHash();
 

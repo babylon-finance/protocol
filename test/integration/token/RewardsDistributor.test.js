@@ -2091,7 +2091,9 @@ skipIfFast('RewardsDistributor', function () {
 
         const newGarden = await createGarden({ reserveAsset: token });
         await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
-        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO, { gasPrice: 0 });
+        await newGarden
+          .connect(signer2)
+          .deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO, { gasPrice: 0 });
 
         const [long1] = await createStrategies([{ garden: newGarden }]);
 
