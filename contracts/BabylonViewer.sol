@@ -305,6 +305,16 @@ contract BabylonViewer {
         return (userGardens, hasUserDeposited, data);
     }
 
+    function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view returns (uint256) {
+        uint256[] memory contribution = new uint256[](2);
+        (, , , , , , uint256 totalDeposits, , ) = _garden.getContributor(_user);
+
+        // Avg price per user share = deposits / garden tokens
+        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
+        // contributor[1] -> Balance (Garden tokens) with 18 decimals
+        return totalDeposits > 0 ? totalDeposits.preciseDiv(_garden.balanceOf(_user)) : 0;
+    }
+
     /**
      * Gets the number of tokens that can vote in this garden
      *
@@ -347,41 +357,50 @@ contract BabylonViewer {
         return (strategiesCreated, totalVotes);
     }
 
-    function getContributionAndRewards(address _garden, address _user)
+    function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
+        (
+            uint256 lastDepositAt,
+            uint256 initialDepositAt,
+            uint256 claimedAt,
+            uint256 claimedBABL,
+            uint256 claimedRewards,
+            uint256 withdrawnSince,
+            uint256 totalDeposits,
+            ,
+            uint256 lockedBalance
+        ) = _garden.getContributor(_user);
+        return [
+            lastDepositAt,
+            initialDepositAt,
+            claimedAt,
+            claimedBABL,
+            claimedRewards,
+            totalDeposits > withdrawnSince ? totalDeposits.sub(withdrawnSince) : 0,
+            _garden.balanceOf(_user),
+            lockedBalance,
+            0,
+            getGardenUserAvgPricePerShare(_garden, _user)
+        ];
+    }
+
+    function getContributionAndRewards(IGarden _garden, address _user)
         external
         view
         returns (
-            uint256[] memory,
+            uint256[10] memory,
             uint256[] memory,
             uint256[] memory
         )
     {
-        IGarden garden = IGarden(_garden);
-        uint256[] memory contribution = new uint256[](10);
-        uint256[] memory pendingRewards = new uint256[](4);
-        (
-            contribution[0],
-            contribution[1],
-            contribution[2],
-            contribution[3],
-            contribution[4],
-            contribution[5],
-            ,
-            ,
-            contribution[8],
-
-        ) = garden.getContributor(_user);
-        contribution[6] = IERC20(_garden).balanceOf(_user);
-        contribution[7] = garden.getLockedBalance(_user);
-        uint256[] memory totalRewards =
+        return (
+            getContributor(_garden, _user),
             IRewardsDistributor(controller.rewardsDistributor()).getRewards(
-                _garden,
+                address(_garden),
                 _user,
-                garden.getFinalizedStrategies()
-            );
-        contribution[9] = _getGardenUserAvgPricePerShare(_garden, _user);
-        pendingRewards = _estimateUserRewards(_user, garden.getStrategies());
-        return (contribution, totalRewards, pendingRewards);
+                _garden.getFinalizedStrategies()
+            ),
+            _estimateUserRewards(_user, _garden.getStrategies())
+        );
     }
 
     function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
@@ -414,12 +433,19 @@ contract BabylonViewer {
     function _getGardenUserAvgPricePerShare(address _garden, address _user) private view returns (uint256) {
         IGarden garden = IGarden(_garden);
         uint256[] memory contribution = new uint256[](2);
-        (, , , , , contribution[0], contribution[1], , , ) = garden.getContributor(_user);
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 totalDeposits,
+            ,
+         ) = garden.getContributor(_user);
 
         // Avg price per user share = deposits / garden tokens
-        // contributor[0] -> Deposits (ERC20 reserveAsset with X decimals)
-        // contributor[1] -> Balance (Garden tokens) with 18 decimals
-        return contribution[1] > 0 ? contribution[0].preciseDiv(contribution[1]) : 0;
+        return totalDeposits > 0 ? totalDeposits.preciseDiv(garden.balanceOf(_user)) : 0;
     }
 
     function _getUniswapHighestLiquidity(address _sendToken, address _reserveAsset) private view returns (uint256) {

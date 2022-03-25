@@ -113,14 +113,17 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         _onlyStrategy();
 
         // burn stategist stake
+        address strategist = IStrategy(msg.sender).strategist();
         if (_burningAmount > 0) {
-            address strategist = IStrategy(msg.sender).strategist();
             if (_burningAmount >= balanceOf(strategist)) {
                 // Avoid underflow condition
                 _burningAmount = balanceOf(strategist);
             }
             _burn(strategist, _burningAmount);
         }
+        contributors[strategist].lockedBalance = contributors[strategist].lockedBalance.sub(
+            IStrategy(msg.sender).stake()
+        );
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
 
@@ -214,8 +217,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     ) external override {
         _onlyUnpaused();
         _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
-        (, , bool canCreateStrategies) = _getUserPermission(msg.sender);
-        _require(canCreateStrategies, Errors.USER_CANNOT_ADD_STRATEGIES);
+        bool canCreateStrategy =
+            publicStrategists ||
+                IMardukGate(controller.mardukGate()).canAddStrategiesInAGarden(address(this), msg.sender);
+        _require(canCreateStrategy, Errors.USER_CANNOT_ADD_STRATEGIES);
         _require(strategies.length < MAX_TOTAL_STRATEGIES, Errors.VALUE_TOO_HIGH);
         address strategy =
             IStrategyFactory(controller.strategyFactory()).createStrategy(
@@ -227,6 +232,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             );
         strategyMapping[strategy] = true;
         totalStake = totalStake.add(_stratParams[1]);
+        contributors[msg.sender].lockedBalance = contributors[msg.sender].lockedBalance.add(_stratParams[1]);
         strategies.push(strategy);
         IStrategy(strategy).setData(_opTypes, _opIntegrations, _opEncodedDatas);
         isGardenStrategy[strategy] = true;
@@ -271,24 +277,5 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     function _liquidReserve() private view returns (uint256) {
         uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
-    }
-
-    /**
-     * Check contributor permissions for deposit [0], vote [1] and create strategies [2]
-     */
-    function _getUserPermission(address _user)
-        internal
-        view
-        returns (
-            bool canDeposit,
-            bool canVote,
-            bool canCreateStrategy
-        )
-    {
-        IMardukGate mgate = IMardukGate(controller.mardukGate());
-        bool betaAccess = true;
-        canDeposit = (betaAccess && !privateGarden) || mgate.canJoinAGarden(address(this), _user);
-        canVote = (betaAccess && publicStewards) || mgate.canVoteInAGarden(address(this), _user);
-        canCreateStrategy = (betaAccess && publicStrategists) || mgate.canAddStrategiesInAGarden(address(this), _user);
     }
 }

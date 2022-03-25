@@ -84,7 +84,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     uint24 private constant FEE_MEDIUM = 3000;
     uint24 private constant FEE_HIGH = 10000;
     int24 private constant baseThreshold = 1000;
-    int24 private constant INITIAL_TWAP_DEVIATION = 800; // locally for testing. It should be halved in main
+    int24 private constant INITIAL_TWAP_DEVIATION = 1600; // locally for testing. It should be halved in main
 
     /* ============ State Variables ============ */
 
@@ -151,12 +151,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function getCompoundExchangeRate(address _asset, address _underlying) public view override returns (uint256) {
         uint256 exchangeRateNormalized = ICToken(_asset).exchangeRateStored();
-        if (ERC20(_underlying).decimals() > 8) {
-            exchangeRateNormalized = exchangeRateNormalized.div(10**(ERC20(_underlying).decimals() - 8));
-        } else {
-            exchangeRateNormalized = exchangeRateNormalized.mul(10**(8 - ERC20(_underlying).decimals()));
-        }
-        return exchangeRateNormalized;
+        return SafeDecimalMath.normalizeAmountTokens(_underlying, _asset, exchangeRateNormalized);
     }
 
     function getCreamExchangeRate(address _asset, address _underlying) public view override returns (uint256) {

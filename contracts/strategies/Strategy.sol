@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -373,7 +374,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this));
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -767,9 +768,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     /* ============ Internal Functions ============ */
 
     function _setStake(uint256 _stake, address _strategist) internal {
+        (, , , , , , , , uint256 lockedBalance) = garden.getContributor(_strategist);
         _require(
-            _stake > 0 &&
-                IERC20(address(garden)).balanceOf(_strategist).sub(garden.getLockedBalance(_strategist)) >= _stake,
+            _stake > 0 && IERC20(address(garden)).balanceOf(_strategist).sub(lockedBalance) >= _stake,
             Errors.TOKENS_STAKED
         );
         stake = _stake;
