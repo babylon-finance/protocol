@@ -22,6 +22,7 @@ import {IWETH} from './interfaces/external/weth/IWETH.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 
 /**
  * @title BabController
@@ -36,6 +37,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
+    using PreciseUnitMath for uint256;
 
     /* ============ Events ============ */
 

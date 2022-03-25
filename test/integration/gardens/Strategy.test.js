@@ -6,6 +6,7 @@ const { fund } = require('lib/whale');
 require('chai').use(chaiAsPromised);
 
 const {
+  ADDRESS_ZERO,
   createStrategy,
   executeStrategy,
   finalizeStrategy,

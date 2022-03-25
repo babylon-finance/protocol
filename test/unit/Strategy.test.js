@@ -16,7 +16,7 @@ const {
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
-const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('fixtures/StrategyHelper');
 const ZEROMAXCAP_STRATEGY_PARAMS = [
