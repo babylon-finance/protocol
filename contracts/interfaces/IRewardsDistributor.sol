@@ -2,6 +2,8 @@
 
 pragma solidity 0.7.6;
 
+import {TimeLockedToken} from '../token/TimeLockedToken.sol';
+
 /**
  * @title IRewardsDistributor
  * @author Babylon Finance
@@ -10,6 +12,8 @@ pragma solidity 0.7.6;
  */
 
 interface IRewardsDistributor {
+    function babltoken() external view returns (TimeLockedToken);
+
     /* ========== View functions ========== */
 
     function getStrategyRewards(address _strategy) external view returns (uint256);

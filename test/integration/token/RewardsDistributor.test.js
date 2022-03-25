@@ -51,7 +51,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-skipIfFast('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -2029,14 +2029,15 @@ skipIfFast('RewardsDistributor', function () {
       });
 
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
-      const [long1] = await createStrategies([{ garden: newGarden }]);
+      const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
 
       await executeStrategy(long1, eth());
-      await injectFakeProfits(long1, eth().mul(200));
-      await finalizeStrategyAfterQuarter(long1);
+      await executeStrategy(long2, eth());
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       expect(rewardsSigner2[5]).to.be.gt(0); // BABL
-      expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+      expect(rewardsSigner2[6]).to.be.eq(0); // Profit rewards as steward
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceBefore = await ethers.provider.getBalance(signer2.address);
       // Fee is going to be paid by burning garden tokens
@@ -2046,7 +2047,8 @@ skipIfFast('RewardsDistributor', function () {
 
       const babl = rewardsSigner2[5];
       const profits = rewardsSigner2[6];
-      const nonce = 2; // nonce is 2 as it deposited twice before
+      const newGardenUserData = await newGarden.getContributor(signer2.address);
+      const nonce = newGardenUserData[9]; // new garden user nonce
       const maxFee = 1;
       const fee = 1;
       const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
@@ -2060,7 +2062,7 @@ skipIfFast('RewardsDistributor', function () {
       // BABL Balance
       const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
 
-      expect(signer2ETHBalanceAfter).to.be.gt(signer2ETHBalanceBefore);
+      expect(signer2ETHBalanceAfter).to.be.eq(signer2ETHBalanceBefore);
       expect(signer2ETHBalanceAfter).to.be.closeTo(signer2ETHBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
       expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
       expect(signer2BABLBalanceBefore).to.be.equal(0);
@@ -2077,15 +2079,15 @@ skipIfFast('RewardsDistributor', function () {
       });
 
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
-      const [long1] = await createStrategies([{ garden: newGarden }]);
+      const [long1, long2] = await createStrategies([{ garden: newGarden }, { garden: newGarden }]);
 
       await executeStrategy(long1, { amount: eth() });
-      await injectFakeProfits(long1, eth().mul(200));
+      await executeStrategy(long2, { amount: eth() });
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       expect(rewardsSigner2[5]).to.be.gt(0); // BABL
-      expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+      expect(rewardsSigner2[6]).to.be.eq(0); // Profit rewards as steward
       // WETH gardens pay rewards in ETH
       const signer2ETHBalanceBefore = await ethers.provider.getBalance(signer2.address);
       const signer2GardenBalanceBefore = await newGarden.balanceOf(signer2.address);
@@ -2138,13 +2140,115 @@ skipIfFast('RewardsDistributor', function () {
       const signer2GardenBalanceAfter = await newGarden.balanceOf(signer2.address);
       // BABL Balance
       const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
-      expect(signer2ETHBalanceAfter).to.be.gt(signer2ETHBalanceBefore);
+      expect(signer2ETHBalanceAfter).to.be.eq(signer2ETHBalanceBefore);
       expect(signer2ETHBalanceAfter).to.be.closeTo(signer2ETHBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
       expect(signer2GardenBalanceAfter).to.be.eq(signer2GardenBalanceBefore);
       expect(signer2BABLBalanceBefore).to.be.equal(signer2BABLBalanceAfter); // We have staked into heart garden instead
       expect(signer2HeartGardenBalanceBefore).to.eq(0);
       expect(signer2HeartGardenBalanceAfter).to.be.gt(signer2HeartGardenBalanceBefore);
       expect(signer2HeartGardenBalanceAfter).to.eq(totalBabl);
+    });
+    it('can claimReturns above cap', async function () {
+      const signerBABLBalanceBefore = await bablToken.balanceOf(signer1.address);
+      const cap = eth(5500);
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
+
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+
+      await finalizeStrategyAfterQuarter(long2);
+      const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
+        long1.address,
+        long2.address,
+      ]);
+      expect(rewardsSigner1[5]).to.be.gt(cap);
+      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore);
+      // We claim our tokens and check that they are received properly
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.not.reverted;
+      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore.add(rewardsSigner1[5]));
+    });
+    it('can NOT claimRewardsBySig above cap ', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const babl = eth(5501); // above max cap
+      const profits = eth();
+      const nonce = 1;
+      const maxFee = 1;
+      const fee = 1;
+      const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
+
+      // Signer 2 claim rewards by sig
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
+      ).to.be.revertedWith('BAB#122');
+    });
+    it('can NOT claimRewardsAndStakeBySig above cap ', async function () {
+      const amountIn = eth();
+      const minAmountOut = eth('0.9');
+
+      await fund([signer1.address, signer2.address], { tokens: [addresses.tokens.WETH] });
+
+      const newGarden = await createGarden({ reserveAsset: addresses.tokens.WETH });
+      await weth.connect(signer2).approve(newGarden.address, amountIn.mul(2), {
+        gasPrice: 0,
+      });
+
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      const newGardenUserData = await newGarden.getContributor(signer2.address);
+      const newGardenUserNonce = newGardenUserData[9]; // new garden user nonce
+      const babl = eth(5501); // above max cap
+      const profits = eth();
+      const nonce = 1;
+      const maxFee = 1;
+      const fee = 1;
+      const heartGardenUserData = await heartTestGarden.getContributor(signer2.address);
+      const heartGardenUserNonce = heartGardenUserData[9]; // heart garden user nonce
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartTestGarden.address, bablToken.address);
+      // We create the signature equivalent to depositBySig
+      const sig = await getStakeRewardsSig(
+        newGarden.address,
+        signer2,
+        babl,
+        profits,
+        minAmountOut,
+        newGardenUserNonce,
+        heartGardenUserNonce,
+        maxFee,
+      );
+      // Signer 2 claim rewards and stake by sig
+      await weth.connect(signer2).approve(newGarden.address, fee, {
+        gasPrice: 0,
+      });
+      await expect(
+        newGarden
+          .connect(keeper)
+          .claimAndStakeRewardsBySig(
+            babl,
+            profits,
+            minAmountOut,
+            newGardenUserNonce,
+            heartGardenUserNonce,
+            maxFee,
+            fee,
+            pricePerShare,
+            signer2.address,
+            sig,
+            { gasPrice: 0 },
+          ),
+      ).to.be.revertedWith('BAB#122');
     });
 
     [
@@ -2182,14 +2286,19 @@ skipIfFast('RewardsDistributor', function () {
         await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
         await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), { gasPrice: 0 });
 
-        const [long1] = await createStrategies([{ garden: newGarden }]);
-
+        const [long1, long2, long3] = await createStrategies([
+          { garden: newGarden },
+          { garden: newGarden },
+          { garden: newGarden },
+        ]);
         await executeStrategy(long1, eth());
-        await injectFakeProfits(long1, eth().mul(200));
-        await finalizeStrategyAfterQuarter(long1);
+        await executeStrategy(long2, eth());
+        await executeStrategy(long3, eth());
+        await increaseTime(ONE_DAY_IN_SECONDS * 30);
+        await finalizeStrategyImmediate(long1);
         const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
         expect(rewardsSigner2[5]).to.be.gt(0); // BABL
-        expect(rewardsSigner2[6]).to.be.gt(0); // Profit rewards as steward
+        expect(rewardsSigner2[6]).to.be.eq(0); // Profit rewards as steward
         // WETH gardens pay rewards in ETH
         if (token === addresses.tokens.WETH) {
           signer2AssetBalanceBefore = await ethers.provider.getBalance(signer2.address);
@@ -2200,7 +2309,8 @@ skipIfFast('RewardsDistributor', function () {
         const signer2BABLBalanceBefore = await bablToken.balanceOf(signer2.address);
         const babl = rewardsSigner2[5];
         const profits = rewardsSigner2[6];
-        const nonce = 2; // nonce is 2 as it deposited twice before
+        const newGardenUserData = await newGarden.getContributor(signer2.address);
+        const nonce = newGardenUserData[9]; // new garden user nonce
         const sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
         // Should have enough remaining allowance (at least the fee) - we need to be sure before the tx
         await erc20.connect(signer2).approve(newGarden.address, fee, { gasPrice: 0 });
@@ -2220,7 +2330,7 @@ skipIfFast('RewardsDistributor', function () {
         const signer2BABLBalanceAfter = await bablToken.balanceOf(signer2.address);
         if (token === addresses.tokens.WETH) {
           expect(signer2AssetBalanceAfter).to.be.closeTo(signer2AssetBalanceBefore.add(rewardsSigner2[6]), 1);
-          expect(signer2AssetBalanceAfter).to.be.gt(signer2AssetBalanceBefore);
+          expect(signer2AssetBalanceAfter).to.be.eq(signer2AssetBalanceBefore);
         } else {
           expect(signer2AssetBalanceAfter).to.be.closeTo(signer2AssetBalanceBefore.add(rewardsSigner2[6]).sub(fee), 1);
           // The tx gas cost more than the rewards received (exception but it is up to the user)
@@ -2357,14 +2467,22 @@ skipIfFast('RewardsDistributor', function () {
       });
 
       await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
-      const [long1] = await createStrategies([{ garden: newGarden }]);
-
+      const [long1, long2, long3] = await createStrategies([
+        { garden: newGarden },
+        { garden: newGarden },
+        { garden: newGarden },
+      ]);
       await executeStrategy(long1, eth());
-      await finalizeStrategyAfterQuarter(long1);
+      await executeStrategy(long2, eth());
+      await executeStrategy(long3, eth());
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
+      await finalizeStrategyImmediate(long1);
       const rewardsSigner2 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long1.address]);
       let babl = rewardsSigner2[5];
       let profits = rewardsSigner2[6];
-      let nonce = 1; // nonce is 2 as it deposited twice before, we use 1 instead
+      const newGardenUserData = await newGarden.getContributor(signer2.address);
+      const userNonce = newGardenUserData[9]; // new garden user nonce
+      let nonce = userNonce.sub(1); // prev nonce
       const maxFee = 1;
       const fee = 1;
       let sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
@@ -2374,16 +2492,16 @@ skipIfFast('RewardsDistributor', function () {
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
-      // nonce 3 also fails
-      nonce = 3;
+      // following nonce also fails
+      nonce = userNonce.add(1);
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await expect(
         newGarden
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).to.be.revertedWith('BAB#089');
-      // nonce 2 works
-      nonce = 2;
+      // current nonce works
+      nonce = userNonce;
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await weth.connect(signer2).approve(newGarden.address, fee, {
         gasPrice: 0,
@@ -2393,19 +2511,13 @@ skipIfFast('RewardsDistributor', function () {
           .connect(keeper)
           .claimRewardsBySig(babl, profits, nonce, maxFee, fee, signer2.address, sig, { gasPrice: 0 }),
       ).not.to.be.reverted;
-      // Now we check that nonce is been updated with the claimRewardsBySig
-      // nonce is 3 at this point
-      const [long2] = await createStrategies([{ garden: newGarden }]);
-      // nonce is 4 at this point as there is a hidden deposit for signer2 while creating long2 strategy
 
-      await executeStrategy(long2, eth());
-      await injectFakeProfits(long2, eth().mul(200));
-      await finalizeStrategyAfterQuarter(long2);
+      await finalizeStrategyImmediate(long2);
 
       const rewardsSigner22 = await rewardsDistributor.getRewards(newGarden.address, signer2.address, [long2.address]);
       babl = rewardsSigner22[5];
       profits = rewardsSigner22[6];
-      nonce = 4; // nonce is still 4 for signer2
+      nonce = userNonce.add(1);
       sig = await getRewardsSig(newGarden.address, signer2, babl, profits, nonce, maxFee);
       await weth.connect(signer2).approve(newGarden.address, fee, {
         gasPrice: 0,
@@ -3474,6 +3586,7 @@ skipIfFast('RewardsDistributor', function () {
     });
 
     it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
+      const signer1BABLBefore = await bablToken.balanceOf(signer1.address);
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },
         { garden: garden1 },
@@ -3521,7 +3634,10 @@ skipIfFast('RewardsDistributor', function () {
       await garden1.connect(signer1).claimReturns([long1.address, long2.address]);
       await garden1.connect(signer2).claimReturns([long1.address, long2.address]);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL, eth('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL.add(signer1BABLBefore),
+        eth('0.0005'),
+      );
       expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL, eth('0.0005'));
       expect(signer1Profit).to.be.gt(0);
       expect(signer2Profit).to.be.gt(0);
@@ -3544,7 +3660,10 @@ skipIfFast('RewardsDistributor', function () {
       await garden2.connect(signer1).claimReturns([long3.address, long4.address, long5.address]);
       await garden2.connect(signer2).claimReturns([long3.address, long4.address, long5.address]);
 
-      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(signer1BABL2.add(signer1BABL), eth('0.0005'));
+      expect(await bablToken.balanceOf(signer1.address)).to.be.closeTo(
+        signer1BABL2.add(signer1BABL).add(signer1BABLBefore),
+        eth('0.0005'),
+      );
       expect(await bablToken.balanceOf(signer2.address)).to.be.closeTo(signer2BABL2.add(signer2BABL), eth('0.0005'));
 
       expect(signer1Profit2).to.be.gt(signer1Profit);
