@@ -120,6 +120,8 @@ interface ICoreGarden {
 
     function verifiedCategory() external view returns (uint256);
 
+    function canMintNftAfter() external view returns (uint256);
+
     function hardlockStartsAt() external view returns (uint256);
 
     function totalContributors() external view returns (uint256);
