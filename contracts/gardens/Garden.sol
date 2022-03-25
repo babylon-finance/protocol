@@ -447,8 +447,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * was invested in.
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
-        // Flashloan protection
-        _require(block.timestamp.sub(_getLastDepositAt(msg.sender)) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], false);
@@ -463,11 +461,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         override
         nonReentrant
     {
-        // Flashloan protection
-        _require(
-            block.timestamp.sub(contributors[msg.sender].lastDepositAt) >= depositHardlock,
-            Errors.DEPOSIT_HARDLOCK
-        );
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         IGarden heartGarden = IGarden(address(IHeart(controller.heart()).heartGarden()));
