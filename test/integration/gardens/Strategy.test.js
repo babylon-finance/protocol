@@ -6,7 +6,6 @@ const { fund } = require('lib/whale');
 require('chai').use(chaiAsPromised);
 
 const {
-  ADDRESS_ZERO,
   createStrategy,
   executeStrategy,
   finalizeStrategy,
@@ -17,7 +16,7 @@ const {
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
-const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('fixtures/StrategyHelper');
 
@@ -563,7 +562,7 @@ describe('Strategy', function () {
   });
 
   describe('sweep', async function () {
-    it('can sweep with a custom slippage', async function () {
+    it.only('can sweep with a custom slippage', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
