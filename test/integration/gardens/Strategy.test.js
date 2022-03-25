@@ -562,7 +562,7 @@ describe('Strategy', function () {
   });
 
   describe('sweep', async function () {
-    it.only('can sweep with a custom slippage', async function () {
+    it('can sweep with a custom slippage', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
