@@ -664,7 +664,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
         // Referral program
         if (_referrer != address(0)) {
-            controller.addAffiliateReward(_from, _amountIn);
+            controller.addAffiliateReward(_referrer, _amountIn);
         }
         // We need to update at Rewards Distributor smartcontract for rewards accurate calculations
         _updateContributorDepositInfo(_to, previousBalance, _amountIn, sharesToMint);
