@@ -23,6 +23,7 @@ import {IWETH} from './interfaces/external/weth/IWETH.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
 
+
 /**
  * @title BabController
  * @author Babylon Finance Protocol
@@ -301,7 +302,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // ===========  Protocol related Gov Functions ======
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid keeper to the list
+     * PRIVILEGED FUNCTION. Adds a new valid keeper to the list
      *
      * @param _keeper Address of the keeper
      */
@@ -311,7 +312,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Removes a keeper
+     * PRIVILEGED FUNCTION. Removes a keeper
      *
      * @param _keeper Address of the keeper
      */
@@ -321,7 +322,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a list of assets to the whitelist
+     * PRIVILEGED FUNCTION. Adds a list of assets to the whitelist
      *
      * @param _keepers List with keeprs of the assets to whitelist
      */
@@ -332,7 +333,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
+     * PRIVILEGED FUNCTION. Adds a new valid reserve asset for gardens
      *
      * @param _reserveAsset Address of the reserve assset
      */
@@ -359,7 +360,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Updates a protocol wanted asset
+     * PRIVILEGED FUNCTION. Updates a protocol wanted asset
      *
      * @param _wantedAsset  Address of the wanted assset
      * @param _wanted       True if wanted, false otherwise
@@ -373,7 +374,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Updates the affiliate rate for a garden. 0 if none.
+     * PRIVILEGED FUNCTION. Updates the affiliate rate for a garden. 0 if none.
      *
      * @param _garden              Address of the garden
      * @param _affiliateRate       Affiliate rate for this garden
@@ -387,7 +388,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds the affiliate rewards earned by an user
+     * PRIVILEGED FUNCTION. Adds the affiliate rewards earned by an user
      *
      * Only a garden can call this
      *
@@ -405,16 +406,19 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Claims affiliate rewards
+     * Claims affiliate rewards
      * Controller needs to hold BABL.
      */
     function claimRewards() external override {
-        IERC20 babl = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
-        require(affiliateRewards[msg.sender] > 0, 'No affiliate rewards');
         uint256 rewards = affiliateRewards[msg.sender];
-        require(babl.balanceOf(address(this)) >= rewards, 'Not enough BABL balance');
-        affiliateRewards[msg.sender] = 0;
-        babl.transfer(msg.sender, rewards);
+
+        require(rewards > 0, 'No affiliate rewards');
+        require(BABL.balanceOf(address(this)) >= rewards, 'Not enough BABL balance');
+
+        delete affiliateRewards[msg.sender];
+
+        BABL.transfer(msg.sender, rewards);
+
         emit AffiliateRewardsClaimed(msg.sender, rewards);
     }
 

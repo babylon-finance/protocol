@@ -54,7 +54,7 @@ const {
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('Garden', function () {
+describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let heart;
@@ -301,7 +301,7 @@ describe.only('Garden', function () {
     });
   });
 
-  describe('Recover original creator position', async function () {
+  describe('recover original creator position', async function () {
     it('should allow recovering of creator rights by emergency', async function () {
       expect(await garden1.creator()).to.equal(await signer1.getAddress());
       await garden1.connect(signer1).makeGardenPublic();
@@ -1576,6 +1576,25 @@ describe.only('Garden', function () {
 
       const [, , , , , withdrawnSinceAfter, totalDepositsAfter, ,] = await garden.getContributor(signer3.address);
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
+    });
+
+    it('can deposit with referral', async function () {
+      const amountIn = eth(1000);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await babController.connect(owner).updateGardenAffiliateRate(garden.address, eth());
+
+      await dai.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), signer2.address);
+
+      expect(await babController.affiliateRewards(signer2.address)).to.equal(amountIn);
     });
 
     it('can deposit USDC', async function () {
