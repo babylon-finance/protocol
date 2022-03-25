@@ -70,13 +70,6 @@ describe('Babylon Viewer', function () {
       expect(status[8]).to.equal(0); // Seed
     });
 
-    // TODO: has to update block number so Prophets NFT exists
-    it.skip('calls get permissions', async function () {
-      const globalPermissions = await babViewer.getPermissions(signer1.address);
-      expect(globalPermissions[0]).to.equal(true);
-      expect(globalPermissions[1]).to.equal(true);
-    });
-
     it('calls get garden permissions', async function () {
       const gardenPermissions = await babViewer.getGardenPermissions(garden1.address, signer1.address);
       expect(gardenPermissions[0]).to.equal(true);
