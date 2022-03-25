@@ -22,6 +22,7 @@ import {IWETH} from './interfaces/external/weth/IWETH.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 
 /**
  * @title BabController
@@ -36,6 +37,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     using AddressUpgradeable for address;
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
+    using PreciseUnitMath for uint256;
 
     /* ============ Events ============ */
 
@@ -51,6 +53,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
     event ProtocolWantedAssetUpdated(address indexed _wantedAsset, bool _wanted);
+    event GardenAffiliateRateUpdated(address indexed _garden, uint256 _affiliateRate);
+    event AffiliateRewardsClaimed(address indexed _user, uint256 _rewardsClaimed);
     event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
@@ -163,6 +167,8 @@ contract BabController is OwnableUpgradeable, IBabController {
     address public override heart;
     address public override curveMetaRegistry;
     mapping(address => bool) public override protocolWantedAssets;
+    mapping(address => uint256) public override gardenAffiliateRates; // 18 decimals
+    mapping(address => uint256) public override affiliateRewards;
 
     /* ============ Constants ============ */
 
@@ -252,7 +258,12 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(!isGarden[newGarden], 'Garden already exists');
         isGarden[newGarden] = true;
         gardens.push(newGarden);
-        IGarden(newGarden).deposit{value: msg.value}(_initialContribution, _initialContribution, msg.sender);
+        IGarden(newGarden).deposit{value: msg.value}(
+            _initialContribution,
+            _initialContribution,
+            msg.sender,
+            address(0)
+        );
         // Avoid gas cost if default sharing values are provided (0,0,0)
         if (_profitSharing[0] != 0 || _profitSharing[1] != 0 || _profitSharing[2] != 0) {
             IRewardsDistributor(rewardsDistributor).setProfitRewards(
@@ -292,7 +303,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // ===========  Protocol related Gov Functions ======
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid keeper to the list
+     * PRIVILEGED FUNCTION. Adds a new valid keeper to the list
      *
      * @param _keeper Address of the keeper
      */
@@ -302,7 +313,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Removes a keeper
+     * PRIVILEGED FUNCTION. Removes a keeper
      *
      * @param _keeper Address of the keeper
      */
@@ -312,7 +323,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a list of assets to the whitelist
+     * PRIVILEGED FUNCTION. Adds a list of assets to the whitelist
      *
      * @param _keepers List with keeprs of the assets to whitelist
      */
@@ -323,7 +334,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
+     * PRIVILEGED FUNCTION. Adds a new valid reserve asset for gardens
      *
      * @param _reserveAsset Address of the reserve assset
      */
@@ -350,7 +361,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     }
 
     /**
-     * PRIVILEGED FACTORY FUNCTION. Adds a new valid reserve asset for gardens
+     * PRIVILEGED FUNCTION. Updates a protocol wanted asset
      *
      * @param _wantedAsset  Address of the wanted assset
      * @param _wanted       True if wanted, false otherwise
@@ -361,6 +372,55 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(protocolWantedAssets[_wantedAsset] != _wanted, 'Wanted asset already added');
         protocolWantedAssets[_wantedAsset] = _wanted;
         emit ProtocolWantedAssetUpdated(_wantedAsset, _wanted);
+    }
+
+    /**
+     * PRIVILEGED FUNCTION. Updates the affiliate rate for a garden. 0 if none.
+     *
+     * @param _garden              Address of the garden
+     * @param _affiliateRate       Affiliate rate for this garden
+     */
+    function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external override {
+        _onlyGovernanceOrEmergency();
+        require(isGarden[_garden], 'Garden is not valid');
+        require(gardenAffiliateRates[_garden] != _affiliateRate, 'Rate already set');
+        gardenAffiliateRates[_garden] = _affiliateRate;
+        emit GardenAffiliateRateUpdated(_garden, _affiliateRate);
+    }
+
+    /**
+     * PRIVILEGED FUNCTION. Adds the affiliate rewards earned by an user
+     *
+     * Only a garden can call this
+     *
+     * @param _user                 Address of the user
+     * @param _reserveAmount        Amount of reserved deposited by a link of the user
+     */
+    function addAffiliateReward(address _user, uint256 _reserveAmount) external override {
+        require(isGarden[msg.sender], 'Only garden can add rewards');
+        require(_user != address(0) && _reserveAmount > 0, 'User and/or amount invalid');
+        if (gardenAffiliateRates[msg.sender] > 0) {
+            affiliateRewards[_user] = affiliateRewards[_user].add(
+                _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender])
+            );
+        }
+    }
+
+    /**
+     * Claims affiliate rewards
+     * Controller needs to hold BABL.
+     */
+    function claimRewards() external override {
+        uint256 rewards = affiliateRewards[msg.sender];
+
+        require(rewards > 0, 'No affiliate rewards');
+        require(BABL.balanceOf(address(this)) >= rewards, 'Not enough BABL balance');
+
+        delete affiliateRewards[msg.sender];
+
+        BABL.transfer(msg.sender, rewards);
+
+        emit AffiliateRewardsClaimed(msg.sender, rewards);
     }
 
     /**

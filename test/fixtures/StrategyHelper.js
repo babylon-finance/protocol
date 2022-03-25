@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
 const { getAssetWhale } = require('lib/whale');
@@ -126,6 +126,7 @@ async function deposit(garden, signers) {
       amount,
       amount,
       signer.getAddress(),
+      ADDRESS_ZERO,
       isWeth
         ? {
             value: amount,

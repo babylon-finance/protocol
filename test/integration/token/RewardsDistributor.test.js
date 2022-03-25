@@ -1352,7 +1352,7 @@ skipIfFast('RewardsDistributor', function () {
   });
   describe('Deterministic contributor share and balance along the time', async function () {
     it('getPriorBalance is zero if just deposited to avoid flash loans', async function () {
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
@@ -1366,7 +1366,7 @@ skipIfFast('RewardsDistributor', function () {
       await expect(priorBalance).to.be.equal(eth('0'));
     });
     it('getPriorBalance is the balance the next block after depositing', async function () {
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block = await ethers.provider.getBlock();
@@ -1395,7 +1395,7 @@ skipIfFast('RewardsDistributor', function () {
       await expect(priorBalance).to.be.equal(eth('0'));
 
       // 1st deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
@@ -1416,7 +1416,7 @@ skipIfFast('RewardsDistributor', function () {
       await expect(priorBalance3).to.be.equal(eth('1'));
 
       // 2nd deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
@@ -1445,7 +1445,7 @@ skipIfFast('RewardsDistributor', function () {
       );
       await expect(priorBalance1).to.be.equal(eth('0'));
       // 1st deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block2 = await ethers.provider.getBlock();
@@ -1465,7 +1465,7 @@ skipIfFast('RewardsDistributor', function () {
       );
       await expect(priorBalance3).to.be.equal(eth('1'));
       // 2nd deposit
-      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), {
+      await garden1.connect(signer3).deposit(eth('1'), 1, signer3.getAddress(), ADDRESS_ZERO, {
         value: eth('1'),
       });
       const block4 = await ethers.provider.getBlock();
@@ -1531,7 +1531,7 @@ skipIfFast('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const gardenBalance = await garden1.totalSupply();
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 15);
@@ -1558,7 +1558,7 @@ skipIfFast('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await finalizeStrategyImmediate(long1);
@@ -1587,7 +1587,7 @@ skipIfFast('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 20);
       await finalizeStrategyImmediate(long1);
@@ -1613,7 +1613,7 @@ skipIfFast('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const gardenBalance = await garden1.totalSupply();
       await increaseTime(ONE_DAY_IN_SECONDS * 10);
       await finalizeStrategyImmediate(long1);
@@ -1639,7 +1639,7 @@ skipIfFast('RewardsDistributor', function () {
       await executeStrategy(long1, eth(1));
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       await weth.connect(signer3).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const gardenBalance = await garden1.totalSupply();
       await finalizeStrategyImmediate(long1);
       const signer1ShareLong1 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -1662,7 +1662,7 @@ skipIfFast('RewardsDistributor', function () {
       const [long1] = await createStrategies([{ garden: garden1 }]);
       await transferFunds(token);
       await weth.connect(signer3).approve(garden1.address, eth(5), { gasPrice: 0 });
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       const estimatedSigner3BABL1 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       await executeStrategy(long1, eth(1));
       // Quick in and out
@@ -1676,7 +1676,7 @@ skipIfFast('RewardsDistributor', function () {
       await increaseTime(ONE_DAY_IN_SECONDS * 40);
       const estimatedSigner3BABL4 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       // join again the garden just before finalization
-      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress());
+      await garden1.connect(signer3).deposit(eth(1), 1, signer3.getAddress(), ADDRESS_ZERO);
       await increaseTime(1);
       const estimatedSigner3BABL5 = await rewardsDistributor.estimateUserRewards(long1.address, signer3.address);
       const gardenBalance = await garden1.totalSupply();
@@ -1925,7 +1925,7 @@ skipIfFast('RewardsDistributor', function () {
       expect(signer1ShareLong32).to.be.equal(signer1ShareLong3);
       expect(signer1ShareLong42).to.be.equal(signer1ShareLong4);
       await weth.connect(signer1).approve(garden1.address, eth(1), { gasPrice: 0 });
-      await garden1.connect(signer1).deposit(eth(1), 1, signer1.getAddress());
+      await garden1.connect(signer1).deposit(eth(1), 1, signer1.getAddress(), ADDRESS_ZERO);
       // In the future it might be able to get the same user share that he deserve but will never take it
       // if running low on garden tokens or it does not create a new checkpoint (deposit or withdrawal)
       const signer1ShareLong13 = await rewardsDistributor.getSafeUserSharePerStrategy(
@@ -2019,7 +2019,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2091,7 +2091,9 @@ skipIfFast('RewardsDistributor', function () {
 
         const newGarden = await createGarden({ reserveAsset: token });
         await erc20.connect(signer2).approve(newGarden.address, amountIn, { gasPrice: 0 });
-        await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), { gasPrice: 0 });
+        await newGarden
+          .connect(signer2)
+          .deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO, { gasPrice: 0 });
 
         const [long1] = await createStrategies([{ garden: newGarden }]);
 
@@ -2153,7 +2155,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2188,7 +2190,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2259,7 +2261,7 @@ skipIfFast('RewardsDistributor', function () {
         gasPrice: 0,
       });
 
-      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress());
+      await newGarden.connect(signer2).deposit(amountIn, minAmountOut, signer2.getAddress(), ADDRESS_ZERO);
       const [long1] = await createStrategies([{ garden: newGarden }]);
 
       await executeStrategy(long1, eth());
@@ -2436,7 +2438,7 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), ADDRESS_ZERO);
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -2507,7 +2509,7 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), ADDRESS_ZERO);
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -2611,11 +2613,11 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), ADDRESS_ZERO);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), ADDRESS_ZERO);
 
       const long1 = await createStrategy(
         'buy',
@@ -2733,11 +2735,11 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), ADDRESS_ZERO);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), ADDRESS_ZERO);
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -2868,11 +2870,11 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), ADDRESS_ZERO);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), ADDRESS_ZERO);
       const long1 = await createStrategy(
         'buy',
         'vote',
@@ -2993,11 +2995,11 @@ skipIfFast('RewardsDistributor', function () {
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, daiGarden.address, 1, { gasPrice: 0 });
       await dai.connect(signer3).approve(daiGarden.address, eth('500'), { gasPrice: 0 });
-      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress());
+      await daiGarden.connect(signer3).deposit(eth('500'), 1, signer3.getAddress(), ADDRESS_ZERO);
 
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, usdcGarden.address, 1, { gasPrice: 0 });
       await usdc.connect(signer3).approve(usdcGarden.address, thousandUSDC, { gasPrice: 0 });
-      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress());
+      await usdcGarden.connect(signer3).deposit(thousandUSDC.div(2), 1, signer3.getAddress(), ADDRESS_ZERO);
       const long1 = await createStrategy(
         'buy',
         'vote',

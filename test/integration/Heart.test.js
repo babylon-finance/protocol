@@ -307,6 +307,7 @@ describe('Heart', function () {
         nonce,
         maxFee,
         signer3.address,
+        ADDRESS_ZERO,
       );
 
       // Bond the asset
@@ -323,6 +324,7 @@ describe('Heart', function () {
           eth(),
           fee,
           signer3.address,
+          ADDRESS_ZERO,
           sig,
           {
             gasPrice: 0,
@@ -351,7 +353,8 @@ describe('Heart', function () {
     });
 
     it('user cannot bond asset that is not added', async function () {
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, { gasPrice: 0 })).to.be.reverted;
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
+        .reverted;
     });
 
     it('user cannot bond a small amount', async function () {
@@ -361,7 +364,8 @@ describe('Heart', function () {
       await cDAI.connect(signer1).approve(heart.address, 1, { gasPrice: 0 });
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, { gasPrice: 0 })).to.be.reverted;
+      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
+        .reverted;
     });
 
     it('user can bond an appropriate amount and receive the discount', async function () {
@@ -379,7 +383,9 @@ describe('Heart', function () {
       // User approves the heart
       await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
-      await heart.connect(signer3).bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), { gasPrice: 0 });
+      await heart
+        .connect(signer3)
+        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, { gasPrice: 0 });
 
       expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
     });

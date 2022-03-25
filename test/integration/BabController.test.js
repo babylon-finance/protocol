@@ -25,9 +25,13 @@ describe('BabController', function () {
   let strategy11;
   let owner;
   let MULTISIG;
+  let dai;
+  let babl;
 
   beforeEach(async () => {
     ({
+      babl,
+      dai,
       babController,
       bablToken,
       owner,
@@ -58,7 +62,7 @@ describe('BabController', function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await babController.connect(signer1).setGlobalPause(true);
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
@@ -69,14 +73,14 @@ describe('BabController', function () {
       await babController.connect(signer1).setSomePause([garden1.address], true);
       const signer1Garden2Balance = await garden2.balanceOf(signer1.address);
       await expect(
-        garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+        garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
           value: eth(),
         }),
       ).to.be.not.reverted;
       const signer1Garden2Balance2 = await garden2.balanceOf(signer1.address);
       expect(signer1Garden2Balance2.sub(signer1Garden2Balance)).to.equal(eth());
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
@@ -121,16 +125,16 @@ describe('BabController', function () {
     it('owner can unpause a garden', async function () {
       await babController.connect(owner).setPauseGuardian(signer1.address);
       await expect(babController.connect(signer1).setSomePause([garden1.address], true)).to.be.not.reverted;
-      await garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+      await garden2.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
         value: eth(),
       });
       await expect(
-        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+        garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
           value: eth(),
         }),
       ).to.be.revertedWith('BAB#083');
       await babController.connect(owner).setSomePause([garden1.address], false);
-      garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), {
+      garden1.connect(signer1).deposit(eth(), 1, signer1.getAddress(), ADDRESS_ZERO, {
         value: eth(),
       });
     });
@@ -162,6 +166,29 @@ describe('BabController', function () {
     });
   });
 
-  // TODO: Integration functions
-  // TODO: add functions to update the max fees and test them
+  describe('claimRewards', function () {
+    it('can claim', async function () {
+      const amountIn = eth(1000);
+      const minAmountOut = eth(1000);
+
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+      await fund([babController.address], { tokens: [addresses.tokens.BABL] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await babController.connect(owner).updateGardenAffiliateRate(garden.address, eth());
+
+      await dai.connect(signer3).approve(garden.address, amountIn, {
+        gasPrice: 0,
+      });
+
+      await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), signer2.address);
+
+      const prevBalance = await babl.balanceOf(signer2.address);
+
+      await babController.connect(signer2).claimRewards();
+
+      expect((await babl.balanceOf(signer2.address)).sub(prevBalance)).to.eq(amountIn);
+    });
+  });
 });

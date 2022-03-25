@@ -16,7 +16,7 @@ const {
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
-const { ONE_DAY_IN_SECONDS } = require('lib/constants.js');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy } = require('fixtures/StrategyHelper');
 
@@ -468,7 +468,7 @@ describe('Strategy', function () {
       await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
       // add extra WETH to repay keeper
-      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, {
+      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, ADDRESS_ZERO, {
         value: eth().mul(2),
       });
 
@@ -573,7 +573,7 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { fee: eth(0.1), amount: eth().mul(4) });
 
-      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, {
+      await garden1.connect(signer1).deposit(eth().mul(2), 1, signer1.address, ADDRESS_ZERO, {
         value: eth().mul(2),
       });
 
