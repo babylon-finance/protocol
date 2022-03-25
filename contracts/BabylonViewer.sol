@@ -291,7 +291,7 @@ contract BabylonViewer {
                 hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
                 resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[i] = PartialGardenInfo(
+                data[resultIndex] = PartialGardenInfo(
                     gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
