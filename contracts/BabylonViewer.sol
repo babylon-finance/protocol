@@ -297,7 +297,7 @@ contract BabylonViewer {
                     garden.verifiedCategory(),
                     garden.totalContributors(),
                     garden.reserveAsset(),
-                    garden.totalSupply().mul(garden.lastPricePerShare())
+                    garden.totalSupply().mul(garden.lastPricePerShare()).div(1e18)
                 );
                 resultIndex = resultIndex + 1;
             }
