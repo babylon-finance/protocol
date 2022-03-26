@@ -10,19 +10,19 @@ import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
-import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
-import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
-import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
-import {IBabController} from './interfaces/IBabController.sol';
-import {IGardenValuer} from './interfaces/IGardenValuer.sol';
-import {IGarden} from './interfaces/IGarden.sol';
-import {IStrategy} from './interfaces/IStrategy.sol';
-import {IMardukGate} from './interfaces/IMardukGate.sol';
-import {IGardenNFT} from './interfaces/IGardenNFT.sol';
-import {IStrategyNFT} from './interfaces/IStrategyNFT.sol';
-import {IPriceOracle} from './interfaces/IPriceOracle.sol';
-import {Math} from './lib/Math.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {Math} from '../lib/Math.sol';
 
 /**
  * @title BabylonViewer

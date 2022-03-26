@@ -224,7 +224,7 @@ async function setUpFixture(
   const aaveGarden = await ethers.getContractAt('IGarden', gardens[5]);
 
   // Set the heart
-  await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
+  console.log('heart', heartGarden.address);
 
   // Grants community access
   for (let i = 0; i < gardens.length; i += 1) {

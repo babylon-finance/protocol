@@ -8,6 +8,7 @@ module.exports = async ({
   getGasPrice,
   getContract,
   getController,
+  getChainId,
 }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -16,11 +17,15 @@ module.exports = async ({
   const controller = await deployments.get('BabControllerProxy');
   const governor = await deployments.get('BabylonGovernor');
   const heart = await deployments.get('HeartProxy');
-  const HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
+  let HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
+  const chainId = await getChainId();
+  if (chainId === '1337') {
+    HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
+  }
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address, governor.address, heart.address],
+    args: [controller.address, governor.address, heart.address, HEART_GARDEN_ADDRES],
     log: true,
     ...(await getGasPrice()),
   });
@@ -30,9 +35,6 @@ module.exports = async ({
   }
 
   if (network.live && deployment.newlyDeployed) {
-    if (HEART_GARDEN_ADDRES) {
-      await (await deployment.setHeartGarden(HEART_GARDEN_ADDRES, { ...(await getGasPrice()) })).wait();
-    }
     await tenderly.push(await getTenderlyContract(contract));
   }
 };

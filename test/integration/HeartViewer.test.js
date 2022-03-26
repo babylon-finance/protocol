@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe('Heart Viewer', function () {
+describe.only('Heart Viewer', function () {
   let heartViewer;
 
   beforeEach(async () => {
