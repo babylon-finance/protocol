@@ -241,12 +241,6 @@ contract BabylonViewer {
         return (types, integrations, datas);
     }
 
-    function getPermissions(address _user) external view returns (bool, bool) {
-        IMardukGate gate = IMardukGate(controller.mardukGate());
-        bool hasProphet = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43).balanceOf(_user) > 0;
-        return (gate.canAccessBeta(_user) || hasProphet, gate.canCreate(_user) || hasProphet);
-    }
-
     function getGardenPermissions(address _garden, address _user)
         public
         view
@@ -257,30 +251,58 @@ contract BabylonViewer {
         )
     {
         IMardukGate gate = IMardukGate(controller.mardukGate());
-        bool accessBeta = true;
         return (
-            gate.canJoinAGarden(_garden, _user) || (accessBeta && !IGarden(_garden).privateGarden()),
-            gate.canVoteInAGarden(_garden, _user) || (accessBeta && IGarden(_garden).publicStewards()),
-            gate.canAddStrategiesInAGarden(_garden, _user) || (accessBeta && IGarden(_garden).publicStrategists())
+            gate.canJoinAGarden(_garden, _user) || (!IGarden(_garden).privateGarden()),
+            gate.canVoteInAGarden(_garden, _user) || (IGarden(_garden).publicStewards()),
+            gate.canAddStrategiesInAGarden(_garden, _user) || (IGarden(_garden).publicStrategists())
         );
     }
 
-    function getGardensUser(address _user, uint256 _offset) external view returns (address[] memory, bool[] memory) {
+    struct PartialGardenInfo {
+        address addr;
+        string name;
+        bool publicLP;
+        uint256 verified;
+        uint256 totalContributors;
+        address reserveAsset;
+        uint256 netAssetValue;
+    }
+
+    function getGardensUser(address _user, uint256 _offset)
+        external
+        view
+        returns (
+            address[] memory,
+            bool[] memory,
+            PartialGardenInfo[] memory
+        )
+    {
         address[] memory gardens = controller.getGardens();
-        address[] memory userGardens = new address[](100);
-        bool[] memory hasUserDeposited = new bool[](100);
-        uint256 limit = gardens.length <= 100 ? gardens.length : _offset.add(100);
+        address[] memory userGardens = new address[](50);
+        bool[] memory hasUserDeposited = new bool[](50);
+        PartialGardenInfo[] memory data = new PartialGardenInfo[](50);
+        uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
         for (uint256 i = _offset; i < limit; i++) {
             (bool depositPermission, , ) = getGardenPermissions(gardens[i], _user);
             if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];
-                hasUserDeposited[resultIndex] = IERC20(gardens[i]).balanceOf(_user) > 0;
+                hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
                 resultIndex = resultIndex + 1;
+                IGarden garden = IGarden(gardens[i]);
+                data[resultIndex] = PartialGardenInfo(
+                    gardens[i],
+                    garden.name(),
+                    !garden.privateGarden(),
+                    garden.verifiedCategory(),
+                    garden.totalContributors(),
+                    garden.reserveAsset(),
+                    garden.totalSupply().mul(garden.lastPricePerShare())
+                );
             }
         }
-        return (userGardens, hasUserDeposited);
+        return (userGardens, hasUserDeposited, data);
     }
 
     function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view returns (uint256) {
@@ -405,6 +427,14 @@ contract BabylonViewer {
 
     function _getGardenProfitSharing(address _garden) private view returns (uint256[3] memory) {
         return IRewardsDistributor(controller.rewardsDistributor()).getGardenProfitsSharing(_garden);
+    }
+
+    function _getGardenUserAvgPricePerShare(address _garden, address _user) private view returns (uint256) {
+        IGarden garden = IGarden(_garden);
+        (, , , , , , uint256 totalDeposits, , ) = garden.getContributor(_user);
+
+        // Avg price per user share = deposits / garden tokens
+        return totalDeposits > 0 ? totalDeposits.preciseDiv(garden.balanceOf(_user)) : 0;
     }
 
     function _getUniswapHighestLiquidity(address _sendToken, address _reserveAsset) private view returns (uint256) {

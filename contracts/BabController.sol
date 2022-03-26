@@ -307,7 +307,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _keeper Address of the keeper
      */
-    function addKeeper(address _keeper) external override onlyOwner {
+    function addKeeper(address _keeper) external override {
+        _onlyGovernanceOrEmergency();
         require(!keeperList[_keeper] && _keeper != address(0), 'Incorrect address');
         keeperList[_keeper] = true;
     }
@@ -317,7 +318,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _keeper Address of the keeper
      */
-    function removeKeeper(address _keeper) external override onlyOwner {
+    function removeKeeper(address _keeper) external override {
+        _onlyGovernanceOrEmergency();
         require(keeperList[_keeper], 'Keeper is whitelisted');
         delete keeperList[_keeper];
     }
@@ -327,7 +329,8 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _keepers List with keeprs of the assets to whitelist
      */
-    function addKeepers(address[] memory _keepers) external override onlyOwner {
+    function addKeepers(address[] memory _keepers) external override {
+        _onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _keepers.length; i++) {
             keeperList[_keepers[i]] = true;
         }
