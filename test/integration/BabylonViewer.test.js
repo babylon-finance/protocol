@@ -173,9 +173,9 @@ describe('Babylon Viewer', function () {
     it('for garden with active strategies', async function () {
       const garden = await createGarden();
 
-      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
-      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
-      await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'active', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'active', specificParams: [addresses.tokens.USDT, 0] });
 
       const principal = await babViewer.getGardenPrincipal(garden.address);
 
@@ -185,9 +185,9 @@ describe('Babylon Viewer', function () {
     it('for garden with final strategies', async function () {
       const garden = await createGarden();
 
-      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
-      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
-      await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'final', specificParams: [addresses.tokens.USDT, 0] });
+      await getStrategy({ garden: garden, state: 'final', specificParams: [addresses.tokens.USDT, 0] });
 
       const principal = await babViewer.getGardenPrincipal(garden.address);
 
