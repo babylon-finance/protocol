@@ -407,7 +407,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         _onlyUnpaused();
         _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(block.timestamp < executedAt.add(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
         // An unwind should not allow users to remove all capital from a strategy
         _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
         // Exits and enters the strategy
