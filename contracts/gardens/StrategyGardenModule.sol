@@ -121,9 +121,9 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             }
             _burn(strategist, _burningAmount);
         }
-        contributors[strategist].lockedBalance = contributors[strategist].lockedBalance.sub(
-            IStrategy(msg.sender).stake()
-        );
+        uint256 stake = IStrategy(msg.sender).stake();
+        uint256 lockedBalance = contributors[strategist].lockedBalance;
+        contributors[strategist].lockedBalance = lockedBalance > stake ? lockedBalance.sub(stake) : 0;
 
         reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.add(_rewards);
 
