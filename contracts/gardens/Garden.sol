@@ -104,7 +104,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             'StakeRewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee,address _to)'
         );
 
-    uint256 private constant SAFE_BABL_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
+    uint256 private constant CLAIM_BY_SIG_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
 
     /* ============ Structs ============ */
 
@@ -508,7 +508,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_fee > 0, Errors.FEE_TOO_LOW);
 
         _onlyValidSigner(_signer, _nonce, hash, _signature);
-        _require(_babl <= SAFE_BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
+        _require(_babl <= CLAIM_BY_SIG_CAP, Errors.MAX_BABL_CAP_REACHED);
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
         _sendRewardsInternal(_signer, _babl, _profits, false);
@@ -567,7 +567,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 .toEthSignedMessageHash();
         _onlyValidSigner(_signer, _nonce, hash, _signature);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
-        _require(_babl <= SAFE_BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
+        _require(_babl <= CLAIM_BY_SIG_CAP, Errors.MAX_BABL_CAP_REACHED);
 
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
