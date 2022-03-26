@@ -35,6 +35,16 @@ contract Assistant is OwnableUpgradeable {
 
     function setupUIGovernor() external {}
 
+    // We need to send BABL to assistant first
+    function rewardProphets(address[] calldata _addresses) external {
+        require(address(msg.sender) == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 'Only multisig');
+        IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
+        // BABL.safeTransferFrom(msg.sender, address(this), 2e18 * _addresses.length);
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            BABL.safeTransfer(_addresses[i], 2e18);
+        }
+    }
+
     /* ============ External Getter Functions ============ */
     /* ============ Internal Only Function ============ */
 
