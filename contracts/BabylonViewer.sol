@@ -280,7 +280,7 @@ contract BabylonViewer {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](50);
         bool[] memory hasUserDeposited = new bool[](50);
-        PartialGardenInfo[] memory data = new PartialGardenInfo[](50);
+        PartialGardenInfo[] memory info = new PartialGardenInfo[](50);
         uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
@@ -289,9 +289,8 @@ contract BabylonViewer {
             if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
-                resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[resultIndex] = PartialGardenInfo(
+                info[resultIndex] = PartialGardenInfo(
                     gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
@@ -300,9 +299,10 @@ contract BabylonViewer {
                     garden.reserveAsset(),
                     garden.totalSupply().mul(garden.lastPricePerShare())
                 );
+                resultIndex = resultIndex + 1;
             }
         }
-        return (userGardens, hasUserDeposited, data);
+        return (userGardens, hasUserDeposited, info);
     }
 
     function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view returns (uint256) {
