@@ -246,7 +246,6 @@ async function setUpFixture(
 
   const heartTestGarden = await ethers.getContractAt('IGarden', gardens[6]);
 
-
   console.log('heart garden', heartGarden.address);
 
   // Set the heart garden
