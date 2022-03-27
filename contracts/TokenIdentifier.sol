@@ -306,7 +306,7 @@ contract TokenIdentifier is ITokenIdentifier {
         vaults[0x2994529C0652D127b7842094103715ec5299bBed] = true; // yearn Curve.fi yDAI/yUSDC/yUSDT/yBUSD
         vaults[0xD6Ea40597Be05c201845c0bFd2e96A60bACde267] = true; // Curve Compound Pool yVault
 
-        visors[0x52cE16B1F37Ea7BE4352B29fcDE3331E225380FF] = true; // BABL-ETH Visor
+        visors[0x705b3aCaF102404CfDd5e4A60535E4e70091273C] = true; // BABL-ETH Visor
         visors[0xf6eeCA73646ea6A5c878814e6508e87facC7927C] = true; // GAMMA-ETH Visor
         visors[0xc86B1e7FA86834CaC1468937cdd53ba3cCbC1153] = true; // FLOAT-ETH Visor
     }

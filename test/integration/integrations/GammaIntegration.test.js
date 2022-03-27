@@ -7,7 +7,8 @@ const addresses = require('lib/addresses');
 const { increaseTime, getERC20, pick, eth } = require('utils/test-helpers');
 const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
-describe('GammaIntegrationTest', function () {
+// TODO: bump block number
+describe.skip('GammaIntegrationTest', function () {
   let gammaIntegration;
   let signer1;
   let signer2;
@@ -30,6 +31,7 @@ describe('GammaIntegrationTest', function () {
         });
       });
     });
+
     it(`cannot enter an invalid pool`, async function () {
       await expect(tryDepositIntoGamma(ADDRESS_ZERO, addresses.tokens.WETH)).to.be.reverted;
     });

@@ -190,6 +190,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that overrides the depositLock with a global one
     uint256 public override hardlockStartsAt;
 
+    // Variable that controls whether the NFT can be minted after x amount of time
+    uint256 public override canMintNftAfter;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -489,7 +492,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      *   Allows Garden contributors to claim an NFT.
      */
     function claimNFT() external override {
-        _require(balanceOf(msg.sender) > 0, Errors.ONLY_CONTRIBUTOR);
+        _require(balanceOf(msg.sender) > minContribution, Errors.ONLY_CONTRIBUTOR);
+        IGarden.Contributor storage contributor = contributors[msg.sender];
+        _require(
+            canMintNftAfter > 0 && block.timestamp.sub(contributor.initialDepositAt) > canMintNftAfter,
+            Errors.CLAIM_GARDEN_NFT
+        );
         IGardenNFT(controller.gardenNFT()).grantGardenNFT(msg.sender);
     }
 

@@ -665,7 +665,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         address _assetToBond,
         uint256 _amountToBond,
         uint256 _priceInBABL
-    ) private returns (uint256) {
+    ) private view returns (uint256) {
         return
             SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
                 _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))

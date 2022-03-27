@@ -138,6 +138,9 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     // Variable that overrides the depositLock with a global one
     uint256 internal hardlockStartsAt;
 
+    // Variable that controls whether the NFT can be minted after x amount of time
+    uint256 public canMintNftAfter;
+
     /* ============ Modifiers ============ */
 
     /* ============ Constructor ============ */

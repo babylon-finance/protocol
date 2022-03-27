@@ -200,7 +200,7 @@ contract GardenViewer {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](50);
         bool[] memory hasUserDeposited = new bool[](50);
-        IGardenViewer.PartialGardenInfo[] memory data = new IGardenViewer.PartialGardenInfo[](50);
+        IGardenViewer.PartialGardenInfo[] memory info = new IGardenViewer.PartialGardenInfo[](50);
         uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
@@ -209,24 +209,23 @@ contract GardenViewer {
             if (depositPermission) {
                 userGardens[resultIndex] = gardens[i];
                 hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
-                resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[resultIndex] = IGardenViewer.PartialGardenInfo(
+                info[resultIndex] = IGardenViewer.PartialGardenInfo(
                     gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
                     garden.verifiedCategory(),
                     garden.totalContributors(),
                     garden.reserveAsset(),
-                    garden.totalSupply().mul(garden.lastPricePerShare())
+                    garden.totalSupply().mul(garden.lastPricePerShare()).div(1e18)
                 );
+                resultIndex = resultIndex + 1;
             }
         }
-        return (userGardens, hasUserDeposited, data);
+        return (userGardens, hasUserDeposited, info);
     }
 
     function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view returns (uint256) {
-        uint256[] memory contribution = new uint256[](2);
         (, , , , , , uint256 totalDeposits, , ) = _garden.getContributor(_user);
 
         // Avg price per user share = deposits / garden tokens
