@@ -9,13 +9,13 @@ const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
 const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
-describe('Babylon Viewer', function () {
+describe('Viewer', function () {
   let garden1;
   let signer1;
   let signer2;
   let signer3;
   let uniswapV3TradeIntegration;
-  let babViewer;
+  let viewer;
   let owner;
   let babController;
 
@@ -25,7 +25,7 @@ describe('Babylon Viewer', function () {
       signer1,
       signer2,
       signer3,
-      babViewer,
+      viewer,
       garden1,
       owner,
       babController,
@@ -34,7 +34,7 @@ describe('Babylon Viewer', function () {
 
   describe('can call getter methods', async function () {
     it('calls getGardenDetails', async function () {
-      const gardenDetails = await babViewer.getGardenDetails(garden1.address);
+      const gardenDetails = await viewer.getGardenDetails(garden1.address);
       expect(gardenDetails[0]).to.equal('Absolute ETH Return [beta]'); // Name
       expect(gardenDetails[1]).to.equal('EYFA'); // Symbol
       expect(gardenDetails[2][0]).to.equal(signer1.address); // Creator
@@ -71,15 +71,15 @@ describe('Babylon Viewer', function () {
     });
 
     it('calls get garden permissions', async function () {
-      const gardenPermissions = await babViewer.getGardenPermissions(garden1.address, signer1.address);
+      const gardenPermissions = await viewer.getGardenPermissions(garden1.address, signer1.address);
       expect(gardenPermissions[0]).to.equal(true);
       expect(gardenPermissions[1]).to.equal(true);
       expect(gardenPermissions[2]).to.equal(true);
     });
 
     it('calls get operations strategy', async function () {
-      const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      const strategyOperations = await babViewer.getOperationsStrategy(gardenDetails[5][0]);
+      const gardenDetails = await viewer.getGardenDetails(garden1.address);
+      const strategyOperations = await viewer.getOperationsStrategy(gardenDetails[5][0]);
       expect(strategyOperations[0].length).to.equal(1);
       expect(strategyOperations[1].length).to.equal(1);
       expect(strategyOperations[2].length).to.equal(1);
@@ -90,8 +90,8 @@ describe('Babylon Viewer', function () {
     });
 
     it('calls get complete strategy', async function () {
-      const gardenDetails = await babViewer.getGardenDetails(garden1.address);
-      const strategyDetails = await babViewer.getCompleteStrategy(gardenDetails[5][0]);
+      const gardenDetails = await viewer.getGardenDetails(garden1.address);
+      const strategyDetails = await viewer.getCompleteStrategy(gardenDetails[5][0]);
 
       expect(strategyDetails[0]).to.equal(signer1.address); // Strategist
 
@@ -126,9 +126,9 @@ describe('Babylon Viewer', function () {
     it('calls get contribution and rewards', async function () {
       const newGarden = await createGarden();
       await getStrategy({ state: 'active', garden: newGarden, specificParams: [addresses.tokens.USDC, 0] });
-      const [, , pendingRewards] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
+      const [, , pendingRewards] = await viewer.getContributionAndRewards(newGarden.address, signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS);
-      const [, , pendingRewards2] = await babViewer.getContributionAndRewards(newGarden.address, signer1.address);
+      const [, , pendingRewards2] = await viewer.getContributionAndRewards(newGarden.address, signer1.address);
       expect(pendingRewards[0]).to.equal(0); // Not profit strategy, strategist gets 0 BABL
       expect(pendingRewards[1]).to.equal(0); // Not profit strategy, strategist gets 0 profit
       expect(pendingRewards[2]).to.equal(0); // Not profit strategy, steward voting for gets 0 BABL
@@ -146,14 +146,14 @@ describe('Babylon Viewer', function () {
     });
 
     it('calls get user gardens', async function () {
-      const userGardens = await babViewer.getGardensUser(signer1.address, 0);
+      const userGardens = await viewer.getGardensUser(signer1.address, 0);
       const gardens = userGardens[0].filter((t) => t !== ADDRESS_ZERO);
       expect(gardens.length).to.be.gt(0);
       expect(userGardens[1].filter((t) => t).length).to.equal(gardens.length);
     });
 
     it('getPotentialVotes', async function () {
-      const totalVotes = await babViewer.getPotentialVotes(garden1.address, [
+      const totalVotes = await viewer.getPotentialVotes(garden1.address, [
         signer1.address,
         signer2.address,
         signer3.address,
@@ -165,7 +165,7 @@ describe('Babylon Viewer', function () {
 
   describe('getGardenPrincipal', async function () {
     it('for garden with no strategies', async function () {
-      const principal = await babViewer.getGardenPrincipal(garden1.address);
+      const principal = await viewer.getGardenPrincipal(garden1.address);
 
       expect(principal).to.be.eq(eth());
     });
@@ -177,7 +177,7 @@ describe('Babylon Viewer', function () {
       await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
       await getStrategy({ state: 'active', specificParams: [addresses.tokens.USDT, 0] });
 
-      const principal = await babViewer.getGardenPrincipal(garden.address);
+      const principal = await viewer.getGardenPrincipal(garden.address);
 
       expect(principal).to.be.eq(eth(13));
     });
@@ -189,7 +189,7 @@ describe('Babylon Viewer', function () {
       await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
       await getStrategy({ state: 'final', specificParams: [addresses.tokens.USDT, 0] });
 
-      const principal = await babViewer.getGardenPrincipal(garden.address);
+      const principal = await viewer.getGardenPrincipal(garden.address);
 
       expect(principal).to.be.eq(eth(13));
     });
