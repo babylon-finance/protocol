@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { IGarden } from '../interfaces/IGarden.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
 
 interface IStrategyViewer {
     function getCompleteStrategy(address _strategy)

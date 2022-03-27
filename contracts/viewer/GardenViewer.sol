@@ -171,7 +171,6 @@ contract GardenViewer {
         );
     }
 
-
     function getGardenPermissions(address _garden, address _user)
         public
         view
@@ -257,7 +256,6 @@ contract GardenViewer {
         }
         return total;
     }
-
 
     function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
         (

@@ -53,9 +53,9 @@ contract StrategyViewer is IStrategyViewer {
      * @return                     All strategy details
      */
     function getCompleteStrategy(address _strategy)
-    override
         external
         view
+        override
         returns (
             address,
             string memory,
@@ -91,7 +91,9 @@ contract StrategyViewer is IStrategyViewer {
                 strategy.maxAllocationPercentage(),
                 strategy.maxGasFeePercentage(),
                 strategy.maxTradeSlippagePercentage(),
-                strategy.isStrategyActive() ? IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy): 0
+                strategy.isStrategyActive()
+                    ? IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy)
+                    : 0
             ],
             status,
             ts
@@ -99,9 +101,9 @@ contract StrategyViewer is IStrategyViewer {
     }
 
     function getOperationsStrategy(address _strategy)
-    override
         external
         view
+        override
         returns (
             uint8[] memory,
             address[] memory,
@@ -121,9 +123,9 @@ contract StrategyViewer is IStrategyViewer {
     }
 
     function getUserStrategyActions(address[] memory _strategies, address _user)
-    override
         external
         view
+        override
         returns (uint256, uint256)
     {
         uint256 strategiesCreated;
@@ -142,5 +144,4 @@ contract StrategyViewer is IStrategyViewer {
     }
 
     /* ============ Private Functions ============ */
-
 }

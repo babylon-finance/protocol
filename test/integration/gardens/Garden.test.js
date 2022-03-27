@@ -2267,12 +2267,12 @@ describe('Garden', function () {
         const user1Avg = user1Balance > 0 ? user1Deposits[6].mul(eth()).div(user1Balance) : 0;
         const user2Avg = user2Balance > 0 ? user2Deposits[6].mul(eth()).div(user2Balance) : 0;
 
-        expect(
-          await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),
-        ).to.equal(user1Avg);
-        expect(
-          await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address),
-        ).to.equal(user2Avg);
+        expect(await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address)).to.equal(
+          user1Avg,
+        );
+        expect(await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address)).to.equal(
+          user2Avg,
+        );
       });
     });
   });
