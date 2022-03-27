@@ -18,6 +18,7 @@ const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
+const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
 
 describe('Strategy', function () {
@@ -92,6 +93,7 @@ describe('Strategy', function () {
 
   describe('addStrategy', async function () {
     it('should NOT initialize a strategy with maxcapitalrequested of 0', async function () {
+      const garden = await createGarden();
       await expect(
         getStrategy({
           state: 'deposit',
