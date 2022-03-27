@@ -298,7 +298,6 @@ describe('Heart', function () {
       // User approves the Heart
       await cDAI.connect(signer3).approve(heart.address, amountToBond, { gasPrice: 0 });
 
-      console.log(signer3.address);
       const sig = await getDepositSig(
         heartGarden.address,
         signer3,
@@ -377,7 +376,6 @@ describe('Heart', function () {
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       const price = await priceOracle.getPrice(cDAI.address, addresses.tokens.BABL);
       const minAmountOut = amount.mul(price).mul(eth(1.05)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
-      console.log('minAmountOut', minAmountOut.toString());
 
       await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
       // User approves the heart
