@@ -171,77 +171,6 @@ contract GardenViewer {
         );
     }
 
-    /**
-     * Gets complete strategy details
-     *
-     * @param _strategy            Address of the strategy to fetch
-     * @return                     All strategy details
-     */
-    function getCompleteStrategy(address _strategy)
-        external
-        view
-        returns (
-            address,
-            string memory,
-            uint256[16] memory,
-            bool[] memory,
-            uint256[] memory
-        )
-    {
-        IStrategy strategy = IStrategy(_strategy);
-        bool[] memory status = new bool[](3);
-        uint256[] memory ts = new uint256[](4);
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
-        (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
-        uint256 rewards =
-            ts[1] != 0 ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy) : 0;
-        ts[3] = strategy.enteredCooldownAt();
-        return (
-            strategy.strategist(),
-            IStrategyNFT(controller.strategyNFT()).getStrategyName(_strategy),
-            [
-                strategy.getOperationsCount(),
-                strategy.stake(),
-                strategy.totalPositiveVotes(),
-                strategy.totalNegativeVotes(),
-                strategy.capitalAllocated(),
-                strategy.capitalReturned(),
-                strategy.duration(),
-                strategy.expectedReturn(),
-                strategy.maxCapitalRequested(),
-                strategy.enteredAt(),
-                strategy.getNAV(),
-                rewards,
-                strategy.maxAllocationPercentage(),
-                strategy.maxGasFeePercentage(),
-                strategy.maxTradeSlippagePercentage(),
-                strategy.isStrategyActive() ? _estimateStrategyRewards(_strategy) : 0
-            ],
-            status,
-            ts
-        );
-    }
-
-    function getOperationsStrategy(address _strategy)
-        external
-        view
-        returns (
-            uint8[] memory,
-            address[] memory,
-            bytes[] memory
-        )
-    {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 count = strategy.getOperationsCount();
-        uint8[] memory types = new uint8[](count);
-        address[] memory integrations = new address[](count);
-        bytes[] memory datas = new bytes[](count);
-
-        for (uint8 i = 0; i < count; i++) {
-            (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);
-        }
-        return (types, integrations, datas);
-    }
 
     function getGardenPermissions(address _garden, address _user)
         public
@@ -329,25 +258,6 @@ contract GardenViewer {
         return total;
     }
 
-    function getUserStrategyActions(address[] memory _strategies, address _user)
-        external
-        view
-        returns (uint256, uint256)
-    {
-        uint256 strategiesCreated;
-        uint256 totalVotes;
-        for (uint8 i = 0; i < _strategies.length; i++) {
-            IStrategy strategy = IStrategy(_strategies[i]);
-            if (strategy.strategist() == _user) {
-                strategiesCreated = strategiesCreated.add(1);
-            }
-            int256 votes = strategy.getUserVotes(_user);
-            if (votes != 0) {
-                totalVotes = totalVotes.add(uint256(Math.abs(votes)));
-            }
-        }
-        return (strategiesCreated, totalVotes);
-    }
 
     function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
         (
@@ -485,13 +395,6 @@ contract GardenViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
-    }
-
-    /**
-     * returns the estimated accrued BABL of a strategy
-     */
-    function _estimateStrategyRewards(address _strategy) private view returns (uint256) {
-        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy);
     }
 
     /**

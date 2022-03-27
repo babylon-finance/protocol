@@ -45,6 +45,13 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
 
+  const strategyViewerModuleDeployment = await deploy('StrategyViewer', {
+    from: deployer,
+    args: [controller.address],
+    log: true,
+    ...(await getGasPrice()),
+  });
+
   const gardenViewerModuleDeployment = await deploy('GardenViewer', {
     from: deployer,
     args: [controller.address],
@@ -87,6 +94,18 @@ module.exports = async ({
 
   if (heartViewerModuleDeployment.newlyDeployed) {
     const heartViewerModuleContract = await ethers.getContractAt(
+      'HeartViewer',
+      heartViewerModuleDeployment.address,
+      signer,
+    );
+    const sigs = Object.keys(heartViewerModuleContract.interface.functions).map((func) =>
+      heartViewerModuleContract.interface.getSighash(func),
+    );
+    await vTableProxyContract.updateVTable([[heartViewerModuleDeployment.address, sigs]]);
+  }
+
+  if (strategyViewerModuleDeployment.newlyDeployed) {
+    const strategyViewerModuleContract = await ethers.getContractAt(
       'HeartViewer',
       heartViewerModuleDeployment.address,
       signer,

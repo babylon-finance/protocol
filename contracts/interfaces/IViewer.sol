@@ -3,7 +3,34 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import {IGarden} from '../interfaces/IGarden.sol';
+import { IGarden } from '../interfaces/IGarden.sol';
+
+interface IStrategyViewer {
+    function getCompleteStrategy(address _strategy)
+        external
+        view
+        returns (
+            address,
+            string memory,
+            uint256[16] memory,
+            bool[] memory,
+            uint256[] memory
+        );
+
+    function getOperationsStrategy(address _strategy)
+        external
+        view
+        returns (
+            uint8[] memory,
+            address[] memory,
+            bytes[] memory
+        );
+
+    function getUserStrategyActions(address[] memory _strategies, address _user)
+        external
+        view
+        returns (uint256, uint256);
+}
 
 interface IGardenViewer {
     struct PartialGardenInfo {
@@ -34,26 +61,6 @@ interface IGardenViewer {
             uint256[3] memory
         );
 
-    function getCompleteStrategy(address _strategy)
-        external
-        view
-        returns (
-            address,
-            string memory,
-            uint256[16] memory,
-            bool[] memory,
-            uint256[] memory
-        );
-
-    function getOperationsStrategy(address _strategy)
-        external
-        view
-        returns (
-            uint8[] memory,
-            address[] memory,
-            bytes[] memory
-        );
-
     function getGardenPermissions(address _garden, address _user)
         external
         view
@@ -76,11 +83,6 @@ interface IGardenViewer {
 
     function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256);
 
-    function getUserStrategyActions(address[] memory _strategies, address _user)
-        external
-        view
-        returns (uint256, uint256);
-
     function getContributor(IGarden _garden, address _user) external view returns (uint256[10] memory);
 
     function getContributionAndRewards(IGarden _garden, address _user)
@@ -98,7 +100,6 @@ interface IGardenViewer {
 }
 
 interface IHeartViewer {
-
     function heart() external view returns (address);
 
     function heartGarden() external view returns (address);
@@ -130,4 +131,4 @@ interface IHeartViewer {
     function getBondDiscounts(address[] calldata _assets) external view returns (uint256[] memory);
 }
 
-interface IViewer is IGardenViewer, IHeartViewer {}
+interface IViewer is IGardenViewer, IHeartViewer, IStrategyViewer {}

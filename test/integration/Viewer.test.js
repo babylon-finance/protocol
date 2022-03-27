@@ -9,7 +9,7 @@ const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
 const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
 
-describe.only('Viewer', function () {
+describe('Viewer', function () {
   let garden1;
   let signer1;
   let signer2;
