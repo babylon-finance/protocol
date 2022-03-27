@@ -338,4 +338,8 @@ library Errors {
     uint256 internal constant MAX_BABL_CAP_REACHED = 123;
     // Not enough BABL
     uint256 internal constant NOT_ENOUGH_BABL = 124;
+
+    uint256 internal constant INVALID_REFERRER = 125;
+    // Claim garden NFT
+    uint256 internal constant CLAIM_GARDEN_NFT = 126;
 }

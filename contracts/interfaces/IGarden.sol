@@ -73,7 +73,7 @@ interface IAdminGarden {
 
     function updateCreators(address _newCreator, address[4] memory _newCreators) external;
 
-    function updateGardenParams(uint256[11] memory _newParams) external;
+    function updateGardenParams(uint256[12] memory _newParams) external;
 
     function verifyGarden(uint256 _verifiedCategory) external;
 
@@ -120,6 +120,8 @@ interface ICoreGarden {
     function reserveAsset() external view returns (address);
 
     function verifiedCategory() external view returns (uint256);
+
+    function canMintNftAfter() external view returns (uint256);
 
     function hardlockStartsAt() external view returns (uint256);
 
