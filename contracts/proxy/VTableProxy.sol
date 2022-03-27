@@ -4,8 +4,8 @@ pragma solidity 0.7.6;
 
 import '@openzeppelin/contracts/proxy/Proxy.sol';
 
-import "./VTable.sol";
-import "./modules/VTableUpdateModule.sol";
+import './VTable.sol';
+import './modules/VTableUpdateModule.sol';
 
 /**
  * @title VTableProxy
@@ -31,6 +31,6 @@ contract VTableProxy is Proxy {
         module = vtable.getFunction(_FALLBACK_SIGN);
         if (module != address(0)) return module;
 
-        revert("VTableProxy: No implementation found");
+        revert('VTableProxy: No implementation found');
     }
 }

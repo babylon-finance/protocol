@@ -13,6 +13,8 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {Math} from '../lib/Math.sol';
+
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
@@ -22,7 +24,7 @@ import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
-import {Math} from '../lib/Math.sol';
+import {IGardenViewer} from '../interfaces/IViewer.sol';
 
 /**
  * @title BabylonViewer
@@ -221,7 +223,7 @@ contract BabylonViewer {
     }
 
     function getOperationsStrategy(address _strategy)
-        public
+        external
         view
         returns (
             uint8[] memory,
@@ -258,29 +260,19 @@ contract BabylonViewer {
         );
     }
 
-    struct PartialGardenInfo {
-        address addr;
-        string name;
-        bool publicLP;
-        uint256 verified;
-        uint256 totalContributors;
-        address reserveAsset;
-        uint256 netAssetValue;
-    }
-
     function getGardensUser(address _user, uint256 _offset)
         external
         view
         returns (
             address[] memory,
             bool[] memory,
-            PartialGardenInfo[] memory
+            IGardenViewer.PartialGardenInfo[] memory
         )
     {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](50);
         bool[] memory hasUserDeposited = new bool[](50);
-        PartialGardenInfo[] memory data = new PartialGardenInfo[](50);
+        IGardenViewer.PartialGardenInfo[] memory data = new IGardenViewer.PartialGardenInfo[](50);
         uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
@@ -291,7 +283,7 @@ contract BabylonViewer {
                 hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
                 resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[resultIndex] = PartialGardenInfo(
+                data[resultIndex] = IGardenViewer.PartialGardenInfo(
                     gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
@@ -403,14 +395,14 @@ contract BabylonViewer {
         );
     }
 
-    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
+    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) external view returns (uint256, uint256) {
         return (
             IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
             _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
     }
 
-    function getAllProphets(address _address) public view returns (uint256[] memory) {
+    function getAllProphets(address _address) external view returns (uint256[] memory) {
         IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
         uint256 prophetsNumber = prophets.balanceOf(_address);
         uint256[] memory prophetIds = new uint256[](prophetsNumber);

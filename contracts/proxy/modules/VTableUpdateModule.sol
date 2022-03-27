@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../VTable.sol";
+import '../VTable.sol';
 
 contract VTableUpdateModule {
     using VTable for VTable.VTableStore;
@@ -20,7 +20,7 @@ contract VTableUpdateModule {
      */
     function updateVTable(ModuleDefinition[] calldata modules) public {
         VTable.VTableStore storage vtable = VTable.instance();
-        require(VTable.instance().getOwner() == msg.sender, "VTableOwnership: caller is not the owner");
+        require(VTable.instance().getOwner() == msg.sender, 'VTableOwnership: caller is not the owner');
 
         for (uint256 i = 0; i < modules.length; ++i) {
             ModuleDefinition memory module = modules[i];

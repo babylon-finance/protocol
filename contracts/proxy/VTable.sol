@@ -3,15 +3,15 @@
 pragma solidity 0.7.6;
 
 /**
-* @title VTable
-*/
+ * @title VTable
+ */
 library VTable {
     // bytes32 private constant _VTABLE_SLOT = bytes32(uint256(keccak256("openzeppelin.vtable.location")) - 1);
     bytes32 private constant _VTABLE_SLOT = 0x13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc657;
 
     struct VTableStore {
         address _owner;
-        mapping (bytes4 => address) _delegates;
+        mapping(bytes4 => address) _delegates;
     }
 
     /**
@@ -47,7 +47,11 @@ library VTable {
         return vtable._delegates[selector];
     }
 
-    function setFunction(VTableStore storage vtable, bytes4 selector, address module) internal {
+    function setFunction(
+        VTableStore storage vtable,
+        bytes4 selector,
+        address module
+    ) internal {
         emit VTableUpdate(selector, vtable._delegates[selector], module);
         vtable._delegates[selector] = module;
     }

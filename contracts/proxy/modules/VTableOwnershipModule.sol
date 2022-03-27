@@ -2,7 +2,7 @@
 
 pragma solidity 0.7.6;
 
-import "../VTable.sol";
+import '../VTable.sol';
 
 contract VTableOwnershipModule {
     using VTable for VTable.VTableStore;
@@ -13,7 +13,7 @@ contract VTableOwnershipModule {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner() == msg.sender, "VTableOwnership: caller is not the owner");
+        require(owner() == msg.sender, 'VTableOwnership: caller is not the owner');
         _;
     }
 
@@ -40,7 +40,7 @@ contract VTableOwnershipModule {
      * Can only be called by the current owner.
      */
     function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "VTableOwnership: new owner is the zero address");
+        require(newOwner != address(0), 'VTableOwnership: new owner is the zero address');
         VTable.instance().setOwner(newOwner);
     }
 }
