@@ -1721,7 +1721,7 @@ describe('Garden', function () {
       });
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), ADDRESS_ZERO);
-      await expect(garden.connect(signer3).claimNFT()).to.be.revertedWith('BAB#121');
+      await expect(garden.connect(signer3).claimNFT()).to.be.revertedWith('BAB#125');
       await increaseTime(1);
       await garden.connect(signer3).claimNFT();
 
