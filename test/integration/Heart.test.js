@@ -85,6 +85,7 @@ describe('Heart', function () {
 
     cDAI = await ethers.getContractAt('ICToken', '0xa6c25548df506d84afd237225b5b34f2feb1aa07');
     feeDistributionWeights = await heart.connect(owner).getFeeDistributionWeights();
+    await heart.connect(owner).setHeartGardenAddress(heartGarden.address);
     // Impersonate visor and add heart to the whitelist
     const visorOwner = await impersonateAddress('0xc40ccde9c951ace468154d1d39917d8f8d11b38c');
     const visor = await ethers.getContractAt('IHypervisor', '0xF19F91d7889668A533F14d076aDc187be781a458');

@@ -9,6 +9,29 @@ module.exports = async ({
   getController,
   getChainId,
 }) => {
+  async function registerModule(deployment, name, proxy) {
+    if (deployment.newlyDeployed) {
+      const contract = await ethers.getContractAt(name, deployment.address, signer);
+      const sigs = Object.keys(contract.interface.functions).map((func) => contract.interface.getSighash(func));
+      await proxy.updateVTable([[deployment.address, sigs]]);
+    }
+  }
+
+  async function deployAndPush(name, args, contract) {
+    const deployment = await deploy(name, {
+      from: deployer,
+      contract,
+      args,
+      log: true,
+      ...(await getGasPrice()),
+    });
+
+    if (network.live && deployment.newlyDeployed) {
+      await tenderly.push(await getTenderlyContract(!!contract ? contract : name));
+    }
+    return deployment;
+  }
+
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
@@ -23,102 +46,24 @@ module.exports = async ({
     HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
   }
 
-  const vTableOwnershipModuleDeployment = await deploy('VTableOwnershipModule', {
-    from: deployer,
-    args: [],
-    log: true,
-    ...(await getGasPrice()),
-  });
-
-  const vTableUpdateModuleDeployment = await deploy('VTableUpdateModule', {
-    from: deployer,
-    args: [],
-    log: true,
-    ...(await getGasPrice()),
-  });
-
-  const viewerDeployment = await deploy('Viewer', {
-    from: deployer,
-    contract: 'VTableProxy',
-    args: [vTableUpdateModuleDeployment.address],
-    log: true,
-    ...(await getGasPrice()),
-  });
-
-  const strategyViewerModuleDeployment = await deploy('StrategyViewer', {
-    from: deployer,
-    args: [controller.address],
-    log: true,
-    ...(await getGasPrice()),
-  });
-
-  const gardenViewerModuleDeployment = await deploy('GardenViewer', {
-    from: deployer,
-    args: [controller.address],
-    log: true,
-    ...(await getGasPrice()),
-  });
-
-  const heartViewerModuleDeployment = await deploy('HeartViewer', {
-    from: deployer,
-    args: [controller.address, governor.address, heart.address, HEART_GARDEN_ADDRES],
-    log: true,
-    ...(await getGasPrice()),
-  });
+  const vTableOwnershipModuleDeployment = await deployAndPush('VTableOwnershipModule', []);
+  const vTableUpdateModuleDeployment = await deployAndPush('VTableUpdateModule', []);
+  const viewerDeployment = await deployAndPush('Viewer', [vTableUpdateModuleDeployment.address], 'VTableProxy');
+  const strategyViewerModuleDeployment = await deployAndPush('StrategyViewer', [controller.address]);
+  const gardenViewerModuleDeployment = await deployAndPush('GardenViewer', [controller.address]);
+  const heartViewerModuleDeployment = await deployAndPush('HeartViewer', [
+    controller.address,
+    governor.address,
+    heart.address,
+    HEART_GARDEN_ADDRES,
+  ]);
 
   const vTableProxyContract = await ethers.getContractAt('VTableUpdateModule', viewerDeployment.address, signer);
 
-  if (vTableUpdateModuleDeployment.newlyDeployed) {
-    const vTableOwnershipModuleContract = await ethers.getContractAt(
-      'VTableOwnershipModule',
-      vTableUpdateModuleDeployment.address,
-      signer,
-    );
-    const sigs = Object.keys(vTableOwnershipModuleContract.interface.functions).map((func) =>
-      vTableOwnershipModuleContract.interface.getSighash(func),
-    );
-    await vTableProxyContract.updateVTable([[vTableOwnershipModuleDeployment.address, sigs]]);
-  }
-
-  if (gardenViewerModuleDeployment.newlyDeployed) {
-    const gardenModuleViewerContract = await ethers.getContractAt(
-      'GardenViewer',
-      gardenViewerModuleDeployment.address,
-      signer,
-    );
-    const sigs = Object.keys(gardenModuleViewerContract.interface.functions).map((func) =>
-      gardenModuleViewerContract.interface.getSighash(func),
-    );
-    await vTableProxyContract.updateVTable([[gardenViewerModuleDeployment.address, sigs]]);
-  }
-
-  if (heartViewerModuleDeployment.newlyDeployed) {
-    const heartViewerModuleContract = await ethers.getContractAt(
-      'HeartViewer',
-      heartViewerModuleDeployment.address,
-      signer,
-    );
-    const sigs = Object.keys(heartViewerModuleContract.interface.functions).map((func) =>
-      heartViewerModuleContract.interface.getSighash(func),
-    );
-    await vTableProxyContract.updateVTable([[heartViewerModuleDeployment.address, sigs]]);
-  }
-
-  if (strategyViewerModuleDeployment.newlyDeployed) {
-    const strategyViewerModuleContract = await ethers.getContractAt(
-      'HeartViewer',
-      heartViewerModuleDeployment.address,
-      signer,
-    );
-    const sigs = Object.keys(heartViewerModuleContract.interface.functions).map((func) =>
-      heartViewerModuleContract.interface.getSighash(func),
-    );
-    await vTableProxyContract.updateVTable([[heartViewerModuleDeployment.address, sigs]]);
-  }
-
-  if (network.live && deployment.newlyDeployed) {
-    await tenderly.push(await getTenderlyContract(contract));
-  }
+  await registerModule(vTableUpdateModuleDeployment, 'VTableOwnershipModule', vTableProxyContract);
+  await registerModule(gardenViewerModuleDeployment, 'GardenViewer', vTableProxyContract);
+  await registerModule(heartViewerModuleDeployment, 'HeartViewer', vTableProxyContract);
+  await registerModule(strategyViewerModuleDeployment, 'StrategyViewer', vTableProxyContract);
 };
 
 module.exports.tags = ['BabViewer'];
