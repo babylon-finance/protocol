@@ -29,8 +29,7 @@ async function setUpFixture(
   const gardenNFT = await getContract('GardenNFT');
   const strategyNFT = await getContract('StrategyNFT');
   const rewardsDistributor = await getContract('RewardsDistributor', 'RewardsDistributorProxy');
-  const babViewer = await getContract('BabylonViewer');
-  const heartViewer = await getContract('HeartViewer');
+  const viewer = await getContract('IViewer', 'Viewer');
   const timelockController = await getContract('TimelockController');
   const babGovernor = await getContract('BabylonGovernor');
 
@@ -223,8 +222,7 @@ async function setUpFixture(
 
   const aaveGarden = await ethers.getContractAt('IGarden', gardens[5]);
 
-  // Set the heart
-  await heartViewer.connect(owner).setHeartGarden(heartGarden.address, { gasPrice: 0 });
+  console.log('heart garden', heartGarden.address);
 
   // Grants community access
   for (let i = 0; i < gardens.length; i += 1) {
@@ -291,10 +289,10 @@ async function setUpFixture(
     fuseBorrowIntegration,
     lidoIntegration,
     stakewiseIntegration,
-    babViewer,
     timelockController,
     babGovernor,
     masterSwapper,
+    viewer,
 
     garden1,
     garden2,
@@ -317,7 +315,6 @@ async function setUpFixture(
     tokenIdentifier,
     ishtarGate,
     mardukGate,
-    heartViewer,
 
     gardenNFT,
     strategyNFT,
