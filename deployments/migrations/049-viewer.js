@@ -45,7 +45,7 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
 
-  const gardenViewerModuleDeployment = await deploy('BabylonViewer', {
+  const gardenViewerModuleDeployment = await deploy('GardenViewer', {
     from: deployer,
     args: [controller.address],
     log: true,
@@ -75,7 +75,7 @@ module.exports = async ({
 
   if (gardenViewerModuleDeployment.newlyDeployed) {
     const gardenModuleViewerContract = await ethers.getContractAt(
-      'BabylonViewer',
+      'GardenViewer',
       gardenViewerModuleDeployment.address,
       signer,
     );

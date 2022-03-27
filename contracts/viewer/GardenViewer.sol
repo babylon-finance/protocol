@@ -27,12 +27,12 @@ import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IGardenViewer} from '../interfaces/IViewer.sol';
 
 /**
- * @title BabylonViewer
+ * @title GardenViewer
  * @author Babylon Finance
  *
  * Class that holds common view functions to retrieve garden information effectively
  */
-contract BabylonViewer {
+contract GardenViewer {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using Math for int256;
