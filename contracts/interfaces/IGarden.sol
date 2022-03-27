@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC1271} from '../interfaces/IERC1271.sol';
 
 import {IBabController} from './IBabController.sol';
 
@@ -218,6 +219,8 @@ interface ICoreGarden {
 
     function claimReturns(address[] calldata _finalizedStrategies) external;
 
+    function claimAndStakeReturns(uint256 _minAmountOut, address[] calldata _finalizedStrategies) external;
+
     function claimRewardsBySig(
         uint256 _babl,
         uint256 _profits,
@@ -228,6 +231,32 @@ interface ICoreGarden {
         bytes memory signature
     ) external;
 
+    function claimAndStakeRewardsBySig(
+        uint256 _babl,
+        uint256 _profits,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _nonceHeart,
+        uint256 _maxFee,
+        uint256 _pricePerShare,
+        uint256 _fee,
+        address _signer,
+        bytes memory _signature
+    ) external;
+
+    function stakeBySig(
+        uint256 _amountIn,
+        uint256 _profits,
+        uint256 _minAmountOut,
+        uint256 _nonce,
+        uint256 _nonceHeart,
+        uint256 _maxFee,
+        address _to,
+        uint256 _pricePerShare,
+        address _signer,
+        bytes memory _signature
+    ) external;
+
     function claimNFT() external;
 }
 
@@ -235,7 +264,7 @@ interface IERC20Metadata {
     function name() external view returns (string memory);
 }
 
-interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata {
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata, IERC1271 {
     struct Contributor {
         uint256 lastDepositAt;
         uint256 initialDepositAt;

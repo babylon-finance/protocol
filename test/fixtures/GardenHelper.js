@@ -289,6 +289,27 @@ async function getRewardsSig(garden, signer, babl, profits, nonce, maxFee) {
   return await signer.signMessage(ethers.utils.arrayify(payloadHash));
 }
 
+function getStakeRewardsSigHash(garden, babl, profits, minAmountOut, nonce, nonceHeart, maxFee, to) {
+  const REWARDS_BY_SIG_TYPEHASH = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(
+      'StakeRewardsBySig(uint256 _babl,uint256 _profits,uint256 _minAmountOut,uint256 _nonce,uint256 _nonceHeart,uint256 _maxFee,address _to)',
+    ),
+  );
+
+  let payload = ethers.utils.defaultAbiCoder.encode(
+    ['bytes32', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'address'],
+    [REWARDS_BY_SIG_TYPEHASH, garden, babl, profits, minAmountOut, nonce, nonceHeart, maxFee, to],
+  );
+
+  return ethers.utils.keccak256(payload);
+}
+
+async function getStakeRewardsSig(garden, signer, babl, profits, minAmountOut, nonce, nonceHeart, maxFee, to) {
+  let payloadHash = getStakeRewardsSigHash(garden, babl, profits, minAmountOut, nonce, nonceHeart, maxFee, to);
+
+  return await signer.signMessage(ethers.utils.arrayify(payloadHash));
+}
+
 module.exports = {
   createGarden,
   depositFunds,
@@ -299,4 +320,6 @@ module.exports = {
   getWithdrawSigHash,
   getRewardsSigHash,
   getRewardsSig,
+  getStakeRewardsSigHash,
+  getStakeRewardsSig,
 };

@@ -36,7 +36,11 @@ describe('Keeper', function () {
       const garden = await createGarden();
       const fee = eth(0.1);
 
-      const strategy = await getStrategy({ state: 'deposit', specificParams: [addresses.tokens.USDT, 0] });
+      const strategy = await getStrategy({
+        garden: garden,
+        state: 'deposit',
+        specificParams: [addresses.tokens.USDT, 0],
+      });
 
       await strategy
         .connect(keeper)
@@ -97,8 +101,9 @@ describe('Keeper', function () {
         it(`gets paid max fee at ${name} garden`, async function () {
           const garden = await createGarden({ reserveAsset: token });
           const tokenContract = await getERC20(token);
-
-          const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
+          // initial balance (if any i.e. USDC)
+          const keeperInitialBalance = await tokenContract.balanceOf(await keeper.getAddress());
+          const strategy = await getStrategy({ garden: garden, state, specificParams: [addresses.tokens.USDT, 0] });
 
           const price = await priceOracle.getPrice(token, addresses.tokens.DAI);
           const fee = eth(2000)
@@ -108,10 +113,9 @@ describe('Keeper', function () {
             .div(100)
             .mul((10 ** (await tokenContract.decimals())).toString())
             .div(eth());
-
           await func(garden, strategy, keeper, fee, token);
 
-          expect(await tokenContract.balanceOf(await keeper.getAddress())).to.equal(fee);
+          expect(await tokenContract.balanceOf(await keeper.getAddress())).to.equal(fee.add(keeperInitialBalance));
         });
 
         it(`refuse to pay more than max fee at ${name} garden`, async function () {
@@ -127,7 +131,7 @@ describe('Keeper', function () {
             .mul((10 ** (await tokenContract.decimals())).toString())
             .div(eth());
 
-          const strategy = await getStrategy({ state, specificParams: [addresses.tokens.USDT, 0] });
+          const strategy = await getStrategy({ garden: garden, state, specificParams: [addresses.tokens.USDT, 0] });
 
           await expect(func(garden, strategy, keeper, fee.mul(110).div(100), token)).to.be.revertedWith('BAB#019');
         });

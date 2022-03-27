@@ -201,7 +201,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     IBabController private controller;
 
     // BABL Token contract
-    TimeLockedToken private babltoken;
+    TimeLockedToken public override babltoken;
 
     // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal)
     // in all ongoing strategies during mining program.

@@ -219,7 +219,7 @@ describe('Garden', function () {
       });
       await babController.connect(owner).enableGardenTokensTransfers();
 
-      const strategy = await getStrategy();
+      const strategy = await getStrategy({ garden: garden });
 
       const amount = await garden.balanceOf(signer1.address);
       await expect(garden.connect(signer1).transfer(signer2.address, amount)).to.be.revertedWith('BAB#007');
@@ -790,7 +790,6 @@ describe('Garden', function () {
     it('can withdraw with a penalty', async function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
-
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
@@ -805,7 +804,7 @@ describe('Garden', function () {
 
       const balanceBefore = await garden.balanceOf(signer3.address);
 
-      const strategy = await getStrategy();
+      const strategy = await getStrategy({ garden: garden, signers: [signer1] });
       await vote(strategy, [signer1, signer2, signer3]);
 
       await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
@@ -880,7 +879,7 @@ describe('Garden', function () {
 
       const balanceBefore = await garden.balanceOf(signer3.address);
 
-      const strategy = await getStrategy();
+      const strategy = await getStrategy({ garden: garden, signers: [signer1] });
       await vote(strategy, [signer1, signer2, signer3]);
 
       await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
@@ -979,10 +978,10 @@ describe('Garden', function () {
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
     });
 
-    it('can withdraw with a penalty from a straetgy with losses', async function () {
+    it('can withdraw with a penalty from a strategy with losses', async function () {
       const garden = await createGarden();
 
-      const strategy = await getStrategy();
+      const strategy = await getStrategy({ garden: garden, signers: [signer1] });
       await vote(strategy, [signer1, signer2, signer3]);
 
       await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
@@ -1006,16 +1005,11 @@ describe('Garden', function () {
 
     it('can withdraw funds with a penalty', async function () {
       const garden = await createGarden();
-
-      const strategy = await getStrategy();
+      const strategy = await getStrategy({ garden: garden, signers: [signer1] });
       await vote(strategy, [signer1, signer2, signer3]);
-
       await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
-
       const beforeWithdrawal = await ethers.provider.getBalance(signer1.address);
-
       await garden.connect(signer1).withdraw(eth(0.5), 1, signer1.getAddress(), true, strategy.address);
-
       expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.be.closeTo(
         eth(0.48),
         eth(0.01),
@@ -1727,7 +1721,7 @@ describe('Garden', function () {
       });
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), ADDRESS_ZERO);
-      await expect(garden.connect(signer3).claimNFT()).to.be.revertedWith('BAB#121');
+      await expect(garden.connect(signer3).claimNFT()).to.be.revertedWith('BAB#125');
       await increaseTime(1);
       await garden.connect(signer3).claimNFT();
 
