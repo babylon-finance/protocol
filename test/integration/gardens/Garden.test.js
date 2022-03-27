@@ -1727,7 +1727,8 @@ describe('Garden', function () {
       });
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), ADDRESS_ZERO);
-
+      await expect(garden.connect(signer3).claimNFT()).to.be.revertedWith('BAB#121');
+      await increaseTime(1);
       await garden.connect(signer3).claimNFT();
 
       expect(await gardenNFT.balanceOf(signer3.address)).to.eq(1);
@@ -2049,6 +2050,7 @@ describe('Garden', function () {
           await garden.minVoters(),
           1,
           eth(),
+          0,
         ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
@@ -2136,6 +2138,7 @@ describe('Garden', function () {
           await garden.minVoters(),
           1,
           eth(),
+          0,
         ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
@@ -2219,6 +2222,7 @@ describe('Garden', function () {
           from(9),
           from(10),
           from(11),
+          from(0),
         ]);
 
       expect(await garden.maxDepositLimit()).to.eq(eth());
