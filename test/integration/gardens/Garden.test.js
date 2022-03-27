@@ -75,7 +75,7 @@ describe('Garden', function () {
   let heartGarden;
   let gardenNFT;
   let gardenValuer;
-  let babViewer;
+  let viewer;
 
   let usdc;
   let weth;
@@ -100,7 +100,7 @@ describe('Garden', function () {
       balancerIntegration,
       uniswapV3TradeIntegration,
       gardenValuer,
-      babViewer,
+      viewer,
 
       dai,
       usdc,
@@ -393,7 +393,7 @@ describe('Garden', function () {
       await garden1.connect(signer1).makeGardenPublic();
       await garden1.connect(signer1).setPublicRights(true, false);
       await expect(getStrategy({ garden: garden1, signers: [signer3] })).not.to.be.reverted;
-      const [, , canAddStrategy3] = await babViewer
+      const [, , canAddStrategy3] = await viewer
         .connect(signer1)
         .getGardenPermissions(garden1.address, signer3.address);
       expect(canAddStrategy3).to.equal(true);
@@ -2261,12 +2261,12 @@ describe('Garden', function () {
         const user1Avg = user1Balance > 0 ? user1Deposits[6].mul(eth()).div(user1Balance) : 0;
         const user2Avg = user2Balance > 0 ? user2Deposits[6].mul(eth()).div(user2Balance) : 0;
 
-        expect(
-          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address),
-        ).to.equal(user1Avg);
-        expect(
-          await babViewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address),
-        ).to.equal(user2Avg);
+        expect(await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer1.address)).to.equal(
+          user1Avg,
+        );
+        expect(await viewer.connect(signer1).getGardenUserAvgPricePerShare(garden.address, signer3.address)).to.equal(
+          user2Avg,
+        );
       });
     });
   });

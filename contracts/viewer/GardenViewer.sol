@@ -10,27 +10,29 @@ import {ERC721} from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
-import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
-import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
-import {IRewardsDistributor} from './interfaces/IRewardsDistributor.sol';
-import {IBabController} from './interfaces/IBabController.sol';
-import {IGardenValuer} from './interfaces/IGardenValuer.sol';
-import {IGarden} from './interfaces/IGarden.sol';
-import {IStrategy} from './interfaces/IStrategy.sol';
-import {IMardukGate} from './interfaces/IMardukGate.sol';
-import {IGardenNFT} from './interfaces/IGardenNFT.sol';
-import {IStrategyNFT} from './interfaces/IStrategyNFT.sol';
-import {IPriceOracle} from './interfaces/IPriceOracle.sol';
-import {Math} from './lib/Math.sol';
+import {LowGasSafeMath as SafeMath} from '../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
+import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
+import {Math} from '../lib/Math.sol';
+
+import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IGardenValuer} from '../interfaces/IGardenValuer.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IMardukGate} from '../interfaces/IMardukGate.sol';
+import {IGardenNFT} from '../interfaces/IGardenNFT.sol';
+import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {IGardenViewer} from '../interfaces/IViewer.sol';
 
 /**
- * @title BabylonViewer
+ * @title GardenViewer
  * @author Babylon Finance
  *
  * Class that holds common view functions to retrieve garden information effectively
  */
-contract BabylonViewer {
+contract GardenViewer {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using Math for int256;
@@ -169,78 +171,6 @@ contract BabylonViewer {
         );
     }
 
-    /**
-     * Gets complete strategy details
-     *
-     * @param _strategy            Address of the strategy to fetch
-     * @return                     All strategy details
-     */
-    function getCompleteStrategy(address _strategy)
-        external
-        view
-        returns (
-            address,
-            string memory,
-            uint256[16] memory,
-            bool[] memory,
-            uint256[] memory
-        )
-    {
-        IStrategy strategy = IStrategy(_strategy);
-        bool[] memory status = new bool[](3);
-        uint256[] memory ts = new uint256[](4);
-        // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
-        (, status[0], status[1], status[2], ts[0], ts[1], ts[2]) = strategy.getStrategyState();
-        uint256 rewards =
-            ts[1] != 0 ? IRewardsDistributor(controller.rewardsDistributor()).getStrategyRewards(_strategy) : 0;
-        ts[3] = strategy.enteredCooldownAt();
-        return (
-            strategy.strategist(),
-            IStrategyNFT(controller.strategyNFT()).getStrategyName(_strategy),
-            [
-                strategy.getOperationsCount(),
-                strategy.stake(),
-                strategy.totalPositiveVotes(),
-                strategy.totalNegativeVotes(),
-                strategy.capitalAllocated(),
-                strategy.capitalReturned(),
-                strategy.duration(),
-                strategy.expectedReturn(),
-                strategy.maxCapitalRequested(),
-                strategy.enteredAt(),
-                strategy.getNAV(),
-                rewards,
-                strategy.maxAllocationPercentage(),
-                strategy.maxGasFeePercentage(),
-                strategy.maxTradeSlippagePercentage(),
-                strategy.isStrategyActive() ? _estimateStrategyRewards(_strategy) : 0
-            ],
-            status,
-            ts
-        );
-    }
-
-    function getOperationsStrategy(address _strategy)
-        public
-        view
-        returns (
-            uint8[] memory,
-            address[] memory,
-            bytes[] memory
-        )
-    {
-        IStrategy strategy = IStrategy(_strategy);
-        uint256 count = strategy.getOperationsCount();
-        uint8[] memory types = new uint8[](count);
-        address[] memory integrations = new address[](count);
-        bytes[] memory datas = new bytes[](count);
-
-        for (uint8 i = 0; i < count; i++) {
-            (types[i], integrations[i], datas[i]) = strategy.getOperationByIndex(i);
-        }
-        return (types, integrations, datas);
-    }
-
     function getGardenPermissions(address _garden, address _user)
         public
         view
@@ -258,29 +188,19 @@ contract BabylonViewer {
         );
     }
 
-    struct PartialGardenInfo {
-        address addr;
-        string name;
-        bool publicLP;
-        uint256 verified;
-        uint256 totalContributors;
-        address reserveAsset;
-        uint256 netAssetValue;
-    }
-
     function getGardensUser(address _user, uint256 _offset)
         external
         view
         returns (
             address[] memory,
             bool[] memory,
-            PartialGardenInfo[] memory
+            IGardenViewer.PartialGardenInfo[] memory
         )
     {
         address[] memory gardens = controller.getGardens();
         address[] memory userGardens = new address[](50);
         bool[] memory hasUserDeposited = new bool[](50);
-        PartialGardenInfo[] memory data = new PartialGardenInfo[](50);
+        IGardenViewer.PartialGardenInfo[] memory data = new IGardenViewer.PartialGardenInfo[](50);
         uint256 limit = gardens.length <= 50 ? gardens.length : _offset.add(50);
         limit = limit < gardens.length ? limit : gardens.length;
         uint8 resultIndex;
@@ -291,7 +211,7 @@ contract BabylonViewer {
                 hasUserDeposited[resultIndex] = _user != address(0) ? IERC20(gardens[i]).balanceOf(_user) > 0 : false;
                 resultIndex = resultIndex + 1;
                 IGarden garden = IGarden(gardens[i]);
-                data[resultIndex] = PartialGardenInfo(
+                data[resultIndex] = IGardenViewer.PartialGardenInfo(
                     gardens[i],
                     garden.name(),
                     !garden.privateGarden(),
@@ -335,26 +255,6 @@ contract BabylonViewer {
             }
         }
         return total;
-    }
-
-    function getUserStrategyActions(address[] memory _strategies, address _user)
-        external
-        view
-        returns (uint256, uint256)
-    {
-        uint256 strategiesCreated;
-        uint256 totalVotes;
-        for (uint8 i = 0; i < _strategies.length; i++) {
-            IStrategy strategy = IStrategy(_strategies[i]);
-            if (strategy.strategist() == _user) {
-                strategiesCreated = strategiesCreated.add(1);
-            }
-            int256 votes = strategy.getUserVotes(_user);
-            if (votes != 0) {
-                totalVotes = totalVotes.add(uint256(Math.abs(votes)));
-            }
-        }
-        return (strategiesCreated, totalVotes);
     }
 
     function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
@@ -403,14 +303,14 @@ contract BabylonViewer {
         );
     }
 
-    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) public view returns (uint256, uint256) {
+    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) external view returns (uint256, uint256) {
         return (
             IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
             _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
     }
 
-    function getAllProphets(address _address) public view returns (uint256[] memory) {
+    function getAllProphets(address _address) external view returns (uint256[] memory) {
         IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
         uint256 prophetsNumber = prophets.balanceOf(_address);
         uint256[] memory prophetIds = new uint256[](prophetsNumber);
@@ -493,13 +393,6 @@ contract BabylonViewer {
             return (poolMedium, FEE_MEDIUM);
         }
         return (poolHigh, FEE_HIGH);
-    }
-
-    /**
-     * returns the estimated accrued BABL of a strategy
-     */
-    function _estimateStrategyRewards(address _strategy) private view returns (uint256) {
-        return IRewardsDistributor(controller.rewardsDistributor()).estimateStrategyRewards(_strategy);
     }
 
     /**

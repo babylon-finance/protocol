@@ -61,6 +61,7 @@ describe('AaveBorrowIntegrationTest', function () {
     expect(await asset1.balanceOf(strategyContract.address)).to.equal(0);
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.gt(beforeExitingWeth);
   }
+
   async function supplyBorrowStrategyNAV(asset1, asset2, token) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
