@@ -31,7 +31,6 @@ contract HeartViewer {
     IBabController public immutable controller;
     IGovernor public immutable governor;
     IHeart public immutable heart;
-    IGarden public immutable heartGarden;
     IHypervisor public constant visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
     IHypervisor public constant visor_full = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
 
@@ -40,8 +39,7 @@ contract HeartViewer {
     constructor(
         IBabController _controller,
         IGovernor _governor,
-        IHeart _heart,
-        IGarden _heartGarden
+        IHeart _heart
     ) {
         require(address(_controller) != address(0), 'Controller must exist');
         require(address(_governor) != address(0), 'Governor must exist');
@@ -49,7 +47,6 @@ contract HeartViewer {
         controller = _controller;
         governor = _governor;
         heart = _heart;
-        heartGarden = _heartGarden;
     }
 
     /* ============ External Getter Functions ============ */
@@ -75,7 +72,7 @@ contract HeartViewer {
         (uint256 wethAmountF, uint256 bablAmountF) = visor_full.getTotalAmounts();
 
         return (
-            [address(heartGarden), heart.assetToLend()],
+            [address(heart.heartGarden()), heart.assetToLend()],
             heart.getTotalStats(),
             heart.getFeeDistributionWeights(),
             heart.getVotedGardens(),

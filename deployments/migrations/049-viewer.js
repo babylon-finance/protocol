@@ -39,13 +39,6 @@ module.exports = async ({
   const controller = await deployments.get('BabControllerProxy');
   const governor = await deployments.get('BabylonGovernor');
   const heart = await deployments.get('HeartProxy');
-
-  let HEART_GARDEN_ADDRES = '0xaA2D49A1d66A58B8DD0687E730FefC2823649791';
-  const chainId = await getChainId();
-  if (chainId === '1337') {
-    HEART_GARDEN_ADDRES = '0xC769a6C6F9Ddc972EF756624Ec69aAe8810bF630';
-  }
-
   const vTableOwnershipModuleDeployment = await deployAndPush('VTableOwnershipModule', []);
   const vTableUpdateModuleDeployment = await deployAndPush('VTableUpdateModule', []);
   const viewerDeployment = await deployAndPush('Viewer', [vTableUpdateModuleDeployment.address], 'VTableProxy');
@@ -55,7 +48,6 @@ module.exports = async ({
     controller.address,
     governor.address,
     heart.address,
-    HEART_GARDEN_ADDRES,
   ]);
 
   const vTableProxyContract = await ethers.getContractAt('VTableUpdateModule', viewerDeployment.address, signer);
