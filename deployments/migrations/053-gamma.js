@@ -28,4 +28,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['GammaIntegration'];
+module.exports.tags = ['GammaPool'];

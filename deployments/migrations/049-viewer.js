@@ -10,10 +10,13 @@ module.exports = async ({
   getChainId,
 }) => {
   async function registerModule(deployment, name, proxy) {
-    if (deployment.newlyDeployed) {
+    console.log(`Updating ${name}...`);
+    if (true || deployment.newlyDeployed) {
       const contract = await ethers.getContractAt(name, deployment.address, signer);
       const sigs = Object.keys(contract.interface.functions).map((func) => contract.interface.getSighash(func));
-      await proxy.updateVTable([[deployment.address, sigs]]);
+      const tx = await proxy.updateVTable([[deployment.address, sigs]]);
+      console.log(`Tx hash ${tx.hash}`);
+      await tx.wait();
     }
   }
 
@@ -27,7 +30,7 @@ module.exports = async ({
     });
 
     if (network.live && deployment.newlyDeployed) {
-      await tenderly.push(await getTenderlyContract(!!contract ? contract : name));
+      await tenderly.push(await getTenderlyContract(name));
     }
     return deployment;
   }
@@ -39,6 +42,7 @@ module.exports = async ({
   const controller = await deployments.get('BabControllerProxy');
   const governor = await deployments.get('BabylonGovernor');
   const heart = await deployments.get('HeartProxy');
+
   const vTableOwnershipModuleDeployment = await deployAndPush('VTableOwnershipModule', []);
   const vTableUpdateModuleDeployment = await deployAndPush('VTableUpdateModule', []);
   const viewerDeployment = await deployAndPush('Viewer', [vTableUpdateModuleDeployment.address], 'VTableProxy');
@@ -58,4 +62,4 @@ module.exports = async ({
   await registerModule(strategyViewerModuleDeployment, 'StrategyViewer', vTableProxyContract);
 };
 
-module.exports.tags = ['BabViewer'];
+module.exports.tags = ['Viewer'];

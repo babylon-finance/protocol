@@ -15,11 +15,11 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const controller = await getController();
-  const oracle = await deployments.get('TokenIdentifier');
+  const identifier = await deployments.get('TokenIdentifier');
 
   const deployment = await deploy('PriceOracle', {
     from: deployer,
-    args: [oracle.address, controller.address],
+    args: [identifier.address, controller.address],
     log: true,
     ...(await getGasPrice()),
   });
