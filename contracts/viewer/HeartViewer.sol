@@ -31,7 +31,7 @@ contract HeartViewer is IHeartViewer {
 
     IBabController public immutable controller;
     IGovernor public immutable governor;
-    IHeart public override immutable heart;
+    IHeart public immutable override heart;
     IHypervisor public constant visor = IHypervisor(0xF19F91d7889668A533F14d076aDc187be781a458);
     IHypervisor public constant visor_full = IHypervisor(0x5e6c481dE496554b66657Dd1CA1F70C61cf11660);
 
@@ -56,9 +56,9 @@ contract HeartViewer is IHeartViewer {
      * Gets all the heart details in one view call
      */
     function getAllHeartDetails()
-    override
         external
         view
+        override
         returns (
             address[2] memory, // address of the heart garden
             uint256[7] memory, // total stats
@@ -85,9 +85,7 @@ contract HeartViewer is IHeartViewer {
         );
     }
 
-    function getBondDiscounts(address[] calldata _assets)
-    override
-    external view returns (uint256[] memory) {
+    function getBondDiscounts(address[] calldata _assets) external view override returns (uint256[] memory) {
         uint256[] memory discounts = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
             discounts[i] = heart.bondAssets(_assets[i]);
@@ -96,9 +94,9 @@ contract HeartViewer is IHeartViewer {
     }
 
     function getGovernanceProposals(uint256[] calldata _ids)
-    override
         external
         view
+        override
         returns (
             address[] memory, // proposers
             uint256[] memory, // endBlocks
