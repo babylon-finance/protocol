@@ -451,7 +451,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _amountToSell                 Amount of asset to sell
      */
     function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
-        controller.isSystemContract(msg.sender);
+        require(controller.isSystemContract(msg.sender), 'Only system can call this');
         require(controller.protocolWantedAssets(_assetToSell), 'Must be a wanted asset');
         require(assetForPurchases != address(0), 'Asset for purchases not set');
         // Uses on chain oracle to fetch prices
