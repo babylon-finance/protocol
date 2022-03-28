@@ -79,6 +79,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IERC20 private constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
 
     // Strategy cooldown period
     uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
@@ -954,9 +955,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Only used to approve Heart Garden to stake
      */
     function _approveBABL(address _garden, uint256 _amount) internal {
-        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
-        _require(bablToken.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
-        bablToken.safeApprove(address(_garden), _amount);
+        _require(BABL.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
+        BABL.safeApprove(address(_garden), _amount);
     }
 
     /**
