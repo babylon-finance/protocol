@@ -139,9 +139,9 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     uint256 internal hardlockStartsAt;
 
     // EIP-1271 signer
-    address private signer;
+    address internal signer;
     // Variable that controls whether the NFT can be minted after x amount of time
-    uint256 public canMintNftAfter;
+    uint256 internal canMintNftAfter;
 
     /* ============ Modifiers ============ */
 
