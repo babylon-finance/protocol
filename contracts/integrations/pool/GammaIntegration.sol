@@ -183,7 +183,7 @@ contract GammaIntegration is PoolIntegration {
         require(_minAmountsOut.length == 2, 'Two amounts required');
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('withdraw(uint256,address,address)', _poolTokensIn, _strategy, _strategy);
+            abi.encodeWithSignature('withdraw(uint256,address,address,uint256,uint256)', _poolTokensIn, _strategy, _strategy, 0, 0);
         return (visorAddress, 0, methodData);
     }
 }
