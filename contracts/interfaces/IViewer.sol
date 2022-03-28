@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IGarden} from '../interfaces/IGarden.sol';
+import {IHeart} from '../interfaces/IHeart.sol';
 
 interface IStrategyViewer {
     function getCompleteStrategy(address _strategy)
@@ -100,9 +101,7 @@ interface IGardenViewer {
 }
 
 interface IHeartViewer {
-    function heart() external view returns (address);
-
-    function heartGarden() external view returns (address);
+    function heart() external view returns (IHeart);
 
     function getAllHeartDetails()
         external
