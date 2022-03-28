@@ -1,0 +1,103 @@
+{
+  "address": "0x586e44C1b6F8B2D4e8c89822073525BEF4556aE8",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x6ae18d8aa57b6716fc222718081b326e86c540f918a563b33332ea23a5f3a1e2",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0x586e44C1b6F8B2D4e8c89822073525BEF4556aE8",
+    "transactionIndex": 22,
+    "gasUsed": "212264",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xe731960f04ea785646c1a4b1f531de941b87ad4f9ddc4a64551c3dad8a8f3ca1",
+    "transactionHash": "0x6ae18d8aa57b6716fc222718081b326e86c540f918a563b33332ea23a5f3a1e2",
+    "logs": [],
+    "blockNumber": 14474180,
+    "cumulativeGasUsed": "1692796",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "52326babd87e7897610fb1d2a71f018c",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Reads ownership for the vtable\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/proxy/modules/VTableOwnershipModule.sol\":\"VTableOwnershipModule\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"contracts/proxy/VTable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title VTable\\n */\\nlibrary VTable {\\n    // bytes32 private constant _VTABLE_SLOT = bytes32(uint256(keccak256(\\\"openzeppelin.vtable.location\\\")) - 1);\\n    bytes32 private constant _VTABLE_SLOT = 0x13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc657;\\n\\n    struct VTableStore {\\n        address _owner;\\n        mapping(bytes4 => address) _delegates;\\n    }\\n\\n    /**\\n     * @dev Get singleton instance\\n     */\\n    function instance() internal pure returns (VTableStore storage vtable) {\\n        bytes32 position = _VTABLE_SLOT;\\n        assembly {\\n            vtable.slot := position\\n        }\\n    }\\n\\n    /**\\n     * @dev Ownership management\\n     */\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    function getOwner(VTableStore storage vtable) internal view returns (address) {\\n        return vtable._owner;\\n    }\\n\\n    function setOwner(VTableStore storage vtable, address newOwner) internal {\\n        emit OwnershipTransferred(vtable._owner, newOwner);\\n        vtable._owner = newOwner;\\n    }\\n\\n    /**\\n     * @dev VTableManagement\\n     */\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    function getFunction(VTableStore storage vtable, bytes4 selector) internal view returns (address) {\\n        return vtable._delegates[selector];\\n    }\\n\\n    function setFunction(\\n        VTableStore storage vtable,\\n        bytes4 selector,\\n        address module\\n    ) internal {\\n        emit VTableUpdate(selector, vtable._delegates[selector], module);\\n        vtable._delegates[selector] = module;\\n    }\\n}\\n\",\"keccak256\":\"0x58b44ccaf8a7521bce0087ac83483cba566cf18a26c8e9c3ede37a06a221c54f\",\"license\":\"MIT\"},\"contracts/proxy/modules/VTableOwnershipModule.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\n\\nimport '../VTable.sol';\\n\\ncontract VTableOwnershipModule {\\n    using VTable for VTable.VTableStore;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        require(owner() == msg.sender, 'VTableOwnership: caller is not the owner');\\n        _;\\n    }\\n\\n    /**\\n     * @dev Reads ownership for the vtable\\n     */\\n    function owner() public view virtual returns (address) {\\n        return VTable.instance().getOwner();\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions anymore. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby removing any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        VTable.instance().setOwner(address(0));\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), 'VTableOwnership: new owner is the zero address');\\n        VTable.instance().setOwner(newOwner);\\n    }\\n}\\n\",\"keccak256\":\"0x539bf307b8d84bd6054fb7fb2727e4a2cd167fa8cd642ce98756e91e81e8236c\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506102e1806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c8063715018a6146100465780638da5cb5b14610050578063f2fde38b14610074575b600080fd5b61004e61009a565b005b6100586100fd565b604080516001600160a01b039092168252519081900360200190f35b61004e6004803603602081101561008a57600080fd5b50356001600160a01b0316610114565b336100a36100fd565b6001600160a01b0316146100e85760405162461bcd60e51b81526004018080602001828103825260288152602001806102566028913960400191505060405180910390fd5b6100fb60006100f56101b6565b906101da565b565b600061010f61010a6101b6565b610248565b905090565b3361011d6100fd565b6001600160a01b0316146101625760405162461bcd60e51b81526004018080602001828103825260288152602001806102566028913960400191505060405180910390fd5b6001600160a01b0381166101a75760405162461bcd60e51b815260040180806020018281038252602e81526020018061027e602e913960400191505060405180910390fd5b6101b3816100f56101b6565b50565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b81546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a381547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0391909116179055565b546001600160a01b03169056fe565461626c654f776e6572736869703a2063616c6c6572206973206e6f7420746865206f776e6572565461626c654f776e6572736869703a206e6577206f776e657220697320746865207a65726f2061646472657373a26469706673582212206525f8646367fe0be7dba34ce976a694a87c2de2033a46c14de5eea428bcece064736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100415760003560e01c8063715018a6146100465780638da5cb5b14610050578063f2fde38b14610074575b600080fd5b61004e61009a565b005b6100586100fd565b604080516001600160a01b039092168252519081900360200190f35b61004e6004803603602081101561008a57600080fd5b50356001600160a01b0316610114565b336100a36100fd565b6001600160a01b0316146100e85760405162461bcd60e51b81526004018080602001828103825260288152602001806102566028913960400191505060405180910390fd5b6100fb60006100f56101b6565b906101da565b565b600061010f61010a6101b6565b610248565b905090565b3361011d6100fd565b6001600160a01b0316146101625760405162461bcd60e51b81526004018080602001828103825260288152602001806102566028913960400191505060405180910390fd5b6001600160a01b0381166101a75760405162461bcd60e51b815260040180806020018281038252602e81526020018061027e602e913960400191505060405180910390fd5b6101b3816100f56101b6565b50565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b81546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a381547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0391909116179055565b546001600160a01b03169056fe565461626c654f776e6572736869703a2063616c6c6572206973206e6f7420746865206f776e6572565461626c654f776e6572736869703a206e6577206f776e657220697320746865207a65726f2061646472657373a26469706673582212206525f8646367fe0be7dba34ce976a694a87c2de2033a46c14de5eea428bcece064736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "owner()": {
+        "details": "Reads ownership for the vtable"
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+      },
+      "transferOwnership(address)": {
+        "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

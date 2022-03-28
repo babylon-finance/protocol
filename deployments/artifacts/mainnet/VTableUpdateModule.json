@@ -1,0 +1,95 @@
+{
+  "address": "0xa78e81CCe96bac0e00c081E599806bcea2Dd5917",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "oldImplementation",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "VTableUpdate",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes4[]",
+              "name": "selectors",
+              "type": "bytes4[]"
+            }
+          ],
+          "internalType": "struct VTableUpdateModule.ModuleDefinition[]",
+          "name": "modules",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "updateVTable",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x2f5ee3e3320b34e35485ff56abfeed9615206ccec30b843f3cb678eb1aa5c844",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0xa78e81CCe96bac0e00c081E599806bcea2Dd5917",
+    "transactionIndex": 126,
+    "gasUsed": "308949",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x766f28d746deb9523f49629dd22e0f3f4d8bebbfb77b948d49dcc8f7559ffea0",
+    "transactionHash": "0x2f5ee3e3320b34e35485ff56abfeed9615206ccec30b843f3cb678eb1aa5c844",
+    "logs": [],
+    "blockNumber": 14474182,
+    "cumulativeGasUsed": "8420848",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "52326babd87e7897610fb1d2a71f018c",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"selector\",\"type\":\"bytes4\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldImplementation\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"VTableUpdate\",\"type\":\"event\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"selectors\",\"type\":\"bytes4[]\"}],\"internalType\":\"struct VTableUpdateModule.ModuleDefinition[]\",\"name\":\"modules\",\"type\":\"tuple[]\"}],\"name\":\"updateVTable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"updateVTable((address,bytes4[])[])\":{\"details\":\"Updates the vtable\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/proxy/modules/VTableUpdateModule.sol\":\"VTableUpdateModule\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"contracts/proxy/VTable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title VTable\\n */\\nlibrary VTable {\\n    // bytes32 private constant _VTABLE_SLOT = bytes32(uint256(keccak256(\\\"openzeppelin.vtable.location\\\")) - 1);\\n    bytes32 private constant _VTABLE_SLOT = 0x13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc657;\\n\\n    struct VTableStore {\\n        address _owner;\\n        mapping(bytes4 => address) _delegates;\\n    }\\n\\n    /**\\n     * @dev Get singleton instance\\n     */\\n    function instance() internal pure returns (VTableStore storage vtable) {\\n        bytes32 position = _VTABLE_SLOT;\\n        assembly {\\n            vtable.slot := position\\n        }\\n    }\\n\\n    /**\\n     * @dev Ownership management\\n     */\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    function getOwner(VTableStore storage vtable) internal view returns (address) {\\n        return vtable._owner;\\n    }\\n\\n    function setOwner(VTableStore storage vtable, address newOwner) internal {\\n        emit OwnershipTransferred(vtable._owner, newOwner);\\n        vtable._owner = newOwner;\\n    }\\n\\n    /**\\n     * @dev VTableManagement\\n     */\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    function getFunction(VTableStore storage vtable, bytes4 selector) internal view returns (address) {\\n        return vtable._delegates[selector];\\n    }\\n\\n    function setFunction(\\n        VTableStore storage vtable,\\n        bytes4 selector,\\n        address module\\n    ) internal {\\n        emit VTableUpdate(selector, vtable._delegates[selector], module);\\n        vtable._delegates[selector] = module;\\n    }\\n}\\n\",\"keccak256\":\"0x58b44ccaf8a7521bce0087ac83483cba566cf18a26c8e9c3ede37a06a221c54f\",\"license\":\"MIT\"},\"contracts/proxy/modules/VTableUpdateModule.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\npragma abicoder v2;\\n\\nimport '../VTable.sol';\\n\\ncontract VTableUpdateModule {\\n    using VTable for VTable.VTableStore;\\n\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    struct ModuleDefinition {\\n        address implementation;\\n        bytes4[] selectors;\\n    }\\n\\n    /**\\n     * @dev Updates the vtable\\n     */\\n    function updateVTable(ModuleDefinition[] calldata modules) public {\\n        VTable.VTableStore storage vtable = VTable.instance();\\n        require(VTable.instance().getOwner() == msg.sender, 'VTableOwnership: caller is not the owner');\\n\\n        for (uint256 i = 0; i < modules.length; ++i) {\\n            ModuleDefinition memory module = modules[i];\\n            for (uint256 j = 0; j < module.selectors.length; ++j) {\\n                vtable.setFunction(module.selectors[j], module.implementation);\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x8a36a247fb7936aae3313dd7f142777935ae8d7e7193c3f75fc0c8b398848914\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506104a8806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063719c5ac214610030575b600080fd5b61004361003e366004610257565b610045565b005b600061004f610139565b90503361006261005d610139565b61015d565b6001600160a01b0316146100ab576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016100a2906102c6565b60405180910390fd5b60005b828110156101335760008484838181106100c457fe5b90506020028101906100d69190610323565b6100df90610366565b905060005b816020015151811015610129576101218260200151828151811061010457fe5b602002602001015183600001518661016a9092919063ffffffff16565b6001016100e4565b50506001016100ae565b50505050565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b546001600160a01b031690565b7fffffffff00000000000000000000000000000000000000000000000000000000821660008181526001850160209081526040918290205482516001600160a01b0391821681529085169181019190915281517ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a929181900390910190a27fffffffff0000000000000000000000000000000000000000000000000000000090911660009081526001909201602052604090912080546001600160a01b039092167fffffffffffffffffffffffff0000000000000000000000000000000000000000909216919091179055565b60008060208385031215610269578182fd5b823567ffffffffffffffff80821115610280578384fd5b818501915085601f830112610293578384fd5b8135818111156102a1578485fd5b86602080830285010111156102b4578485fd5b60209290920196919550909350505050565b60208082526028908201527f565461626c654f776e6572736869703a2063616c6c6572206973206e6f74207460408201527f6865206f776e6572000000000000000000000000000000000000000000000000606082015260800190565b60008235603e19833603018112610338578182fd5b9190910192915050565b60405181810167ffffffffffffffff8111828210171561035e57fe5b604052919050565b600060408236031215610377578081fd5b6040516040810167ffffffffffffffff828210818311171561039557fe5b81604052843591506001600160a01b03821682146103b1578384fd5b90825260209084820135818111156103c7578485fd5b850136601f8201126103d7578485fd5b8035828111156103e357fe5b83810292506103f3848401610342565b81815284810190838601368686018801111561040d578889fd5b8895505b8386101561045f57803594507fffffffff000000000000000000000000000000000000000000000000000000008516851461044a578889fd5b84835260019590950194918601918601610411565b509486019490945250929594505050505056fea2646970667358221220f4dcb1e1957d2ec4877921fd52acae9c334c331c08c13f0212203109a23a5f3064736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061002b5760003560e01c8063719c5ac214610030575b600080fd5b61004361003e366004610257565b610045565b005b600061004f610139565b90503361006261005d610139565b61015d565b6001600160a01b0316146100ab576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016100a2906102c6565b60405180910390fd5b60005b828110156101335760008484838181106100c457fe5b90506020028101906100d69190610323565b6100df90610366565b905060005b816020015151811015610129576101218260200151828151811061010457fe5b602002602001015183600001518661016a9092919063ffffffff16565b6001016100e4565b50506001016100ae565b50505050565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b546001600160a01b031690565b7fffffffff00000000000000000000000000000000000000000000000000000000821660008181526001850160209081526040918290205482516001600160a01b0391821681529085169181019190915281517ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a929181900390910190a27fffffffff0000000000000000000000000000000000000000000000000000000090911660009081526001909201602052604090912080546001600160a01b039092167fffffffffffffffffffffffff0000000000000000000000000000000000000000909216919091179055565b60008060208385031215610269578182fd5b823567ffffffffffffffff80821115610280578384fd5b818501915085601f830112610293578384fd5b8135818111156102a1578485fd5b86602080830285010111156102b4578485fd5b60209290920196919550909350505050565b60208082526028908201527f565461626c654f776e6572736869703a2063616c6c6572206973206e6f74207460408201527f6865206f776e6572000000000000000000000000000000000000000000000000606082015260800190565b60008235603e19833603018112610338578182fd5b9190910192915050565b60405181810167ffffffffffffffff8111828210171561035e57fe5b604052919050565b600060408236031215610377578081fd5b6040516040810167ffffffffffffffff828210818311171561039557fe5b81604052843591506001600160a01b03821682146103b1578384fd5b90825260209084820135818111156103c7578485fd5b850136601f8201126103d7578485fd5b8035828111156103e357fe5b83810292506103f3848401610342565b81815284810190838601368686018801111561040d578889fd5b8895505b8386101561045f57803594507fffffffff000000000000000000000000000000000000000000000000000000008516851461044a578889fd5b84835260019590950194918601918601610411565b509486019490945250929594505050505056fea2646970667358221220f4dcb1e1957d2ec4877921fd52acae9c334c331c08c13f0212203109a23a5f3064736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "updateVTable((address,bytes4[])[])": {
+        "details": "Updates the vtable"
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "address": "0xcdEBBDa854dC44780281FE7Fa3c49D72e069990A",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "updatemodule",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "transactionHash": "0xcae0814516e7335af188c024f576cf0401c05f221436471d9e5ec5552136491f",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0xcdEBBDa854dC44780281FE7Fa3c49D72e069990A",
+    "transactionIndex": 87,
+    "gasUsed": "261800",
+    "logsBloom": "0x00000000080000000000000000000000000000000000000000800000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000020000000000100000000801000000000000000010000000000000400000000000004100000000000000000000000000000000000000000000400020000000000000000000000000000000000000000000000000000000000000000000000020000000000000100000000000000080000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x9b785be6897abd20cd540e5308f950f615acfc866003d8e8afc59c987904add4",
+    "transactionHash": "0xcae0814516e7335af188c024f576cf0401c05f221436471d9e5ec5552136491f",
+    "logs": [
+      {
+        "transactionIndex": 87,
+        "blockNumber": 14474184,
+        "transactionHash": "0xcae0814516e7335af188c024f576cf0401c05f221436471d9e5ec5552136491f",
+        "address": "0xcdEBBDa854dC44780281FE7Fa3c49D72e069990A",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000aec6233a45a3866e9f1c64ab121e4ee9dbeafbff"
+        ],
+        "data": "0x",
+        "logIndex": 126,
+        "blockHash": "0x9b785be6897abd20cd540e5308f950f615acfc866003d8e8afc59c987904add4"
+      },
+      {
+        "transactionIndex": 87,
+        "blockNumber": 14474184,
+        "transactionHash": "0xcae0814516e7335af188c024f576cf0401c05f221436471d9e5ec5552136491f",
+        "address": "0xcdEBBDa854dC44780281FE7Fa3c49D72e069990A",
+        "topics": [
+          "0xf76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a",
+          "0x719c5ac200000000000000000000000000000000000000000000000000000000"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a78e81cce96bac0e00c081e599806bcea2dd5917",
+        "logIndex": 127,
+        "blockHash": "0x9b785be6897abd20cd540e5308f950f615acfc866003d8e8afc59c987904add4"
+      }
+    ],
+    "blockNumber": 14474184,
+    "cumulativeGasUsed": "6244994",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xa78e81CCe96bac0e00c081E599806bcea2Dd5917"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "52326babd87e7897610fb1d2a71f018c",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"updatemodule\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"VTableProxy\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/proxy/VTableProxy.sol\":\"VTableProxy\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/proxy/Proxy.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/**\\n * @dev This abstract contract provides a fallback function that delegates all calls to another contract using the EVM\\n * instruction `delegatecall`. We refer to the second contract as the _implementation_ behind the proxy, and it has to\\n * be specified by overriding the virtual {_implementation} function.\\n *\\n * Additionally, delegation to the implementation can be triggered manually through the {_fallback} function, or to a\\n * different contract through the {_delegate} function.\\n *\\n * The success and return data of the delegated call will be returned back to the caller of the proxy.\\n */\\nabstract contract Proxy {\\n    /**\\n     * @dev Delegates the current call to `implementation`.\\n     *\\n     * This function does not return to its internall call site, it will return directly to the external caller.\\n     */\\n    function _delegate(address implementation) internal virtual {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            // Copy msg.data. We take full control of memory in this inline assembly\\n            // block because it will not return to Solidity code. We overwrite the\\n            // Solidity scratch pad at memory position 0.\\n            calldatacopy(0, 0, calldatasize())\\n\\n            // Call the implementation.\\n            // out and outsize are 0 because we don't know the size yet.\\n            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)\\n\\n            // Copy the returned data.\\n            returndatacopy(0, 0, returndatasize())\\n\\n            switch result\\n            // delegatecall returns 0 on error.\\n            case 0 { revert(0, returndatasize()) }\\n            default { return(0, returndatasize()) }\\n        }\\n    }\\n\\n    /**\\n     * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function\\n     * and {_fallback} should delegate.\\n     */\\n    function _implementation() internal view virtual returns (address);\\n\\n    /**\\n     * @dev Delegates the current call to the address returned by `_implementation()`.\\n     *\\n     * This function does not return to its internall call site, it will return directly to the external caller.\\n     */\\n    function _fallback() internal virtual {\\n        _beforeFallback();\\n        _delegate(_implementation());\\n    }\\n\\n    /**\\n     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other\\n     * function in the contract matches the call data.\\n     */\\n    fallback () external payable virtual {\\n        _fallback();\\n    }\\n\\n    /**\\n     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data\\n     * is empty.\\n     */\\n    receive () external payable virtual {\\n        _fallback();\\n    }\\n\\n    /**\\n     * @dev Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`\\n     * call, or as part of the Solidity `fallback` or `receive` functions.\\n     *\\n     * If overriden should call `super._beforeFallback()`.\\n     */\\n    function _beforeFallback() internal virtual {\\n    }\\n}\\n\",\"keccak256\":\"0x0414d54056b3d8f9102ae1142264e9361408397878148203ab7a25cbf6248f08\",\"license\":\"MIT\"},\"contracts/proxy/VTable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title VTable\\n */\\nlibrary VTable {\\n    // bytes32 private constant _VTABLE_SLOT = bytes32(uint256(keccak256(\\\"openzeppelin.vtable.location\\\")) - 1);\\n    bytes32 private constant _VTABLE_SLOT = 0x13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc657;\\n\\n    struct VTableStore {\\n        address _owner;\\n        mapping(bytes4 => address) _delegates;\\n    }\\n\\n    /**\\n     * @dev Get singleton instance\\n     */\\n    function instance() internal pure returns (VTableStore storage vtable) {\\n        bytes32 position = _VTABLE_SLOT;\\n        assembly {\\n            vtable.slot := position\\n        }\\n    }\\n\\n    /**\\n     * @dev Ownership management\\n     */\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    function getOwner(VTableStore storage vtable) internal view returns (address) {\\n        return vtable._owner;\\n    }\\n\\n    function setOwner(VTableStore storage vtable, address newOwner) internal {\\n        emit OwnershipTransferred(vtable._owner, newOwner);\\n        vtable._owner = newOwner;\\n    }\\n\\n    /**\\n     * @dev VTableManagement\\n     */\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    function getFunction(VTableStore storage vtable, bytes4 selector) internal view returns (address) {\\n        return vtable._delegates[selector];\\n    }\\n\\n    function setFunction(\\n        VTableStore storage vtable,\\n        bytes4 selector,\\n        address module\\n    ) internal {\\n        emit VTableUpdate(selector, vtable._delegates[selector], module);\\n        vtable._delegates[selector] = module;\\n    }\\n}\\n\",\"keccak256\":\"0x58b44ccaf8a7521bce0087ac83483cba566cf18a26c8e9c3ede37a06a221c54f\",\"license\":\"MIT\"},\"contracts/proxy/VTableProxy.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\n\\nimport '@openzeppelin/contracts/proxy/Proxy.sol';\\n\\nimport './VTable.sol';\\nimport './modules/VTableUpdateModule.sol';\\n\\n/**\\n * @title VTableProxy\\n */\\ncontract VTableProxy is Proxy {\\n    using VTable for VTable.VTableStore;\\n\\n    bytes4 private constant _FALLBACK_SIGN = 0xffffffff;\\n\\n    constructor(address updatemodule) {\\n        VTable.VTableStore storage vtable = VTable.instance();\\n\\n        vtable.setOwner(msg.sender);\\n        vtable.setFunction(VTableUpdateModule(updatemodule).updateVTable.selector, updatemodule);\\n    }\\n\\n    function _implementation() internal view virtual override returns (address module) {\\n        VTable.VTableStore storage vtable = VTable.instance();\\n\\n        module = vtable.getFunction(msg.sig);\\n        if (module != address(0)) return module;\\n\\n        module = vtable.getFunction(_FALLBACK_SIGN);\\n        if (module != address(0)) return module;\\n\\n        revert('VTableProxy: No implementation found');\\n    }\\n}\\n\",\"keccak256\":\"0xb3e9f55002899d4fb381369b74d5496d516843ab6858612ae650c0b0082a041c\",\"license\":\"MIT\"},\"contracts/proxy/modules/VTableUpdateModule.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.7.6;\\npragma abicoder v2;\\n\\nimport '../VTable.sol';\\n\\ncontract VTableUpdateModule {\\n    using VTable for VTable.VTableStore;\\n\\n    event VTableUpdate(bytes4 indexed selector, address oldImplementation, address newImplementation);\\n\\n    struct ModuleDefinition {\\n        address implementation;\\n        bytes4[] selectors;\\n    }\\n\\n    /**\\n     * @dev Updates the vtable\\n     */\\n    function updateVTable(ModuleDefinition[] calldata modules) public {\\n        VTable.VTableStore storage vtable = VTable.instance();\\n        require(VTable.instance().getOwner() == msg.sender, 'VTableOwnership: caller is not the owner');\\n\\n        for (uint256 i = 0; i < modules.length; ++i) {\\n            ModuleDefinition memory module = modules[i];\\n            for (uint256 j = 0; j < module.selectors.length; ++j) {\\n                vtable.setFunction(module.selectors[j], module.implementation);\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x8a36a247fb7936aae3313dd7f142777935ae8d7e7193c3f75fc0c8b398848914\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b5060405161047d38038061047d8339818101604052602081101561003357600080fd5b5051600061004a610087602090811b61003117901c565b905061006333826100ab60201b6100551790919060201c565b610080816338ce2d6160e11b84610101602090811b6100b817901c565b50506101a6565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b81546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a381546001600160a01b0319166001600160a01b0391909116179055565b6001600160e01b0319821660008181526001850160209081526040918290205482516001600160a01b0391821681529085169181019190915281517ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a929181900390910190a26001600160e01b031990911660009081526001909201602052604090912080546001600160a01b039092166001600160a01b0319909216919091179055565b6102c8806101b56000396000f3fe60806040523661001357610011610017565b005b6100115b61001f61002f565b61002f61002a61016a565b610221565b565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b81546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3815473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0391909116179055565b6001600160e01b0319821660008181526001850160209081526040918290205482516001600160a01b0391821681529085169181019190915281517ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a929181900390910190a26001600160e01b031990911660009081526001909201602052604090912080546001600160a01b0390921673ffffffffffffffffffffffffffffffffffffffff19909216919091179055565b600080610175610031565b905061018d816001600160e01b031960003516610245565b91506001600160a01b038216156101a4575061021e565b6101b6816001600160e01b0319610245565b91506001600160a01b038216156101cd575061021e565b6040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602481526020018061026f6024913960400191505060405180910390fd5b90565b3660008037600080366000845af43d6000803e808015610240573d6000f35b3d6000fd5b6001600160e01b031916600090815260019190910160205260409020546001600160a01b03169056fe565461626c6550726f78793a204e6f20696d706c656d656e746174696f6e20666f756e64a26469706673582212202a3a9c5675e11d5fc364f010032f2876a20f0eb5917ea7bd9dc51acfa4c793c064736f6c63430007060033",
+  "deployedBytecode": "0x60806040523661001357610011610017565b005b6100115b61001f61002f565b61002f61002a61016a565b610221565b565b7f13f1d5ea37b1d7aca82fcc2879c3bddc731555698dfc87ad6057b416547bc65790565b81546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3815473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0391909116179055565b6001600160e01b0319821660008181526001850160209081526040918290205482516001600160a01b0391821681529085169181019190915281517ff76ead56fd55a04ec804a64583bc1e90671f895c8e71b18935917b92053ba87a929181900390910190a26001600160e01b031990911660009081526001909201602052604090912080546001600160a01b0390921673ffffffffffffffffffffffffffffffffffffffff19909216919091179055565b600080610175610031565b905061018d816001600160e01b031960003516610245565b91506001600160a01b038216156101a4575061021e565b6101b6816001600160e01b0319610245565b91506001600160a01b038216156101cd575061021e565b6040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602481526020018061026f6024913960400191505060405180910390fd5b90565b3660008037600080366000845af43d6000803e808015610240573d6000f35b3d6000fd5b6001600160e01b031916600090815260019190910160205260409020546001600160a01b03169056fe565461626c6550726f78793a204e6f20696d706c656d656e746174696f6e20666f756e64a26469706673582212202a3a9c5675e11d5fc364f010032f2876a20f0eb5917ea7bd9dc51acfa4c793c064736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "title": "VTableProxy",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
