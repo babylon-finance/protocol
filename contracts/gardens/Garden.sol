@@ -1080,6 +1080,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV18 is Garden {
+contract GardenV19 is Garden {
     constructor(VTableBeacon _beacon) Garden(_beacon) {}
 }

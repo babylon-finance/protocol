@@ -55,4 +55,4 @@ contract Assistant is OwnableUpgradeable {
     receive() external payable {}
 }
 
-contract AssistantV8 is Assistant {}
+contract AssistantV9 is Assistant {}
