@@ -163,7 +163,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     mapping(address => uint256) public override bondAssets;
 
     // EIP-1271 signer
-    address signer;
+    address private signer;
 
     /* ============ Initializer ============ */
 
