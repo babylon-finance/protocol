@@ -26,7 +26,7 @@ contract GammaIntegration is PoolIntegration {
     /* ============ State Variables ============ */
 
     /* ============ Constants ============ */
-    IGammaDeposit private constant depositProxy = IGammaDeposit(0x96a4F484915523553272A9f64FD9848859F799fa);
+    IGammaDeposit private constant depositProxy = IGammaDeposit(0x83de646a7125ac04950fea7e322481d4be66c71d);
 
     /* ============ Constructor ============ */
 
