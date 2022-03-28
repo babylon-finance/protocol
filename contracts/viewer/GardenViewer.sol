@@ -181,10 +181,11 @@ contract GardenViewer {
         )
     {
         IMardukGate gate = IMardukGate(controller.mardukGate());
+        bool isZero = _user == address(0);
         return (
-            gate.canJoinAGarden(_garden, _user) || (!IGarden(_garden).privateGarden()),
-            gate.canVoteInAGarden(_garden, _user) || (IGarden(_garden).publicStewards()),
-            gate.canAddStrategiesInAGarden(_garden, _user) || (IGarden(_garden).publicStrategists())
+            !IGarden(_garden).privateGarden() || (!isZero && gate.canJoinAGarden(_garden, _user)),
+            IGarden(_garden).publicStewards() || (!isZero && gate.canVoteInAGarden(_garden, _user)),
+            IGarden(_garden).publicStrategists() || (!isZero && gate.canAddStrategiesInAGarden(_garden, _user))
         );
     }
 
