@@ -92,6 +92,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     IERC20 private constant FRAX = IERC20(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    IERC20 private constant FEI = IERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
 
     // Fuse
     address private constant BABYLON_FUSE_POOL_ADDRESS = 0xC7125E3A2925877C7371d579D29dAe4729Ac9033;
@@ -165,6 +166,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     // EIP-1271 signer
     address private signer;
 
+    uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
+
+
     /* ============ Initializer ============ */
 
     /**
@@ -215,6 +219,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
+        // Use fei to pump if needed
+        if (wethBalance < MIN_PUMP_WETH) {
+            uint256 feiPriceInWeth = IPriceOracle(controller.priceOracle()).getPrice(address(FEI), address(WETH));
+            uint256 feiNeeded = MIN_PUMP_WETH.sub(wethBalance).preciseMul(feiPriceInWeth).preciseMul(105e16); // a bit more just in case
+            if (FEI.balanceOf(address(this)) >= feiNeeded) {
+                _trade(address(FEI), address(WETH), feiNeeded);
+            }
+        }
         _require(wethBalance >= 15e17, Errors.HEART_MINIMUM_FEES);
         // Send 10% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
@@ -851,6 +863,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             (_tokenOut == address(FRAX) && _tokenIn != address(DAI))
         ) {
             _hopToken = address(DAI);
+        } else {
+            if (
+                (_tokenIn == address(FEI) && _tokenOut != address(USDC)) ||
+                (_tokenOut == address(FEI) && _tokenIn != address(USDC))
+            ) {
+                _hopToken = address(USDC);
+            }
         }
         if (_hopToken != address(0)) {
             uint24 fee0 = _getUniswapPoolFeeWithHighestLiquidity(_tokenIn, _hopToken);
