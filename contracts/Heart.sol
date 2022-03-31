@@ -168,7 +168,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
 
-
     /* ============ Initializer ============ */
 
     /**
