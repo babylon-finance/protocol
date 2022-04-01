@@ -413,8 +413,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
         controller.onlyGovernanceOrEmergency();
         address cToken = assetToCToken[_assetToBorrow];
-        require(cToken != address(0), 'Not a valid cToken');
-        require(ICToken(cToken).borrow(_borrowAmount) == 0, 'Not enough collateral');
+        _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
+        _require(ICToken(cToken).borrow(_borrowAmount) == 0, Errors.NOT_ENOUGH_COLLATERAL);
     }
 
     /**
@@ -428,7 +428,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         controller.onlyGovernanceOrEmergency();
         address cToken = assetToCToken[_borrowedAsset];
         IERC20(_borrowedAsset).safeApprove(cToken, _amountToRepay);
-        require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, 'Not enough to repay');
+        _require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, Errors.AMOUNT_TOO_LOW);
     }
 
     /**
@@ -447,9 +447,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _minAmountOut
     ) external override {
         controller.onlyGovernanceOrEmergency();
-        require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, 'Not enough asset to trade');
+        _require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, Errors.AMOUNT_TOO_LOW);
         uint256 boughtAmount = _trade(_fromAsset, _toAsset, _fromAmount);
-        require(boughtAmount >= _minAmountOut, 'Too much slippage');
+        _require(boughtAmount >= _minAmountOut, Errors.SLIPPAGE_TOO_HIH);
     }
 
     /**
@@ -462,17 +462,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _amountToSell                 Amount of asset to sell
      */
     function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
-        require(controller.isSystemContract(msg.sender), 'Only system can call this');
-        require(controller.protocolWantedAssets(_assetToSell), 'Must be a wanted asset');
-        require(assetForPurchases != address(0), 'Asset for purchases not set');
+        _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
+        _require(controller.protocolWantedAssets(_assetToSell), Errors.HEART_ASSET_PURCHASE_INVALID);
+        _require(assetForPurchases != address(0), Errors.INVALID_ADDRESS);
         // Uses on chain oracle to fetch prices
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
-        require(pricePerTokenUnit != 0, 'No price found');
+        _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         uint256 amountInPurchaseAssetOffered = pricePerTokenUnit.preciseMul(_amountToSell);
-        require(
-            IERC20(assetForPurchases).balanceOf(address(this)) >= amountInPurchaseAssetOffered,
-            'Not enough balance to buy wanted asset'
-        );
+        _require(IERC20(assetForPurchases).balanceOf(address(this)) >= amountInPurchaseAssetOffered, Errors.BALANCE_TOO_LOW);
         IERC20(_assetToSell).safeTransferFrom(msg.sender, address(this), _amountToSell);
         // Buy it from the strategy plus 1% premium
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
@@ -495,7 +492,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _minAmountOut,
         address _referrer
     ) external override {
-        require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, 'Bond > 0');
+        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
         // Total value adding the premium
         uint256 bondValueInBABL =
             _bondToBABL(
@@ -506,7 +503,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         // Get asset to bond from sender
         IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
         // Deposit on behalf of the user
-        require(BABL.balanceOf(address(this)) >= bondValueInBABL, 'Not enough BABL');
+        _require(BABL.balanceOf(address(this)) >= bondValueInBABL, Errors.AMOUNT_TOO_LOW);
 
         BABL.safeApprove(address(heartGarden), bondValueInBABL);
 
@@ -591,17 +588,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         address _hopToken
     ) external override {
         _onlyKeeper();
-        require(assetForPurchases != address(0), 'Asset for purchases not set');
-        require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, 'Price is above target');
+        _require(assetForPurchases != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
+        _require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, Errors.AMOUNT_TOO_HIGH);
 
-        require(
-            SafeDecimalMath.normalizeAmountTokens(
+        _require(SafeDecimalMath.normalizeAmountTokens(
                 assetForPurchases,
                 address(DAI),
                 _purchaseAssetPrice.preciseMul(IERC20(assetForPurchases).balanceOf(address(this)))
-            ) >= PROTECT_BUY_AMOUNT_DAI,
-            'Not enough to protect'
-        );
+            ) >= PROTECT_BUY_AMOUNT_DAI, Errors.NOT_ENOUGH_AMOUNT);
 
         uint256 exactAmount = PROTECT_BUY_AMOUNT_DAI.preciseDiv(_bablPrice);
         uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(_slippage == 0 ? tradeSlippage : _slippage));

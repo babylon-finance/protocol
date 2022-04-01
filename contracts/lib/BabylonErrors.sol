@@ -340,4 +340,16 @@ library Errors {
     uint256 internal constant NOT_ENOUGH_BABL = 124;
     // Claim garden NFT
     uint256 internal constant CLAIM_GARDEN_NFT = 125;
+    // Not enough collateral
+    uint256 internal constant NOT_ENOUGH_COLLATERAL = 126;
+    // Amount too low
+    uint256 internal constant AMOUNT_TOO_LOW = 127;
+    // Amount too high
+    uint256 internal constant AMOUNT_TOO_HIGH = 128;
+    // Not enough to repay debt
+    uint256 internal constant SLIPPAGE_TOO_HIH = 129;
+    // Invalid amount
+    uint256 internal constant INVALID_AMOUNT = 130;
+    // Not enough BABL
+    uint256 internal constant NOT_ENOUGH_AMOUNT = 131;
 }
