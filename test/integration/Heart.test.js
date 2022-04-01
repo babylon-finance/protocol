@@ -17,7 +17,7 @@ const {
 
 const { fund } = require('lib/whale');
 
-describe.only('Heart', function () {
+describe('Heart', function () {
   let heartGarden;
   let heart;
   let signer1;
