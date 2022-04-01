@@ -469,7 +469,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         uint256 amountInPurchaseAssetOffered = pricePerTokenUnit.preciseMul(_amountToSell);
-        _require(IERC20(assetForPurchases).balanceOf(address(this)) >= amountInPurchaseAssetOffered, Errors.BALANCE_TOO_LOW);
+        _require(
+            IERC20(assetForPurchases).balanceOf(address(this)) >= amountInPurchaseAssetOffered,
+            Errors.BALANCE_TOO_LOW
+        );
         IERC20(_assetToSell).safeTransferFrom(msg.sender, address(this), _amountToSell);
         // Buy it from the strategy plus 1% premium
         uint256 wethTraded = _trade(assetForPurchases, address(WETH), amountInPurchaseAssetOffered.preciseMul(101e16));
@@ -591,11 +594,14 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _require(assetForPurchases != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
         _require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, Errors.AMOUNT_TOO_HIGH);
 
-        _require(SafeDecimalMath.normalizeAmountTokens(
+        _require(
+            SafeDecimalMath.normalizeAmountTokens(
                 assetForPurchases,
                 address(DAI),
                 _purchaseAssetPrice.preciseMul(IERC20(assetForPurchases).balanceOf(address(this)))
-            ) >= PROTECT_BUY_AMOUNT_DAI, Errors.NOT_ENOUGH_AMOUNT);
+            ) >= PROTECT_BUY_AMOUNT_DAI,
+            Errors.NOT_ENOUGH_AMOUNT
+        );
 
         uint256 exactAmount = PROTECT_BUY_AMOUNT_DAI.preciseDiv(_bablPrice);
         uint256 minAmountOut = exactAmount.sub(exactAmount.preciseMul(_slippage == 0 ? tradeSlippage : _slippage));
