@@ -536,16 +536,19 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         bytes memory _signature
     ) external override {
         _onlyKeeper();
-        require(_fee <= _maxFee, 'Fee too high');
-        require(bondAssets[_assetToBond] > 0, 'Bond > 0');
+        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
 
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
-        require(BABL.balanceOf(address(this)) >= _amountIn, 'Not enough BABL');
+        _require(BABL.balanceOf(address(this)) >= _amountIn, Errors.AMOUNT_TOO_LOW);
 
         // verify that _amountIn is correct compare to _amountToBond
-        require(_bondToBABL(_assetToBond, _amountToBond, _priceInBABL) == _amountIn, 'wrong amount of BABL');
+        uint256 val = _bondToBABL(_assetToBond, _amountToBond, _priceInBABL);
+        uint256 diff = val > _amountIn ? val.sub(_amountIn) : _amountIn.sub(val);
+        // allow 0.1% deviation
+        _require(diff < _amountIn.div(1000), Errors.INVALID_AMOUNT);
 
         BABL.safeApprove(address(heartGarden), _amountIn);
 
