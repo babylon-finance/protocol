@@ -927,6 +927,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     }
 }
 
-contract HeartV4 is Heart {
+contract HeartV5 is Heart {
     constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }
