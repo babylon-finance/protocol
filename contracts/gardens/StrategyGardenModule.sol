@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -159,7 +158,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
             rewardsDistributor.sendBABLToContributor(address(this), _newTotalAmount.sub(oldRewards));
         }
         // update profit returns
-        int256 diff = int256(_newCapitalReturned.sub(IStrategy(_strategy).capitalReturned()));
+        int256 diff = int256(_newCapitalReturned).sub(int256(IStrategy(_strategy).capitalReturned()));
         absoluteReturns = absoluteReturns.add(diff);
         // update BABL Mining strategy rewards
         IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
