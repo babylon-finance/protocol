@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
+import 'hardhat/console.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -154,7 +154,7 @@ contract BorrowOperation is Operation {
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received
         _asset = _asset == address(0) ? WETH : _asset;
-        _tradeToDebtToken(_asset, assetToken);
+        _tradeToDebtToken(_asset, assetToken, debtAmount);
 
         uint256 debtTokenBalance = IERC20(assetToken).universalBalanceOf(address(msg.sender));
 
@@ -204,9 +204,13 @@ contract BorrowOperation is Operation {
         return (NAV, false);
     }
 
-    function _tradeToDebtToken(address _asset, address _assetToken) private {
+    function _tradeToDebtToken(
+        address _asset,
+        address _assetToken,
+        uint256 _debtAmount
+    ) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
-        if (_asset != _assetToken && debtTokenBalance == 0) {
+        if (_asset != _assetToken && debtTokenBalance < _debtAmount) {
             if (_asset == address(0)) {
                 IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                 _asset = WETH;
