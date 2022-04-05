@@ -431,6 +431,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
             // Multiply from out reserve path to out token
             price = price.preciseMul(priceAux);
+            if (price != 0) {
+                return price;
+            }
         }
         // If reserves are different
 
