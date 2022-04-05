@@ -27,6 +27,7 @@ const STUCK = [
   // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
   // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
   // '0x22de22A50b00333159C54BFc1b9C0507e4759487',
+  '0x6b9398A256E78616C4C8DceE52B8AA0F0518E268',
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -229,7 +230,6 @@ describe('deploy', function () {
     });
 
     it('gets right NAV strategies', async () => {
-      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
       await checkNAVStrategies();
     });
 
@@ -270,8 +270,7 @@ describe('deploy', function () {
       }
     });
 
-    it('gets right NAV strategies', async () => {
-      await getStrategyFuseRewards('0x69B9a89083E2324079922e01557cAfb87cd90B09');
+    it.only('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 

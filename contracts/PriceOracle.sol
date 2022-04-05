@@ -414,7 +414,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
         if (!hopTokens[_tokenIn]) {
             (address pathIn, uint256 priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
-            if(pathIn != address(0)) {
+            if (pathIn != address(0)) {
                 reservePathIn = pathIn;
                 price = priceAux;
             }
