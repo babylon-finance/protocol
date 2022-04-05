@@ -424,15 +424,15 @@ contract PriceOracle is Ownable, IPriceOracle {
             (address pathOut, uint256 priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
             if (pathOut != address(0)) {
                 reservePathOut = pathOut;
-            }
-            // If reserves are different
-            if (reservePathIn != reservePathOut) {
-                price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
-            }
-            // Multiply from out reserve path to out token
-            price = price.preciseMul(priceAux);
-            if (price != 0) {
-                return price;
+                // If reserves are different
+                if (reservePathIn != reservePathOut) {
+                    price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
+                }
+                // Multiply from out reserve path to out token
+                price = price.preciseMul(priceAux);
+                if (price != 0) {
+                    return price;
+                }
             }
         }
         // If reserves are different
