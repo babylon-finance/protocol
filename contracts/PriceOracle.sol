@@ -409,29 +409,38 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function _getBestPriceUniV3(address _tokenIn, address _tokenOut) private view returns (uint256) {
         uint256 price = 1e18;
-        uint256 priceAux;
         address reservePathIn = _tokenIn;
         address reservePathOut = _tokenOut;
         // Go from token in to a reserve (choose best on the the highest liquidity in DAI)
         if (!hopTokens[_tokenIn]) {
-            (reservePathIn, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
-            price = priceAux;
+            (address pathIn, uint256 priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenIn, true);
+            if (pathIn != address(0)) {
+                reservePathIn = pathIn;
+                price = priceAux;
+            }
         }
         // Go from a reserve to token out (choose best on the the highest liquidity in DAI)
         if (!hopTokens[_tokenOut]) {
-            (reservePathOut, priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
-            // If reserves are different
-            if (reservePathIn != reservePathOut) {
-                price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
+            (address pathOut, uint256 priceAux) = _getHighestLiquidityPathToReserveUniV3(_tokenOut, false);
+            if (pathOut != address(0)) {
+                reservePathOut = pathOut;
+                // If reserves are different
+                if (reservePathIn != reservePathOut) {
+                    price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
+                }
+                // Multiply from out reserve path to out token
+                price = price.preciseMul(priceAux);
+                if (price != 0) {
+                    return price;
+                }
             }
-            // Multiply from out reserve path to out token
-            return price.preciseMul(priceAux);
         }
         // If reserves are different
+
         if (reservePathIn != reservePathOut) {
             price = price.preciseMul(_getUniV3PriceNaive(reservePathIn, reservePathOut));
         }
-        return price;
+        return price != 0 ? price : _getUniV3PriceNaive(_tokenIn, _tokenOut);
     }
 
     function _getHighestLiquidityPathToReserveUniV3(address _token, bool _in) private view returns (address, uint256) {

@@ -263,7 +263,13 @@ contract DepositVaultOperation is Operation {
         ) {
             if (rewardToken != address(0) && amount > 0) {
                 uint256 normalizedBalance = SafeDecimalMath.normalizeAmountTokens(rewardToken, _reserveAsset, amount);
-                return _getPrice(rewardToken, _reserveAsset).preciseMul(normalizedBalance);
+                uint256 price = _getPrice(rewardToken, _reserveAsset);
+                return
+                    price != 0
+                        ? price.preciseMul(normalizedBalance)
+                        : _getPrice(rewardToken, _yieldVault)
+                            .preciseMul(_getPrice(_yieldVault, _reserveAsset))
+                            .preciseMul(normalizedBalance);
             }
             return 0;
         } catch {
