@@ -33,7 +33,11 @@ interface IBabController {
 
     function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external;
 
-    function addAffiliateReward(address _user, uint256 _reserveAmount) external;
+    function addAffiliateReward(
+        address _depositor,
+        address _referrer,
+        uint256 _reserveAmount
+    ) external;
 
     function claimRewards() external;
 
