@@ -187,8 +187,10 @@ describe('BabController', function () {
       const prevBalance = await babl.balanceOf(signer2.address);
 
       await babController.connect(signer2).claimRewards();
+      await babController.connect(signer3).claimRewards();
 
-      expect((await babl.balanceOf(signer2.address)).sub(prevBalance)).to.eq(amountIn);
+      expect((await babl.balanceOf(signer2.address)).sub(prevBalance)).to.eq(amountIn.div(2));
+      expect((await babl.balanceOf(signer3.address)).sub(prevBalance)).to.eq(amountIn.div(2));
     });
   });
 });
