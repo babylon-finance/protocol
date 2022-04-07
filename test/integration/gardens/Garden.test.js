@@ -1588,7 +1588,8 @@ describe('Garden', function () {
 
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), signer2.address);
 
-      expect(await babController.affiliateRewards(signer2.address)).to.equal(amountIn);
+      expect(await babController.affiliateRewards(signer2.address)).to.equal(amountIn.div(2));
+      expect(await babController.affiliateRewards(signer3.address)).to.equal(amountIn.div(2));
     });
 
     it('can deposit USDC', async function () {

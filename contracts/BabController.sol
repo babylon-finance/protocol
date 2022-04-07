@@ -55,6 +55,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event ProtocolWantedAssetUpdated(address indexed _wantedAsset, bool _wanted);
     event GardenAffiliateRateUpdated(address indexed _garden, uint256 _affiliateRate);
     event AffiliateRewardsClaimed(address indexed _user, uint256 _rewardsClaimed);
+    event AffiliateRewards(address indexed _depositor, address indexed _referrer, uint256 _reward);
     event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
@@ -396,16 +397,22 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * Only a garden can call this
      *
-     * @param _user                 Address of the user
+     * @param _depositor            Address of the user that deposits
+     * @param _referrer             Address of the user that refers
      * @param _reserveAmount        Amount of reserved deposited by a link of the user
      */
-    function addAffiliateReward(address _user, uint256 _reserveAmount) external override {
+    function addAffiliateReward(
+        address _depositor,
+        address _referrer,
+        uint256 _reserveAmount
+    ) external override {
         require(isGarden[msg.sender], 'Only garden can add rewards');
-        require(_user != address(0) && _reserveAmount > 0, 'User and/or amount invalid');
+        require(_referrer != address(0) && _reserveAmount > 0, 'User and/or amount invalid');
         if (gardenAffiliateRates[msg.sender] > 0) {
-            affiliateRewards[_user] = affiliateRewards[_user].add(
-                _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender])
-            );
+            uint256 totalReward = _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender]);
+            affiliateRewards[_depositor] = affiliateRewards[_depositor].add(totalReward.div(2));
+            affiliateRewards[_referrer] = affiliateRewards[_referrer].add(totalReward.div(2));
+            emit AffiliateRewards(_depositor, _referrer, totalReward);
         }
     }
 
