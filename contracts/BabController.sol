@@ -411,7 +411,9 @@ contract BabController is OwnableUpgradeable, IBabController {
         if (gardenAffiliateRates[msg.sender] > 0) {
             uint256 totalReward = _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender]);
             affiliateRewards[_depositor] = affiliateRewards[_depositor].add(totalReward.div(2));
-            affiliateRewards[_referrer] = affiliateRewards[_referrer].add(totalReward.div(2));
+            if (_depositor != _referrer) {
+              affiliateRewards[_referrer] = affiliateRewards[_referrer].add(totalReward.div(2));
+            }
             emit AffiliateRewards(_depositor, _referrer, totalReward);
         }
     }
