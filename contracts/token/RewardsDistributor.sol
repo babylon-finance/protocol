@@ -1176,7 +1176,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
             !betaAddressMigrated[_contributor][_contributor] &&
-                (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
+                (cp == 0 || gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
