@@ -541,7 +541,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden       Address of the garden
      * @param _address      Address to get prior balance for
      * @param _blockTime  Block timestamp to get token power at
-     * @return Token power for an account at specific block
+     * @return Timestamp initializedAt timestamp (if any)
+     * @return Balance power in garden tokens for an account just prior to a specific blockTime
+     * @return Checkpoint prior checkpoint to a specific blockTime (if any)
      */
     function getPriorBalance(
         address _garden,
