@@ -456,7 +456,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) public view override returns (uint256[] memory) {
+    ) external view override returns (uint256[] memory) {
         _isGarden(_garden);
         uint256[] memory totalRewards = new uint256[](8);
         if (_garden == address(IHeart(controller.heart()).heartGarden())) {

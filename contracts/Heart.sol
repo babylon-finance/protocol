@@ -326,7 +326,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * @param _purchaseAsset             New asset to purchase
      */
-    function updateAssetToPurchase(address _purchaseAsset) public override {
+    function updateAssetToPurchase(address _purchaseAsset) external override {
         controller.onlyGovernanceOrEmergency();
         _require(
             _purchaseAsset != assetForPurchases && _purchaseAsset != address(0),
