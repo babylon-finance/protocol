@@ -55,7 +55,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event ProtocolWantedAssetUpdated(address indexed _wantedAsset, bool _wanted);
     event GardenAffiliateRateUpdated(address indexed _garden, uint256 _affiliateRate);
     event AffiliateRewardsClaimed(address indexed _user, uint256 _rewardsClaimed);
-    event AffiliateRewards(address indexed _depositor, address indexed _referrer, uint256 _reward);
+    event AffiliateRewards(address indexed _depositor, address indexed _referrer, uint256 _reserve, uint256 _reward);
     event LiquidityMinimumEdited(address indexed _resesrveAsset, uint256 _newMinLiquidityReserve);
 
     event PriceOracleChanged(address indexed _priceOracle, address _oldPriceOracle);
@@ -411,8 +411,10 @@ contract BabController is OwnableUpgradeable, IBabController {
         if (gardenAffiliateRates[msg.sender] > 0) {
             uint256 totalReward = _reserveAmount.preciseMul(gardenAffiliateRates[msg.sender]);
             affiliateRewards[_depositor] = affiliateRewards[_depositor].add(totalReward.div(2));
-            affiliateRewards[_referrer] = affiliateRewards[_referrer].add(totalReward.div(2));
-            emit AffiliateRewards(_depositor, _referrer, totalReward);
+            if (_depositor != _referrer) {
+              affiliateRewards[_referrer] = affiliateRewards[_referrer].add(totalReward.div(2));
+            }
+            emit AffiliateRewards(_depositor, _referrer, _reserveAmount, totalReward);
         }
     }
 
