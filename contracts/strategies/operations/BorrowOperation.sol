@@ -16,6 +16,8 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title BorrowOperation
  * @author Babylon Finance
@@ -82,8 +84,9 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
-        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
+        (address borrowToken, uint256 rate )= BytesLib.decodeOpDataAddressAndUint(_data);
+
+        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
 
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
 
@@ -112,16 +115,18 @@ contract BorrowOperation is Operation {
         address _asset,
         address _borrowToken,
         uint256 _capital,
-        address _integration
+        address _integration,
+        uint256 _rate
     ) internal view returns (uint256) {
         uint256 price = _getPrice(_asset, _borrowToken);
         // % of the total collateral value in the borrow token
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
         uint256 amountToBorrow =
-            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
+            _capital.preciseMul(price).preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
                 IBorrowIntegration(_integration).getCollateralFactor(_asset)
             );
+            console.log('amountToBorrow:', amountToBorrow);
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
     }
@@ -148,7 +153,8 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address assetToken = BytesLib.decodeOpDataAddress(_data);
+        (address assetToken, )= BytesLib.decodeOpDataAddressAndUint(_data);
+        console.log('assetToken:', assetToken);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received

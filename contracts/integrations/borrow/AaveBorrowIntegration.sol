@@ -92,8 +92,8 @@ contract AaveBorrowIntegration is BorrowIntegration {
     }
 
     function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
-        (, , uint256 collateral, , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
-        return collateral.mul(1e14);
+        (, uint256 ltv, , , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
+        return ltv.mul(1e14);
     }
 
     /* ============ Internal Functions ============ */
