@@ -46,7 +46,7 @@ describe('ComplexIntegrationsTest', function () {
       const pool = new ethers.Contract(
         '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
         [
-          ' function getUserAccountData(address user) external view returns ( uint256 totalCollateralETH, uint256 totalDebtETH, uint256 availableBorrowsETH, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)',
+          'function getUserAccountData(address user) external view returns ( uint256 totalCollateralETH, uint256 totalDebtETH, uint256 availableBorrowsETH, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)',
         ],
         signer1,
       );
@@ -62,50 +62,28 @@ describe('ComplexIntegrationsTest', function () {
       await depositFunds(addresses.tokens.WETH, garden);
       await depositFunds(addresses.tokens.WETH, garden);
 
+      const leverage = 7;
+
       const strategyContract = await createStrategy(
         'custom',
         'vote',
         [signer1, signer2, signer3],
         [
-          aaveLendIntegration.address,
-          aaveBorrowIntegration.address,
-          aaveLendIntegration.address,
-          aaveBorrowIntegration.address,
-          aaveLendIntegration.address,
-          aaveBorrowIntegration.address,
-          aaveLendIntegration.address,
-          aaveBorrowIntegration.address,
-          aaveLendIntegration.address,
-          aaveBorrowIntegration.address,
+          ...[...Array(leverage).keys()]
+            .map((item) => [aaveLendIntegration.address, aaveBorrowIntegration.address])
+            .flat(),
           aaveLendIntegration.address,
         ],
         garden,
         strategyParamsToArray({ ...WETH_STRATEGY_PARAMS, maxCapitalRequested: eth(100) }),
         [
-          addresses.tokens.stETH,
-          0,
-          addresses.tokens.WETH,
-          eth(),
-          addresses.tokens.stETH,
-          0,
-          addresses.tokens.WETH,
-          eth(),
-          addresses.tokens.stETH,
-          0,
-          addresses.tokens.WETH,
-          eth(),
-          addresses.tokens.stETH,
-          0,
-          addresses.tokens.WETH,
-          eth(),
-          addresses.tokens.stETH,
-          0,
-          addresses.tokens.WETH,
-          eth(),
+          ...[...Array(leverage).keys()]
+            .map((item) => [addresses.tokens.stETH, 0, addresses.tokens.WETH, eth()])
+            .flat(),
           addresses.tokens.stETH,
           0,
         ],
-        [3, 4, 3, 4, 3, 4, 3, 4, 3, 4, 3],
+        [...[...Array(leverage).keys()].map((item) => [3, 4]).flat(), 3],
       );
 
       const gardenBalance = await weth.balanceOf(garden.address);
