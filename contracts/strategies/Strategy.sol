@@ -280,7 +280,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
-                opEncodedLength > 0 &&
+            opEncodedLength > 0 &&
                 (_opTypes.length == _opIntegrations.length) &&
                 (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
@@ -736,8 +736,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         bytes32[] memory hashedOps = new bytes32[](opTypes.length);
         for (uint256 i = 0; i < opTypes.length; i++) {
             uint8 opType = opTypes[i];
-            IOperation operation =
-                IOperation(IBabController(controller).enabledOperations(uint256(opType)));
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opType)));
             // _getOpDecodedData guarantee backward compatibility with OpData
             bytes memory data = _getOpDecodedData(i);
             address integration = opIntegrations[i];
@@ -755,10 +754,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     continue;
                 }
             }
-            try operation.getNAV(data, garden, integration) returns (
-                uint256 opNAV,
-                bool positive
-            ) {
+            try operation.getNAV(data, garden, integration) returns (uint256 opNAV, bool positive) {
                 if (positive) {
                     positiveNav = positiveNav.add(opNAV);
                 } else {

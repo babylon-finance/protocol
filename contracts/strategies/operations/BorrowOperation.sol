@@ -16,7 +16,6 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
-
 /**
  * @title BorrowOperation
  * @author Babylon Finance
@@ -83,7 +82,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        (address borrowToken, uint256 rate )= BytesLib.decodeOpDataAddressAndUint(_data);
+        (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
 
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
 
@@ -122,9 +121,10 @@ contract BorrowOperation is Operation {
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
         uint256 amountToBorrow =
-            _capital.preciseMul(price).preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
-                IBorrowIntegration(_integration).getCollateralFactor(_asset)
-            );
+            _capital
+                .preciseMul(price)
+                .preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor())
+                .preciseMul(IBorrowIntegration(_integration).getCollateralFactor(_asset));
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
     }
@@ -151,7 +151,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        (address assetToken, )= BytesLib.decodeOpDataAddressAndUint(_data);
+        (address assetToken, ) = BytesLib.decodeOpDataAddressAndUint(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received

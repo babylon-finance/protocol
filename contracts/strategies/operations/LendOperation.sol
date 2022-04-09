@@ -14,7 +14,6 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 
 import {Operation} from './Operation.sol';
 
-
 /**
  * @title LendOperation
  * @author Babylon Finance
@@ -203,21 +202,22 @@ contract LendOperation is Operation {
             _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
         }
         uint256 healthFactor = ILendIntegration(_integration).getHealthFactor(msg.sender);
-        if(healthFactor > 0) {
-            numTokensToRedeem = healthFactor != type(uint256).max ?
-                numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
-            : numTokensToRedeem;
+        if (healthFactor > 0) {
+            numTokensToRedeem = healthFactor != type(uint256).max
+                ? numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
+                : numTokensToRedeem;
         } else {
             // Compound does not support health factor which makes things
             // complicated. Do not create strategies which have the last
             // operation CompoundLend and debt. Such strategies would fail to
             // finalize due to _debt being zero and no health factor.
             if (_debt > 0) {
-                uint256 debtInCollateral = SafeDecimalMath.normalizeAmountTokens(
-                    _borrowToken,
-                    _assetToken,
-                    _debt.preciseMul(_getPrice(_borrowToken, _assetToken))
-                );
+                uint256 debtInCollateral =
+                    SafeDecimalMath.normalizeAmountTokens(
+                        _borrowToken,
+                        _assetToken,
+                        _debt.preciseMul(_getPrice(_borrowToken, _assetToken))
+                    );
                 // Update amount so we can exit if there is debt
                 try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
                     numTokensToRedeem = numTokensToRedeem.sub(
@@ -254,7 +254,6 @@ contract LendOperation is Operation {
             IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
         }
     }
-
 
     function _getRewardToken(address _integration) private view returns (address) {
         try ILendIntegration(_integration).getRewardToken() returns (address rewardsToken) {
