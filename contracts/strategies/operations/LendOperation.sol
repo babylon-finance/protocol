@@ -196,7 +196,25 @@ contract LendOperation is Operation {
     ) internal {
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
+        // Apply percentage
+        numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
+        uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
+        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeAmountTokens(
+            _borrowToken,
+            _assetToken,
+            remainingDebtInCollateralTokens
+        );
 
+        if (_remaining > 0) {
+            // Update amount so we can exit if there is debt
+            try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
+                numTokensToRedeem = numTokensToRedeem.sub(
+                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg).mul(105).div(100)
+                ); // add a bit extra 5% just in case
+            } catch {
+                numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(140).div(100));
+            }
+        }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
         // replace old aave
         if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
@@ -206,9 +224,13 @@ contract LendOperation is Operation {
         numTokensToRedeem = healthFactor != type(uint256).max ?
             numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
         : numTokensToRedeem;
+<<<<<<< HEAD
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
         // sometimes dust is left
+=======
+        // sometimes dust it left
+>>>>>>> parent of 2e350781... Refactor Redeem Tokens
         if (numTokensToRedeem > 1000) {
             ILendIntegration(_integration).redeemTokens(
                 msg.sender,
@@ -231,6 +253,18 @@ contract LendOperation is Operation {
         if (IERC20(_borrowToken).balanceOf(msg.sender) > 1e6) {
             IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
         }
+    }
+
+    function _getRemainingDebt(
+        address _borrowToken,
+        address _assetToken,
+        uint256 _remaining
+    ) private view returns (uint256) {
+        if (_remaining == 0) {
+            return 0;
+        }
+        uint256 price = _getPrice(_borrowToken, _assetToken);
+        return _remaining.preciseMul(price);
     }
 
     function _getRewardToken(address _integration) private view returns (address) {
