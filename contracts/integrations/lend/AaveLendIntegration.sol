@@ -56,6 +56,21 @@ contract AaveLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
+    function _getHealthFactor(address _strategy) internal view override returns
+    (uint256) {
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 healthFactor
+
+        ) =
+            lendingPool.getUserAccountData(_strategy);
+        return healthFactor;
+    }
+
     function _getRewardToken() internal pure override returns (address) {
         return AAVE;
     }
@@ -189,7 +204,7 @@ contract AaveLendIntegration is LendIntegration {
         uint256 _numTokensToSupply
     )
         internal
-        pure
+        view
         override
         returns (
             address,

@@ -59,14 +59,14 @@ contract AaveBorrowIntegration is BorrowIntegration {
         address /* asset */
     ) external view override returns (uint256) {
         (
-            uint256 totalCollateral, // uint256 totalDebt, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
-            ,
-            ,
-            ,
-            ,
+            uint256 totalCollateral,
+            uint256 totalDebt, 
+            uint256 borrowingPower, 
+            uint256 liquidationThreshold, 
+            uint256 ltv,
+            uint256 healthFactor
 
         ) =
-            // uint256 healthFactor
             lendingPool.getUserAccountData(_strategy);
         return totalCollateral;
     }

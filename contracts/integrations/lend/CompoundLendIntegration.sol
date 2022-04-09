@@ -83,6 +83,12 @@ contract CompoundLendIntegration is LendIntegration {
 
     /* ============ Internal Functions ============ */
 
+    function _getHealthFactor(address _strategy) internal view override returns
+    (uint256) {
+        // TODO: Support Health factor
+        return type(uint256).max;
+    }
+
     function _overrideMappings(IComptroller _comptroller) private {
         address[] memory markets = _comptroller.getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {

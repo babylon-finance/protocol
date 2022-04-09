@@ -136,10 +136,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     // Max Operations
-    uint256 private constant MAX_OPERATIONS = 6;
+    uint256 private constant MAX_OPERATIONS = 9;
 
     // Quadratic penalty for looses
     uint256 private constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 175e16; // 1.75e18
+
+    uint256 private constant LEND_OP = 3;
+    uint256 private constant BORROW_OP = 4;
 
     /* ============ Structs ============ */
 
@@ -734,10 +737,29 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
+        bytes32[] memory hashedOps = new bytes32[](opTypes.length);
         for (uint256 i = 0; i < opTypes.length; i++) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
+            uint8 opType = opTypes[i];
+            IOperation operation =
+                IOperation(IBabController(controller).enabledOperations(uint256(opType)));
             // _getOpDecodedData guarantee backward compatibility with OpData
-            try operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]) returns (
+            bytes memory data = _getOpDecodedData(i);
+            address integration = opIntegrations[i];
+            bytes32 hash = keccak256(abi.encodePacked(opType, data, integration));
+            // for borrow and lend operations we only need to count NAV once
+            if (opType == LEND_OP || opType == BORROW_OP) {
+                // check if NAV has been counted already
+                bool found;
+                for (uint256 j = 0; j < i; j++) {
+                    if (hashedOps[j] == hash) {
+                        found = true;
+                    }
+                }
+                if (found) {
+                    continue;
+                }
+            }
+            try operation.getNAV(data, garden, integration) returns (
                 uint256 opNAV,
                 bool positive
             ) {
@@ -746,6 +768,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 } else {
                     negativeNav = negativeNav.add(opNAV);
                 }
+                hashedOps[i] = hash;
             } catch {}
         }
         if (negativeNav > positiveNav) {

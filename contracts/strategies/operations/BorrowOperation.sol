@@ -161,11 +161,15 @@ contract BorrowOperation is Operation {
             debtAmount > debtTokenBalance
                 ? debtTokenBalance.preciseMul(_percentage)
                 : debtAmount.preciseMul(_percentage);
-        IBorrowIntegration(_integration).repay(
-            msg.sender,
-            assetToken,
-            amountToRepay // We repay the percentage of all that we can
-        );
+        // if 0 that mean all the debt is repaid already
+        if (amountToRepay > 0) {
+            IBorrowIntegration(_integration).repay(
+                msg.sender,
+                assetToken,
+                amountToRepay // We repay the percentage of all that we can
+            );
+        }
+
         return (assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken), 2);
     }
 

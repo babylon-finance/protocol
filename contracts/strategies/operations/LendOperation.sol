@@ -14,6 +14,7 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 
 import {Operation} from './Operation.sol';
 
+
 /**
  * @title LendOperation
  * @author Babylon Finance
@@ -219,12 +220,19 @@ contract LendOperation is Operation {
         if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
             _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
         }
-        ILendIntegration(_integration).redeemTokens(
-            msg.sender,
-            _assetToken,
-            numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
-        );
+        uint256 healthFactor = ILendIntegration(_integration).getHealthFactor(msg.sender);
+        numTokensToRedeem = healthFactor != type(uint256).max ?
+            numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
+        : numTokensToRedeem;
+        // sometimes dust it left
+        if (numTokensToRedeem > 1000) {
+            ILendIntegration(_integration).redeemTokens(
+                msg.sender,
+                _assetToken,
+                numTokensToRedeem,
+                exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
+            );
+        }
     }
 
     function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {

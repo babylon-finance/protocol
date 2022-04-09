@@ -23,6 +23,8 @@ interface ILendIntegration {
         uint256 _minAmountExpected
     ) external;
 
+    function getHealthFactor(address _strategy) external view returns (uint256);
+
     function getRewardToken() external view returns (address);
 
     function getCollateralFactor(address _assetToken) external view returns (uint256);
