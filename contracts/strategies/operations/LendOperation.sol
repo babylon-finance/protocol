@@ -208,7 +208,7 @@ contract LendOperation is Operation {
         : numTokensToRedeem;
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
-        // sometimes dust it left
+        // sometimes dust is left
         if (numTokensToRedeem > 1000) {
             ILendIntegration(_integration).redeemTokens(
                 msg.sender,
