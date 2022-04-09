@@ -135,9 +135,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
-    // Max Operations
-    uint256 private constant MAX_OPERATIONS = 9;
-
     // Quadratic penalty for looses
     uint256 private constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 175e16; // 1.75e18
 
@@ -283,7 +280,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
-            opEncodedLength < MAX_OPERATIONS &&
                 opEncodedLength > 0 &&
                 (_opTypes.length == _opIntegrations.length) &&
                 (_opIntegrations.length == opEncodedLength),
