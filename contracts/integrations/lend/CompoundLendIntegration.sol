@@ -85,8 +85,9 @@ contract CompoundLendIntegration is LendIntegration {
 
     function _getHealthFactor(address _strategy) internal view override returns
     (uint256) {
-        // TODO: Support Health factor
-        return type(uint256).max;
+        // Compound architecture makes it almost impossible to implement this
+        // method
+        return 0;
     }
 
     function _overrideMappings(IComptroller _comptroller) private {
