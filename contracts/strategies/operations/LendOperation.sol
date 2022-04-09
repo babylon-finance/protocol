@@ -224,13 +224,9 @@ contract LendOperation is Operation {
         numTokensToRedeem = healthFactor != type(uint256).max ?
             numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
         : numTokensToRedeem;
-<<<<<<< HEAD
         // Apply percentage
         numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
         // sometimes dust is left
-=======
-        // sometimes dust it left
->>>>>>> parent of 2e350781... Refactor Redeem Tokens
         if (numTokensToRedeem > 1000) {
             ILendIntegration(_integration).redeemTokens(
                 msg.sender,
