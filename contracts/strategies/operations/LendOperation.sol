@@ -201,7 +201,11 @@ contract LendOperation is Operation {
         if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
             _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
         }
-        uint256 healthFactor = ILendIntegration(_integration).getHealthFactor(msg.sender);
+        // backwards compatability
+        uint256 healthFactor = 0;
+        try ILendIntegration(_integration).getHealthFactor(msg.sender) returns (uint256 factor) {
+            healthFactor = factor;
+        } catch {}
         if (healthFactor > 0) {
             numTokensToRedeem = healthFactor != type(uint256).max
                 ? numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
