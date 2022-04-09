@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -226,11 +225,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      */
     function _onlyValidSigner(
         address _signer,
+        address _to,
         uint256 _nonce,
         bytes32 _hash,
         bytes memory _signature
     ) private view {
-        _require(contributors[_signer].nonce == _nonce, Errors.INVALID_NONCE);
+        _require(
+            _signer == _to ? contributors[_signer].nonce == _nonce : contributors[_to].nonce == _nonce,
+            Errors.INVALID_NONCE
+        );
         // to prevent replay attacks
         _require(_signer.isValidSignatureNow(_hash, _signature), Errors.INVALID_SIGNER);
     }
@@ -316,7 +319,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 )
             )
                 .toEthSignedMessageHash();
-        _onlyValidSigner(_signer, _nonce, hash, _signature);
+        _onlyValidSigner(_signer, _to, _nonce, hash, _signature);
 
         // If a Keeper fee is greater than zero then reduce user shares to
         // exchange and pay keeper the fee.
@@ -432,7 +435,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             )
                 .toEthSignedMessageHash();
 
-        _onlyValidSigner(_signer, _nonce, hash, _signature);
+        _onlyValidSigner(_signer, _signer, _nonce, hash, _signature);
 
         _withdrawInternal(
             _amountIn,
@@ -511,7 +514,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 .toEthSignedMessageHash();
         _require(_fee > 0, Errors.FEE_TOO_LOW);
 
-        _onlyValidSigner(_signer, _nonce, hash, _signature);
+        _onlyValidSigner(_signer, _signer, _nonce, hash, _signature);
         _require(_babl <= CLAIM_BY_SIG_CAP, Errors.MAX_BABL_CAP_REACHED);
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
@@ -569,7 +572,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 )
             )
                 .toEthSignedMessageHash();
-        _onlyValidSigner(_signer, _nonce, hash, _signature);
+        _onlyValidSigner(_signer, _signer, _nonce, hash, _signature);
         _require(_fee > 0, Errors.FEE_TOO_LOW);
         _require(_babl <= CLAIM_BY_SIG_CAP, Errors.MAX_BABL_CAP_REACHED);
 
@@ -632,7 +635,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     ) external override nonReentrant {
         _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
-
         bytes32 hash =
             keccak256(
                 abi.encode(
@@ -648,7 +650,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 )
             )
                 .toEthSignedMessageHash();
-        _onlyValidSigner(_signer, _nonceHeart, hash, _signature);
+        _onlyValidSigner(_signer, _to, _nonceHeart, hash, _signature);
 
         // Keeper fee must have been paid in the original garden
         _internalDeposit(_amountIn, _minAmountOut, _to, _signer, _pricePerShare, minContribution, address(0));
