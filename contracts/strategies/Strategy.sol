@@ -31,8 +31,6 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Strategy
  * @author Babylon Finance
@@ -872,8 +870,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
-            console.log('opTypes[i]:', opTypes[i]);
-            console.log('capitalForNexOperation:', capitalForNexOperation);
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(

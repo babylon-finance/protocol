@@ -16,7 +16,6 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
-import 'hardhat/console.sol';
 
 /**
  * @title BorrowOperation
@@ -126,7 +125,6 @@ contract BorrowOperation is Operation {
             _capital.preciseMul(price).preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
                 IBorrowIntegration(_integration).getCollateralFactor(_asset)
             );
-            console.log('amountToBorrow:', amountToBorrow);
         uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
         return normalizedAmount;
     }
@@ -154,7 +152,6 @@ contract BorrowOperation is Operation {
         )
     {
         (address assetToken, )= BytesLib.decodeOpDataAddressAndUint(_data);
-        console.log('assetToken:', assetToken);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received

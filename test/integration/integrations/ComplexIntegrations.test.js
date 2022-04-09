@@ -40,7 +40,7 @@ describe('ComplexIntegrationsTest', function () {
   });
 
   describe('getNAV', function () {
-    it.only(`Leveraged stETH`, async function () {
+    it(`Leveraged stETH`, async function () {
       await transferFunds(dai.address);
 
       const pool = new ethers.Contract(
@@ -126,10 +126,10 @@ describe('ComplexIntegrationsTest', function () {
       await finalizeStrategy(strategyContract);
 
       const newBalance = await weth.balanceOf(garden.address);
-      console.log(`losses due to trades: ${formatUnit(eth().sub(newBalance.mul(eth()).div(gardenBalance)))}%`);
+      console.log(`losses due to trades: ${eth().sub(newBalance.mul(eth()).div(gardenBalance))}%`);
 
       expect(await strategyContract.getNAV()).to.eq(0);
-      expect(await weth.balanceOf(garden.address)).to.be.closeTo(gardenBalance, gardenBalance.div(100));
+      expect(await weth.balanceOf(garden.address)).to.be.closeTo(gardenBalance, gardenBalance.div(50));
     });
 
     it(`DAI Garden of a leveraged ETH (AaveLend WETH->AaveBorrow DAI->BuyOp WETH)`, async function () {
