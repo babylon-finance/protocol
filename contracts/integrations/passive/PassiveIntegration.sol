@@ -138,11 +138,12 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         if (targetAddressP != address(0)) {
             // Approve spending of the pre action token
-            if (_preActionNeedsApproval()) {
+            address approvalAsset = _preActionNeedsApproval();
+            if (approvalAsset != address(0)) {
                 investmentInfo.strategy.invokeApprove(
                     _getSpender(_investmentAddress, 1),
-                    targetAddressP,
-                    IERC20(targetAddressP).balanceOf(_strategy)
+                    approvalAsset,
+                    IERC20(approvalAsset).balanceOf(_strategy)
                 );
             }
             // Invoke protocol specific call
@@ -468,8 +469,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return (address(0), 0);
     }
 
-    function _preActionNeedsApproval() internal view virtual returns (bool) {
-        return false;
+    function _preActionNeedsApproval() internal view virtual returns (address) {
+        return address(0);
     }
 
     function _getAssetAfterExitPreAction(address _asset) internal view virtual returns (address) {

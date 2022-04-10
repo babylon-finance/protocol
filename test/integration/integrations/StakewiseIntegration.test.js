@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
+const { impersonateAddress } = require('lib/rpc');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
@@ -55,11 +56,14 @@ describe('StakewiseIntegrationTest', function () {
           const amount = STRATEGY_EXECUTE_MAP[token];
           await executeStrategy(strategyContract, { amount });
           await increaseTime(86400 * 20);
-          // Check NAV
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(15));
+          // Add rewards
+          const whaleSigner = await impersonateAddress('0xa9ffb27d36901f87f1d0f20773f7072e38c5bfba');
+          await rETH2.connect(whaleSigner).transfer(strategyContract.address, eth('0.1'), { gasPrice: 0 });
           const beforeBalance = await reserveContract.balanceOf(garden.address);
           expect(await sETH2.balanceOf(strategyContract.address)).to.be.closeTo(amount, amount.div(15));
-          // expect(await rETH2.balanceOf(strategyContract.address)).to.be.gt(0);
+          expect(await rETH2.balanceOf(strategyContract.address)).to.be.closeTo(eth('0.1'), eth('0.01'));
+          expect(await strategyContract.getNAV()).to.be.gt(amount);
           await finalizeStrategy(strategyContract, 0);
           const newBalance = await sETH2.balanceOf(strategyContract.address);
           expect(newBalance).to.be.lt(eth().div(100));
