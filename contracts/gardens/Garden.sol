@@ -231,10 +231,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bytes32 _hash,
         bytes memory _signature
     ) private view {
-        _require(
-            _signer == _to ? contributors[_signer].nonce == _nonce : contributors[_to].nonce == _nonce,
-            Errors.INVALID_NONCE
-        );
+        _require(contributors[_to].nonce == _nonce, Errors.INVALID_NONCE);
         // to prevent replay attacks
         _require(_signer.isValidSignatureNow(_hash, _signature), Errors.INVALID_SIGNER);
     }
