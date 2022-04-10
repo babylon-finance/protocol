@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
-const { fund, getWhaleSigner} = require('lib/whale');
+const { fund, getWhaleSigner } = require('lib/whale');
 
 const {
   ADDRESS_ZERO,
