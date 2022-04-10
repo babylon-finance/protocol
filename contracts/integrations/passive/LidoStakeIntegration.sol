@@ -182,8 +182,8 @@ contract LidoStakeIntegration is PassiveIntegration {
         return (curveSteth, 0, methodData);
     }
 
-    function _preActionNeedsApproval() internal pure override returns (bool) {
-        return true;
+    function _preActionNeedsApproval() internal pure override returns (address) {
+        return address(wstETH);
     }
 
     function _getAssetAfterExitPreAction(
