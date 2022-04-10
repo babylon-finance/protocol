@@ -83,12 +83,10 @@ contract BorrowOperation is Operation {
         )
     {
         (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
+        require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
 
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
 
-        require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
-
-        _onlyPositiveCollateral(msg.sender, _asset, _integration);
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
         if (borrowToken == address(0)) {
@@ -98,17 +96,6 @@ contract BorrowOperation is Operation {
         return (borrowToken, normalizedAmount, 0); // borrowings are liquid
     }
 
-    function _onlyPositiveCollateral(
-        address _sender,
-        address _asset,
-        address _integration
-    ) internal view {
-        require(
-            IBorrowIntegration(_integration).getCollateralBalance(_sender, _asset) > 0,
-            'There is no collateral locked'
-        );
-    }
-
     function _getBorrowAmount(
         address _asset,
         address _borrowToken,
@@ -116,7 +103,11 @@ contract BorrowOperation is Operation {
         address _integration,
         uint256 _rate
     ) internal view returns (uint256) {
-        uint256 price = _getPrice(_asset, _borrowToken);
+        // Because we are not using AAVE/Compound price oracles there is a price
+        // difference between our price and AAVE/Compound price which may result
+        // in borrow amount being to high. That is why we decrease the price by
+        // 0.1%
+        uint256 price = _getPrice(_asset, _borrowToken).mul(999).div(1000);
         // % of the total collateral value in the borrow token
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
@@ -125,8 +116,7 @@ contract BorrowOperation is Operation {
                 .preciseMul(price)
                 .preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor())
                 .preciseMul(IBorrowIntegration(_integration).getCollateralFactor(_asset));
-        uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
-        return normalizedAmount;
+        return SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
     }
 
     /**

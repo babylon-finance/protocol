@@ -2,6 +2,7 @@ const { ethers } = require('hardhat');
 
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
+const { fund, getWhaleSigner} = require('lib/whale');
 
 const {
   ADDRESS_ZERO,
@@ -84,13 +85,12 @@ async function createGarden({
   return garden;
 }
 
-async function depositFunds(address, garden) {
-  let whaleAddress;
-  let whaleSigner;
-  const [, , , signer1, signer2, signer3] = await ethers.getSigners();
+async function depositFunds(asset, garden, amount = eth(3)) {
+  const [, , , signer1, , signer3] = await ethers.getSigners();
+  const whaleSigner = await getWhaleSigner(asset);
   const ishtarGate = await getContract('IshtarGate');
 
-  switch (address.toLowerCase()) {
+  switch (asset.toLowerCase()) {
     case addresses.tokens.DAI.toLowerCase():
       const DAI = await getERC20(addresses.tokens.DAI);
       await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
@@ -105,9 +105,9 @@ async function depositFunds(address, garden) {
       break;
     case addresses.tokens.WETH.toLowerCase():
       const WETH = await getERC20(addresses.tokens.WETH);
-      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
-      await WETH.connect(signer3).approve(garden.address, eth(3), { gasPrice: 0 });
-      await garden.connect(signer3).deposit(eth(3), 1, signer3.getAddress(), ADDRESS_ZERO);
+      await ishtarGate.connect(signer1).setGardenAccess(whaleSigner.address, garden.address, 1, { gasPrice: 0 });
+      await WETH.connect(whaleSigner).approve(garden.address, amount, { gasPrice: 0 });
+      await garden.connect(whaleSigner).deposit(amount, 1, whaleSigner.address, ADDRESS_ZERO);
       break;
     case addresses.tokens.WBTC.toLowerCase():
       const WBTC = await getERC20(addresses.tokens.WBTC);
