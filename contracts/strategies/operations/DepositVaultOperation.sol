@@ -144,7 +144,7 @@ contract DepositVaultOperation is Operation {
 
         // Patch stakewise
         if (_integration == 0x8E4796f9E2612AFF12f9AE37a7091Dfd4253A5C1) {
-          _integration = 0x699118Bd7cda572A25dDda8A04E409719744683E;
+            _integration = 0x699118Bd7cda572A25dDda8A04E409719744683E;
         }
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
