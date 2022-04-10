@@ -456,7 +456,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         address[] calldata _finalizedStrategies
-    ) public view override returns (uint256[] memory) {
+    ) external view override returns (uint256[] memory) {
         _isGarden(_garden);
         uint256[] memory totalRewards = new uint256[](8);
         if (_garden == address(IHeart(controller.heart()).heartGarden())) {
@@ -541,7 +541,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _garden       Address of the garden
      * @param _address      Address to get prior balance for
      * @param _blockTime  Block timestamp to get token power at
-     * @return Token power for an account at specific block
+     * @return Timestamp initializedAt timestamp (if any)
+     * @return Balance power in garden tokens for an account just prior to a specific blockTime
+     * @return Checkpoint prior checkpoint to a specific blockTime (if any)
      */
     function getPriorBalance(
         address _garden,
@@ -825,7 +827,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _capital,
         bool _addOrSubstract
     ) private {
-        if (_addOrSubstract == false) {
+        if (!_addOrSubstract) {
             // Substracting capital
             // Failsafe condition
             uint256 amount = _capital > strategyPrincipal[_strategy] ? strategyPrincipal[_strategy] : _capital;
@@ -1089,13 +1091,13 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
         rewards[0] = _strategist == _contributor ? _getStrategyStrategistBabl(_strategyDetails, _profitData) : 0;
         // Get strategist profit
-        rewards[1] = (_strategist == _contributor && _profitData[0] == true)
+        rewards[1] = (_strategist == _contributor && _profitData[0])
             ? _getStrategyStrategistProfits(_garden, _strategyDetails[10])
             : 0;
         // Get steward rewards
         rewards[2] = _getStrategyStewardBabl(_strategy, _contributor, _strategyDetails, _profitData);
         // If not profits _getStrategyStewardsProfits should not execute
-        rewards[3] = _profitData[0] == true
+        rewards[3] = _profitData[0]
             ? _getStrategyStewardProfits(_garden, _strategy, _contributor, _strategyDetails, _profitData)
             : 0;
         // Get LP rewards
@@ -1176,7 +1178,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
             !betaAddressMigrated[_contributor][_contributor] &&
-                (cp == 0 || (cp > 0 && gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime)) &&
+                (cp == 0 || gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
         bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
@@ -1429,23 +1431,23 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 bablCap;
         // Get proportional voter (stewards) rewards in case the contributor was also a steward of the strategy
         uint256 babl;
-        if (userVotes > 0 && _profitData[0] == true && _profitData[1] == true) {
+        if (userVotes > 0 && _profitData[0] && _profitData[1]) {
             // Voting in favor of the execution of the strategy with profits and positive distance
             // Negative votes in this case will not receive BABL so we divide only by positive votes
             babl = _strategyDetails[9].multiplyDecimal(stewardsBABLPercentage).preciseMul(
                 uint256(userVotes).preciseDiv(_strategyDetails[4])
             );
-        } else if (userVotes > 0 && _profitData[0] == true && _profitData[1] == false) {
+        } else if (userVotes > 0 && _profitData[0] && !_profitData[1]) {
             // Voting in favor positive profits but below expected return
             babl = _strategyDetails[9].multiplyDecimal(stewardsBABLPercentage).preciseMul(
                 uint256(userVotes).preciseDiv(totalVotes)
             );
             // We discount the error of expected return vs real returns
             babl = babl.sub(babl.preciseMul(_strategyDetails[11].preciseDiv(_strategyDetails[8])));
-        } else if (userVotes > 0 && _profitData[0] == false) {
+        } else if (userVotes > 0 && !_profitData[0]) {
             // Voting in favor of a non profitable strategy get nothing
             babl = 0;
-        } else if (userVotes < 0 && _profitData[1] == false) {
+        } else if (userVotes < 0 && !_profitData[1]) {
             // Voting against a strategy that got results below expected return provides rewards
             // to the voter (helping the protocol to only have good strategies)
             // If no profit at all, the whole steward benefit goes to those voting against
@@ -1461,7 +1463,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 // We limit 2x by a Cap
                 babl = bablCap;
             }
-        } else if (userVotes < 0 && _profitData[1] == true) {
+        } else if (userVotes < 0 && _profitData[1]) {
             babl = 0;
         }
         return babl;
@@ -1499,12 +1501,12 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             stewardBabl = _strategyDetails[10].multiplyDecimal(profitShare).preciseMul(uint256(userVotes)).preciseDiv(
                 accountingVotes
             );
-        } else if ((userVotes < 0) && _profitData[1] == false) {
+        } else if ((userVotes < 0) && !_profitData[1]) {
             stewardBabl = _strategyDetails[10]
                 .multiplyDecimal(profitShare)
                 .preciseMul(uint256(Math.abs(userVotes)))
                 .preciseDiv(totalVotes);
-        } else if ((userVotes < 0) && _profitData[1] == true) {
+        } else if ((userVotes < 0) && _profitData[1]) {
             // Voted against a very profit strategy above expected returns, get no profit at all
             stewardBabl = 0;
         }
@@ -1524,7 +1526,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // We assume that the contributor is the strategist. Should not execute this function otherwise.
         uint256 babl;
         babl = _strategyDetails[9].multiplyDecimal(strategistBABLPercentage); // Standard calculation to be ponderated
-        if (_profitData[0] == true && _profitData[1] == true) {
+        if (_profitData[0] && _profitData[1]) {
             uint256 bablCap = babl.mul(2); // Cap x2
             // Strategist get a bonus based on the profits with a max cap of x2
             babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
@@ -1532,7 +1534,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
                 babl = bablCap;
             }
             return babl;
-        } else if (_profitData[0] == true && _profitData[1] == false) {
+        } else if (_profitData[0] && !_profitData[1]) {
             // under expectations
             // The more the results are close to the expected the less penalization it might have
             return babl.sub(babl.sub(babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[8]))));
