@@ -82,12 +82,11 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address borrowToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
-        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration);
-
+        (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
 
-        _onlyPositiveCollateral(msg.sender, _asset, _integration);
+        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
+
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
         if (borrowToken == address(0)) {
@@ -97,33 +96,27 @@ contract BorrowOperation is Operation {
         return (borrowToken, normalizedAmount, 0); // borrowings are liquid
     }
 
-    function _onlyPositiveCollateral(
-        address _sender,
-        address _asset,
-        address _integration
-    ) internal view {
-        require(
-            IBorrowIntegration(_integration).getCollateralBalance(_sender, _asset) > 0,
-            'There is no collateral locked'
-        );
-    }
-
     function _getBorrowAmount(
         address _asset,
         address _borrowToken,
         uint256 _capital,
-        address _integration
+        address _integration,
+        uint256 _rate
     ) internal view returns (uint256) {
-        uint256 price = _getPrice(_asset, _borrowToken);
+        // Because we are not using AAVE/Compound price oracles there is a price
+        // difference between our price and AAVE/Compound price which may result
+        // in borrow amount being to high. That is why we decrease the price by
+        // 0.1%
+        uint256 price = _getPrice(_asset, _borrowToken).mul(999).div(1000);
         // % of the total collateral value in the borrow token
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
         uint256 amountToBorrow =
-            _capital.preciseMul(price).preciseMul(IBorrowIntegration(_integration).maxCollateralFactor()).preciseMul(
-                IBorrowIntegration(_integration).getCollateralFactor(_asset)
-            );
-        uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
-        return normalizedAmount;
+            _capital
+                .preciseMul(price)
+                .preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor())
+                .preciseMul(IBorrowIntegration(_integration).getCollateralFactor(_asset));
+        return SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
     }
 
     /**
@@ -148,7 +141,7 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        address assetToken = BytesLib.decodeOpDataAddress(_data);
+        (address assetToken, ) = BytesLib.decodeOpDataAddressAndUint(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
         // if debt token is different than the token received
@@ -161,11 +154,15 @@ contract BorrowOperation is Operation {
             debtAmount > debtTokenBalance
                 ? debtTokenBalance.preciseMul(_percentage)
                 : debtAmount.preciseMul(_percentage);
-        IBorrowIntegration(_integration).repay(
-            msg.sender,
-            assetToken,
-            amountToRepay // We repay the percentage of all that we can
-        );
+        // if 0 that mean all the debt is repaid already
+        if (amountToRepay > 0) {
+            IBorrowIntegration(_integration).repay(
+                msg.sender,
+                assetToken,
+                amountToRepay // We repay the percentage of all that we can
+            );
+        }
+
         return (assetToken, IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken), 2);
     }
 

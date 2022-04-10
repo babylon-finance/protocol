@@ -1620,16 +1620,6 @@ describe('Garden', function () {
       expect(totalDepositsAfter.sub(totalDepositsBefore)).to.equal(amountIn);
     });
 
-    describe('have a limit', async function () {
-      it('reverts if the deposit is bigger than the limit', async function () {
-        await expect(
-          garden1.connect(signer3).deposit(eth('21'), 1, signer3.getAddress(), ADDRESS_ZERO, {
-            value: eth('21'),
-          }),
-        ).to.be.reverted;
-      });
-    });
-
     describe('can be done after making a garden public', async function () {
       it('a user can still deposit after a garden is granted public access', async function () {
         await garden1.connect(signer1).makeGardenPublic();

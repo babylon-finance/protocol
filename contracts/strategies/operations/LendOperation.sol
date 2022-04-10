@@ -101,7 +101,7 @@ contract LendOperation is Operation {
      */
     function exitOperation(
         address _borrowToken,
-        uint256 _remaining,
+        uint256 _debt,
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes memory _data,
@@ -119,7 +119,7 @@ contract LendOperation is Operation {
     {
         address assetToken = BytesLib.decodeOpDataAddressAssembly(_data, 12);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        _redeemTokens(_borrowToken, _remaining, _percentage, msg.sender, _integration, assetToken);
+        _redeemTokens(_borrowToken, _debt, _percentage, msg.sender, _integration, assetToken);
         // Change to weth if needed
         if (assetToken == address(0)) {
             assetToken = WETH;
@@ -187,7 +187,7 @@ contract LendOperation is Operation {
 
     function _redeemTokens(
         address _borrowToken,
-        uint256 _remaining,
+        uint256 _debt,
         uint256 _percentage,
         address _sender,
         address _integration,
@@ -195,36 +195,54 @@ contract LendOperation is Operation {
     ) internal {
         // Normalize to underlying asset if any (ctokens for compound)
         uint256 numTokensToRedeem = ILendIntegration(_integration).getInvestmentTokenAmount(_sender, _assetToken);
-        // Apply percentage
-        numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
-        uint256 remainingDebtInCollateralTokens = _getRemainingDebt(_borrowToken, _assetToken, _remaining);
-        remainingDebtInCollateralTokens = SafeDecimalMath.normalizeAmountTokens(
-            _borrowToken,
-            _assetToken,
-            remainingDebtInCollateralTokens
-        );
 
-        if (_remaining > 0) {
-            // Update amount so we can exit if there is debt
-            try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
-                numTokensToRedeem = numTokensToRedeem.sub(
-                    remainingDebtInCollateralTokens.preciseDiv(collateralPctg).mul(105).div(100)
-                ); // add a bit extra 5% just in case
-            } catch {
-                numTokensToRedeem = numTokensToRedeem.sub(remainingDebtInCollateralTokens.mul(140).div(100));
-            }
-        }
         uint256 exchangeRate = ILendIntegration(_integration).getExchangeRatePerToken(_assetToken);
         // replace old aave
         if (_integration == 0x9b468eb07082bE767895eA7A9019619c3Db3BC89) {
             _integration = 0x72e27dA102a67767a7a3858D117159418f93617D;
         }
-        ILendIntegration(_integration).redeemTokens(
-            msg.sender,
-            _assetToken,
-            numTokensToRedeem,
-            exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
-        );
+        // backwards compatability
+        uint256 healthFactor = 0;
+        try ILendIntegration(_integration).getHealthFactor(msg.sender) returns (uint256 factor) {
+            healthFactor = factor;
+        } catch {}
+        if (healthFactor > 0) {
+            numTokensToRedeem = healthFactor != type(uint256).max
+                ? numTokensToRedeem.preciseMul(healthFactor.sub(1e18).preciseDiv(healthFactor))
+                : numTokensToRedeem;
+        } else {
+            // Compound does not support health factor which makes things
+            // complicated. Do not create strategies which have the last
+            // operation CompoundLend and debt. Such strategies would fail to
+            // finalize due to _debt being zero and no health factor.
+            if (_debt > 0) {
+                uint256 debtInCollateral =
+                    SafeDecimalMath.normalizeAmountTokens(
+                        _borrowToken,
+                        _assetToken,
+                        _debt.preciseMul(_getPrice(_borrowToken, _assetToken))
+                    );
+                // Update amount so we can exit if there is debt
+                try ILendIntegration(_integration).getCollateralFactor(_assetToken) returns (uint256 collateralPctg) {
+                    numTokensToRedeem = numTokensToRedeem.sub(
+                        debtInCollateral.preciseDiv(collateralPctg).mul(105).div(100)
+                    ); // add a bit extra 5% just in case
+                } catch {
+                    numTokensToRedeem = numTokensToRedeem.sub(debtInCollateral.mul(140).div(100));
+                }
+            }
+        }
+        // Apply percentage
+        numTokensToRedeem = numTokensToRedeem.preciseMul(_percentage);
+        // sometimes dust is left
+        if (numTokensToRedeem > 1000) {
+            ILendIntegration(_integration).redeemTokens(
+                msg.sender,
+                _assetToken,
+                numTokensToRedeem,
+                exchangeRate.mul(numTokensToRedeem.sub(numTokensToRedeem.preciseMul(SLIPPAGE_ALLOWED.mul(2))))
+            );
+        }
     }
 
     function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {
@@ -239,18 +257,6 @@ contract LendOperation is Operation {
         if (IERC20(_borrowToken).balanceOf(msg.sender) > 1e6) {
             IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
         }
-    }
-
-    function _getRemainingDebt(
-        address _borrowToken,
-        address _assetToken,
-        uint256 _remaining
-    ) private view returns (uint256) {
-        if (_remaining == 0) {
-            return 0;
-        }
-        uint256 price = _getPrice(_borrowToken, _assetToken);
-        return _remaining.preciseMul(price);
     }
 
     function _getRewardToken(address _integration) private view returns (address) {

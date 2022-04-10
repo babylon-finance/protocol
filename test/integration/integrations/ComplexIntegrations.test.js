@@ -1,9 +1,18 @@
 const { expect } = require('chai');
-const { createStrategy, executeStrategy, DAI_STRATEGY_PARAMS } = require('fixtures/StrategyHelper');
+const { strategyParamsToArray, createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
-const { ADDRESS_ZERO } = require('lib/constants');
-const { eth } = require('lib/helpers');
+const {
+  getGardenParams,
+  GARDEN_PARAMS,
+  ONE_DAY_IN_SECONDS,
+  ADDRESS_ZERO,
+  DAI_STRATEGY_PARAMS,
+  WETH_STRATEGY_PARAMS,
+} = require('lib/constants');
+const { formatNumber, formatUnit } = require('lib/helpers');
+const { increaseTime, getERC20, eth, from } = require('utils/test-helpers');
+const addresses = require('lib/addresses');
 
 describe('ComplexIntegrationsTest', function () {
   let aaveBorrowIntegration;
@@ -38,6 +47,73 @@ describe('ComplexIntegrationsTest', function () {
   });
 
   describe('getNAV', function () {
+    it(`Leveraged stETH`, async function () {
+      await transferFunds(dai.address);
+
+      const pool = new ethers.Contract(
+        '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+        [
+          'function getUserAccountData(address user) external view returns ( uint256 totalCollateralETH, uint256 totalDebtETH, uint256 availableBorrowsETH, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)',
+        ],
+        signer1,
+      );
+
+      const amount = eth(10);
+      const stETH = await getERC20(addresses.tokens.stETH);
+
+      const garden = await createGarden({ params: getGardenParams({ maxDepositLimit: amount.mul(10) }) });
+
+      await depositFunds(addresses.tokens.WETH, garden, amount);
+
+      const leverage = 7;
+
+      const strategyContract = await createStrategy(
+        'custom',
+        'vote',
+        [signer1, signer2, signer3],
+        [
+          ...[...Array(leverage).keys()]
+            .map((item) => [aaveLendIntegration.address, aaveBorrowIntegration.address])
+            .flat(),
+          aaveLendIntegration.address,
+        ],
+        garden,
+        strategyParamsToArray({ ...WETH_STRATEGY_PARAMS, maxCapitalRequested: amount }),
+        [
+          ...[...Array(leverage).keys()]
+            .map((item) => [addresses.tokens.stETH, 0, addresses.tokens.WETH, eth()])
+            .flat(),
+          addresses.tokens.stETH,
+          0,
+        ],
+        [...[...Array(leverage).keys()].map((item) => [3, 4]).flat(), 3],
+      );
+
+      const gardenBalance = await weth.balanceOf(garden.address);
+      await executeStrategy(strategyContract, { amount });
+      expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(100));
+      const [
+        totalCollateralETH,
+        totalDebtETH,
+        availableBorrowsETH,
+        currentLiquidationThreshold,
+        ltv,
+        healthFactor,
+      ] = await pool.getUserAccountData(strategyContract.address);
+
+      console.log(`stETH balance: ${formatUnit(totalCollateralETH.toString())} ETH`);
+      console.log(`leverage: x${formatUnit(totalCollateralETH.mul(eth()).div(amount))}`);
+
+      await increaseTime(ONE_DAY_IN_SECONDS * 90);
+      await finalizeStrategy(strategyContract);
+
+      const newBalance = await weth.balanceOf(garden.address);
+      console.log(`losses: ${eth().sub(newBalance.mul(eth()).div(gardenBalance))}%`);
+
+      expect(await strategyContract.getNAV()).to.eq(0);
+      expect(await weth.balanceOf(garden.address)).to.be.closeTo(gardenBalance, gardenBalance.div(30));
+    });
+
     it(`DAI Garden of a leveraged ETH (AaveLend WETH->AaveBorrow DAI->BuyOp WETH)`, async function () {
       await transferFunds(dai.address);
 

@@ -135,11 +135,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
-    // Max Operations
-    uint256 private constant MAX_OPERATIONS = 6;
-
     // Quadratic penalty for looses
     uint256 private constant STAKE_QUADRATIC_PENALTY_FOR_LOSSES = 175e16; // 1.75e18
+
+    uint256 private constant LEND_OP = 3;
+    uint256 private constant BORROW_OP = 4;
 
     /* ============ Structs ============ */
 
@@ -280,8 +280,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         );
         uint256 opEncodedLength = _opEncodedData.length.div(64); // encoded without signature
         _require(
-            opEncodedLength < MAX_OPERATIONS &&
-                opEncodedLength > 0 &&
+            opEncodedLength > 0 &&
                 (_opTypes.length == _opIntegrations.length) &&
                 (_opIntegrations.length == opEncodedLength),
             Errors.TOO_MANY_OPS
@@ -734,18 +733,34 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function getNAV() public view override returns (uint256) {
         uint256 positiveNav;
         uint256 negativeNav;
+        bytes32[] memory hashedOps = new bytes32[](opTypes.length);
         for (uint256 i = 0; i < opTypes.length; i++) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opTypes[i])));
+            uint8 opType = opTypes[i];
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opType)));
             // _getOpDecodedData guarantee backward compatibility with OpData
-            try operation.getNAV(_getOpDecodedData(i), garden, opIntegrations[i]) returns (
-                uint256 opNAV,
-                bool positive
-            ) {
+            bytes memory data = _getOpDecodedData(i);
+            address integration = opIntegrations[i];
+            bytes32 hash = keccak256(abi.encodePacked(opType, data, integration));
+            // for borrow and lend operations we only need to count NAV once
+            if (opType == LEND_OP || opType == BORROW_OP) {
+                // check if NAV has been counted already
+                bool found;
+                for (uint256 j = 0; j < i; j++) {
+                    if (hashedOps[j] == hash) {
+                        found = true;
+                    }
+                }
+                if (found) {
+                    continue;
+                }
+            }
+            try operation.getNAV(data, garden, integration) returns (uint256 opNAV, bool positive) {
                 if (positive) {
                     positiveNav = positiveNav.add(opNAV);
                 } else {
                     negativeNav = negativeNav.add(opNAV);
                 }
+                hashedOps[i] = hash;
             } catch {}
         }
         if (negativeNav > positiveNav) {

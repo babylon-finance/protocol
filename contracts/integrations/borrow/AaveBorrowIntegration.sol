@@ -59,15 +59,13 @@ contract AaveBorrowIntegration is BorrowIntegration {
         address /* asset */
     ) external view override returns (uint256) {
         (
-            uint256 totalCollateral, // uint256 totalDebt, // uint256 borrowingPower, // uint256 liquidationThreshold, // uint256 ltv,
-            ,
-            ,
-            ,
-            ,
-
-        ) =
-            // uint256 healthFactor
-            lendingPool.getUserAccountData(_strategy);
+            uint256 totalCollateral,
+            uint256 totalDebt,
+            uint256 borrowingPower,
+            uint256 liquidationThreshold,
+            uint256 ltv,
+            uint256 healthFactor
+        ) = lendingPool.getUserAccountData(_strategy);
         return totalCollateral;
     }
 
@@ -92,8 +90,8 @@ contract AaveBorrowIntegration is BorrowIntegration {
     }
 
     function _getCollateralFactor(address _assetToken) internal view virtual override returns (uint256) {
-        (, , uint256 collateral, , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
-        return collateral.mul(1e14);
+        (, uint256 ltv, , , , , , , , ) = dataProvider.getReserveConfigurationData(_assetToken);
+        return ltv.mul(1e14);
     }
 
     /* ============ Internal Functions ============ */
