@@ -706,7 +706,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share % within the strategy window out of the total garden and users
-            uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, strategyDetails);
+            uint256 contributorShare =
+                _getSafeUserSharePerStrategy(
+                    garden,
+                    _contributor,
+                    strategyDetails[0],
+                    strategyDetails[1],
+                    strategyDetails[13]
+                );
             rewards = _getRewardsPerRole(
                 garden,
                 _strategy,
@@ -735,7 +742,17 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategy
     ) external view returns (uint256) {
         (, uint256[] memory strategyDetails, ) = IStrategy(_strategy).getStrategyRewardsContext();
-        return _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
+        // strategyDetails[0] = executedAt
+        // strategyDetails[1] = exitedAt
+        // strategyDetails[13] = endingGardenSupply
+        return
+            _getSafeUserSharePerStrategy(
+                _garden,
+                _contributor,
+                strategyDetails[0],
+                strategyDetails[1],
+                strategyDetails[13]
+            );
     }
 
     /**
@@ -1159,31 +1176,30 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
 
     /**
      * Get a safe user share position within a strategy of a garden
-     * @param _garden          Address of the garden
-     * @param _contributor     Address of the garden contributor
-     * @param _strategyDetails Strategy details rewards context
+     * @param _garden               Address of the garden
+     * @param _contributor          Address of the garden contributor
+     * @param _executedAt           Timestamp of strategy starting execution
+     * @param _exitedAt             Timestamp of strategy finalization (0 if still active)
+     * @param _endingGardenSupply   Garden tokens supply at the end of the strategy
      * @return % deserved share per user
      */
     function _getSafeUserSharePerStrategy(
         address _garden,
         address _contributor,
-        uint256[] memory _strategyDetails
+        uint256 _executedAt,
+        uint256 _exitedAt,
+        uint256 _endingGardenSupply
     ) internal view returns (uint256) {
-        // strategyDetails array mapping:
-        // strategyDetails[0]: executedAt
-        // strategyDetails[1]: exitedAt
-        // strategyDetails[12]: startingGardenSupply
-        // strategyDetails[13]: endingGardenSupply
-        uint256 endTime = _strategyDetails[1] > 0 ? _strategyDetails[1] : block.timestamp;
+        uint256 endTime = _exitedAt > 0 ? _exitedAt : block.timestamp;
         uint256 cp = numCheckpoints[_garden][_contributor];
         bool betaUser =
             !betaAddressMigrated[_contributor][_contributor] &&
                 (cp == 0 || gardenCheckpoints[_garden][_contributor][0].fromTime >= endTime) &&
                 contributorPerGarden[_garden][_contributor].initialDepositAt > 0;
-        bool oldStrategy = _strategyDetails[0] < gardenPowerByTimestamp[_garden][0].lastDepositAt;
+        bool oldStrategy = _executedAt < gardenPowerByTimestamp[_garden][0].lastDepositAt;
         if (betaUser && oldStrategy && !betaAddressMigrated[_garden][_garden]) {
             // Backward compatibility for old strategies
-            return _getContributorPower(_garden, _contributor, endTime, _strategyDetails[13]);
+            return _getContributorPower(_garden, _contributor, endTime, _endingGardenSupply);
         }
         // Take the closest position prior to _endTime
         (uint256 timestamp, uint256 balanceEnd, uint256 cpEnd) = getPriorBalance(_garden, _contributor, endTime);
@@ -1192,9 +1208,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             // Avoid gas consuming
             return 0;
         }
-        uint256 startTime = _strategyDetails[0];
+        uint256 startTime = _executedAt;
         uint256 finalSupplyEnd =
-            (_strategyDetails[1] > 0 && _strategyDetails[13] > 0) ? _strategyDetails[13] : ERC20(_garden).totalSupply();
+            (_exitedAt > 0 && _endingGardenSupply > 0) ? _endingGardenSupply : ERC20(_garden).totalSupply();
         // At this point, all strategies must be started or even finished startTime != 0
         if (timestamp > startTime) {
             if (cp > 0) {
@@ -1393,7 +1409,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // Contributor power will check their exact contribution (avoiding flashloans)
         if (strategyDetails[1] > _claimedAt) {
             // Get the contributor share until the the strategy exit timestamp
-            uint256 contributorShare = _getSafeUserSharePerStrategy(_garden, _contributor, strategyDetails);
+            uint256 contributorShare =
+                _getSafeUserSharePerStrategy(
+                    _garden,
+                    _contributor,
+                    strategyDetails[0],
+                    strategyDetails[1],
+                    strategyDetails[13]
+                );
             rewards = _getRewardsPerRole(
                 _garden,
                 _strategy,
