@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -268,7 +267,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     ) external payable override nonReentrant {
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
-
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution, _referrer);
     }
 
@@ -954,8 +952,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Only used to approve Heart Garden to stake
      */
     function _approveBABL(address _garden, uint256 _amount) internal {
-        _require(BABL.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
-        BABL.safeApprove(address(_garden), _amount);
+        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
+        _require(bablToken.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
+        bablToken.safeApprove(address(_garden), _amount);
     }
 
     /**

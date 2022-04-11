@@ -201,7 +201,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     IBabController private controller;
 
     // BABL Token contract
-    TimeLockedToken private babltoken;
+    TimeLockedToken public override babltoken;
 
     // Protocol total allocation points. Must be the sum of all allocation points (strategyPrincipal)
     // in all ongoing strategies during mining program.
@@ -1277,7 +1277,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategyDetails   Strategy details
      * @return strData           Simplified array with executedAt, exitedAt and endingGardenSupply data
      */
-    function _getStrParams(uint256[] memory _strategyDetails) private view returns (uint256[] memory) {
+    function _getStrParams(uint256[] memory _strategyDetails) private pure returns (uint256[] memory) {
         uint256[] memory strData = new uint256[](3);
         // _strategyDetails[0] = executedAt
         // _strategyDetails[1] = exitedAt

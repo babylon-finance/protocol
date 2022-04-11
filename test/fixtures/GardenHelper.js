@@ -105,6 +105,9 @@ async function depositFunds(asset, garden, amount = eth(3)) {
       break;
     case addresses.tokens.WETH.toLowerCase():
       const WETH = await getERC20(addresses.tokens.WETH);
+      await ishtarGate.connect(signer1).setGardenAccess(signer3.address, garden.address, 1, { gasPrice: 0 });
+      await WETH.connect(signer3).approve(garden.address, amount, { gasPrice: 0 });
+      await garden.connect(signer3).deposit(amount, 1, signer3.address, ADDRESS_ZERO);
       await ishtarGate.connect(signer1).setGardenAccess(whaleSigner.address, garden.address, 1, { gasPrice: 0 });
       await WETH.connect(whaleSigner).approve(garden.address, amount, { gasPrice: 0 });
       await garden.connect(whaleSigner).deposit(amount, 1, whaleSigner.address, ADDRESS_ZERO);
