@@ -109,7 +109,7 @@ describe('CurvePoolIntegrationTest', function () {
   // logCurvePools();
 
   async function testCurvePool(name, pool) {
-    const slippage = ['compound', 'susd', 'y', 'aeth'].includes(name) ? eth().div(3) : eth().div(20);
+    const slippage = ['compound', 'susd', 'y', 'aeth', 'usdm'].includes(name) ? eth().div(3) : eth().div(20);
     const reserveAsset = await getERC20(await garden1.reserveAsset());
     const strategyContract = await createStrategy(
       'lp',

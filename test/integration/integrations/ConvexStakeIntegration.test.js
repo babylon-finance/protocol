@@ -17,28 +17,36 @@ describe('ConvexStakeIntegrationTest', function () {
 
   // Used to create addresses info. do not remove
   async function logConvexPools() {
-    const convexpools = await Promise.all(
-      [...Array(70).keys()].map(async (pid) => {
-        return await createConvexPoolInfo(pid);
-      }),
-    );
-    console.log(convexpools.filter((c) => c));
-  }
-
-  async function createConvexPoolInfo(pid) {
-    const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
-    const poolInfo = await convexBooster.poolInfo(pid);
     const allCrvPools = {
       ...addresses.curve.pools.v3,
       ...addresses.curve.pools.crypto,
       ...addresses.curve.pools.factory,
+      ...addresses.curve.pools.cryptofactory,
     };
     const crvLpTokens = await Promise.all(
       Object.values(allCrvPools).map(async (address) => {
         return await curveMetaRegistry.getLpToken(address);
       }),
     );
-    const foundIndex = crvLpTokens.findIndex((e) => e === poolInfo[0]);
+    const convexpools = await Promise.all(
+      [...Array(80).keys()].slice(75).map(async (pid) => {
+        try {
+          return await createConvexPoolInfo(pid, crvLpTokens, allCrvPools);
+        } catch (e) {
+          console.log('could not retrieve pool', pid);
+          return undefined;
+        }
+      }),
+    );
+    console.log(convexpools.filter((c) => c));
+  }
+
+  async function createConvexPoolInfo(pid, crvLpTokens, allCrvPools) {
+    const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
+    // console.log('convex booster', convexBooster);
+    const poolInfo = await convexBooster.poolInfo(pid);
+
+    const foundIndex = crvLpTokens.filter((c) => !!c).findIndex((e) => e === poolInfo[0]);
     if (foundIndex > -1) {
       return {
         name: Object.keys(allCrvPools)[foundIndex],
