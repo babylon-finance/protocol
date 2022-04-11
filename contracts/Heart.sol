@@ -790,7 +790,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             ICEther(cToken).mint{value: _fromAmount}();
         } else {
             IERC20(_lendAsset).safeApprove(cToken, assetToLendBalance);
-            ICToken(cToken).mint(assetToLendBalance);
+            _require(ICToken(cToken).mint(assetToLendBalance) == 0, Errors.MINT_ERROR);
         }
         uint256 assetToLendWethPrice = IPriceOracle(controller.priceOracle()).getPrice(_lendAsset, address(WETH));
         uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
