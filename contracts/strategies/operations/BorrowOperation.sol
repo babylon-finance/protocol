@@ -227,7 +227,7 @@ contract BorrowOperation is Operation {
 
     function _patchIntegration(address _integration) private pure returns (address) {
         if (
-            _integration == 0x48CcAE7adDf90eeaCe202b298D30F4Eb26Bdc03B || //AAVE Borrow
+            _integration == 0x48CcAE7adDf90eeaCe202b298D30F4Eb26Bdc03B //AAVE Borrow
         ) {
             _integration = 0x048d4c45C5963320f7E1893138Aed34084948242; // AAVE Borrow
         }
