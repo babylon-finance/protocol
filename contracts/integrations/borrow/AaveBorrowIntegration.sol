@@ -45,7 +45,8 @@ contract AaveBorrowIntegration is BorrowIntegration {
      *
      */
     function getBorrowBalance(address _strategy, address asset) public view override returns (uint256) {
-        (, uint256 currentStableDebt, uint256 currentVariableDebt, , , , , , ) = dataProvider.getUserReserveData(asset, _strategy);
+        (, uint256 currentStableDebt, uint256 currentVariableDebt, , , , , , ) =
+            dataProvider.getUserReserveData(asset, _strategy);
         // Account for both stable and variable debt
         return currentStableDebt.add(currentVariableDebt);
     }
