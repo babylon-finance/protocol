@@ -24,7 +24,7 @@ contract AaveBorrowIntegration is BorrowIntegration {
     ILendingPool constant lendingPool = ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider =
         IProtocolDataProvider(address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)); // Mainnet
-    uint256 constant interestRateMode = 1; // Stable Interest
+    uint256 constant interestRateMode = 2; // Variable Rate Interest
 
     /* ============ Constructor ============ */
 
