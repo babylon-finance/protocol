@@ -20,6 +20,7 @@ import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
+import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IOperation} from '../interfaces/IOperation.sol';
@@ -109,9 +110,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
         _require(
             isIntegration ||
-                _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E ||
-                _address == 0x72e27dA102a67767a7a3858D117159418f93617D ||
+                _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E || // convex_v2
+                _address == 0x72e27dA102a67767a7a3858D117159418f93617D || // aavelend
                 _address == 0x699118Bd7cda572A25dDda8A04E409719744683E ||
+                _address == 0x048d4c45C5963320f7E1893138Aed34084948242 || // AAVE Borrow
                 masterSwapper.isTradeIntegration(_address),
             Errors.ONLY_INTEGRATION
         );
@@ -450,6 +452,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyStrategistOrGovernor();
         _deleteCandidateStrategy();
         emit StrategyDeleted(address(garden), block.timestamp);
+    }
+
+    /**
+     * Emergency fix to change interest rate
+     */
+    function swapInterestRate(uint256 rateMode) external {
+        _onlyStrategistOrGovernor();
+        if (address(this) == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
+            ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9).swapBorrowRateMode(
+                0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+                rateMode
+            );
+        }
     }
 
     /**
@@ -1081,4 +1096,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV27 is Strategy {}
+contract StrategyV29 is Strategy {}
