@@ -212,10 +212,4 @@ contract AaveBorrowIntegration is BorrowIntegration {
     ) internal pure override returns (address) {
         return address(lendingPool);
     }
-
-    function _getDebtToken(address asset) internal view returns (address) {
-        // Get the relevant debt token address
-        (, address stableDebtTokenAddress, ) = dataProvider.getReserveTokensAddresses(asset);
-        return stableDebtTokenAddress;
-    }
 }
