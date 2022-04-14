@@ -455,19 +455,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Emergency fix to change interest rate
-     */
-    function swapInterestRate(uint256 rateMode) external {
-        _onlyStrategistOrGovernor();
-        if (address(this) == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
-            ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9).swapBorrowRateMode(
-                0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-                rateMode
-            );
-        }
-    }
-
-    /**
      * Allows strategist to update some strategy params
      * @dev
      *   _params[0]  duration
