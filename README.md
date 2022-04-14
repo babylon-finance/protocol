@@ -170,3 +170,22 @@ npx hardhat upgrade-multisig --network mainnet --curve CurveMetaRegistry --oracl
 
 This script will create a proposal at [Defender Admin](https://defender.openzeppelin.com/#/admin). It has to be signed
 and executed to upgrade the protocol.
+
+## scripts
+
+### Fuse
+
+```bash
+npx hardhat fuse --network mainnet
+```
+
+Gets Fuse positions stats of Heart and Heart garden.
+
+### AAVE
+
+```bash
+npx hardhat aave 0x371b23eedb1a5e3822aacff906187111a91fae88 --network mainnet
+```
+
+Gets Aave positions stats of provided accounts. Many accounts can be provided at
+once.
