@@ -171,7 +171,7 @@ contract AaveOracleMock is IPriceOracleGetter, Ownable {
         IChainlinkAggregator source = assetsSources[asset];
 
         if (asset == WETH) {
-            return 0.96 ether;
+            return 0.75 ether;
         } else if (address(source) == address(0)) {
             return _fallbackOracle.getAssetPrice(asset);
         } else {
