@@ -38,6 +38,7 @@ require('./lib/tasks/mining');
 require('./lib/tasks/strategy-expire');
 require('./lib/tasks/diff');
 require('./lib/tasks/fuse');
+require('./lib/tasks/aave');
 
 const OPTIMIZER = !(process.env.OPTIMIZER === 'false');
 const COVERAGE = !!process.env.COVERAGE;
