@@ -85,7 +85,7 @@ contract BorrowOperation is Operation {
         _integration = _patchIntegration(_integration);
         (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
         if (msg.sender == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
-            rate = 70e16;
+            rate = 85e16;
         }
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
 
