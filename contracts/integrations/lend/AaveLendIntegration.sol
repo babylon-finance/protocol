@@ -194,7 +194,7 @@ contract AaveLendIntegration is LendIntegration {
         uint256 _numTokensToSupply
     )
         internal
-        view
+        pure
         override
         returns (
             address,

@@ -85,7 +85,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     function _getHealthFactor(
         address /* _strategy */
-    ) internal view override returns (uint256) {
+    ) internal pure override returns (uint256) {
         // Compound architecture makes it almost impossible to implement this
         // method
         return 0;

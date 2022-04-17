@@ -264,6 +264,10 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         _onlyStrategy();
         strategies = strategies.remove(_strategy);
         strategyMapping[_strategy] = false;
+        address strategist = IStrategy(msg.sender).strategist();
+        uint256 stake = IStrategy(msg.sender).stake();
+        uint256 lockedBalance = contributors[strategist].lockedBalance;
+        contributors[strategist].lockedBalance = lockedBalance > stake ? lockedBalance.sub(stake) : 0;
     }
 
     /* ============ External Getter Functions ============ */
