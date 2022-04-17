@@ -270,6 +270,11 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         contributors[strategist].lockedBalance = lockedBalance > stake ? lockedBalance.sub(stake) : 0;
     }
 
+    function resetStrategistLock(address _strategist) external {
+        _require(msg.sender == controller.EMERGENCY_OWNER(), Errors.ONLY_GOVERNANCE_OR_EMERGENCY);
+        contributors[_strategist].lockedBalance = 0;
+    }
+
     /* ============ External Getter Functions ============ */
 
     /* ============ Internal Functions ============ */
