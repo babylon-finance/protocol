@@ -713,6 +713,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         _onlyGovernanceOrEmergency();
         patchedIntegrations[_old] = _new;
     }
+
     /* ============ External Getter Functions ============ */
 
     function owner() public view override(IBabController, OwnableUpgradeable) returns (address) {
