@@ -100,16 +100,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not a keeper in the protocol
      */
     function _onlyIntegration(address _address) private view {
-        bool isIntegration;
         for (uint256 i = 0; i < opIntegrations.length; i++) {
-            if (opIntegrations[i] == _address) {
-                isIntegration = true;
-                break;
+            if (opIntegrations[i] == _address || controller.patchedIntegrations(opIntegrations[i]) == _address) {
+                return;
             }
         }
-        IMasterSwapper masterSwapper = IMasterSwapper(IBabController(controller).masterSwapper());
+
+        IMasterSwapper masterSwapper = IMasterSwapper(controller.masterSwapper());
         _require(
-            isIntegration ||
                 _address == 0xF1392356e22F5b10A2F0eF2a29b7E78ffaBF6F5E || // convex_v2
                 _address == 0x72e27dA102a67767a7a3858D117159418f93617D || // aavelend
                 _address == 0x699118Bd7cda572A25dDda8A04E409719744683E ||
@@ -162,7 +160,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     // 0 = Liquid
     // 1 = Put as collateral
     // 2 = Borrowed
-    // 3 = staked
+    // 3 = Staked
 
     // Types and data for the operations of this strategy
     uint8[] private opTypes;
@@ -742,7 +740,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(uint256(opType)));
             // _getOpDecodedData guarantee backward compatibility with OpData
             bytes memory data = _getOpDecodedData(i);
-            address integration = opIntegrations[i];
+            address integration = _getIntegration(opIntegrations[i]);
             bytes32 hash = keccak256(abi.encodePacked(opType, data, integration));
             // for borrow and lend operations we only need to count NAV once
             if (opType == LEND_OP || opType == BORROW_OP) {
@@ -877,7 +875,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 assetStatus,
                 _getOpDecodedData(i),
                 garden,
-                opIntegrations[i]
+                _getIntegration(opIntegrations[i])
             );
         }
     }
@@ -903,7 +901,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 i == opTypes.length ? _percentage : HUNDRED_PERCENT,
                 _getOpDecodedData(i - 1),
                 garden,
-                opIntegrations[i - 1]
+                _getIntegration(opIntegrations[i])
             );
         }
         // Consolidate to reserve asset if needed
@@ -1068,6 +1066,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _getOpDecodedData(uint256 _index) private view returns (bytes memory) {
         return
             opDatas.length > 0 ? abi.encode(opDatas[_index], address(0)) : BytesLib.get64Bytes(opEncodedData, _index);
+    }
+
+    function _getIntegration(address _integration) private view returns (address) {
+        address patched = controller.patchedIntegrations(_integration);
+        return patched != address(0) ? patched : _integration;
     }
 
     function _handleWeth(bool _isDeposit, uint256 _wethAmount) private {
