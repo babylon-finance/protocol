@@ -82,7 +82,6 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        _integration = _patchIntegration(_integration);
         (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
         if (msg.sender == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
             rate = 85e16;
@@ -145,7 +144,6 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        _integration = _patchIntegration(_integration);
         (address assetToken, ) = BytesLib.decodeOpDataAddressAndUint(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         uint256 debtAmount = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, assetToken);
@@ -184,7 +182,6 @@ contract BorrowOperation is Operation {
         IGarden _garden,
         address _integration
     ) external view override onlyStrategy returns (uint256, bool) {
-        _integration = _patchIntegration(_integration);
         address borrowToken = BytesLib.decodeOpDataAddress(_data); // 64 bytes (w/o signature prefix bytes4)
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
@@ -226,14 +223,5 @@ contract BorrowOperation is Operation {
                 IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             }
         }
-    }
-
-    function _patchIntegration(address _integration) private pure returns (address) {
-        if (
-            _integration == 0x48CcAE7adDf90eeaCe202b298D30F4Eb26Bdc03B //AAVE Borrow
-        ) {
-            _integration = 0x048d4c45C5963320f7E1893138Aed34084948242; // AAVE Borrow
-        }
-        return _integration;
     }
 }
