@@ -563,6 +563,29 @@ describe('Strategy', function () {
     });
   });
 
+  describe('deleteCandidateStrategy', async function () {
+    it('can delete candidate strategy', async function () {
+      const [, , , , , , , , lockedBalanceBefore] = await garden1.getContributor(signer1.address);
+
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      const [, , , , , , , , lockedBalanceHigh] = await garden1.getContributor(signer1.address);
+      expect(lockedBalanceHigh).to.gt(lockedBalanceBefore);
+
+      await strategyContract.connect(signer1).deleteCandidateStrategy();
+
+      const [, , , , , , , , lockedBalance] = await garden1.getContributor(signer1.address);
+
+      expect(lockedBalance).to.eq(lockedBalanceBefore);
+    });
+  });
+
   describe('sweep', async function () {
     it('can sweep with a custom slippage', async function () {
       const strategyContract = await createStrategy(
