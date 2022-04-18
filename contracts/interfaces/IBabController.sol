@@ -77,6 +77,8 @@ interface IBabController {
 
     function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;
 
+    function patchIntegration(address _old, address _new) external;
+
     function gardenCreationIsOpen() external view returns (bool);
 
     function owner() external view returns (address);
@@ -142,6 +144,8 @@ interface IBabController {
     function gardenAffiliateRates(address _wantedAsset) external view returns (uint256);
 
     function affiliateRewards(address _user) external view returns (uint256);
+
+    function patchedIntegrations(address _integration) external view returns (address);
 
     function isValidReserveAsset(address _reserveAsset) external view returns (bool);
 

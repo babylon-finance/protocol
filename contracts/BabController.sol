@@ -171,6 +171,10 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => uint256) public override gardenAffiliateRates; // 18 decimals
     mapping(address => uint256) public override affiliateRewards;
 
+    // Mapping oldIntegration -> _newIntegration
+    // Allows to fix bugs for integrations per address
+    mapping(address => address) public override patchedIntegrations;
+
     /* ============ Constants ============ */
 
     address public constant override EMERGENCY_OWNER = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
@@ -237,7 +241,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             'Parameters not initialized'
         );
         require(
-            IIshtarGate(mardukGate).canCreate(msg.sender) || gardenCreationIsOpen,
+            gardenCreationIsOpen || IIshtarGate(mardukGate).canCreate(msg.sender),
             'User does not have creation permissions'
         );
         address newGarden =
@@ -698,6 +702,16 @@ contract BabController is OwnableUpgradeable, IBabController {
             emit ActionPausedIndividually(_address[i], _state);
         }
         return _state;
+    }
+
+    /**
+     * Replace old integration with a new one for all the strategies using this integration
+     * @param _old  Old integration address
+     * @param _new  New integration address
+     */
+    function patchIntegration(address _old, address _new) external override {
+        _onlyGovernanceOrEmergency();
+        patchedIntegrations[_old] = _new;
     }
 
     /* ============ External Getter Functions ============ */
