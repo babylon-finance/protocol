@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
-const { impersonateAddress } = require('lib/rpc');
+const { impersonateAddress, setCode } = require('lib/rpc');
 const { createStrategy, executeStrategy, finalizeStrategy, getStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
@@ -11,6 +11,8 @@ const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
 
 describe('BabController', function () {
+  let aaveBorrowIntegration;
+  let aaveLendIntegration;
   let babController;
   let treasury;
   let bablToken;
@@ -38,6 +40,8 @@ describe('BabController', function () {
       signer1,
       signer2,
       signer3,
+      aaveLendIntegration,
+      aaveBorrowIntegration,
       treasury,
       garden1,
       garden2,
@@ -191,6 +195,38 @@ describe('BabController', function () {
 
       expect((await babl.balanceOf(signer2.address)).sub(prevBalance)).to.eq(amountIn.div(2));
       expect((await babl.balanceOf(signer3.address)).sub(prevBalance)).to.eq(amountIn.div(2));
+    });
+  });
+
+  describe('patchIntegrations', function () {
+    it('can patch an integration', async function () {
+      const garden = await createGarden();
+
+      const strategy = await createStrategy(
+        'borrow',
+        'vote',
+        [signer1, signer2, signer3],
+        [aaveLendIntegration.address, aaveBorrowIntegration.address],
+        garden,
+        false,
+        [addresses.tokens.WETH, 0, addresses.tokens.DAI, 0],
+      );
+      const [type, address, data] = await strategy.getOperationByIndex(0);
+
+      const NEW_INTEGRATION = '0x0000000000000000000000000000000000000042';
+
+      await babController.connect(owner).patchIntegration(address, NEW_INTEGRATION);
+
+      expect(await babController.patchedIntegrations(address)).to.eq(NEW_INTEGRATION);
+
+      // should fail because the new integration is a random address
+      await expect(executeStrategy(strategy)).to.be.revertedWith('');
+
+      // restore old integration
+      await babController.connect(owner).patchIntegration(address, ADDRESS_ZERO);
+
+      // should succeed
+      await executeStrategy(strategy);
     });
   });
 });

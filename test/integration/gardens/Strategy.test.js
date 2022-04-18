@@ -304,7 +304,7 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { amount: eth().mul(2) });
 
-      expect(await strategyContract.capitalAllocated()).to.equal(eth('2'));
+      expect(await strategyContract.capitalAllocated()).to.equal(eth(2));
 
       await strategyContract.connect(owner).unwindStrategy(eth(), await strategyContract.getNAV());
 

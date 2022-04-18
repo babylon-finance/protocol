@@ -101,7 +101,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _onlyIntegration(address _address) private view {
         for (uint256 i = 0; i < opIntegrations.length; i++) {
-            if (opIntegrations[i] == _address || controller.patchedIntegrations(opIntegrations[i]) == _address) {
+            if (_getIntegration(opIntegrations[i]) == _address) {
                 return;
             }
         }
@@ -901,7 +901,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 i == opTypes.length ? _percentage : HUNDRED_PERCENT,
                 _getOpDecodedData(i - 1),
                 garden,
-                _getIntegration(opIntegrations[i])
+                _getIntegration(opIntegrations[i - 1])
             );
         }
         // Consolidate to reserve asset if needed
