@@ -336,5 +336,54 @@ describe('deploy', function () {
     it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
     });
+    it.only('getPastEvents for prophets staking', async () => {
+      const provider = new ethers.providers.JsonRpcProvider();
+      const abi = [
+        'AffiliateRewards(address indexed _depositor, address indexed _referrer, uint256 _reserve, uint256 _reward)',
+      ];
+      const controller = '0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F';
+      const owner = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
+      const controllerContract = await ethers.getContractAt('BabController', controller, owner);
+      let eventFilter = controllerContract.filters.AffiliateRewards();
+      let events = await controllerContract.queryFilter(eventFilter, 0, 'latest');
+
+      const users = [];
+      const referred = [];
+      const depositReserve = [];
+      const rewardsUsers = [];
+
+      // console.log('events length', events.length.toString());
+      // console.log('users', events[0]);
+      // hardhat block >= 14616468
+      for (let i = 0; i < events.length; i++) {
+        // console.log('user %s', i, events[i].args._owner);
+        let reStaked = false;
+        const user = events[i].args._owner;
+        const referrer = events[i].args._referrer;
+
+        console.log(
+          '%s block %s depositor %s referrer %s amount %s rewards',
+          i,
+          events[i].blockNumber,
+          events[i].args._depositor,
+          events[i].args._referrer,
+          events[i].args._reserve.toString(),
+          events[i].args._reward.toString(),
+        );
+        users.push(events[i].args._depositor);
+        if (referrer != user) {
+          referred.push(referrer);
+        }
+
+        depositReserve.push(events[i].args._reserve);
+        rewardsUsers.push(events[i].args._reward);
+      }
+      console.log('users depositing during referral...', ...users);
+      console.log('referrer users', ...referred);
+      console.log('');
+      console.log('reserve deposited', depositReserve.toString());
+      console.log('');
+      console.log('rewards received', rewardsUsers.toString());
+    });
   });
 });
