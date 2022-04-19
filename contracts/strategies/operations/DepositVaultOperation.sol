@@ -224,13 +224,6 @@ contract DepositVaultOperation is Operation {
         address _yieldVault,
         address _reserveAsset
     ) private view returns (uint256) {
-        // Patching IB
-        if (_yieldVault == 0x912EC00eaEbf3820a9B0AC7a5E15F381A1C91f22) {
-            return
-                _getPrice(CRV, _reserveAsset).preciseMul(
-                    IBasicRewards(0x3E03fFF82F77073cc590b656D42FceB12E4910A8).earned(msg.sender).mul(2)
-                );
-        }
         try IPassiveIntegration(_integration).getRewards(msg.sender, _yieldVault) returns (
             address rewardToken,
             uint256 amount
