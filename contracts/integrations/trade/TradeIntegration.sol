@@ -5,11 +5,14 @@ pragma solidity 0.7.6;
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -174,14 +177,20 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _minReceiveQuantity,
         address _hopToken
     ) internal returns (uint256) {
-        require(_sendQuantity > 0, '_sendQuantity > 0');
-        require(
-            ERC20(_sendToken).balanceOf(address(_strategy)) >= _sendQuantity,
-            'Strategy needs to have enough tokens'
-        );
-
         uint256 preSendQuantity = ERC20(_sendToken).balanceOf(address(_strategy));
         uint256 preReceiveQuantity = ERC20(_receiveToken).balanceOf(address(_strategy));
+
+        require(_sendQuantity > 0, '_sendQuantity is 0');
+        require(
+            preSendQuantity >= _sendQuantity,
+            string(abi.encodePacked(
+                'Strategy balance < send quantity: ',
+                Strings.toString(preSendQuantity),
+                ' ',
+                Strings.toString(_sendQuantity)
+            ))
+        );
+
 
         _preTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         _tradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
@@ -191,8 +200,21 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
 
         uint256 spentQuantity = preSendQuantity.sub(ERC20(_sendToken).balanceOf(address(_strategy)));
 
-        require(spentQuantity == _sendQuantity, 'Partial trade not allowed');
-        require(receivedQuantity >= _minReceiveQuantity, 'Slippage greater than allowed');
+        // Unfortunatelly some protocols, e.g., Curve, leave dust and do not use
+        // full send token quantity
+        require(spentQuantity >= _sendQuantity.sub(1), 
+            string(abi.encodePacked(
+                'Partial trade diff: ',
+                Strings.toString(_sendQuantity.sub(spentQuantity))
+            ))
+               );
+        require(receivedQuantity >= _minReceiveQuantity,
+                string(abi.encodePacked(
+                    'Slippage :',
+                    Strings.toString(receivedQuantity),
+                    ' ',
+                    Strings.toString(_minReceiveQuantity)
+                                       )));
 
         return receivedQuantity;
     }
