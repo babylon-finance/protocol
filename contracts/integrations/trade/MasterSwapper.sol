@@ -192,7 +192,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
         // Palstake AAVE
         if (_receiveToken == palStkAAVE) {
-            uint256 aaveTradeQuantity = _sendToken != AAVE ? ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1) : _sendQuantity;
+            uint256 aaveTradeQuantity =
+                _sendToken != AAVE
+                    ? ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1)
+                    : _sendQuantity;
             try
                 ITradeIntegration(paladinTradeIntegration).trade(
                     _strategy,
@@ -324,14 +327,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         require(msg.sender == address(this), 'Nope');
 
         uint256 receivedQuantity = ITradeIntegration(_one).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
-        return
-            ITradeIntegration(_two).trade(
-                _strategy,
-                _reserve,
-                receivedQuantity,
-                _receiveToken,
-                _minReceiveQuantity
-            );
+        return ITradeIntegration(_two).trade(_strategy, _reserve, receivedQuantity, _receiveToken, _minReceiveQuantity);
     }
 
     function _swapTradeSynt(
@@ -350,7 +346,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         } catch Error(string memory _err) {
             revert(string(abi.encodePacked('Failed midway in out synth', _err, ';')));
         }
-     }
+    }
 
     function _swapSynthTrade(
         address _strategy,
@@ -360,16 +356,11 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity
     ) internal returns (string memory, uint256) {
         // Trade to DAI through sUSD
-        try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) returns (uint256 receivedQuantity) {
+        try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) returns (
+            uint256 receivedQuantity
+        ) {
             // Change DAI to receive token
-            receivedQuantity =
-                _trade(
-                    _strategy,
-                    DAI,
-                    receivedQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity
-                );
+            receivedQuantity = _trade(_strategy, DAI, receivedQuantity, _receiveToken, _minReceiveQuantity);
             return ('', receivedQuantity);
         } catch Error(string memory _err) {
             return (_formatError('', _err, 'Synt ', _sendToken, DAI, _receiveToken), 0);
