@@ -69,7 +69,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _minReceiveQuantity,
         address _hopToken
     ) public override nonReentrant onlySystemContract returns (uint256) {
-        _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
+        return _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
     }
 
     /**
@@ -89,7 +89,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) external override nonReentrant onlySystemContract returns (uint256) {
-        _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, address(0));
+        return _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, address(0));
     }
 
     /* ============ Internal Functions ============ */
@@ -190,7 +190,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
                 Strings.toString(_sendQuantity)
             ))
         );
-
 
         _preTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         _tradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
