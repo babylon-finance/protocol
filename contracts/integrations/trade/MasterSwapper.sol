@@ -341,8 +341,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken != DAI) {
             receivedQuantity = _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
         }
-        try ITradeIntegration(synthetix).trade(_strategy, DAI, receivedQuantity, _receiveToken, _minReceiveQuantity) {
-            return ('', true);
+        try
+            ITradeIntegration(synthetix).trade(_strategy, DAI, receivedQuantity, _receiveToken, _minReceiveQuantity)
+        returns (uint256 receivedQuantity) {
+            return ('', receivedQuantity);
         } catch Error(string memory _err) {
             revert(string(abi.encodePacked('Failed midway in out synth', _err, ';')));
         }
