@@ -183,12 +183,14 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         require(_sendQuantity > 0, '_sendQuantity is 0');
         require(
             preSendQuantity >= _sendQuantity,
-            string(abi.encodePacked(
-                'Strategy balance < send quantity: ',
-                Strings.toString(preSendQuantity),
-                ' ',
-                Strings.toString(_sendQuantity)
-            ))
+            string(
+                abi.encodePacked(
+                    'Strategy balance < send quantity: ',
+                    Strings.toString(preSendQuantity),
+                    ' ',
+                    Strings.toString(_sendQuantity)
+                )
+            )
         );
 
         _preTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
@@ -201,19 +203,21 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
 
         // Unfortunatelly some protocols, e.g., Curve, leave dust and do not use
         // full send token quantity
-        require(spentQuantity >= _sendQuantity.sub(1), 
-            string(abi.encodePacked(
-                'Partial trade diff: ',
-                Strings.toString(_sendQuantity.sub(spentQuantity))
-            ))
-               );
-        require(receivedQuantity >= _minReceiveQuantity,
-                string(abi.encodePacked(
+        require(
+            spentQuantity >= _sendQuantity.sub(1),
+            string(abi.encodePacked('Partial trade diff: ', Strings.toString(_sendQuantity.sub(spentQuantity))))
+        );
+        require(
+            receivedQuantity >= _minReceiveQuantity,
+            string(
+                abi.encodePacked(
                     'Slippage :',
                     Strings.toString(receivedQuantity),
                     ' ',
                     Strings.toString(_minReceiveQuantity)
-                                       )));
+                )
+            )
+        );
 
         return receivedQuantity;
     }

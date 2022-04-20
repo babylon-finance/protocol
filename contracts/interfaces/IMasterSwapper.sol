@@ -14,5 +14,4 @@ interface IMasterSwapper is ITradeIntegration {
     /* ============ Functions ============ */
 
     function isTradeIntegration(address _integration) external view returns (bool);
-
 }
