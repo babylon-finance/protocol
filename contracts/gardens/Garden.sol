@@ -31,6 +31,7 @@ import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
 import {IERC1271} from '../interfaces/IERC1271.sol';
+import {TimeLockedToken} from '../interfaces/TimeLockedToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
@@ -204,6 +205,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     address private signer;
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
+    // BABL Token
+    TimeLockedToken private bablToken;
 
     /* ============ Modifiers ============ */
 
@@ -952,8 +955,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Only used to approve Heart Garden to stake
      */
     function _approveBABL(address _garden, uint256 _amount) internal {
-        IERC20 bablToken = IERC20(address(rewardsDistributor.babltoken()));
-        _require(bablToken.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
+        if (address(bablToken) == address(0)) {
+            // Backward compatible
+            bablToken = rewardsDistributor.babltoken();
+        }
         bablToken.safeApprove(address(_garden), _amount);
     }
 
