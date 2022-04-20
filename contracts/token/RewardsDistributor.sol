@@ -744,9 +744,31 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the estimated BABL rewards
      */
     function estimateStrategyRewards(address _strategy) external view override returns (uint256) {
+        // strategyDetails array mapping:
+        // strategyDetails[0]: executedAt
+        // strategyDetails[1]: exitedAt
+        // strategyDetails[2]: updatedAt
+        // strategyDetails[3]: enteredAt
+        // strategyDetails[4]: totalPositiveVotes
+        // strategyDetails[5]: totalNegativeVotes
+        // strategyDetails[6]: capitalAllocated
+        // strategyDetails[7]: capitalReturned
+        // strategyDetails[8]: expectedReturn
+        // strategyDetails[9]: strategyRewards
+        // strategyDetails[10]: profitValue
+        // strategyDetails[11]: distanceValue
+        // strategyDetails[12]: startingGardenSupply
+        // strategyDetails[13]: endingGardenSupply
+        // profitData array mapping:
+        // profitData[0]: profit
+        // profitData[1]: distance
         if (IStrategy(_strategy).isStrategyActive()) {
-            (, uint256[] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
-            return strategyDetails[9];
+            (, uint256[] memory strategyDetails, bool[] memory profitData) = _estimateStrategyRewards(_strategy);
+            // Strategy will not show slashed rewards if no profits
+            // If no profits there are 2 cases:
+            // a) It has negative votes, 10% goes to those voting against the strategy
+            // b) It has no negative votes, 20% (10% strategist + 10% stewards) are slashed
+            return profitData[0] ? strategyDetails[9] : (strategyDetails[5] > 0 ? strategyDetails[9].sub(strategyDetails[9].preciseMul(strategistBABLPercentage)) : strategyDetails[9].sub(strategyDetails[9].preciseMul(stewardsBABLPercentage.add(strategistBABLPercentage)));
         } else {
             return 0;
         }
