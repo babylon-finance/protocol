@@ -17,7 +17,7 @@ interface ITradeIntegration is IBaseIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external;
+    ) external returns (uint256);
 
     function trade(
         address _strategy,
@@ -26,5 +26,5 @@ interface ITradeIntegration is IBaseIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         address _hopToken
-    ) external;
+    ) external returns (uint256);
 }

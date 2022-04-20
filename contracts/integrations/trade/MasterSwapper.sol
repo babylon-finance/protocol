@@ -117,8 +117,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) public override nonReentrant {
-        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+    ) public override nonReentrant returns (uint256) {
+        return _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
     }
 
     /**
@@ -132,7 +132,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address,
         uint256,
         address
-    ) public override nonReentrant {
+    ) public override nonReentrant returns (uint256) {
         revert('no impl');
     }
 
@@ -182,13 +182,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) private {
+    ) private returns (uint256) {
         if (_sendToken == _receiveToken) {
-            return;
+            return 0;
         }
 
         string memory error;
-        bool success;
+        uint256 receivedQuantity;
 
         // Palstake AAVE
         if (_receiveToken == palStkAAVE) {
@@ -208,8 +208,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     palStkAAVE,
                     _minReceiveQuantity
                 )
-            {
-                return;
+            returns (uint256 receivedQuantity) {
+                return receivedQuantity;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, palStkAAVE);
             }
@@ -219,11 +219,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (controller.protocolWantedAssets(_sendToken)) {
             uint256 wethBalance = ERC20(WETH).balanceOf(_strategy);
             // If the heart wants it go through the heart and get WETH
-            try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) {
+            try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) returns (
+                uint256 receivedQuantity
+            ) {
                 _sendToken = WETH;
                 _sendQuantity = ERC20(WETH).balanceOf(_strategy).sub(wethBalance);
                 if (_receiveToken == WETH) {
-                    return;
+                    return receivedQuantity;
                 }
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Heart Trade Integration ', _sendToken, WETH);
@@ -232,16 +234,18 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
 
         // Synthetix Direct
         string memory err;
-        (err, success) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
-        if (success) {
-            return;
+        (err, receivedQuantity) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        if (receivedQuantity > 0) {
+            return receivedQuantity;
         } else {
             error = string(abi.encodePacked(error, err));
         }
 
         // Curve Direct
-        try ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity) {
-            return;
+        try
+            ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity)
+        returns (uint256 receivedQuantity) {
+            return receivedQuantity;
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'Curve ', _sendToken, _receiveToken);
         }
@@ -256,14 +260,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _minReceiveQuantity,
                 WETH
             )
-        {
-            return;
+        returns (uint256 receivedQuantity) {
+            return receivedQuantity;
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
         }
 
         // Try Curve through reserve assets
-        (error, success) = _swapCurveUni(
+        (error, receivedQuantity) = _swapCurveUni(
             _strategy,
             _sendToken,
             _sendQuantity,
@@ -271,8 +275,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             _minReceiveQuantity,
             error
         );
-        if (success) {
-            return;
+        if (receivedQuantity > 0) {
+            return receivedQuantity;
         }
 
         // Try Univ3 through DAI, USDC, WBTC, USDT
@@ -287,8 +291,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _minReceiveQuantity,
                     reserves[i]
                 )
-            {
-                return;
+            returns (uint256 receivedQuantity) {
+                return receivedQuantity;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV3 ', _sendToken, reserves[i], _receiveToken);
             }
@@ -305,8 +309,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _minReceiveQuantity,
                     WETH
                 )
-            {
-                return;
+            returns (uint256 receivedQuantity) {
+                return receivedQuantity;
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'UniV2 ', _sendToken, WETH, _receiveToken);
             }
@@ -324,18 +328,52 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external {
+    ) external returns (uint256) {
         require(msg.sender == address(this), 'Nope');
 
         uint256 reserveBalance = _getTokenOrETHBalance(_strategy, _reserve);
         ITradeIntegration(_one).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
-        ITradeIntegration(_two).trade(
-            _strategy,
-            _reserve,
-            _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance),
-            _receiveToken,
-            _minReceiveQuantity
-        );
+        return
+            ITradeIntegration(_two).trade(
+                _strategy,
+                _reserve,
+                _getTokenOrETHBalance(_strategy, _reserve).sub(reserveBalance),
+                _receiveToken,
+                _minReceiveQuantity
+            );
+    }
+
+    function _swapSyntDai(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) internal returns (string memory, uint256) {}
+
+    function _swapDaiSynt(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) internal returns (string memory, uint256) {
+        uint256 reserveBalance = _getTokenOrETHBalance(_strategy, DAI);
+        // Trade to DAI through sUSD
+        try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
+            // Change DAI to receive token
+            uint256 receivedQuantity =
+                _trade(
+                    _strategy,
+                    DAI,
+                    _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance),
+                    _receiveToken,
+                    _minReceiveQuantity
+                );
+            return ('', receivedQuantity);
+        } catch Error(string memory _err) {
+            return (_formatError('', _err, 'Synt ', _sendToken, DAI, _receiveToken), 0);
+        }
     }
 
     function _swapSynt(
@@ -344,7 +382,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) internal returns (string memory, bool) {
+    ) internal returns (string memory, uint256) {
         address _sendTokenSynth = _getSynth(_sendToken);
         address _receiveTokenSynth = _getSynth(_receiveToken);
         if (
@@ -360,46 +398,23 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                     _receiveToken,
                     _minReceiveQuantity
                 )
-            {
-                return ('', true);
+            returns (uint256 receivedQuantity) {
+                return ('', receivedQuantity);
             } catch Error(string memory _err) {
-                return (_formatError('', _err, 'Synt ', _sendToken, _receiveToken), false);
+                return (_formatError('', _err, 'Synt ', _sendToken, _receiveToken), 0);
             }
         }
 
         // Abstract Synths out
         if (_sendTokenSynth != address(0)) {
-            uint256 reserveBalance = _getTokenOrETHBalance(_strategy, DAI);
-            // Trade to DAI through sUSD
-            try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) {
-                // Change DAI to receive token
-                _trade(
-                    _strategy,
-                    DAI,
-                    _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance),
-                    _receiveToken,
-                    _minReceiveQuantity
-                );
-                return ('', true);
-            } catch Error(string memory _err) {
-                return (_formatError('', _err, 'Synt ', _sendToken, DAI, _receiveToken), false);
-            }
+            return _swapDaiSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         }
+
         // Trade to DAI and then do DAI to synh
         if (_receiveTokenSynth != address(0)) {
-            uint256 reserveBalance = _getTokenOrETHBalance(_strategy, DAI);
-
-            if (_sendToken != DAI) {
-                _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
-                reserveBalance = _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance);
-            }
-            try ITradeIntegration(synthetix).trade(_strategy, DAI, reserveBalance, _receiveToken, _minReceiveQuantity) {
-                return ('', true);
-            } catch Error(string memory _err) {
-                revert(string(abi.encodePacked('Failed midway in out synth', _err, ';')));
-            }
+            return _swapSyntDai(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         }
-        return ('', false);
+        return ('', 0);
     }
 
     function _swapCurveUni(
@@ -409,7 +424,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         string memory error
-    ) internal returns (string memory, bool) {
+    ) internal returns (string memory, uint256) {
         address[4] memory reserves = [DAI, WETH, WBTC, AAVE];
         for (uint256 i = 0; i < reserves.length; i++) {
             if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
@@ -425,8 +440,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         _receiveToken,
                         _minReceiveQuantity
                     )
-                {
-                    return ('', true);
+                returns (uint256 receivedQuantity) {
+                    return ('', receivedQuantity);
                 } catch Error(string memory _err) {
                     error = _formatError(error, _err, 'Uni-Curve ', _sendToken, reserves[i], _receiveToken);
                 }
@@ -443,14 +458,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                         _receiveToken,
                         _minReceiveQuantity
                     )
-                {
-                    return ('', true);
+                returns (uint256 receivedQuantity) {
+                    return ('', receivedQuantity);
                 } catch Error(string memory _err) {
                     error = _formatError(error, _err, 'Curve-Uni ', _sendToken, reserves[i], _receiveToken);
                 }
             }
         }
-        return (error, false);
+        return (error, 0);
     }
 
     function _swap(
@@ -462,7 +477,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         uint256 _minReceiveQuantity,
         address _hop,
         string memory error
-    ) internal returns (string memory, bool) {
+    ) internal returns (string memory, uint256) {
         try
             ITradeIntegration(_integration).trade(
                 _strategy,
@@ -472,10 +487,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _minReceiveQuantity,
                 _hop
             )
-        {
-            return ('', true);
+        returns (uint256 receivedQuantity) {
+            return ('', receivedQuantity);
         } catch Error(string memory _err) {
-            return (_formatError(error, _err, _integration.name(), _sendToken, _hop, _receiveToken), false);
+            return (_formatError(error, _err, _integration.name(), _sendToken, _hop, _receiveToken), 0);
         }
     }
 

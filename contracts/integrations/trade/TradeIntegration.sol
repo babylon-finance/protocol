@@ -27,19 +27,6 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
 
     /* ============ Struct ============ */
 
-    struct TradeInfo {
-        IGarden garden; // Garden
-        IStrategy strategy; // Strategy
-        string exchangeName; // Which exchange to use
-        address sendToken; // Address of token being sold
-        address receiveToken; // Address of token being bought
-        uint256 gardenTotalSupply; // Total supply of Garden in Precise Units (10^18)
-        uint256 totalSendQuantity; // Total quantity of sold tokens
-        uint256 totalMinReceiveQuantity; // Total minimum quantity of token to receive back
-        uint256 preTradeSendTokenBalance; // Total initial balance of token being sold
-        uint256 preTradeReceiveTokenBalance; // Total initial balance of token being bought
-    }
-
     /* ============ Events ============ */
 
     /* ============ Constants ============ */
@@ -78,8 +65,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         address _receiveToken,
         uint256 _minReceiveQuantity,
         address _hopToken
-    ) public override nonReentrant onlySystemContract {
-        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
+    ) public override nonReentrant onlySystemContract returns (uint256) {
+        _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
     }
 
     /**
@@ -98,11 +85,76 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
-    ) external override nonReentrant onlySystemContract {
-        _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, address(0));
+    ) external override nonReentrant onlySystemContract returns (uint256) {
+        _trade(IStrategy(_strategy), _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, address(0));
     }
 
     /* ============ Internal Functions ============ */
+
+    function _preTradeAction(
+        IStrategy _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) private {
+        // Pre actions
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getPreActionCallData(_sendToken, _receiveToken, _sendQuantity);
+        if (targetAddress != address(0)) {
+            // Invoke protocol specific call
+            if (_getPreApprovalSpender(targetAddress) != address(0)) {
+                _strategy.invokeApprove(_getPreApprovalSpender(targetAddress), _sendToken, _sendQuantity);
+            }
+            _strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        }
+        (targetAddress, callValue, methodData) = (address(0), 0, '');
+    }
+
+    function _tradeAction(
+        IStrategy _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        address _hopToken
+    ) private {
+        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _hopToken != address(0)
+                ? _getTradeCallData(address(_strategy), _sendToken, _sendQuantity, _receiveToken, _hopToken)
+                : _getTradeCallData(address(_strategy), _sendToken, _sendQuantity, _receiveToken);
+        if (targetAddress != address(0)) {
+            // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
+            _strategy.invokeApprove(_getSpender(targetAddress), _sendToken, _sendQuantity);
+            _strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        }
+    }
+
+    function _postTradeAction(
+        IStrategy _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) private {
+        // Post actions
+        uint256 receiveTokenAmount = _getTokenOrETHBalance(address(_strategy), _getPostActionToken(_receiveToken));
+        (address targetAddress, uint256 callValue, bytes memory methodData) =
+            _getPostActionCallData(_sendToken, _receiveToken, receiveTokenAmount);
+        if (targetAddress != address(0)) {
+            // Invoke protocol specific call
+            if (_getPostApprovalSpender(targetAddress) != address(0)) {
+                _strategy.invokeApprove(
+                    _getPostApprovalSpender(targetAddress),
+                    _getPostActionToken(_receiveToken),
+                    receiveTokenAmount
+                );
+            }
+            // Invoke protocol specific call
+            _strategy.invokeFromIntegration(targetAddress, callValue, methodData);
+        }
+    }
 
     /**
      * Executes a trade on a supported DEX.
@@ -115,149 +167,34 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
      * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
     function _trade(
-        address _strategy,
+        IStrategy _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity,
         address _hopToken
-    ) internal {
-        TradeInfo memory tradeInfo =
-            _createTradeInfo(_strategy, name, _sendToken, _receiveToken, _sendQuantity, _minReceiveQuantity);
-        _validatePreTradeData(tradeInfo, _sendQuantity);
-        // Pre actions
-        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_sendToken, _receiveToken, _sendQuantity);
-        if (targetAddressP != address(0)) {
-            // Invoke protocol specific call
-            if (_getPreApprovalSpender(targetAddressP) != address(0)) {
-                tradeInfo.strategy.invokeApprove(
-                    _getPreApprovalSpender(targetAddressP),
-                    tradeInfo.sendToken,
-                    tradeInfo.totalSendQuantity
-                );
-            }
-            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
-        }
-        // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-        (address targetExchange, uint256 callValue, bytes memory methodData) =
-            _hopToken != address(0)
-                ? _getTradeCallData(
-                    _strategy,
-                    tradeInfo.sendToken,
-                    tradeInfo.totalSendQuantity,
-                    tradeInfo.receiveToken,
-                    _hopToken
-                )
-                : _getTradeCallData(
-                    _strategy,
-                    tradeInfo.sendToken,
-                    tradeInfo.totalSendQuantity,
-                    tradeInfo.receiveToken
-                );
-        if (targetExchange != address(0)) {
-            // Get spender address from exchange adapter and invoke approve for exact amount on sendToken
-            tradeInfo.strategy.invokeApprove(
-                _getSpender(targetExchange),
-                tradeInfo.sendToken,
-                tradeInfo.totalSendQuantity
-            );
-            tradeInfo.strategy.invokeFromIntegration(targetExchange, callValue, methodData);
-        }
-        // Post actions
-        uint256 receiveTokenAmount = _getTokenOrETHBalance(address(_strategy), _getPostActionToken(_receiveToken));
-        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
-            _sendToken,
-            _receiveToken,
-            receiveTokenAmount
-        );
-        if (targetAddressP != address(0)) {
-            // Invoke protocol specific call
-            if (_getPostApprovalSpender(targetAddressP) != address(0)) {
-                tradeInfo.strategy.invokeApprove(
-                    _getPostApprovalSpender(targetAddressP),
-                    _getPostActionToken(_receiveToken),
-                    receiveTokenAmount
-                );
-            }
-            // Invoke protocol specific call
-            tradeInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
-        }
-
-        _validatePostTrade(tradeInfo);
-    }
-
-    /**
-     * Create and return TradeInfo struct
-     *
-     * @param _strategy             Address of the strategy
-     * @param _exchangeName         Human readable name of the exchange in the integrations registry
-     * @param _sendToken            Address of the token to be sent to the exchange
-     * @param _receiveToken         Address of the token that will be received from the exchange
-     * @param _sendQuantity         Units of token in SetToken sent to the exchange
-     * @param _minReceiveQuantity   Min units of token in SetToken to be received from the exchange
-     *
-     * return TradeInfo             Struct containing data for trade
-     */
-    function _createTradeInfo(
-        address _strategy,
-        string memory _exchangeName,
-        address _sendToken,
-        address _receiveToken,
-        uint256 _sendQuantity,
-        uint256 _minReceiveQuantity
-    ) internal view returns (TradeInfo memory) {
-        TradeInfo memory tradeInfo;
-
-        tradeInfo.strategy = IStrategy(_strategy);
-        tradeInfo.garden = tradeInfo.strategy.garden();
-
-        tradeInfo.exchangeName = _exchangeName;
-
-        tradeInfo.sendToken = _sendToken;
-        tradeInfo.receiveToken = _receiveToken;
-
-        tradeInfo.gardenTotalSupply = ERC20(address(tradeInfo.strategy.garden())).totalSupply();
-
-        tradeInfo.totalSendQuantity = _sendQuantity;
-
-        tradeInfo.totalMinReceiveQuantity = _minReceiveQuantity;
-        tradeInfo.preTradeSendTokenBalance = ERC20(_sendToken).balanceOf(_strategy);
-        tradeInfo.preTradeReceiveTokenBalance = ERC20(_receiveToken).balanceOf(_strategy);
-        return tradeInfo;
-    }
-
-    /**
-     * Validate pre trade data. Check exchange is valid, token quantity is valid.
-     *
-     * @param _tradeInfo            Struct containing trade information used in internal functions
-     * @param _sendQuantity         Amount of tokens sent
-     */
-    function _validatePreTradeData(TradeInfo memory _tradeInfo, uint256 _sendQuantity) internal view {
-        require(_tradeInfo.totalSendQuantity > 0, 'Token to sell must be nonzero');
+    ) internal returns (uint256) {
+        require(_sendQuantity > 0, '_sendQuantity > 0');
         require(
-            ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy)) >= _sendQuantity,
-            'Strategy needs to have enough liquid tokens'
+            ERC20(_sendToken).balanceOf(address(_strategy)) >= _sendQuantity,
+            'Strategy needs to have enough tokens'
         );
-    }
 
-    /**
-     * Validate post trade data.
-     *
-     * @param _tradeInfo                Struct containing trade information used in internal functions
-     * @return uint256                  Total quantity of receive token that was exchanged
-     */
-    function _validatePostTrade(TradeInfo memory _tradeInfo) internal view returns (uint256) {
-        uint256 exchangedQuantity =
-            ERC20(_tradeInfo.receiveToken).balanceOf(address(_tradeInfo.strategy)).sub(
-                _tradeInfo.preTradeReceiveTokenBalance
-            );
-        uint256 sendTokenBalance = ERC20(_tradeInfo.sendToken).balanceOf(address(_tradeInfo.strategy));
-        uint256 realUsed = _tradeInfo.preTradeSendTokenBalance.sub(sendTokenBalance);
-        // Uses at least 90% of the send token (disallow partial liquidity trades)
-        require(realUsed >= _tradeInfo.totalSendQuantity.preciseMul(9e17), 'Partial trade not allowed');
-        require(exchangedQuantity >= _tradeInfo.totalMinReceiveQuantity, 'Slippage greater than allowed');
-        return exchangedQuantity;
+        uint256 preSendQuantity = ERC20(_sendToken).balanceOf(address(_strategy));
+        uint256 preReceiveQuantity = ERC20(_receiveToken).balanceOf(address(_strategy));
+
+        _preTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        _tradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
+        _postTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+
+        uint256 receivedQuantity = ERC20(_receiveToken).balanceOf(address(_strategy)).sub(preReceiveQuantity);
+
+        uint256 spentQuantity = preSendQuantity.sub(ERC20(_sendToken).balanceOf(address(_strategy)));
+
+        require(spentQuantity == _sendQuantity, 'Partial trade not allowed');
+        require(receivedQuantity >= _minReceiveQuantity, 'Slippage greater than allowed');
+
+        return receivedQuantity;
     }
 
     /**
