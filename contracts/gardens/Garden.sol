@@ -31,10 +31,11 @@ import {IMardukGate} from '../interfaces/IMardukGate.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
 import {IERC1271} from '../interfaces/IERC1271.sol';
-import {TimeLockedToken} from '../interfaces/TimeLockedToken.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
+
+import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 /**
  * @title BaseGarden
@@ -959,7 +960,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             // Backward compatible
             bablToken = rewardsDistributor.babltoken();
         }
-        bablToken.safeApprove(address(_garden), _amount);
+        IERC20(bablToken).safeApprove(address(_garden), _amount);
     }
 
     /**

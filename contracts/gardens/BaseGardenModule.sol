@@ -32,6 +32,7 @@ import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
+import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 /**
  * @title BaseGardenModule
@@ -143,7 +144,7 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 internal canMintNftAfter;
     // BABL Token
-    TimeLockedToken private immutable bablToken;
+    TimeLockedToken internal bablToken;
 
     /* ============ Modifiers ============ */
 
