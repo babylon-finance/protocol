@@ -186,9 +186,8 @@ contract PriceOracle is Ownable, IPriceOracle {
         _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
         _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
 
-        ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
-            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut, curveMetaRegistry);
+            tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
 
         // Comp assets
         uint256 exchangeRate;

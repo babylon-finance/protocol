@@ -16,7 +16,7 @@ module.exports = async ({
   const signer = await getSigner(deployer);
   const controller = await getController();
 
-  const contract = 'TokenIdentifier';
+  const contract = 'PickleJarRegistry';
   const deployment = await deploy(contract, {
     from: deployer,
     args: [controller.address],
@@ -29,4 +29,4 @@ module.exports = async ({
   }
 };
 
-module.exports.tags = ['TokenIdentifier'];
+module.exports.tags = ['PickleJarRegistry'];

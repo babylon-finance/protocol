@@ -61,6 +61,7 @@ contract TokenIdentifier is ITokenIdentifier {
     IBabController public immutable controller;
     IPickleJarRegistry public jarRegistry;
     IYearnVaultRegistry public vaultRegistry;
+    ICurveMetaRegistry public curveMetaRegistry;
 
     // Mapping of interest bearing aave tokens
     mapping(address => address) public aTokenToAsset;
@@ -80,11 +81,13 @@ contract TokenIdentifier is ITokenIdentifier {
     constructor(
         IBabController _controller,
         IPickleJarRegistry _jarRegistry,
-        IYearnVaultRegistry _vaultRegistry
+        IYearnVaultRegistry _vaultRegistry,
+        ICurveMetaRegistry _curveMetaRegistry
     ) {
         controller = _controller;
         jarRegistry = _jarRegistry;
         vaultRegistry = _vaultRegistry;
+        curveMetaRegistry = _curveMetaRegistry;
 
         // Fetches and copies data for faster & cheaper reads
         _refreshAAveReserves();
