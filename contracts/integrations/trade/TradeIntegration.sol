@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
@@ -16,6 +17,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 /**
  * @title TradeIntegration
@@ -27,6 +29,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using PreciseUnitMath for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -142,7 +145,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _minReceiveQuantity
     ) private {
         // Post actions
-        uint256 receiveTokenAmount = _getTokenOrETHBalance(address(_strategy), _getPostActionToken(_receiveToken));
+        uint256 receiveTokenAmount =
+            IERC20(_getPostActionToken(_receiveToken)).universalBalanceOf(address(_strategy));
         (address targetAddress, uint256 callValue, bytes memory methodData) =
             _getPostActionCallData(_sendToken, _receiveToken, receiveTokenAmount);
         if (targetAddress != address(0)) {

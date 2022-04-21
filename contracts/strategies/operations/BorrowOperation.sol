@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -210,8 +211,7 @@ contract BorrowOperation is Operation {
     ) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance < _debtAmount) {
-            // TODO: Use universalBalanceOf
-            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).universalBalanceOf(msg.sender), _assetToken);
         }
     }
 }

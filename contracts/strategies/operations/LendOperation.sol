@@ -11,6 +11,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -25,6 +26,7 @@ contract LendOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -227,9 +229,9 @@ contract LendOperation is Operation {
 
     function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {
         // Trade borrow token (from liquidations)
-        // TODO: Use universalBalance
-        if (IERC20(_borrowToken).balanceOf(msg.sender) > 1e6) {
-            IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
+        uint256 borrowBalance = IERC20(_borrowToken).universalBalanceOf(msg.sender);
+        if (borrowBalance > 1e6) {
+            IStrategy(msg.sender).trade(_borrowToken, borrowBalance, _assetToken);
         }
     }
 
