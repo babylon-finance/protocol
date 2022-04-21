@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-import { ERC20 } from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import { SignedSafeMath } from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-import { SafeCast } from '@openzeppelin/contracts/utils/SafeCast.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
+import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
-import { IBabController } from '../interfaces/IBabController.sol';
-import { IIntegration } from '../interfaces/IIntegration.sol';
-import { IStrategy } from '../interfaces/IStrategy.sol';
-import { IGarden } from '../interfaces/IGarden.sol';
-import { IBaseIntegration } from '../interfaces/IBaseIntegration.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {IIntegration} from '../interfaces/IIntegration.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IGarden} from '../interfaces/IGarden.sol';
+import {IBaseIntegration} from '../interfaces/IBaseIntegration.sol';
 
-import { LowGasSafeMath } from '../lib/LowGasSafeMath.sol';
-import { PreciseUnitMath } from '../lib/PreciseUnitMath.sol';
+import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 
 /**
  * @title BaseIntegration
@@ -72,7 +72,6 @@ abstract contract BaseIntegration is IBaseIntegration {
     /* ============ External Functions ============ */
 
     /* ============ Internal Functions ============ */
-
 
     function _getDurationStrategy(address _strategy) internal view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);

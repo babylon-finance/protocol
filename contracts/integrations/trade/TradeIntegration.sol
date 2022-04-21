@@ -145,8 +145,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _minReceiveQuantity
     ) private {
         // Post actions
-        uint256 receiveTokenAmount =
-            IERC20(_getPostActionToken(_receiveToken)).universalBalanceOf(address(_strategy));
+        uint256 receiveTokenAmount = IERC20(_getPostActionToken(_receiveToken)).universalBalanceOf(address(_strategy));
         (address targetAddress, uint256 callValue, bytes memory methodData) =
             _getPostActionCallData(_sendToken, _receiveToken, receiveTokenAmount);
         if (targetAddress != address(0)) {

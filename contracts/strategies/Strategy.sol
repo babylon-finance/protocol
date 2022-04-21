@@ -960,13 +960,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 ? maxTradeSlippagePercentage
                 : DEFAULT_TRADE_SLIPPAGE;
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
-        uint256 receivedQuantity = ITradeIntegration(IBabController(controller).masterSwapper()).trade(
-            address(this),
-            _sendToken,
-            _sendQuantity,
-            _receiveToken,
-            minAmountExpected
-        );
+        uint256 receivedQuantity =
+            ITradeIntegration(IBabController(controller).masterSwapper()).trade(
+                address(this),
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                minAmountExpected
+            );
         return receivedQuantity;
     }
 

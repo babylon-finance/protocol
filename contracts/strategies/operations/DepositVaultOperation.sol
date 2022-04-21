@@ -86,15 +86,8 @@ contract DepositVaultOperation is Operation {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
 
-        return _enterVault(
-            _asset,
-            _capital,
-            _integration,
-            yieldVault,
-            vaultAsset
-        );
+        return _enterVault(_asset, _capital, _integration, yieldVault, vaultAsset);
     }
-
 
     /**
      * Exits the deposit vault operation.
@@ -212,12 +205,15 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        uint256 vaultAssetQuantity = _vaultAsset != _asset ?
-            IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset) :
-            IERC20(_vaultAsset).balanceOf(msg.sender);
+        uint256 vaultAssetQuantity =
+            _vaultAsset != _asset
+                ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset)
+                : IERC20(_vaultAsset).balanceOf(msg.sender);
 
         uint256 minAmountExpected =
-            IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(uint256(1e18).sub(SLIPPAGE_ALLOWED));
+            IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
+                uint256(1e18).sub(SLIPPAGE_ALLOWED)
+            );
 
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,

@@ -150,11 +150,7 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
-                    IStrategy(msg.sender).trade(
-                        poolTokens[i],
-                        address(msg.sender).balance,
-                        reserveAsset
-                    );
+                    IStrategy(msg.sender).trade(poolTokens[i], address(msg.sender).balance, reserveAsset);
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {

@@ -123,16 +123,31 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         uint256 _minReceiveQuantity
     ) public override nonReentrant returns (uint256) {
         // deposit ETH to WETH if it is a send token
-        if(_sendToken == address(0)) {
-            IStrategy(_strategy).invokeFromIntegration(WETH, _sendQuantity, abi.encodeWithSelector(IWETH.deposit.selector));
+        if (_sendToken == address(0)) {
+            IStrategy(_strategy).invokeFromIntegration(
+                WETH,
+                _sendQuantity,
+                abi.encodeWithSelector(IWETH.deposit.selector)
+            );
         }
 
         // handle ETH<>WETH as a special case
-        uint256 receivedQuantity = _trade(_strategy, _sendToken == address(0) ? WETH :_sendToken, _sendQuantity, _receiveToken == address(0) ? WETH : _receiveToken, _minReceiveQuantity);
+        uint256 receivedQuantity =
+            _trade(
+                _strategy,
+                _sendToken == address(0) ? WETH : _sendToken,
+                _sendQuantity,
+                _receiveToken == address(0) ? WETH : _receiveToken,
+                _minReceiveQuantity
+            );
 
         // unrwap WETH if ETH is a receive token
-        if(_receiveToken == address(0)) {
-            IStrategy(_strategy).invokeFromIntegration(WETH, 0, abi.encodeWithSelector(IWETH.withdraw.selector, _sendQuantity));
+        if (_receiveToken == address(0)) {
+            IStrategy(_strategy).invokeFromIntegration(
+                WETH,
+                0,
+                abi.encodeWithSelector(IWETH.withdraw.selector, _sendQuantity)
+            );
         }
 
         return receivedQuantity;
@@ -166,7 +181,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         }
     }
 
-    function isTradeIntegration(address _integration) external override view returns (bool) {
+    function isTradeIntegration(address _integration) external view override returns (bool) {
         return
             _integration == address(this) ||
             _integration == address(curve) ||
