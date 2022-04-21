@@ -150,7 +150,11 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
-                    IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+                    IStrategy(msg.sender).trade(
+                        poolTokens[i],
+                        address(msg.sender).balance,
+                        reserveAsset
+                    );
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
@@ -240,23 +244,12 @@ contract AddLiquidityOperation is Operation {
         uint256 price = _getPrice(_asset, _isETH(_poolToken) ? WETH : _poolToken);
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
-        if (_poolToken != _asset && !_isETH(_poolToken)) {
+        if (_poolToken != _asset) {
             return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
         }
-        if (_isETH(_poolToken)) {
-            uint256 receivedQuantity = normalizedAssetAmount;
-            if (_asset != WETH) {
-                receivedQuantity = IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
-            }
-            // Convert WETH to ETH
-            // We consider the slippage in the trade
-            IStrategy(msg.sender).handleWeth(false, receivedQuantity); // normalized WETH/ETH amount with 18 decimals
-            return receivedQuantity;
-        } else {
-            // Reserve asset
-            uint256 reserveBalance = IERC20(_poolToken).balanceOf(msg.sender);
-            return normalizedTokenAmount <= reserveBalance ? normalizedTokenAmount : reserveBalance;
-        }
+        // Reserve asset
+        uint256 reserveBalance = IERC20(_poolToken).balanceOf(msg.sender);
+        return normalizedTokenAmount <= reserveBalance ? normalizedTokenAmount : reserveBalance;
     }
 
     function _maxAmountsIn(
@@ -279,6 +272,7 @@ contract AddLiquidityOperation is Operation {
         return IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
     }
 
+    // TODO: Make a lib helper
     function _isETH(address _address) internal pure returns (bool) {
         return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }

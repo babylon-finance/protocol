@@ -178,13 +178,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         address _tokenOut,
         bool _forNAV
     ) private view returns (uint256 price) {
+        _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
+        _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
+
         // Same asset. Returns base unit
         if (_tokenIn == _tokenOut) {
             return 10**18;
         }
-
-        _tokenIn = _tokenIn == address(0) ? WETH : _tokenIn;
-        _tokenOut = _tokenOut == address(0) ? WETH : _tokenOut;
 
         ICurveMetaRegistry curveMetaRegistry = ICurveMetaRegistry(controller.curveMetaRegistry());
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =

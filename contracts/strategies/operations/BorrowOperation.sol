@@ -93,7 +93,7 @@ contract BorrowOperation is Operation {
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
         if (borrowToken == address(0)) {
-            IStrategy(msg.sender).handleWeth(true, normalizedAmount);
+            IStrategy(msg.sender).trade(borrowToken, normalizedAmount, WETH);
             borrowToken = WETH;
         }
         return (borrowToken, normalizedAmount, 0); // borrowings are liquid
@@ -210,18 +210,8 @@ contract BorrowOperation is Operation {
     ) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance < _debtAmount) {
-            if (_asset == address(0)) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-                _asset = WETH;
-            }
-            if (_assetToken != address(0)) {
-                IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
-            } else {
-                if (_asset != WETH) {
-                    IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), WETH);
-                }
-                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
-            }
+            // TODO: Use universalBalanceOf
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).balanceOf(msg.sender), _assetToken);
         }
     }
 }

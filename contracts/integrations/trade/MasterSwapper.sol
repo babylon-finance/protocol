@@ -20,6 +20,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IMasterSwapper} from '../../interfaces/IMasterSwapper.sol';
+import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
 
 import {String} from '../../lib/String.sol';
 import {DeFiUtils} from '../../lib/DeFiUtils.sol';
@@ -171,14 +172,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) private returns (uint256) {
-        if (_sendToken == _receiveToken) {
-            return 0;
+        require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
+        require(_sendToken != _receiveToken, 'sendToken == receiveToken');
+
+        if(_sendToken == address(0) && _receiveToken == WETH) {
+            IWETH(WETH).deposit{value: _sendQuantity}();
+            return _sendQuantity;
         }
 
-        string memory error;
-        uint256 receivedQuantity;
-
-        // Palstake AAVE
+        if(_sendToken == WETH && _receiveToken == address(0)) {
+            IWETH(WETH).withdraw(_sendQuantity);
+            return _sendQuantity; } string memory error; uint256 receivedQuantity; // Palstake AAVE
         if (_receiveToken == palStkAAVE) {
             uint256 aaveTradeQuantity =
                 _sendToken != AAVE
@@ -281,22 +285,20 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             }
         }
 
-        if (_minReceiveQuantity > 1) {
-            // Try on UniV2 through WETH
-            try
-                ITradeIntegration(univ2).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    WETH
-                )
-            returns (uint256 receivedQuantity) {
-                return receivedQuantity;
-            } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV2 ', _sendToken, WETH, _receiveToken);
-            }
+        // Try on UniV2 through WETH
+        try
+            ITradeIntegration(univ2).trade(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity,
+                WETH
+            )
+        returns (uint256 receivedQuantity) {
+            return receivedQuantity;
+        } catch Error(string memory _err) {
+            error = _formatError(error, _err, 'UniV2 ', _sendToken, WETH, _receiveToken);
         }
 
         revert(string(abi.encodePacked('MasterSwapper:', error)));

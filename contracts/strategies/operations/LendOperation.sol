@@ -75,21 +75,8 @@ contract LendOperation is Operation {
         )
     {
         address assetToken = BytesLib.decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
-        uint256 receivedQuantity;
-        if (assetToken != _asset) {
-            // Trade to WETH if is 0x0 (eth in compound)
-            if (assetToken != address(0) || _asset != WETH) {
-                receivedQuantity = IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken);
-            }
-        }
-        uint256 numTokensToSupply;
-        if (assetToken == address(0)) {
-            // change it to plain ETH for Compound
-            IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
-            numTokensToSupply = address(msg.sender).balance;
-        } else {
-            numTokensToSupply = IERC20(assetToken).balanceOf(msg.sender);
-        }
+        // Trade _asset to _assetToken
+        uint256 numTokensToSupply = IStrategy(msg.sender).trade(_asset, _capital, assetToken);
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
@@ -123,8 +110,8 @@ contract LendOperation is Operation {
         _redeemTokens(_borrowToken, _debt, _percentage, msg.sender, _integration, assetToken);
         // Change to weth if needed
         if (assetToken == address(0)) {
+            IStrategy(msg.sender).trade(assetToken, address(msg.sender).balance, WETH);
             assetToken = WETH;
-            IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
         }
         address rewardsToken = _getRewardToken(_integration);
         // Only sell rewards when the strategy finalizes
@@ -239,14 +226,8 @@ contract LendOperation is Operation {
     }
 
     function _tradeLiquidationsToAsset(address _borrowToken, address _assetToken) private {
-        // Change to weth if needed
-        if (_borrowToken == address(0)) {
-            if (address(msg.sender).balance > 0) {
-                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
-            }
-            _borrowToken = WETH;
-        }
         // Trade borrow token (from liquidations)
+        // TODO: Use universalBalance
         if (IERC20(_borrowToken).balanceOf(msg.sender) > 1e6) {
             IStrategy(msg.sender).trade(_borrowToken, IERC20(_borrowToken).balanceOf(msg.sender), _assetToken);
         }

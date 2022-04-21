@@ -85,37 +85,16 @@ contract DepositVaultOperation is Operation {
     {
         address yieldVault = BytesLib.decodeOpDataAddress(_data);
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
-        if (vaultAsset != _asset) {
-            // get ETH if it's needed
-            if (vaultAsset == address(0)) {
-                if (_asset != WETH) {
-                    IStrategy(msg.sender).trade(_asset, _capital, WETH);
-                }
-                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
-            } else {
-                IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
-            }
-        }
-        uint256 minAmountExpected = _getMinAmountExpected(yieldVault, _capital, _integration);
-        IPassiveIntegration(_integration).enterInvestment(
-            msg.sender,
+
+        return _enterVault(
+            _asset,
+            _capital,
+            _integration,
             yieldVault,
-            minAmountExpected,
-            vaultAsset,
-            vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
+            vaultAsset
         );
-        vaultAsset = _getResultAsset(_integration, yieldVault);
-        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
-    function _getMinAmountExpected(
-        address _yieldVault,
-        uint256 _capital,
-        address _integration
-    ) internal view returns (uint256) {
-        uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
-        return exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-    }
 
     /**
      * Exits the deposit vault operation.
@@ -217,6 +196,38 @@ contract DepositVaultOperation is Operation {
         } catch {
             return _yieldVault;
         }
+    }
+
+    function _enterVault(
+        address _asset,
+        uint256 _capital,
+        address _integration,
+        address _yieldVault,
+        address _vaultAsset
+    )
+        internal
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
+        uint256 vaultAssetQuantity = _vaultAsset != _asset ?
+            IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset) :
+            IERC20(_vaultAsset).balanceOf(msg.sender);
+
+        uint256 minAmountExpected =
+            IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(uint256(1e18).sub(SLIPPAGE_ALLOWED));
+
+        IPassiveIntegration(_integration).enterInvestment(
+            msg.sender,
+            _yieldVault,
+            minAmountExpected,
+            _vaultAsset,
+            vaultAssetQuantity
+        );
+
+        return (_getResultAsset(_integration, _yieldVault), IERC20(_vaultAsset).balanceOf(msg.sender), 0);
     }
 
     function _getRewardsNAV(
