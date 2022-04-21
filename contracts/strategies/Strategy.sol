@@ -81,12 +81,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Throws if the sender is not a Garden's integration or integration not enabled
      */
     function _onlyOperation() private view {
-        bool found;
         for (uint8 i = 0; i < opTypes.length; i++) {
-            found = found || msg.sender == controller.enabledOperations(opTypes[i]);
+            if (msg.sender == controller.enabledOperations(opTypes[i])) {
+                return;
+            }
         }
-        // Internal function used to reduce bytecode size
-        _require(found, Errors.ONLY_OPERATION);
+        _require(false, Errors.ONLY_OPERATION);
     }
 
     /**
@@ -502,8 +502,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
           On the other hand, tokens like hBTC doesn't allow to set value to 0 🤯
           https://etherscan.io/address/0x0316EB71485b0Ab14103307bf65a021042c6d380#code
 
-          We need to perform a low level call here to ignore reverts returned by some tokens. If approve to 0 fails we
-          assume approve to _quantity will succeed or revert the whole function.
+          We need to perform a low level call here to ignore reverts returned by
+          some tokens. If approve to 0 fails we assume approve to _quantity will
+          succeed or revert the whole function.
         */
         _asset.call(abi.encodeWithSelector(IERC20(_asset).approve.selector, _spender, 0));
         IERC20(_asset).safeApprove(_spender, _quantity);
@@ -553,16 +554,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyOperation();
         _onlyUnpaused();
         return _trade(_sendToken, _sendQuantity, _receiveToken, 0);
-    }
-
-    /**
-     * Deposits or withdraws weth from an operation in this context
-     * @param _isDeposit                    Whether is a deposit or withdraw
-     * @param _wethAmount                   Amount to deposit or withdraw
-     */
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) public override {
-        _onlyOperation();
-        _handleWeth(_isDeposit, _wethAmount);
     }
 
     /** PRIVILEGE FUNCTION
@@ -1060,15 +1051,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _getIntegration(address _integration) private view returns (address) {
         address patched = controller.patchedIntegrations(_integration);
         return patched != address(0) ? patched : _integration;
-    }
-
-    function _handleWeth(bool _isDeposit, uint256 _wethAmount) private {
-        _onlyUnpaused();
-        if (_isDeposit) {
-            IWETH(WETH).deposit{value: _wethAmount}();
-            return;
-        }
-        IWETH(WETH).withdraw(_wethAmount);
     }
 
     // solhint-disable-next-line

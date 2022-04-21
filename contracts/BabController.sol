@@ -113,8 +113,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     mapping(address => bool) public override isGarden;
     mapping(address => bool) public validReserveAsset;
 
-    // Mapping to check whitelisted assets
-    mapping(address => bool) private assetWhitelist;
+    mapping(address => bool) private assetWhitelist; // DEPRECATED
 
     // Mapping to check keepers
     mapping(address => bool) public keeperList;
@@ -641,6 +640,7 @@ contract BabController is OwnableUpgradeable, IBabController {
         require(_kind < MAX_OPERATIONS, 'Max operations reached');
         require(enabledOperations[_kind] != _operation, 'Operation already set');
         require(_operation != address(0), 'Operation address must exist.');
+
         enabledOperations[_kind] = _operation;
 
         emit ControllerOperationSet(_kind, _operation);

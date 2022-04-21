@@ -122,7 +122,18 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) public override nonReentrant returns (uint256) {
-        return _trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
+        if(_sendToken == address(0)) {
+            IStrategy(_strategy).invokeFromIntegration(WETH, _sendQuantity, abi.encodeWithSelector(IWETH.deposit.selector));
+        }
+
+        // handle ETH<>WETH as a special case
+        uint256 receivedQuantity = (_sendToken == address(0) && _receiveToken == WETH) || (_sendToken == WETH && _receiveToken == address(0)) ? _sendQuantity :  _trade(_strategy, _sendToken == address(0) ? WETH :_sendToken, _sendQuantity, _receiveToken == address(0) ? WETH : _receiveToken, _minReceiveQuantity);
+
+        if(_receiveToken == address(0)) {
+            IStrategy(_strategy).invokeFromIntegration(WETH, 0, abi.encodeWithSelector(IWETH.withdraw.selector, _sendQuantity));
+        }
+
+        return receivedQuantity;
     }
 
     /**
@@ -155,6 +166,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
     function isTradeIntegration(address _integration) external override view returns (bool) {
         return
+            _integration == address(this) ||
             _integration == address(curve) ||
             _integration == address(univ3) ||
             _integration == address(synthetix) ||
@@ -175,14 +187,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
         require(_sendToken != _receiveToken, 'sendToken == receiveToken');
 
-        if(_sendToken == address(0) && _receiveToken == WETH) {
-            IWETH(WETH).deposit{value: _sendQuantity}();
-            return _sendQuantity;
-        }
+        string memory error;
+        uint256 receivedQuantity;
 
-        if(_sendToken == WETH && _receiveToken == address(0)) {
-            IWETH(WETH).withdraw(_sendQuantity);
-            return _sendQuantity; } string memory error; uint256 receivedQuantity; // Palstake AAVE
+        // Palstake AAVE
         if (_receiveToken == palStkAAVE) {
             uint256 aaveTradeQuantity =
                 _sendToken != AAVE
