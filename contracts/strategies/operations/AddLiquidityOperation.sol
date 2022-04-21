@@ -241,29 +241,22 @@ contract AddLiquidityOperation is Operation {
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset && !_isETH(_poolToken)) {
-            IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
-            normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
-                ? normalizedTokenAmount
-                : IERC20(_poolToken).balanceOf(msg.sender);
-            return normalizedTokenAmount;
+            return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
         }
         if (_isETH(_poolToken)) {
+            uint256 receivedQuantity = normalizedAssetAmount;
             if (_asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
+                receivedQuantity = IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
             }
             // Convert WETH to ETH
             // We consider the slippage in the trade
-            normalizedTokenAmount = normalizedTokenAmount <= IERC20(WETH).balanceOf(msg.sender)
-                ? normalizedTokenAmount
-                : IERC20(WETH).balanceOf(msg.sender);
-            IStrategy(msg.sender).handleWeth(false, normalizedTokenAmount); // normalized WETH/ETH amount with 18 decimals
+            IStrategy(msg.sender).handleWeth(false, receivedQuantity); // normalized WETH/ETH amount with 18 decimals
+            return receivedQuantity;
         } else {
             // Reserve asset
-            normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
-                ? normalizedTokenAmount
-                : IERC20(_poolToken).balanceOf(msg.sender);
+            uint256 reserveBalance = IERC20(_poolToken).balanceOf(msg.sender);
+            return normalizedTokenAmount <= reserveBalance ? normalizedTokenAmount : reserveBalance;
         }
-        return normalizedTokenAmount;
     }
 
     function _maxAmountsIn(

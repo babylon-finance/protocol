@@ -75,15 +75,16 @@ contract LendOperation is Operation {
         )
     {
         address assetToken = BytesLib.decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
+        uint256 receivedQuantity;
         if (assetToken != _asset) {
             // Trade to WETH if is 0x0 (eth in compound)
             if (assetToken != address(0) || _asset != WETH) {
-                IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken);
+                receivedQuantity = IStrategy(msg.sender).trade(_asset, _capital, assetToken == address(0) ? WETH : assetToken);
             }
         }
         uint256 numTokensToSupply;
         if (assetToken == address(0)) {
-            // change it to plain eth for compound
+            // change it to plain ETH for Compound
             IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
             numTokensToSupply = address(msg.sender).balance;
         } else {
