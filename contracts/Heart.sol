@@ -24,7 +24,6 @@ import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {ICEther} from './interfaces/external/compound/ICEther.sol';
 import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
-import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
 import {IVoteToken} from './interfaces/IVoteToken.sol';
 import {IERC1271} from './interfaces/IERC1271.sol';
 
