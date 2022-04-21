@@ -15,8 +15,11 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
+
+import 'hardhat/console.sol';
 
 /**
  * @title DepositVaultOperation/Stake Operation
@@ -28,6 +31,7 @@ contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -115,7 +119,7 @@ contract DepositVaultOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
-            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
+            IERC20(_getResultAsset(_integration, yieldVault)).universalBalanceOf(msg.sender).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
@@ -133,7 +137,7 @@ contract DepositVaultOperation is Operation {
         }
         return (
             vaultAsset,
-            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            vaultAsset != address(0) ? IERC20(vaultAsset).universalBalanceOf(msg.sender) : address(msg.sender).balance,
             0
         );
     }
@@ -156,7 +160,8 @@ contract DepositVaultOperation is Operation {
             return (0, true);
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
-        uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
+        uint256 balance = IERC20(_getResultAsset(_integration,
+                                                 vault)).universalBalanceOf(msg.sender);
         // try to get price of an investment token from Oracle
         // markets sometimes price assets differently than
         // their underlying protocols, e.g., stETH/Lido
@@ -205,16 +210,22 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
+        console.log('before Lido trade');
         uint256 vaultAssetQuantity =
             _vaultAsset != _asset
                 ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset)
-                : IERC20(_vaultAsset).balanceOf(msg.sender);
+                : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
+                console.log('vaultAssetQuantity:', vaultAssetQuantity);
 
         uint256 minAmountExpected =
             IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
                 uint256(1e18).sub(SLIPPAGE_ALLOWED)
             );
+        console.log('minAmountExpected:', minAmountExpected);
 
+        console.log('vaultAssetQuantity:', vaultAssetQuantity);
+        console.log('_yieldVault:', _yieldVault);
+        console.log('_vaultAsset:', _vaultAsset);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             _yieldVault,
@@ -223,7 +234,9 @@ contract DepositVaultOperation is Operation {
             vaultAssetQuantity
         );
 
-        return (_getResultAsset(_integration, _yieldVault), IERC20(_vaultAsset).balanceOf(msg.sender), 0);
+        _vaultAsset = _getResultAsset(_integration, _yieldVault);
+        console.log('after enter');
+        return (_vaultAsset, IERC20(_vaultAsset).universalBalanceOf(msg.sender), 0);
     }
 
     function _getRewardsNAV(

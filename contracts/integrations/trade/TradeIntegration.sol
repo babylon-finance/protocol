@@ -180,8 +180,8 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         uint256 _minReceiveQuantity,
         address _hopToken
     ) internal returns (uint256) {
-        uint256 preSendQuantity = ERC20(_sendToken).balanceOf(address(_strategy));
-        uint256 preReceiveQuantity = ERC20(_receiveToken).balanceOf(address(_strategy));
+        uint256 preSendQuantity = IERC20(_sendToken).universalBalanceOf(address(_strategy));
+        uint256 preReceiveQuantity = IERC20(_receiveToken).universalBalanceOf(address(_strategy));
 
         require(_sendQuantity > 0, '_sendQuantity is 0');
         require(
@@ -200,9 +200,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
         _tradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
         _postTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
 
-        uint256 receivedQuantity = ERC20(_receiveToken).balanceOf(address(_strategy)).sub(preReceiveQuantity);
+        uint256 receivedQuantity = IERC20(_receiveToken).universalBalanceOf(address(_strategy)).sub(preReceiveQuantity);
 
-        uint256 spentQuantity = preSendQuantity.sub(ERC20(_sendToken).balanceOf(address(_strategy)));
+        uint256 spentQuantity =
+            preSendQuantity.sub(IERC20(_sendToken).universalBalanceOf(address(_strategy)));
 
         // Unfortunatelly some protocols, e.g., Curve, leave dust and do not use
         // full send token quantity

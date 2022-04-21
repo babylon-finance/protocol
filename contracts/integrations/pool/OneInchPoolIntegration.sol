@@ -10,6 +10,8 @@ import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {IMooniswapFactory} from '../../interfaces/external/1inch/IMooniswapFactory.sol';
 import {IMooniswap} from '../../interfaces/external/1inch/IMooniswap.sol';
 
@@ -23,6 +25,7 @@ contract OneInchPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ State Variables ============ */
 
@@ -84,10 +87,8 @@ contract OneInchPoolIntegration is PoolIntegration {
         address[] memory tokens = IMooniswap(poolAddress).getTokens();
         uint256 totalSupply = IMooniswap(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
-        uint256 token0Balance =
-            (tokens[0] != address(0) ? IERC20(tokens[0]).balanceOf(poolAddress) : poolAddress.balance);
-        uint256 token1Balance =
-            (tokens[1] != address(0) ? IERC20(tokens[1]).balanceOf(poolAddress) : poolAddress.balance);
+        uint256 token0Balance = IERC20(tokens[0]).universalBalanceOf(poolAddress);
+        uint256 token1Balance = IERC20(tokens[1]).universalBalanceOf(poolAddress);
         result[0] = token0Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = token1Balance.mul(_liquidity).div(totalSupply).preciseMul(1e18 - SLIPPAGE_ALLOWED);
         return result;

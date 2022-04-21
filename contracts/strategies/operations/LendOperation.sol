@@ -15,6 +15,8 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title LendOperation
  * @author Babylon Finance
@@ -77,8 +79,10 @@ contract LendOperation is Operation {
         )
     {
         address assetToken = BytesLib.decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
+        console.log('lend');
         // Trade _asset to _assetToken
         uint256 numTokensToSupply = IStrategy(msg.sender).trade(_asset, _capital, assetToken);
+        console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
@@ -118,7 +122,7 @@ contract LendOperation is Operation {
         address rewardsToken = _getRewardToken(_integration);
         // Only sell rewards when the strategy finalizes
         if (rewardsToken != address(0) && _percentage == HUNDRED_PERCENT) {
-            uint256 rewardsBalance = IERC20(rewardsToken).balanceOf(msg.sender);
+            uint256 rewardsBalance = IERC20(rewardsToken).universalBalanceOf(msg.sender);
             // Add rewards
             if (rewardsBalance > 1e16) {
                 IStrategy(msg.sender).trade(rewardsToken, rewardsBalance, assetToken, 70e15);
@@ -126,7 +130,7 @@ contract LendOperation is Operation {
         }
         // Liquidations
         _tradeLiquidationsToAsset(_borrowToken, assetToken);
-        return (assetToken, IERC20(assetToken).balanceOf(msg.sender), 0);
+        return (assetToken, IERC20(assetToken).universalBalanceOf(msg.sender), 0);
     }
 
     /**

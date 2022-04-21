@@ -6,12 +6,14 @@ pragma abicoder v2;
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
 import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
 import {ISnxSynth} from '../../interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxEtherWrapper} from '../../interfaces/external/synthetix/ISnxEtherWrapper.sol';
 import {ISnxDepot} from '../../interfaces/external/synthetix/ISnxDepot.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {TradeIntegration} from './TradeIntegration.sol';
 
@@ -23,6 +25,7 @@ import {TradeIntegration} from './TradeIntegration.sol';
  */
 contract SynthetixTradeIntegration is TradeIntegration {
     using SafeMath for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Modifiers ============ */
 
@@ -230,7 +233,8 @@ contract SynthetixTradeIntegration is TradeIntegration {
         } catch {
             receiveTokenImpl = address(0);
         }
-        return (sendTokenImpl, receiveTokenImpl, ERC20(_sendToken).balanceOf(_strategy));
+        return (sendTokenImpl, receiveTokenImpl,
+                IERC20(_sendToken).universalBalanceOf(_strategy));
     }
 
     function stringToBytes32(string memory source) private pure returns (bytes32 result) {

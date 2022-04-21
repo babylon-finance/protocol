@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+
 import {IBFactory} from '../../interfaces/external/balancer/IBFactory.sol';
 import {IBPool} from '../../interfaces/external/balancer/IBPool.sol';
 
@@ -20,6 +23,7 @@ contract BalancerIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ State Variables ============ */
 
@@ -80,7 +84,7 @@ contract BalancerIntegration is PoolIntegration {
         uint256[] memory result = new uint256[](poolTokens.length);
         for (uint256 i = 0; i < poolTokens.length; i++) {
             result[i] = IERC20(poolTokens[i])
-                .balanceOf(poolAddress)
+                .universalBalanceOf(poolAddress)
                 .mul(_liquidity)
                 .div(lpTokensTotalSupply)
                 .preciseMul(1e18 - SLIPPAGE_ALLOWED);

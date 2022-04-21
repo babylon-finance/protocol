@@ -16,6 +16,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {ControllerLib} from '../../lib/ControllerLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {LendIntegration} from './LendIntegration.sol';
 
@@ -78,7 +79,7 @@ contract CompoundLendIntegration is LendIntegration {
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
         ICToken ctoken = ICToken(_getInvestmentToken(_assetToken));
-        return ctoken.balanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**18);
+        return IERC20(ctoken).universalBalanceOf(_address).mul(ctoken.exchangeRateStored()).div(10**18);
     }
 
     /* ============ Internal Functions ============ */

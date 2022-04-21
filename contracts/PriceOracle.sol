@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -38,6 +39,7 @@ import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
+import {UniversalERC20} from './lib/UniversalERC20.sol';
 
 /**
  * @title PriceOracle
@@ -51,6 +53,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
     using ControllerLib for IBabController;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constants ============ */
 
@@ -63,7 +66,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     INFTPositionManager private constant nftPositionManager =
         INFTPositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
-    address internal constant ETH_ADD_CURVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address internal constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address internal constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
@@ -348,13 +351,13 @@ contract PriceOracle is Ownable, IPriceOracle {
     {
         address[8] memory coins = _curveMetaRegistry.getCoinAddresses(_pool, true);
         if (coins[0] != address(0)) {
-            return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
+            return coins[0] == ETH_ADDRESS ? WETH : coins[0];
         }
         if (coins[1] != address(0)) {
-            return coins[1] == ETH_ADD_CURVE ? WETH : coins[1];
+            return coins[1] == ETH_ADDRESS ? WETH : coins[1];
         }
         if (coins[2] != address(0)) {
-            return coins[2] == ETH_ADD_CURVE ? WETH : coins[2];
+            return coins[2] == ETH_ADDRESS ? WETH : coins[2];
         }
         return address(0);
     }
@@ -503,10 +506,10 @@ contract PriceOracle is Ownable, IPriceOracle {
         address token1 = pool.token1();
 
         if (hopTokens[token0]) {
-            liquidityInReserve = ERC20(token0).balanceOf(address(pool));
+            liquidityInReserve = IERC20(token0).universalBalanceOf(address(pool));
             denominator = token0;
         } else {
-            liquidityInReserve = ERC20(token1).balanceOf(address(pool));
+            liquidityInReserve = IERC20(token1).universalBalanceOf(address(pool));
             denominator = token1;
         }
         // Normalize to reserve asset
@@ -573,14 +576,14 @@ contract PriceOracle is Ownable, IPriceOracle {
     ) private view returns (uint256) {
         (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
-        uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
+        uint256 decimalsIn = 10**(_tokenIn == ETH_ADDRESS ? 18 : ERC20(_tokenIn).decimals());
         if (i == j) return 0;
         if (underlying) {
             price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
         } else {
             price = _getCurveDY(_curvePool, i, j, decimalsIn);
         }
-        price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
+        price = price.mul(10**(18 - (_tokenOut == ETH_ADDRESS ? 18 : ERC20(_tokenOut).decimals())));
         uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
         if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
             return price;
@@ -614,12 +617,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         address[] memory poolTokens = new address[](2);
         poolTokens[0] = IUniswapV2Pair(_pool).token0();
         poolTokens[1] = IUniswapV2Pair(_pool).token1();
-        ERC20 lpToken = ERC20(_pool);
+        IERC20 lpToken = IERC20(_pool);
         uint256 result = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
             uint256 price = getPrice(_denominator, asset);
-            uint256 balance = !_isETH(poolTokens[i]) ? ERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
+            uint256 balance = !_isETH(poolTokens[i]) ?
+                IERC20(poolTokens[i]).universalBalanceOf(_pool) : _pool.balance;
             // Special case for weth in some pools
             if (poolTokens[i] == WETH && balance == 0) {
                 balance = _pool.balance;
@@ -712,12 +716,12 @@ contract PriceOracle is Ownable, IPriceOracle {
     ) private view returns (uint256) {
         address curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
         if (_tokenIn == WETH && curvePool == address(0)) {
-            _tokenIn = ETH_ADD_CURVE;
-            curvePool = _curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _tokenOut, 0);
+            _tokenIn = ETH_ADDRESS;
+            curvePool = _curveMetaRegistry.findPoolForCoins(ETH_ADDRESS, _tokenOut, 0);
         }
         if (_tokenOut == WETH && curvePool == address(0)) {
-            _tokenOut = ETH_ADD_CURVE;
-            curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
+            _tokenOut = ETH_ADDRESS;
+            curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADDRESS, 0);
         }
         if (curvePool != address(0)) {
             uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut, _curveMetaRegistry);

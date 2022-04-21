@@ -10,6 +10,8 @@ import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {IUniswapV2Router} from '../../interfaces/external/uniswap/IUniswapV2Router.sol';
 
 /**
@@ -22,6 +24,7 @@ contract UniswapPoolIntegration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ State Variables ============ */
 
@@ -88,12 +91,12 @@ contract UniswapPoolIntegration is PoolIntegration {
         uint256 totalSupply = IUniswapV2Pair(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
         result[0] = IERC20(IUniswapV2Pair(poolAddress).token0())
-            .balanceOf(poolAddress)
+            .universalBalanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = IERC20(IUniswapV2Pair(poolAddress).token1())
-            .balanceOf(poolAddress)
+            .universalBalanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);

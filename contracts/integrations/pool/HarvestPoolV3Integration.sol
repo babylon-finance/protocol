@@ -8,6 +8,8 @@ import {PoolIntegration} from './PoolIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {IUniVaultStorage} from '../../interfaces/external/uniswap-v3/IUniVaultStorage.sol';
 import {IUniswapViewer} from '../../interfaces/external/uniswap-v3/IUniswapViewer.sol';
 import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
@@ -22,6 +24,7 @@ contract HarvestPoolV3Integration is PoolIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ State Variables ============ */
 
@@ -91,12 +94,12 @@ contract HarvestPoolV3Integration is PoolIntegration {
         uint256 totalSupply = IHarvestUniv3Pool(poolAddress).totalSupply();
         uint256[] memory result = new uint256[](2);
         result[0] = IERC20(IHarvestUniv3Pool(poolAddress).token0())
-            .balanceOf(poolAddress)
+            .universalBalanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);
         result[1] = IERC20(IHarvestUniv3Pool(poolAddress).token1())
-            .balanceOf(poolAddress)
+            .universalBalanceOf(poolAddress)
             .mul(_liquidity)
             .div(totalSupply)
             .preciseMul(1e18 - SLIPPAGE_ALLOWED);

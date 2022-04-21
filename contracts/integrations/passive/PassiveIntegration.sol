@@ -13,6 +13,9 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
+import 'hardhat/console.sol';
 
 /**
  * @title PassiveIntegration
@@ -23,6 +26,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassiveIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -100,7 +104,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getEnterInvestmentCalldata(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
+        console.log('callValue:', callValue);
+        console.log('targetInvestment:', targetInvestment);
+        console.log('methodData:', string(methodData));
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+        console.log('after invoke');
         _validatePostEnterInvestmentData(investmentInfo);
 
         emit InvestmentEntered(
@@ -143,14 +151,14 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
                 investmentInfo.strategy.invokeApprove(
                     _getSpender(_investmentAddress, 1),
                     approvalAsset,
-                    IERC20(approvalAsset).balanceOf(_strategy)
+                    IERC20(approvalAsset).universalBalanceOf(_strategy)
                 );
             }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
             _investmentAddress = _getAssetAfterExitPreAction(_investmentAddress);
             // BUG: Does not respect _investmentTokenIn/percentage
-            _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
+            _investmentTokenIn = IERC20(_investmentAddress).universalBalanceOf(_strategy);
         }
 
         // Approve spending of the investment token
@@ -267,7 +275,8 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.investment = _getResultAsset(_investment);
         investmentInfo.totalSupply = IERC20(_investment).totalSupply();
-        investmentInfo.investmentTokensInGarden = IERC20(investmentInfo.investment).balanceOf(_strategy);
+        investmentInfo.investmentTokensInGarden =
+            IERC20(investmentInfo.investment).universalBalanceOf(_strategy);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -309,7 +318,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            (IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >
+            (IERC20(_investmentInfo.investment).universalBalanceOf(address(_investmentInfo.strategy)) >
                 _investmentInfo.investmentTokensInGarden),
             'The strategy did not receive the investment tokens'
         );
@@ -322,7 +331,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
+            IERC20(_investmentInfo.investment).universalBalanceOf(address(_investmentInfo.strategy)) <=
                 (_investmentInfo.investmentTokensInGarden - _investmentInfo.investmentTokensInTransaction) + 100,
             'The strategy did not return the investment tokens'
         );

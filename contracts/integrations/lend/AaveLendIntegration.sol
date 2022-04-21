@@ -17,6 +17,8 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {LendIntegration} from './LendIntegration.sol';
 
 /**
@@ -28,6 +30,7 @@ import {LendIntegration} from './LendIntegration.sol';
 contract AaveLendIntegration is LendIntegration {
     using SafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constant ============ */
 
@@ -51,7 +54,7 @@ contract AaveLendIntegration is LendIntegration {
     constructor(IBabController _controller) LendIntegration('aavelend', _controller) {}
 
     function getInvestmentTokenAmount(address _address, address _assetToken) public view override returns (uint256) {
-        return IERC20(_getInvestmentToken(_assetToken)).balanceOf(_address);
+        return IERC20(_getInvestmentToken(_assetToken)).universalBalanceOf(_address);
     }
 
     /* ============ Internal Functions ============ */
@@ -115,7 +118,8 @@ contract AaveLendIntegration is LendIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('claimRewards(address,uint256)', _strategy, IERC20(stkAAVE).balanceOf(_strategy));
+            abi.encodeWithSignature('claimRewards(address,uint256)', _strategy,
+                                    IERC20(stkAAVE).universalBalanceOf(_strategy));
 
         return (stkAAVE, 0, methodData);
     }

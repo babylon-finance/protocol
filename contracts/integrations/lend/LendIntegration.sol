@@ -13,6 +13,7 @@ import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 /**
  * @title LendIntegration
@@ -23,6 +24,7 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
     struct InvestmentInfo {
@@ -261,7 +263,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         uint256 balance =
             _investmentInfo.assetToken == address(0)
                 ? address(_investmentInfo.strategy).balance
-                : IERC20(_investmentInfo.assetToken).balanceOf(address(_investmentInfo.strategy));
+                : IERC20(_investmentInfo.assetToken).universalBalanceOf(address(_investmentInfo.strategy));
         require(balance > _investmentInfo.underlyingTokensInGarden, 'The garden did not return the investment tokens');
     }
 
@@ -306,7 +308,7 @@ abstract contract LendIntegration is BaseIntegration, ReentrancyGuard, ILendInte
         investmentInfo.investmentTokensInGarden = getInvestmentTokenAmount(_strategy, _assetToken);
         investmentInfo.underlyingTokensInGarden = _assetToken == address(0)
             ? address(_strategy).balance
-            : IERC20(_assetToken).balanceOf(address(_strategy));
+            : IERC20(_assetToken).universalBalanceOf(address(_strategy));
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 

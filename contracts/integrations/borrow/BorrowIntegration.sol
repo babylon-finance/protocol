@@ -11,6 +11,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 /**
  * @title BorrowIntegration
@@ -20,6 +21,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
  */
 abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrowIntegration {
     using LowGasSafeMath for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -234,7 +236,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         uint256 balance =
             address(0) == _debtInfo.asset
                 ? address(_debtInfo.strategy).balance
-                : IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy));
+                : IERC20(_debtInfo.asset).universalBalanceOf(address(_debtInfo.strategy));
         require(balance >= _debtInfo.amount, 'Did not receive the borrowed asset');
         require(getRemainingLiquidity(address(_debtInfo.strategy)) > 0, 'Not enough liquidity');
     }
@@ -248,7 +250,7 @@ abstract contract BorrowIntegration is BaseIntegration, ReentrancyGuard, IBorrow
         uint256 balance =
             address(0) == _debtInfo.asset
                 ? address(_debtInfo.strategy).balance
-                : IERC20(_debtInfo.asset).balanceOf(address(_debtInfo.strategy));
+                : IERC20(_debtInfo.asset).universalBalanceOf(address(_debtInfo.strategy));
         require(balance >= _debtInfo.amount, 'We do not have enough to repay debt');
     }
 

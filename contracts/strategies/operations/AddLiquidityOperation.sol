@@ -10,6 +10,8 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+
 import {Operation} from './Operation.sol';
 
 /**
@@ -23,6 +25,7 @@ contract AddLiquidityOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -75,39 +78,33 @@ contract AddLiquidityOperation is Operation {
         )
     {
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
-        uint256[] memory _poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
+        uint256[] memory poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
         // if the weights need to be adjusted by price, do so
         try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
             if (priceWeights) {
                 uint256 poolTotal = 0;
                 for (uint256 i = 0; i < poolTokens.length; i++) {
-                    _poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
+                    poolWeights[i] = SafeDecimalMath.normalizeAmountTokens(
                         poolTokens[i],
                         poolTokens[poolTokens.length - 1],
-                        _poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
+                        poolWeights[i].preciseMul(_getPrice(poolTokens[i], poolTokens[poolTokens.length - 1]))
                     );
-                    poolTotal = poolTotal.add(_poolWeights[i]);
+                    poolTotal = poolTotal.add(poolWeights[i]);
                 }
                 for (uint256 i = 0; i < poolTokens.length; i++) {
-                    _poolWeights[i] = _poolWeights[i].mul(1e18).div(poolTotal);
+                    poolWeights[i] = poolWeights[i].mul(1e18).div(poolTotal);
                 }
             }
         } catch {}
-        // Get the tokens needed to enter the pool
-        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, poolTokens);
-        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, poolTokens[0], maxAmountsIn[0]);
-        IPoolIntegration(_integration).joinPool(
-            msg.sender,
+        return _joinPool(
+            _asset,
+            _capital,
             _data,
-            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
-            poolTokens,
-            maxAmountsIn
+            _garden,
+            _integration,
+            poolWeights,
+            poolTokens
         );
-        return (
-            _getLPTokenFromBytes(_integration, _data),
-            IERC20(_getLPTokenFromBytes(_integration, _data)).balanceOf(msg.sender),
-            0
-        ); // liquid
     }
 
     /**
@@ -136,7 +133,7 @@ contract AddLiquidityOperation is Operation {
         address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =
-            IERC20(IPoolIntegration(_integration).getLPToken(pool)).balanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+            IERC20(IPoolIntegration(_integration).getLPToken(pool)).universalBalanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
@@ -154,10 +151,10 @@ contract AddLiquidityOperation is Operation {
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
-                    if (IERC20(poolTokens[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                    if (IERC20(poolTokens[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
-                            IERC20(poolTokens[i]).balanceOf(msg.sender),
+                            IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
                             reserveAsset
                         );
                     }
@@ -169,7 +166,7 @@ contract AddLiquidityOperation is Operation {
             _sellRewardTokens(_integration, _data, reserveAsset);
         }
         // BUG: Should respect percentage and not return all the capital
-        return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
+        return (reserveAsset, IERC20(reserveAsset).universalBalanceOf(msg.sender), 0);
     }
 
     /**
@@ -205,19 +202,20 @@ contract AddLiquidityOperation is Operation {
             SafeDecimalMath.normalizeAmountTokens(
                 address(lpToken),
                 _garden.reserveAsset(),
-                lpToken.balanceOf(msg.sender).preciseMul(price)
+                lpToken.universalBalanceOf(msg.sender).preciseMul(price)
             )
         );
         // get rewards if hanging around
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                if (rewards[i] != address(0) &&
+                    IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     price = _getPrice(_garden.reserveAsset(), rewards[i]);
                     if (price > 0) {
                         NAV += SafeDecimalMath.normalizeAmountTokens(
                             rewards[i],
                             _garden.reserveAsset(),
-                            IERC20(rewards[i]).balanceOf(msg.sender)
+                            IERC20(rewards[i]).universalBalanceOf(msg.sender)
                         );
                     }
                 }
@@ -244,7 +242,7 @@ contract AddLiquidityOperation is Operation {
             return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
         }
         // Reserve asset
-        uint256 reserveBalance = IERC20(_poolToken).balanceOf(msg.sender);
+        uint256 reserveBalance = IERC20(_poolToken).universalBalanceOf(msg.sender);
         return normalizedTokenAmount <= reserveBalance ? normalizedTokenAmount : reserveBalance;
     }
 
@@ -264,8 +262,40 @@ contract AddLiquidityOperation is Operation {
         return maxAmountsIn;
     }
 
-    function _getLPTokenFromBytes(address _integration, bytes calldata _data) internal view returns (address) {
-        return IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
+    function _joinPool(
+        address _asset,
+        uint256 _capital,
+        bytes calldata _data,
+        IGarden _garden,
+        address _integration,
+        uint256[] memory _poolWeights,
+        address[] memory _poolTokens 
+    ) internal
+        returns (
+            address,
+            uint256,
+            uint8
+        )
+    {
+        // Get the tokens needed to enter the pool
+        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden,
+                                                      _poolWeights, _poolTokens);
+        uint256 poolTokensOut =
+            IPoolIntegration(_integration).getPoolTokensOut(_data, _poolTokens[0], maxAmountsIn[0]);
+        IPoolIntegration(_integration).joinPool(
+            msg.sender,
+            _data,
+            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            _poolTokens,
+            maxAmountsIn
+        );
+       address lpToken = IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
+
+        return (
+            lpToken,
+            IERC20(lpToken).balanceOf(msg.sender),
+            0
+        ); // liquid
     }
 
     // TODO: Make a lib helper
@@ -286,11 +316,12 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                if (rewards[i] != address(0) &&
+                    IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     try
                         IStrategy(msg.sender).trade(
                             rewards[i],
-                            IERC20(rewards[i]).balanceOf(msg.sender),
+                            IERC20(rewards[i]).universalBalanceOf(msg.sender),
                             _reserveAsset,
                             70e15
                         )

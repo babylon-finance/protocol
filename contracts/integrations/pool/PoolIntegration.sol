@@ -14,6 +14,7 @@ import {IBabController} from '../../interfaces/IBabController.sol';
 
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {BaseIntegration} from '../BaseIntegration.sol';
 
@@ -27,6 +28,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -92,7 +94,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         (address targetPool, uint256 callValue, bytes memory methodData) =
             _getJoinPoolCalldata(_strategy, _pool, _poolTokensOut, _tokensIn, _maxAmountsIn);
         poolInfo.strategy.invokeFromIntegration(targetPool, callValue, methodData);
-        poolInfo.poolTokensInTransaction = IERC20(poolInfo.lpToken).balanceOf(address(poolInfo.strategy)).sub(
+        poolInfo.poolTokensInTransaction =
+            IERC20(poolInfo.lpToken).universalBalanceOf(address(poolInfo.strategy)).sub(
             poolInfo.poolTokensInStrategy
         );
         _validatePostJoinPoolData(poolInfo);
@@ -227,7 +230,8 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         poolInfo.strategy = IStrategy(_strategy);
         poolInfo.garden = IGarden(poolInfo.strategy.garden());
         poolInfo.pool = _pool;
-        poolInfo.poolTokensInStrategy = IERC20(poolInfo.lpToken).balanceOf(_strategy);
+        poolInfo.poolTokensInStrategy =
+            IERC20(poolInfo.lpToken).universalBalanceOf(_strategy);
         poolInfo.poolTokensInTransaction = _poolTokensInTransaction;
         poolInfo.limitPoolTokenQuantities = _limitPoolTokenQuantities;
 
@@ -265,7 +269,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      */
     function _validatePostJoinPoolData(PoolInfo memory _poolInfo) internal view {
         require(
-            (IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
+            (IERC20(_poolInfo.lpToken).universalBalanceOf(address(_poolInfo.strategy)) > _poolInfo.poolTokensInStrategy),
             'The strategy did not receive the pool tokens'
         );
     }
@@ -277,7 +281,7 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
      */
     function _validatePostExitPoolData(PoolInfo memory _poolInfo) internal view {
         require(
-            IERC20(_poolInfo.lpToken).balanceOf(address(_poolInfo.strategy)) ==
+            IERC20(_poolInfo.lpToken).universalBalanceOf(address(_poolInfo.strategy)) ==
                 _poolInfo.poolTokensInStrategy - _poolInfo.poolTokensInTransaction,
             'The strategy did not return the pool tokens'
         );

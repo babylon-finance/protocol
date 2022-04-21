@@ -29,6 +29,8 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {ControllerLib} from '../../lib/ControllerLib.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title MasterSwapper
  * @author Babylon Finance Protocol
@@ -122,8 +124,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) public override nonReentrant returns (uint256) {
+        console.log('trade');
         // deposit ETH to WETH if it is a send token
         if (_sendToken == address(0)) {
+            console.log('wrap');
             IStrategy(_strategy).invokeFromIntegration(
                 WETH,
                 _sendQuantity,
@@ -131,6 +135,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             );
         }
 
+        console.log('_sendToken:', _sendToken);
+        console.log('_sendQuantity:', _sendQuantity);
+        console.log('_receiveToken:', _receiveToken);
+        console.log('_minReceiveQuantity:', _minReceiveQuantity);
         // handle ETH<>WETH as a special case
         uint256 receivedQuantity =
             _trade(
@@ -141,13 +149,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 _minReceiveQuantity
             );
 
+            console.log('receivedQuantity:', receivedQuantity);
+
         // unrwap WETH if ETH is a receive token
         if (_receiveToken == address(0)) {
+            console.log('unwrap');
             IStrategy(_strategy).invokeFromIntegration(
                 WETH,
                 0,
-                abi.encodeWithSelector(IWETH.withdraw.selector, _sendQuantity)
+                abi.encodeWithSelector(IWETH.withdraw.selector, receivedQuantity)
             );
+            console.log('_strategy.balance:', _strategy.balance);
         }
 
         return receivedQuantity;
@@ -203,7 +215,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     ) private returns (uint256) {
         require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
 
-        if (_sendToken != _receiveToken) {
+        if (_sendToken == _receiveToken) {
             return _sendQuantity;
         }
 

@@ -32,6 +32,8 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title Strategy
  * @author Babylon Finance
@@ -825,6 +827,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
         _enterStrategy(_capital);
+        console.log('_enterStrategy:');
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
             executedAt = block.timestamp;
@@ -851,6 +854,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint8 assetStatus; // liquid
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
+            console.log('opTypes[i]:', opTypes[i]);
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 assetAccumulated,
@@ -860,6 +864,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 garden,
                 _getIntegration(opIntegrations[i])
             );
+            console.log('after opTypes[i]:', opTypes[i]);
         }
     }
 
@@ -890,9 +895,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
             _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
-            if (assetFinalized == address(0)) {
-                assetFinalized = WETH;
-            }
         }
     }
 
@@ -945,8 +947,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _receiveToken,
         uint256 _overrideSlippage
     ) private returns (uint256) {
+        console.log('trade');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
         uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        console.log('pricePerTokenUnit:', pricePerTokenUnit);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
@@ -960,6 +964,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 ? maxTradeSlippagePercentage
                 : DEFAULT_TRADE_SLIPPAGE;
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
+        console.log('before trade');
         uint256 receivedQuantity =
             ITradeIntegration(IBabController(controller).masterSwapper()).trade(
                 address(this),
@@ -968,6 +973,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 minAmountExpected
             );
+            console.log('receivedQuantity:', receivedQuantity);
         return receivedQuantity;
     }
 

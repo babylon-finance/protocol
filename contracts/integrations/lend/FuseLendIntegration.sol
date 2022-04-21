@@ -13,6 +13,7 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {CompoundLendIntegration} from './CompoundLendIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 /**
  * @title FuseLendIntegration
@@ -23,6 +24,7 @@ import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 contract FuseLendIntegration is CompoundLendIntegration {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ State Variables ============ */
 
@@ -57,7 +59,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
             address[] memory markets = IComptroller(comptroller).getAllMarkets();
             uint256 nblocks = _getDurationStrategy(_strategy).div(14); // assuming 14 secs per block
             for (uint256 i = 0; i < markets.length; i++) {
-                uint256 balanceCToken = IERC20(markets[i]).balanceOf(_strategy);
+                uint256 balanceCToken = IERC20(markets[i]).universalBalanceOf(_strategy);
                 uint256 rewardPerBlock;
                 uint256 divisor;
                 // If there is balance, strategy supplied

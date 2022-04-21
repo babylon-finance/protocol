@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -11,6 +12,7 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 /**
  * @title BuyOperation
@@ -23,6 +25,7 @@ contract BuyOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -109,7 +112,7 @@ contract BuyOperation is Operation {
         )
     {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
-        uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
+        uint256 balance = IERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
         return (_asset, balance, 0);
     }
 
@@ -137,7 +140,8 @@ contract BuyOperation is Operation {
         uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
         uint256 NAV =
             SafeDecimalMath
-                .normalizeAmountTokens(token, _garden.reserveAsset(), ERC20(token).balanceOf(msg.sender))
+                .normalizeAmountTokens(token, _garden.reserveAsset(),
+                                       IERC20(token).universalBalanceOf(msg.sender))
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);

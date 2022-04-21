@@ -17,6 +17,8 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title BorrowOperation
  * @author Babylon Finance
@@ -89,14 +91,19 @@ contract BorrowOperation is Operation {
         }
         require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
 
+        console.log('get borrow amount');
         uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
+        console.log('normalizedAmount:', normalizedAmount);
 
+        console.log('borrow');
         IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
+        console.log('borrowToken:', borrowToken);
         if (borrowToken == address(0)) {
             IStrategy(msg.sender).trade(borrowToken, normalizedAmount, WETH);
             borrowToken = WETH;
         }
+        console.log('after trade');
         return (borrowToken, normalizedAmount, 0); // borrowings are liquid
     }
 
@@ -190,7 +197,8 @@ contract BorrowOperation is Operation {
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, borrowToken);
         uint256 price = _getPrice(_garden.reserveAsset(), borrowToken);
         // if there are liquidations or it is the last op (borrowings not used)
-        uint256 borrowTokenBalance = IERC20(borrowToken == address(0) ? WETH : borrowToken).balanceOf(msg.sender);
+        uint256 borrowTokenBalance = IERC20(borrowToken == address(0) ? WETH :
+                                            borrowToken).universalBalanceOf(msg.sender);
         if (borrowTokenBalance > 0) {
             tokensOwed = tokensOwed >= borrowTokenBalance ? tokensOwed.sub(borrowTokenBalance) : 0;
         }
