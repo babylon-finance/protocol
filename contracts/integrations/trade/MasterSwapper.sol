@@ -122,13 +122,15 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) public override nonReentrant returns (uint256) {
+        // deposit ETH to WETH if it is a send token
         if(_sendToken == address(0)) {
             IStrategy(_strategy).invokeFromIntegration(WETH, _sendQuantity, abi.encodeWithSelector(IWETH.deposit.selector));
         }
 
         // handle ETH<>WETH as a special case
-        uint256 receivedQuantity = (_sendToken == address(0) && _receiveToken == WETH) || (_sendToken == WETH && _receiveToken == address(0)) ? _sendQuantity :  _trade(_strategy, _sendToken == address(0) ? WETH :_sendToken, _sendQuantity, _receiveToken == address(0) ? WETH : _receiveToken, _minReceiveQuantity);
+        uint256 receivedQuantity = _trade(_strategy, _sendToken == address(0) ? WETH :_sendToken, _sendQuantity, _receiveToken == address(0) ? WETH : _receiveToken, _minReceiveQuantity);
 
+        // unrwap WETH if ETH is a receive token
         if(_receiveToken == address(0)) {
             IStrategy(_strategy).invokeFromIntegration(WETH, 0, abi.encodeWithSelector(IWETH.withdraw.selector, _sendQuantity));
         }
@@ -185,7 +187,10 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         uint256 _minReceiveQuantity
     ) private returns (uint256) {
         require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
-        require(_sendToken != _receiveToken, 'sendToken == receiveToken');
+
+        if (_sendToken != _receiveToken) {
+            return _sendQuantity;
+        }
 
         string memory error;
         uint256 receivedQuantity;

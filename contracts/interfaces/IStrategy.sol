@@ -92,8 +92,6 @@ interface IStrategy {
         uint256 _overrideSlippage
     ) external returns (uint256);
 
-    function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
-
     function getStrategyDetails()
         external
         view
