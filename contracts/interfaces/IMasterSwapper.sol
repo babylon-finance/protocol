@@ -10,8 +10,16 @@ import {ITradeIntegration} from './ITradeIntegration.sol';
  *
  * Interface for interacting with the Gate Guestlist NFT
  */
-interface IMasterSwapper is ITradeIntegration {
+interface IMasterSwapper {
     /* ============ Functions ============ */
+
+    function trade(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity
+    ) external returns (uint256);
 
     function isTradeIntegration(address _integration) external view returns (bool);
 }

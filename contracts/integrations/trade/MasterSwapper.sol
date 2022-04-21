@@ -19,6 +19,7 @@ import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {IMasterSwapper} from '../../interfaces/IMasterSwapper.sol';
 
 import {String} from '../../lib/String.sol';
 import {DeFiUtils} from '../../lib/DeFiUtils.sol';
@@ -40,7 +41,7 @@ import {ControllerLib} from '../../lib/ControllerLib.sol';
 //     Support proxy or no proxy between synths
 //     - Only between pairs of synths. Great for bigger trades
 //
-contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
+contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
     using PreciseUnitMath for uint256;
@@ -124,21 +125,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
     }
 
     /**
-     * @dev
-     *   Should be never called. Only implemented to satisfy ITradeIntegration
-     */
-    function trade(
-        address,
-        address,
-        uint256,
-        address,
-        uint256,
-        address
-    ) public override nonReentrant returns (uint256) {
-        revert('no impl');
-    }
-
-    /**
      * Function to update the internal mappings of the swapper
      * @param _index                   Index to update
      * @param _newAddress              New address
@@ -166,7 +152,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
     }
 
-    function isTradeIntegration(address _integration) external view returns (bool) {
+    function isTradeIntegration(address _integration) external override view returns (bool) {
         return
             _integration == address(curve) ||
             _integration == address(univ3) ||
