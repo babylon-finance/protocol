@@ -744,21 +744,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @return the estimated BABL rewards
      */
     function estimateStrategyRewards(address _strategy) external view override returns (uint256) {
-        // strategyDetails[5]: totalNegativeVotes
-        // strategyDetails[9]: strategy rewards baseline
-        // profitData[0]: profit
         if (IStrategy(_strategy).isStrategyActive()) {
-            (, uint256[] memory strategyDetails, bool[] memory profitData) = _estimateStrategyRewards(_strategy);
-            // Strategy will not show strategist rewards if no profits
-            // Strategy will likely show stewards rewards if no profits depending:
-            // a) It has some negative votes, 10% goes to those stewards voting against the strategy
-            // b) It has no negative votes, 20% (10% strategist + 10% stewards) are slashed
-            return
-                profitData[0] ? strategyDetails[9] : strategyDetails[5] > 0
-                    ? strategyDetails[9].sub(strategyDetails[9].preciseMul(strategistBABLPercentage))
-                    : strategyDetails[9].sub(
-                        strategyDetails[9].preciseMul(stewardsBABLPercentage.add(strategistBABLPercentage))
-                    );
+            (, uint256[] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
+            return strategyDetails[9];
         } else {
             return 0;
         }
