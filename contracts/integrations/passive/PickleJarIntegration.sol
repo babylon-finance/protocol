@@ -104,9 +104,8 @@ contract PickleJarIntegration is PassiveIntegration {
             bytes memory
         )
     {
+        require(pickleRegistry.jars(_asset), 'Pickle jar does not exist');
         address token = _getInvestmentAsset(_asset);
-        require(token != address(0), 'Pickle jar does not exist');
-
         bytes memory methodData;
         if (pickleRegistry.isUniv3(_asset)) {
             if (pickleRegistry.noSwapParam(_asset)) {

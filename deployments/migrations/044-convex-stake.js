@@ -13,10 +13,11 @@ module.exports = async ({
   const contract = 'ConvexStakeIntegration';
 
   const controller = await deployments.get('BabControllerProxy');
+  const convex = await deployments.get('ConvexRegistry');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, convex.address],
     log: true,
     ...(await getGasPrice()),
   });

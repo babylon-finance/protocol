@@ -16,10 +16,11 @@ module.exports = async ({
   const contract = 'YearnVaultIntegration';
 
   const controller = await getController();
+  const yearn = await deployments.get('YearnVaultRegistry');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, yearn.address],
     log: true,
     ...(await getGasPrice()),
   });

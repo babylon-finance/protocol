@@ -11,12 +11,13 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const contract = 'PickleJarIntegration';
+  const pickle = await deployments.get('PickleJarRegistry');
 
   const controller = await deployments.get('BabControllerProxy');
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [controller.address],
+    args: [controller.address, pickle.address],
     log: true,
     ...(await getGasPrice()),
   });

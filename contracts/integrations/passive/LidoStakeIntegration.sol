@@ -96,6 +96,7 @@ contract LidoStakeIntegration is PassiveIntegration {
         if (_asset == address(stETH)) {
             methodData = abi.encodeWithSignature('submit(address)', controller.treasury());
         } else {
+            require(_asset == address(wstETH), 'Not a valid address');
             // wstETH is just a raw transfer and does both
             methodData = bytes('');
         }
