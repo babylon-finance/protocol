@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IPickleJarRegistry} from '../interfaces/IPickleJarRegistry.sol';
+import {IJar} from '../interfaces/external/pickle/IJar.sol';
 
 import {ControllerLib} from '../lib/ControllerLib.sol';
 
@@ -131,9 +132,12 @@ contract PickleJarRegistry is IPickleJarRegistry {
     /* ============ Internal Functions ============ */
 
     function _addJar(address _jar, bool _univ3) private {
-        jarList.push(_jar);
-        jars[_jar] = true;
-        isUniv3[_jar] = _univ3;
+        uint256 totalSupply = IJar(_jar).totalSupply();
+        if (totalSupply > 0) {
+            jarList.push(_jar);
+            jars[_jar] = true;
+            isUniv3[_jar] = _univ3;
+        }
     }
 
     function _removeJar(address _jar) private {

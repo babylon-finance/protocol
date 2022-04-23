@@ -190,6 +190,7 @@ contract PickleJarIntegration is PassiveIntegration {
                 uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
                 uint256 minAmount = IPriceOracle(controller.priceOracle()).getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0()).preciseMul(token1Amount).preciseMul(95e16);
                 bytes memory methodData = abi.encodeWithSignature('trade(address,address,uint256,address,uint256)', _strategy, IJarUniV3(_asset).token1(), token1Amount, IJarUniV3(_asset).token0(), minAmount);
+                return (controller.masterSwapper(), 0, methodData);
             }
         }
         return (address(0), 0, bytes(''));

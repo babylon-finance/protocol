@@ -79,7 +79,7 @@ describe('PickleJarIntegrationTest', function () {
       garden,
       false,
       params,
-      { maxTradeSlippagePercentage: eth(0.1) },
+      { maxTradeSlippagePercentage: eth(0.15) },
     );
 
     const amount = STRATEGY_EXECUTE_MAP[token];

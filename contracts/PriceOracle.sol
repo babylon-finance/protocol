@@ -284,8 +284,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             uint256 pricePerShare = IJar(_tokenIn).getRatio();
             if (tokenInType == 14) {
                 // univ3
-                return
-                    pricePerShare.preciseMul(_getPriceJarUniV3(_tokenIn, WETH)).preciseMul(getPrice(WETH, _tokenOut));
+                return _getPriceJarUniV3(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
             }
             price = pricePerShare.preciseMul(getPrice(IJar(_tokenIn).token(), _tokenOut));
             uint256 pDecimals = ERC20(_tokenIn).decimals();
@@ -295,12 +294,11 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        if (tokenOutType == 13 || tokenInType == 14) {
-            uint256 pricePerShare = IJar(_tokenIn).getRatio();
-            if (tokenInType == 14) {
+        if (tokenOutType == 13 || tokenOutType == 14) {
+            uint256 pricePerShare = IJar(_tokenOut).getRatio();
+            if (tokenOutType == 14) {
                 // univ3
-                return
-                    getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH)).preciseDiv(pricePerShare);
+                return getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH));
             }
             address jarAsset = IJar(_tokenOut).token();
             price = getPrice(_tokenIn, jarAsset).preciseDiv(IJar(_tokenOut).getRatio());

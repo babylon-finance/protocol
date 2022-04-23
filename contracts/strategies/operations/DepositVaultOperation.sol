@@ -185,18 +185,10 @@ contract DepositVaultOperation is Operation {
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
-        // try to get price of an investment token from Oracle
-        // markets sometimes price assets differently than
-        // their underlying protocols, e.g., stETH/Lido
-        uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        // If vault asset cannot be priced
-        require(price != 0, 'Vault asset cannot be priced');
-        console.log('trying to price vault directly');
-        uint256 pricePerShare = _getPrice(vault, vaultAsset);
-        console.log('price per share', pricePerShare);
+        uint256 price = _getPrice(vault, _garden.reserveAsset());
         //Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-        uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        balance = SafeDecimalMath.normalizeAmountTokens(vault, _garden.reserveAsset(), balance);
+        uint256 NAV = balance.preciseMul(price);
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
