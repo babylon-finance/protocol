@@ -3,6 +3,9 @@
 pragma solidity 0.7.6;
 
 import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
+import {IPickleJarRegistry} from './IPickleJarRegistry.sol';
+import {IConvexRegistry} from './IConvexRegistry.sol';
+import {IYearnVaultRegistry} from './IYearnVaultRegistry.sol';
 
 /**
  * @title IPriceOracle
@@ -11,12 +14,9 @@ import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
  * Interface for interacting with PriceOracle
  */
 interface ITokenIdentifier {
-    /* ============ Functions ============ */
+    /* ============ View Functions ============ */
 
-    function identifyTokens(
-        address _tokenIn,
-        address _tokenOut
-    )
+    function identifyTokens(address _tokenIn, address _tokenOut)
         external
         view
         returns (
@@ -25,6 +25,28 @@ interface ITokenIdentifier {
             address,
             address
         );
+
+    function convexPools(address _pool) external view returns (bool);
+
+    function jars(address _jar) external view returns (uint8);
+
+    function visors(address _visor) external view returns (bool);
+
+    function vaults(address _vault) external view returns (bool);
+
+    function aTokenToAsset(address _aToken) external view returns (address);
+
+    function cTokenToAsset(address _cToken) external view returns (address);
+
+    function jarRegistry() external view returns (IPickleJarRegistry);
+
+    function vaultRegistry() external view returns (IYearnVaultRegistry);
+
+    function curveMetaRegistry() external view returns (ICurveMetaRegistry);
+
+    function convexRegistry() external view returns (IConvexRegistry);
+
+    /* ============ Functions ============ */
 
     function updateVisor(address[] calldata _vaults, bool[] calldata _values) external;
 
@@ -35,4 +57,6 @@ interface ITokenIdentifier {
     function updateYearnVaults() external;
 
     function updatePickleJars() external;
+
+    function updateConvexPools() external;
 }

@@ -103,7 +103,11 @@ contract PickleJarRegistry is IPickleJarRegistry {
      * @param _uniflags         List of booleans. True means univ3 jar
      *
      */
-    function updateJars(address[] calldata _jars, bool[] calldata _values, bool[] calldata _uniflags) external override {
+    function updateJars(
+        address[] calldata _jars,
+        bool[] calldata _values,
+        bool[] calldata _uniflags
+    ) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _jars.length; i++) {
             if (_values[i]) {

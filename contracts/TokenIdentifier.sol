@@ -9,6 +9,8 @@ import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {IProtocolDataProvider} from './interfaces/external/aave/IProtocolDataProvider.sol';
 import {AaveToken} from './interfaces/external/aave/AaveToken.sol';
 import {IComptroller} from './interfaces/external/compound/IComptroller.sol';
+import {IBooster} from './interfaces/external/convex/IBooster.sol';
+import {IConvexRegistry} from './interfaces/IConvexRegistry.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
 import {IPickleJarRegistry} from './interfaces/IPickleJarRegistry.sol';
 import {IYearnVaultRegistry} from './interfaces/IYearnVaultRegistry.sol';
@@ -56,24 +58,28 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant VISOR_LP_TOKEN = 12;
     uint8 private constant PICKLE_JAR_TOKEN = 13;
     uint8 private constant PICKLE_JAR_TOKEN_V3 = 14;
+    uint8 private constant CONVEX_TOKEN = 15;
 
     /* ============ State Variables ============ */
 
     IBabController public immutable controller;
-    IPickleJarRegistry public jarRegistry;
-    IYearnVaultRegistry public vaultRegistry;
-    ICurveMetaRegistry public curveMetaRegistry;
+    IPickleJarRegistry public override jarRegistry;
+    IYearnVaultRegistry public override vaultRegistry;
+    ICurveMetaRegistry public override curveMetaRegistry;
+    IConvexRegistry public override convexRegistry;
 
     // Mapping of interest bearing aave tokens
-    mapping(address => address) public aTokenToAsset;
+    mapping(address => address) public override aTokenToAsset;
     // Mapping of interest bearing compound tokens
-    mapping(address => address) public cTokenToAsset;
+    mapping(address => address) public override cTokenToAsset;
     // Mapping of yearn vaults
-    mapping(address => bool) public vaults;
+    mapping(address => bool) public override vaults;
     // Mapping of gamma visors
-    mapping(address => bool) public visors;
+    mapping(address => bool) public override visors;
     // Mapping of pickle jars
-    mapping(address => uint8) public jars;
+    mapping(address => uint8) public override jars;
+    // Mapping of convex vaults
+    mapping(address => bool) public override convexPools;
 
     /* ============ Modifiers ============ */
 
@@ -83,18 +89,21 @@ contract TokenIdentifier is ITokenIdentifier {
         IBabController _controller,
         IPickleJarRegistry _jarRegistry,
         IYearnVaultRegistry _vaultRegistry,
-        ICurveMetaRegistry _curveMetaRegistry
+        ICurveMetaRegistry _curveMetaRegistry,
+        IConvexRegistry _convexRegistry
     ) {
         controller = _controller;
         jarRegistry = _jarRegistry;
         vaultRegistry = _vaultRegistry;
         curveMetaRegistry = _curveMetaRegistry;
+        convexRegistry = _convexRegistry;
 
         // Fetches and copies data for faster & cheaper reads
         _refreshAAveReserves();
         _refreshCompoundTokens();
         _updateYearnVaults();
         _updatePickleJars();
+        _updateConvexPools();
 
         visors[0x705b3aCaF102404CfDd5e4A60535E4e70091273C] = true; // BABL-ETH Visor
         visors[0xf6eeCA73646ea6A5c878814e6508e87facC7927C] = true; // GAMMA-ETH Visor
@@ -139,6 +148,14 @@ contract TokenIdentifier is ITokenIdentifier {
     }
 
     /**
+     * Refreshes all convex pools from the registry
+     */
+    function updateConvexPools() external override {
+        controller.onlyGovernanceOrEmergency();
+        _updateConvexPools();
+    }
+
+    /**
      * Adds/deletes visor vaults
      */
     function updateVisor(address[] calldata _visors, bool[] calldata _values) external override {
@@ -152,10 +169,7 @@ contract TokenIdentifier is ITokenIdentifier {
      * @param _tokenOut             Address of the second token
      * @return (uint8,uint8)        Types of both tokens
      */
-    function identifyTokens(
-        address _tokenIn,
-        address _tokenOut
-    )
+    function identifyTokens(address _tokenIn, address _tokenOut)
         external
         view
         override
@@ -238,6 +252,15 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = jars[_tokenOut] == 1 ? PICKLE_JAR_TOKEN : PICKLE_JAR_TOKEN_V3;
         }
 
+        // Convex tokens
+        if (convexPools[_tokenIn]) {
+            tokenInType = CONVEX_TOKEN;
+        }
+
+        if (convexPools[_tokenOut]) {
+            tokenOutType = CONVEX_TOKEN;
+        }
+
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
             tokenInType = LIDO_TOKEN;
@@ -272,8 +295,6 @@ contract TokenIdentifier is ITokenIdentifier {
             }
         }
 
-        // todo: convex tokens 1 to 1
-
         return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
     }
 
@@ -294,9 +315,9 @@ contract TokenIdentifier is ITokenIdentifier {
         for (uint256 i = 0; i < markets.length; i++) {
             console.log('market', markets[i]);
             if (markets[i] == 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
-              cTokenToAsset[markets[i]] = WETH;
+                cTokenToAsset[markets[i]] = WETH;
             } else {
-              cTokenToAsset[markets[i]] = ICToken(markets[i]).underlying();
+                cTokenToAsset[markets[i]] = ICToken(markets[i]).underlying();
             }
         }
     }
@@ -327,6 +348,16 @@ contract TokenIdentifier is ITokenIdentifier {
     function _updateVisor(address[] calldata _visors, bool[] calldata _values) private {
         for (uint256 i = 0; i < _visors.length; i++) {
             visors[_visors[i]] = _values[i];
+        }
+    }
+
+    /**
+     * Updates convex vaults
+     */
+    function _updateConvexPools() private {
+        address[] memory cpools = convexRegistry.getAllConvexPools();
+        for (uint256 i = 0; i < cpools.length; i++) {
+            convexPools[cpools[i]] = true;
         }
     }
 }

@@ -191,19 +191,12 @@ contract DepositVaultOperation is Operation {
         uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
         // If vault asset cannot be priced
         require(price != 0, 'Vault asset cannot be priced');
+        console.log('trying to price vault directly');
         uint256 pricePerShare = _getPrice(vault, vaultAsset);
-        // if failed to fetch price from Oracle get it from the underlying protocol
-        if (pricePerShare == 0) {
-            pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
-            // Normalization of pricePerShare
-            pricePerShare = pricePerShare.mul(
-                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-            );
-        }
-        uint256 NAV;
+        console.log('price per share', pricePerShare);
         //Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-        NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        uint256 NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');

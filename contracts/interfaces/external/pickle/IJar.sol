@@ -12,8 +12,6 @@ interface IJar is IERC20 {
 
     function getRatio() external view returns (uint256);
 
-    function totalSupply() external view returns (uint256);
-
     function depositAll() external;
 
     function balance() external view returns (uint256);
