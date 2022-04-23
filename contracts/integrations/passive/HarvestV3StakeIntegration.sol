@@ -133,6 +133,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
     /**
      * Return exit investment calldata to execute after exit if any
      *
+     * hparam  _strategy                       Address of the reward pool
      * @param  _pool                           Address of the reward pool
      * hparam  _amount                         Amount of tokens
      * @param  _passiveOp                      enter is 0, exit is 1
@@ -142,6 +143,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getPostActionCallData(
+        address /* _strategy */,
         address _pool,
         uint256, /* _amount */
         uint256 _passiveOp

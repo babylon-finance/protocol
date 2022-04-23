@@ -214,26 +214,6 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = VISOR_LP_TOKEN;
         }
 
-        // Early exit
-        if (tokenInType > 0 && tokenOutType > 0) {
-            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
-        }
-
-        if (tokenInType == 0) {
-            // Curve LP Token
-            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
-            if (crvPool != address(0)) {
-                tokenInType = CURVE_LP_TOKEN;
-            }
-        }
-
-        if (tokenOutType == 0) {
-            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
-            if (crvPool != address(0)) {
-                tokenOutType = CURVE_LP_TOKEN;
-            }
-        }
-
         // Yearn vaults
         if (vaults[_tokenIn]) {
             tokenInType = YEARN_TOKEN;
@@ -261,6 +241,11 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = CONVEX_TOKEN;
         }
 
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
+        }
+
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
             tokenInType = LIDO_TOKEN;
@@ -272,6 +257,21 @@ contract TokenIdentifier is ITokenIdentifier {
         // Early exit
         if (tokenInType > 0 && tokenOutType > 0) {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
+        }
+
+        if (tokenInType == 0) {
+            // Curve LP Token
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            if (crvPool != address(0)) {
+                tokenInType = CURVE_LP_TOKEN;
+            }
+        }
+
+        if (tokenOutType == 0) {
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            if (crvPool != address(0)) {
+                tokenOutType = CURVE_LP_TOKEN;
+            }
         }
 
         // Check sushi pairs (univ2)
@@ -313,7 +313,6 @@ contract TokenIdentifier is ITokenIdentifier {
     function _refreshCompoundTokens() private {
         address[] memory markets = COMP_COMPTROLLER.getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            console.log('market', markets[i]);
             if (markets[i] == 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
                 cTokenToAsset[markets[i]] = WETH;
             } else {

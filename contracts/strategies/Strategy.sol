@@ -913,7 +913,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _deleteCandidateStrategy() private {
         _require(executedAt == 0 && !finalized, Errors.STRATEGY_IS_EXECUTED);
-        IGarden(garden).expireCandidateStrategy(address(this));
+        IGarden(garden).expireCandidateStrategy();
     }
 
     /**

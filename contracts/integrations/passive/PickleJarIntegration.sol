@@ -105,7 +105,6 @@ contract PickleJarIntegration is PassiveIntegration {
         )
     {
         require(pickleRegistry.jars(_asset), 'Pickle jar does not exist');
-        address token = _getInvestmentAsset(_asset);
         bytes memory methodData;
         if (pickleRegistry.isUniv3(_asset)) {
             if (pickleRegistry.noSwapParam(_asset)) {
@@ -157,5 +156,49 @@ contract PickleJarIntegration is PassiveIntegration {
         bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
         // Go through the reward pool instead of the booster
         return (_asset, 0, methodData);
+    }
+
+    /**
+     * Return post action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address _strategy,
+        address _asset,
+        uint256, /* _amount */
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_passiveOp == 1) {
+            if (pickleRegistry.isUniv3(_asset)) {
+                // Sell token 1 to token 0
+                uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
+                uint256 minAmount = IPriceOracle(controller.priceOracle()).getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0()).preciseMul(token1Amount).preciseMul(95e16);
+                bytes memory methodData = abi.encodeWithSignature('trade(address,address,uint256,address,uint256)', _strategy, IJarUniV3(_asset).token1(), token1Amount, IJarUniV3(_asset).token0(), minAmount);
+            }
+        }
+        return (address(0), 0, bytes(''));
+    }
+
+    function _postActionNeedsApproval(address _jar) internal view override returns (address) {
+        if (pickleRegistry.isUniv3(_jar)) {
+            return IJarUniV3(_jar).token1();
+        }
+        return address(0);
     }
 }

@@ -23,7 +23,7 @@ interface IStrategyGarden {
 
     function allocateCapitalToStrategy(uint256 _capital) external;
 
-    function expireCandidateStrategy(address _strategy) external;
+    function expireCandidateStrategy() external;
 
     function addStrategy(
         string memory _name,

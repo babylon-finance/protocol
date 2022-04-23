@@ -97,6 +97,7 @@ contract PickleJarRegistry is IPickleJarRegistry {
         // A couple of univ3 pools don't have a swap param
         noSwapParam[0xe7b69a17B3531d01FCEAd66FaF7d9f7655469267] = true;
         noSwapParam[0x7f3514CBC6825410Ca3fA4deA41d46964a953Afb] = true;
+        noSwapParam[0x506748d736b77f51c5b490e4aC6c26B8c3975b14] = true;
     }
 
     /* ============ External Functions ============ */

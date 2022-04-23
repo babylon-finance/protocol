@@ -138,7 +138,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
         if (targetAddressP != address(0)) {
             // Approve spending of the pre action token
-            address approvalAsset = _preActionNeedsApproval();
+            address approvalAsset = _preActionNeedsApproval(_investmentAddress);
             if (approvalAsset != address(0)) {
                 investmentInfo.strategy.invokeApprove(
                     _getSpender(_investmentAddress, 1),
@@ -163,10 +163,20 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
-        // Pre actions
-        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_investmentAddress, _investmentTokenIn, 1);
+        // Post actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_strategy, _investmentAddress, _investmentTokenIn, 1);
 
         if (targetAddressP != address(0)) {
+            // Approve spending of the pre action token
+            address approvalAsset = _postActionNeedsApproval(_investmentAddress);
+            if (approvalAsset != address(0)) {
+                uint256 bal = IERC20(approvalAsset).balanceOf(_strategy);
+                investmentInfo.strategy.invokeApprove(
+                    _getSpender(_investmentAddress, 1),
+                    approvalAsset,
+                    bal
+                );
+            }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
         }
@@ -380,6 +390,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     /**
      * Return pre action calldata
      *
+     * hparam  _strategy                 Address of the asset to deposit
      * hparam  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
      * hparam  _passiveOp                 Type of op
@@ -389,6 +400,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      * @return bytes                     Trade calldata
      */
     function _getPostActionCallData(
+        address, /* _strategy */
         address, /* _asset */
         uint256, /* _amount */
         uint256 /* _passiveOp */
@@ -455,7 +467,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return (address(0), 0);
     }
 
-    function _preActionNeedsApproval() internal view virtual returns (address) {
+    function _preActionNeedsApproval(address /* _asset */) internal view virtual returns (address) {
+        return address(0);
+    }
+
+    function _postActionNeedsApproval(address /* _asset */) internal view virtual returns (address) {
         return address(0);
     }
 
