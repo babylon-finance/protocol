@@ -16,6 +16,8 @@ import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
+import {IJar} from './interfaces/external/pickle/IJar.sol';
+import {IJarUniV3} from './interfaces/external/pickle/IJarUniV3.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
 import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
@@ -89,7 +91,8 @@ contract PriceOracle is Ownable, IPriceOracle {
     /* ============ State Variables ============ */
 
     ITokenIdentifier public tokenIdentifier;
-    IBabController public controller;
+    IBabController public immutable controller;
+    ICurveMetaRegistry public immutable curveMetaRegistry;
     mapping(address => bool) public hopTokens;
     address[] public hopTokensList;
     int24 private maxTwapDeviation;
@@ -102,7 +105,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         tokenIdentifier = _tokenIdentifier;
         controller = _controller;
         maxTwapDeviation = INITIAL_TWAP_DEVIATION;
-
+        curveMetaRegistry = ICurveMetaRegistry(_controller.curveMetaRegistry());
         _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
     }
 
@@ -236,7 +239,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (tokenInType == 5) {
             address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
             if (crvPool != address(0)) {
-                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
+                address denominator = _cleanCurvePoolDenominator(crvPool);
                 return
                     curveMetaRegistry.getVirtualPriceFromLpToken(_tokenIn).preciseMul(getPrice(denominator, _tokenOut));
             }
@@ -246,7 +249,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             // Token out is a curve lp
             address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
             if (crvPool != address(0)) {
-                address denominator = _cleanCurvePoolDenominator(crvPool, curveMetaRegistry);
+                address denominator = _cleanCurvePoolDenominator(crvPool);
                 return
                     getPrice(_tokenIn, denominator).preciseDiv(curveMetaRegistry.getVirtualPriceFromLpToken(_tokenOut));
             }
@@ -273,6 +276,38 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
             return price;
         }
+        // Pickle jars
+        if (tokenInType == 13 || tokenInType == 14) {
+            uint256 pricePerShare = IJar(_tokenIn).getRatio();
+            if (tokenInType == 14) {
+              // univ3
+              return pricePerShare.preciseMul(_getPriceJarUniV3(_tokenIn, WETH)).preciseMul(getPrice(WETH, _tokenOut));
+            }
+            price =  pricePerShare.preciseMul(
+                getPrice(IJar(_tokenIn).token(), _tokenOut)
+            );
+            uint256 pDecimals = ERC20(_tokenIn).decimals();
+            if (pDecimals < 18) {
+                price = price.mul(10**(18 - pDecimals));
+            }
+            return price;
+        }
+
+        if (tokenOutType == 13 || tokenInType == 14) {
+            uint256 pricePerShare = IJar(_tokenIn).getRatio();
+            if (tokenInType == 14) {
+              // univ3
+              return getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH)).preciseDiv(pricePerShare);
+            }
+            address jarAsset = IJar(_tokenOut).token();
+            price = getPrice(_tokenIn, jarAsset).preciseDiv(IJar(_tokenOut).getRatio());
+
+            uint256 yvDecimals = ERC20(_tokenOut).decimals();
+            if (yvDecimals < 18) {
+                price = price.div(10**(18 - yvDecimals));
+            }
+            return price;
+        }
 
         // univ2 or sushi or mooniswap
         if (tokenInType == 8 || tokenInType == 9 || tokenInType == 10) {
@@ -292,21 +327,21 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
         if (_tokenIn == palStkAAVE) {
-            uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE, curveMetaRegistry);
+            uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE);
             if (tokenInPrice != 0) {
                 return tokenInPrice.preciseMul(_getBestPriceUniV3(AAVE, _tokenOut));
             }
         }
 
         if (_tokenOut == palStkAAVE) {
-            uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE, curveMetaRegistry);
+            uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE);
             if (tokenOutPrice != 0) {
                 return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
             }
         }
 
         // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut, curveMetaRegistry);
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }
@@ -321,11 +356,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < hopTokensList.length; i++) {
             address reserve = hopTokensList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
-                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve, curveMetaRegistry);
+                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
                 if (tokenInPrice != 0) {
                     return tokenInPrice.preciseMul(_getBestPriceUniV3(reserve, _tokenOut));
                 }
-                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut, curveMetaRegistry);
+                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
                 if (tokenOutPrice != 0) {
                     return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, reserve));
                 }
@@ -340,12 +375,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         return price;
     }
 
-    function _cleanCurvePoolDenominator(address _pool, ICurveMetaRegistry _curveMetaRegistry)
+    function _cleanCurvePoolDenominator(address _pool)
         internal
         view
         returns (address)
     {
-        address[8] memory coins = _curveMetaRegistry.getCoinAddresses(_pool, true);
+        address[8] memory coins = curveMetaRegistry.getCoinAddresses(_pool, true);
         if (coins[0] != address(0)) {
             return coins[0] == ETH_ADD_CURVE ? WETH : coins[0];
         }
@@ -567,10 +602,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     function _getPriceThroughCurve(
         address _curvePool,
         address _tokenIn,
-        address _tokenOut,
-        ICurveMetaRegistry _curveMetaRegistry
+        address _tokenOut
     ) private view returns (uint256) {
-        (uint256 i, uint256 j, bool underlying) = _curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
+        (uint256 i, uint256 j, bool underlying) = curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
         uint256 price = 0;
         uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
         if (i == j) return 0;
@@ -651,6 +685,22 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     /**
+     * Calculates the value of a jar ptoken that is univ3 based
+     * @param _jar                        Address of the jar
+     * @param _reserve                   Address of the reserve to price tokens in
+     */
+    function _getPriceJarUniV3(address _jar, address _reserve) internal view returns (uint256) {
+        uint256 totalSupply = IJarUniV3(_jar).totalSupply();
+        if (totalSupply == 0) {
+            return 0;
+        }
+        uint256 totalLiquidity = IJarUniV3(_jar).totalLiquidity();
+        uint256 proportion = IJarUniV3(_jar).getProportion();
+        uint256 amount0 = totalLiquidity.preciseDiv(proportion.add(1e18));
+        return _getPriceUniV3Pool(IUniswapV3Pool(IJarUniV3(_jar).pool()), _reserve, totalSupply, amount0, totalLiquidity.sub(amount0));
+    }
+
+    /**
      * Calculates the price of a Univ3 wrapped ERC-20 based on supply and amounts
      * @param _pool                      Address of the univ3 pool
      * @param _reserve                   Address of the reserve to denominate the price in
@@ -706,20 +756,19 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     function _checkPairThroughCurve(
         address _tokenIn,
-        address _tokenOut,
-        ICurveMetaRegistry _curveMetaRegistry
+        address _tokenOut
     ) private view returns (uint256) {
-        address curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
+        address curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
         if (_tokenIn == WETH && curvePool == address(0)) {
             _tokenIn = ETH_ADD_CURVE;
-            curvePool = _curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _tokenOut, 0);
+            curvePool = curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _tokenOut, 0);
         }
         if (_tokenOut == WETH && curvePool == address(0)) {
             _tokenOut = ETH_ADD_CURVE;
-            curvePool = _curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
+            curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
         }
         if (curvePool != address(0)) {
-            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut, _curveMetaRegistry);
+            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
             return price;
         }
         return 0;

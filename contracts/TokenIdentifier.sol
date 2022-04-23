@@ -55,6 +55,7 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant HARVESTV3_LP_TOKEN = 11;
     uint8 private constant VISOR_LP_TOKEN = 12;
     uint8 private constant PICKLE_JAR_TOKEN = 13;
+    uint8 private constant PICKLE_JAR_TOKEN_V3 = 14;
 
     /* ============ State Variables ============ */
 
@@ -72,7 +73,7 @@ contract TokenIdentifier is ITokenIdentifier {
     // Mapping of gamma visors
     mapping(address => bool) public visors;
     // Mapping of pickle jars
-    mapping(address => bool) public jars;
+    mapping(address => uint8) public jars;
 
     /* ============ Modifiers ============ */
 
@@ -153,8 +154,7 @@ contract TokenIdentifier is ITokenIdentifier {
      */
     function identifyTokens(
         address _tokenIn,
-        address _tokenOut,
-        ICurveMetaRegistry _curveMetaRegistry
+        address _tokenOut
     )
         external
         view
@@ -207,14 +207,14 @@ contract TokenIdentifier is ITokenIdentifier {
 
         if (tokenInType == 0) {
             // Curve LP Token
-            address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
             if (crvPool != address(0)) {
                 tokenInType = CURVE_LP_TOKEN;
             }
         }
 
         if (tokenOutType == 0) {
-            address crvPool = _curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
             if (crvPool != address(0)) {
                 tokenOutType = CURVE_LP_TOKEN;
             }
@@ -230,12 +230,12 @@ contract TokenIdentifier is ITokenIdentifier {
         }
 
         // Pickle jars
-        if (jars[_tokenIn]) {
-            tokenInType = PICKLE_JAR_TOKEN;
+        if (jars[_tokenIn] > 0) {
+            tokenInType = jars[_tokenIn] == 1 ? PICKLE_JAR_TOKEN : PICKLE_JAR_TOKEN_V3;
         }
 
-        if (jars[_tokenOut]) {
-            tokenOutType = PICKLE_JAR_TOKEN;
+        if (jars[_tokenOut] > 0) {
+            tokenOutType = jars[_tokenOut] == 1 ? PICKLE_JAR_TOKEN : PICKLE_JAR_TOKEN_V3;
         }
 
         // Checks stETH && wstETH (Lido tokens)
@@ -282,7 +282,7 @@ contract TokenIdentifier is ITokenIdentifier {
     function _refreshAAveReserves() private {
         IProtocolDataProvider.TokenData[] memory atokens = AAVE_PROVIDER.getAllATokens();
         for (uint256 i = 0; i < atokens.length; i++) {
-            aTokenToAsset[atokens[i].tokenAddress] = AaveToken(atokens[i].tokenAddress).underlyingAssetAddress();
+            aTokenToAsset[atokens[i].tokenAddress] = AaveToken(atokens[i].tokenAddress).UNDERLYING_ASSET_ADDRESS();
         }
     }
 
@@ -292,7 +292,12 @@ contract TokenIdentifier is ITokenIdentifier {
     function _refreshCompoundTokens() private {
         address[] memory markets = COMP_COMPTROLLER.getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            cTokenToAsset[markets[i]] = ICToken(markets[i]).underlying();
+            console.log('market', markets[i]);
+            if (markets[i] == 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5) {
+              cTokenToAsset[markets[i]] = WETH;
+            } else {
+              cTokenToAsset[markets[i]] = ICToken(markets[i]).underlying();
+            }
         }
     }
 
@@ -312,7 +317,7 @@ contract TokenIdentifier is ITokenIdentifier {
     function _updatePickleJars() private {
         address[] memory pjars = jarRegistry.getAllJars();
         for (uint256 i = 0; i < pjars.length; i++) {
-            jars[pjars[i]] = true;
+            jars[pjars[i]] = jarRegistry.isUniv3(pjars[i]) ? 2 : 1;
         }
     }
 

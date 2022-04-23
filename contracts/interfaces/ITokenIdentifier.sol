@@ -15,8 +15,7 @@ interface ITokenIdentifier {
 
     function identifyTokens(
         address _tokenIn,
-        address _tokenOut,
-        ICurveMetaRegistry _curveMetaRegistry
+        address _tokenOut
     )
         external
         view

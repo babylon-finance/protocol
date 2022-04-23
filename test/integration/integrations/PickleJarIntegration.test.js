@@ -99,7 +99,7 @@ describe('PickleJarIntegrationTest', function () {
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
       balanceBeforeExecuting,
-      balanceBeforeExecuting.div(35),
+      balanceBeforeExecuting.div(20),
     );
   }
 

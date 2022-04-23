@@ -17,7 +17,7 @@ module.exports = async ({
   const controller = await getController();
   const pickle = await deployments.get('PickleJarRegistry');
   const yearn = await deployments.get('YearnVaultRegistry');
-  const curve = await deployments.get('curveMetaRegistry');
+  const curve = await deployments.get('CurveMetaRegistry');
 
   const contract = 'TokenIdentifier';
   const deployment = await deploy(contract, {
