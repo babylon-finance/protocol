@@ -195,12 +195,10 @@ contract AddLiquidityOperation is Operation {
         uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
         require(price != 0, 'Could not price lp token');
         uint256 NAV =
-            NAV.add(
-                SafeDecimalMath.normalizeAmountTokens(
-                    address(lpToken),
-                    _garden.reserveAsset(),
-                    lpToken.balanceOf(msg.sender).preciseMul(price)
-                )
+            SafeDecimalMath.normalizeAmountTokens(
+                address(lpToken),
+                _garden.reserveAsset(),
+                lpToken.balanceOf(msg.sender).preciseMul(price)
             );
         // get rewards if hanging around
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {

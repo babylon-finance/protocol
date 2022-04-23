@@ -9,4 +9,8 @@ interface IJarUniV3 is IJar {
     function getProportion() external view returns (uint256);
 
     function totalLiquidity() external view returns (uint256);
+
+    function token0() external view returns (address);
+
+    function token1() external view returns (address);
 }

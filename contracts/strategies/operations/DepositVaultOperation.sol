@@ -147,7 +147,7 @@ contract DepositVaultOperation is Operation {
         if (amountVault > 0) {
             uint256 minAmount =
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
-                    IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                    _getPrice(yieldVault, vaultAsset).mul(
                         10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                     )
                 );

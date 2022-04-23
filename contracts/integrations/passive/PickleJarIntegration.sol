@@ -8,6 +8,7 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IPickleJarRegistry} from '../../interfaces/IPickleJarRegistry.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -52,13 +53,18 @@ contract PickleJarIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _jar, uint256 _amount) internal view override returns (uint256) {
+        uint256 amountNormalized;
         // Normalize to 18 decimals
-        uint256 amoountNormalized = SafeDecimalMath.normalizeAmountTokens(IJar(_jar).token(), _jar, _amount);
-        return amoountNormalized.preciseDiv(IJar(_jar).getRatio());
+        if (pickleRegistry.isUniv3(_jar)) {
+            amountNormalized = SafeDecimalMath.normalizeAmountTokens(IJarUniV3(_jar).token0(), _jar, _amount);
+            return IPriceOracle(controller.priceOracle()).getPrice(_getInvestmentAsset(_jar), _jar).preciseMul(amountNormalized);
+        }
+        amountNormalized = SafeDecimalMath.normalizeAmountTokens(IJar(_jar).token(), _jar, _amount);
+        return amountNormalized.preciseDiv(IJar(_jar).getRatio());
     }
 
     function _getInvestmentAsset(address _jar) internal view override returns (address) {
-        if (pickleRegistry(_jar).isUniv3()) {
+        if (pickleRegistry.isUniv3(_jar)) {
             return IJarUniV3(_jar).token0();
         } else {
             return IJar(_jar).token();
@@ -101,8 +107,9 @@ contract PickleJarIntegration is PassiveIntegration {
         address token = _getInvestmentAsset(_asset);
         require(token != address(0), 'Pickle jar does not exist');
 
-        if (pickleRegistry(_jar).isUniv3()) {
-            if (pickleRegistry(_jar).noSwapParam()) {
+        bytes memory methodData;
+        if (pickleRegistry.isUniv3(_asset)) {
+            if (pickleRegistry.noSwapParam(_asset)) {
                 methodData = abi.encodeWithSignature(
                     'deposit(uint256,uint256)',
                     _maxAmountIn.div(2),

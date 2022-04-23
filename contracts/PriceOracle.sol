@@ -706,7 +706,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     /**
      * Calculates the value of a jar ptoken that is univ3 based
      * @param _jar                        Address of the jar
-     * @param _reserve                   Address of the reserve to price tokens in
+     * @param _reserve                    Address of the reserve to price tokens in
      */
     function _getPriceJarUniV3(address _jar, address _reserve) internal view returns (uint256) {
         uint256 totalSupply = IJarUniV3(_jar).totalSupply();
