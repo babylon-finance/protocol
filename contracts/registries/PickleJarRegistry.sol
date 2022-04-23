@@ -25,6 +25,7 @@ contract PickleJarRegistry is IPickleJarRegistry {
     // Mapping of valid jars
     mapping(address => bool) public override jars;
     mapping(address => bool) public override isUniv3;
+    mapping(address => bool) public override noSwapParam;
     address[] public jarList;
 
     /* ============ Modifiers ============ */
@@ -92,6 +93,10 @@ contract PickleJarRegistry is IPickleJarRegistry {
         _addJar(0x49ED0e6B438430CEEdDa8C6d06B6A2797aFA81cA, true);
         _addJar(0x81740AAc02ae2F3c61D5a0c012b3e18f9dc02b5c, false);
         _addJar(0x363e7CD14AEcf4f7d0e66Ae1DEff830343D760a7, false);
+
+        // A couple of univ3 pools don't have a swap param
+        noSwapParam[0xe7b69a17B3531d01FCEAd66FaF7d9f7655469267] = true;
+        noSwapParam[0x7f3514CBC6825410Ca3fA4deA41d46964a953Afb] = true;
     }
 
     /* ============ External Functions ============ */

@@ -53,10 +53,6 @@ contract YearnVaultIntegration is PassiveIntegration {
             );
     }
 
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        return IYearnVault(_asset).pricePerShare();
-    }
-
     function _getInvestmentAsset(address _asset) internal view override returns (address) {
         return IYearnVault(_asset).token();
     }

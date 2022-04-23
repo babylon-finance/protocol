@@ -13,6 +13,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IJar} from '../../interfaces/external/pickle/IJar.sol';
+import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
 
 /**
  * @title PickleJarIntegration
@@ -26,6 +27,7 @@ contract PickleJarIntegration is PassiveIntegration {
     using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
+    IPickleJarRegistry public immutable pickleRegistry;
 
     /* ============ Constructor ============ */
 
@@ -33,8 +35,11 @@ contract PickleJarIntegration is PassiveIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
+     * @param _pickleJarRegistry            Address of our pickle jar registry
      */
-    constructor(IBabController _controller) PassiveIntegration('pickle_jar', _controller) {}
+    constructor(IBabController _controller, IPickleJarRegistry _pickleJarRegistry) PassiveIntegration('pickle_jar', _controller) {
+      pickleRegistry = _pickleJarRegistry;
+    }
 
     /* ============ Internal Functions ============ */
     function _getSpender(
@@ -50,12 +55,12 @@ contract PickleJarIntegration is PassiveIntegration {
         return amoountNormalized.preciseDiv(IJar(_jar).getRatio());
     }
 
-    function _getPricePerShare(address _jar) internal view override returns (uint256) {
-        return IJar(_jar).getRatio();
-    }
-
-    function _getInvestmentAsset(address _jar) internal view override returns (address lptoken) {
-        return IJar(_jar).token();
+    function _getInvestmentAsset(address _jar) internal view override returns (address) {
+        if (pickleRegistry(_jar).isUniv3()) {
+          return IJarUniV3(_jar).token0();
+        } else {
+          return IJar(_jar).token();
+        }
     }
 
     function _getResultAsset(address _jar) internal view virtual override returns (address) {
@@ -93,8 +98,17 @@ contract PickleJarIntegration is PassiveIntegration {
     {
         address token = _getInvestmentAsset(_asset);
         require(token != address(0), 'Pickle jar does not exist');
+
+        if (pickleRegistry(_jar).isUniv3()) {
+          if (pickleRegistry(_jar).noSwapParam()) {
+            methodData = abi.encodeWithSignature('deposit(uint256,uint256)', _maxAmountIn.div(2), _maxAmountIn.div(2));
+          } else {
+            methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', _maxAmountIn, 0, true);
+          }
+        } else {
+          methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+        }
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
         return (_asset, 0, methodData);
     }
 

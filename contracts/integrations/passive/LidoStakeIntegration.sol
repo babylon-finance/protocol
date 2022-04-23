@@ -55,15 +55,6 @@ contract LidoStakeIntegration is PassiveIntegration {
         return shares;
     }
 
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        uint256 shares = 1e18;
-        // wrapped steth
-        if (_asset == address(wstETH)) {
-            shares = wstETH.getStETHByWstETH(shares);
-        }
-        return stETH.getPooledEthByShares(shares);
-    }
-
     function _getInvestmentAsset(
         address /* _asset */
     ) internal pure override returns (address) {

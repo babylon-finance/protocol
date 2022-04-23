@@ -194,14 +194,7 @@ contract AddLiquidityOperation is Operation {
         // Get price multiplier if needed (harvestv3)
         uint256 price = _getPrice(address(lpToken), _garden.reserveAsset());
         require(price != 0, 'Could not price lp token');
-        try IPoolIntegration(_integration).getPricePerShare(_data) returns (uint256 pricePerShare) {
-            if (pricePerShare != 0) {
-                price = pricePerShare.preciseMul(price);
-            }
-        } catch {}
-        uint256 NAV;
-        // Price lp token through price oracle
-        NAV = NAV.add(
+        uint256 NAV = NAV.add(
             SafeDecimalMath.normalizeAmountTokens(
                 address(lpToken),
                 _garden.reserveAsset(),

@@ -198,16 +198,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     }
 
     /**
-     * Gets how much eth one unit of the investment is worth
-     *
-     * @param _investmentAddress                 Investment address to check
-     * @return uint256                           Returns the price in ETH of an investment share
-     */
-    function getPricePerShare(address _investmentAddress) external view override returns (uint256) {
-        return _getPricePerShare(_investmentAddress);
-    }
-
-    /**
      * Gets the asset needed to enter the investment
      *
      * @return address                           Returns the asset that this investment needs
@@ -447,10 +437,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     function _getExpectedShares(
         address, //_investmentAddress
         uint256 // _ethAmount
-    ) internal view virtual returns (uint256);
-
-    function _getPricePerShare(
-        address //_investmentAddress
     ) internal view virtual returns (uint256);
 
     function _getInvestmentAsset(

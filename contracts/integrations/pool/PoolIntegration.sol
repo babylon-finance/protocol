@@ -177,10 +177,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         return _getUnderlyingAndRate(_pool, _i);
     }
 
-    function getPricePerShare(bytes calldata _pool) external view virtual override returns (uint256) {
-        return _getPricePerShare(_pool);
-    }
-
     function poolWeightsByPrice(
         bytes calldata /* _pool */
     ) external view virtual override returns (bool) {
@@ -343,12 +339,6 @@ abstract contract PoolIntegration is BaseIntegration, ReentrancyGuard, IPoolInte
         );
 
     function _isPool(bytes memory _pool) internal view virtual returns (bool);
-
-    function _getPricePerShare(
-        bytes calldata /* _pool */
-    ) internal pure virtual returns (uint256) {
-        return 0;
-    }
 
     function _totalSupply(address _pool) internal view virtual returns (uint256) {
         return IERC20(_pool).totalSupply();

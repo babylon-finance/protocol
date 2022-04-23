@@ -57,12 +57,6 @@ contract ConvexStakeIntegration is PassiveIntegration {
         return _amount;
     }
 
-    function _getPricePerShare(
-        address /* _asset */
-    ) internal pure override returns (uint256) {
-        return 1e18;
-    }
-
     function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
         return convexRegistry.getConvexInputToken(_asset);
     }

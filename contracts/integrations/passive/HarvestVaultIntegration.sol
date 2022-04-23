@@ -54,10 +54,6 @@ contract HarvestVaultIntegration is PassiveIntegration {
             );
     }
 
-    function _getPricePerShare(address _vault) internal view override returns (uint256) {
-        return IHarvestVault(_vault).getPricePerFullShare();
-    }
-
     function _getInvestmentAsset(address _vault) internal view override returns (address) {
         return IHarvestVault(_vault).underlying();
     }

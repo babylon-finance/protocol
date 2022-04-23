@@ -21,6 +21,8 @@ interface IPickleJarRegistry {
 
     function jars(address _jarAddress) external view returns (bool);
 
+    function noSwapParam(address _jarAddress) external view returns (bool);
+
     function isUniv3(address _jarAddress) external view returns (bool);
 
     function getAllJars() external view returns (address[] memory);
