@@ -37,8 +37,10 @@ contract PickleJarIntegration is PassiveIntegration {
      * @param _controller                   Address of the controller
      * @param _pickleJarRegistry            Address of our pickle jar registry
      */
-    constructor(IBabController _controller, IPickleJarRegistry _pickleJarRegistry) PassiveIntegration('pickle_jar', _controller) {
-      pickleRegistry = _pickleJarRegistry;
+    constructor(IBabController _controller, IPickleJarRegistry _pickleJarRegistry)
+        PassiveIntegration('pickle_jar', _controller)
+    {
+        pickleRegistry = _pickleJarRegistry;
     }
 
     /* ============ Internal Functions ============ */
@@ -57,9 +59,9 @@ contract PickleJarIntegration is PassiveIntegration {
 
     function _getInvestmentAsset(address _jar) internal view override returns (address) {
         if (pickleRegistry(_jar).isUniv3()) {
-          return IJarUniV3(_jar).token0();
+            return IJarUniV3(_jar).token0();
         } else {
-          return IJar(_jar).token();
+            return IJar(_jar).token();
         }
     }
 
@@ -100,13 +102,17 @@ contract PickleJarIntegration is PassiveIntegration {
         require(token != address(0), 'Pickle jar does not exist');
 
         if (pickleRegistry(_jar).isUniv3()) {
-          if (pickleRegistry(_jar).noSwapParam()) {
-            methodData = abi.encodeWithSignature('deposit(uint256,uint256)', _maxAmountIn.div(2), _maxAmountIn.div(2));
-          } else {
-            methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', _maxAmountIn, 0, true);
-          }
+            if (pickleRegistry(_jar).noSwapParam()) {
+                methodData = abi.encodeWithSignature(
+                    'deposit(uint256,uint256)',
+                    _maxAmountIn.div(2),
+                    _maxAmountIn.div(2)
+                );
+            } else {
+                methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', _maxAmountIn, 0, true);
+            }
         } else {
-          methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+            methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
         }
         // Encode method data for Garden to invoke
         return (_asset, 0, methodData);
