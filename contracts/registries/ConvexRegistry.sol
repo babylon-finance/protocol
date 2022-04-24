@@ -51,10 +51,13 @@ contract ConvexRegistry is IConvexRegistry {
             return;
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            (, address token, , , , ) = booster.poolInfo(i);
+            (, address token, , address reward, , ) = booster.poolInfo(i);
             cacheConvexTokenToPid[token] = i + 1;
+            cacheConvexTokenToPid[reward] = i + 1;
             convexPools[token] = true;
+            convexPools[reward] = true;
             convexList.push(token);
+            convexList.push(reward);
         }
         elementsCached = poolLength;
     }
@@ -73,8 +76,8 @@ contract ConvexRegistry is IConvexRegistry {
             return (false, 0);
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            (, address token, , , , ) = booster.poolInfo(i);
-            if (token == _asset) {
+            (, address token, , address reward , , ) = booster.poolInfo(i);
+            if (token == _asset || reward == _asset) {
                 return (true, i);
             }
         }

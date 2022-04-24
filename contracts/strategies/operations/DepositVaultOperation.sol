@@ -184,13 +184,9 @@ contract DepositVaultOperation is Operation {
         address resultAsset = _getResultAsset(_integration, _vault);
         uint256 balance = IERC20(resultAsset).balanceOf(msg.sender);
         // Get price through oracle
-        // TODO: we should use result asset here but for convex doesn't work
-        uint256 price = _getPrice(_vault, _garden.reserveAsset());
+        uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
+        // TODO: make safe decimal math ressistant to decimals
         uint256 NAV = SafeDecimalMath.normalizeAmountTokens(_vault, _garden.reserveAsset(), balance.preciseMul(price));
-        // normalize amount token does not fix this
-        // if (ERC20(_garden.reserveAsset()).decimals() < 18) {
-        //   NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
-        // }
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         balance = ERC20(vaultAsset).balanceOf(msg.sender);
@@ -201,9 +197,6 @@ contract DepositVaultOperation is Operation {
               _garden.reserveAsset(),
               balance.preciseMul(price)
           ));
-          // if (ERC20(_garden.reserveAsset()).decimals() < 18) {
-          //   NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
-          // }
         }
         return NAV;
     }

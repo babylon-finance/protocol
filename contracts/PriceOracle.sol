@@ -295,10 +295,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             } else {
                 price = pricePerShare.preciseMul(getPrice(IJar(_tokenIn).token(), _tokenOut));
             }
-            uint256 pDecimals = ERC20(_tokenIn).decimals();
-            if (pDecimals < 18) {
-                price = price.mul(10**(18 - pDecimals));
-            }
             return price;
         }
 
@@ -312,10 +308,6 @@ contract PriceOracle is Ownable, IPriceOracle {
                 price = getPrice(_tokenIn, IJar(_tokenOut).token()).preciseDiv(IJar(_tokenOut).getRatio());
             }
 
-            uint256 yvDecimals = ERC20(_tokenOut).decimals();
-            if (yvDecimals < 18) {
-                price = price.div(10**(18 - yvDecimals));
-            }
             return price;
         }
 
@@ -323,19 +315,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (tokenInType == 15) {
             // price per share is 1 to 1 in convex
             price = getPrice(convexRegistry.getConvexInputToken(_tokenIn), _tokenOut);
-            uint256 cvDecimals = ERC20(_tokenIn).decimals();
-            if (cvDecimals < 18) {
-                price = price.mul(10**(18 - cvDecimals));
-            }
             return price;
         }
 
         if (tokenOutType == 15) {
             price = getPrice(_tokenIn, convexRegistry.getConvexInputToken(_tokenOut));
-            uint256 cvDecimals = ERC20(_tokenIn).decimals();
-            if (cvDecimals < 18) {
-                price = price.mul(10**(18 - cvDecimals));
-            }
             return price;
         }
 
