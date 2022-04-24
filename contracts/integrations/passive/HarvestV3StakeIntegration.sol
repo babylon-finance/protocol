@@ -44,13 +44,6 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
         return _stakingPool;
     }
 
-    function _getExpectedShares(
-        address, /* _asset */
-        uint256 _amount
-    ) internal pure override returns (uint256) {
-        return _amount;
-    }
-
     function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
         return IHarvestV3Stake(_asset).lpToken();
     }

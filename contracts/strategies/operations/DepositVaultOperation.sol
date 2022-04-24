@@ -71,7 +71,7 @@ contract DepositVaultOperation is Operation {
         uint256 _capital,
         uint8, /* _assetStatus */
         bytes calldata _data,
-        IGarden, /* _garden */
+        IGarden _garden,
         address _integration
     )
         external
@@ -96,26 +96,21 @@ contract DepositVaultOperation is Operation {
                 IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
             }
         }
-        uint256 minAmountExpected = _getMinAmountExpected(yieldVault, IERC20(vaultAsset).balanceOf(msg.sender), _integration);
-        console.log('before enter investment', minAmountExpected);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             yieldVault,
-            minAmountExpected,
+            1,
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
+        console.log('token 0', IERC20(vaultAsset).balanceOf(msg.sender));
+        console.log('token 1', IERC20(WETH).balanceOf(msg.sender));
+        console.log('balance', address(msg.sender).balance);
         vaultAsset = _getResultAsset(_integration, yieldVault);
+        uint256 NAV = _getCoreNAV(_integration, yieldVault, _garden);
+        console.log('nav in reserve', NAV);
+        require(NAV >= _capital.preciseMul(SLIPPAGE_ALLOWED), 'NAV borked after execution');
         return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
-    }
-
-    function _getMinAmountExpected(
-        address _yieldVault,
-        uint256 _capital,
-        address _integration
-    ) internal view returns (uint256) {
-        uint256 exactAmount = IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital);
-        return exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
     }
 
     /**
@@ -184,16 +179,25 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
-        // Get price through oracle
-        uint256 price = _getPrice(vault, _garden.reserveAsset());
-        // Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(vault, _garden.reserveAsset(), balance);
-        uint256 NAV = balance.preciseMul(price);
+        uint256 NAV = _getCoreNAV(_integration, vault, _garden);
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);
+    }
+
+    function _getCoreNAV(address _integration, address _vault, IGarden _garden) internal view returns (uint256) {
+        uint256 balance = IERC20(_getResultAsset(_integration, _vault)).balanceOf(msg.sender);
+        // Get price through oracle
+        uint256 price = _getPrice(_vault, _garden.reserveAsset());
+        // Balance normalization
+        balance = SafeDecimalMath.normalizeAmountTokens(_vault, _garden.reserveAsset(), balance);
+        uint256 NAV = balance.preciseMul(price);
+        // Get remaining investment asset
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
+        balance = IERC20(vaultAsset).balanceOf(msg.sender);
+        price = _getPrice(vaultAsset, _garden.reserveAsset());
+        return NAV.add(balance.preciseMul(price));
     }
 
     // Function to provide backward compatibility

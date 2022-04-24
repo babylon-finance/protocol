@@ -47,14 +47,6 @@ contract YearnVaultIntegration is PassiveIntegration {
         return _asset;
     }
 
-    function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        // Normalizing pricePerShare returned by Yearn
-        return
-            _amount.preciseDiv(IYearnVault(_asset).pricePerShare()).div(
-                10**PreciseUnitMath.decimals().sub(ERC20(_asset).decimals())
-            );
-    }
-
     function _getInvestmentAsset(address _asset) internal view override returns (address) {
         return IYearnVault(_asset).token();
     }
