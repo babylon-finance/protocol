@@ -949,7 +949,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) private returns (uint256) {
         console.log('trade');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 pricePerTokenUnit = _getPrice(_sendToken, _receiveToken);
+        uint256 pricePerTokenUnit = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
         console.log('pricePerTokenUnit:', pricePerTokenUnit);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
@@ -1019,16 +1019,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) internal {
         rewardsDistributor.updateProtocolPrincipal(_capital, _addOrSubstract);
-    }
-
-    function _getPrice(address _assetOne, address _assetTwo) private view returns (uint256) {
-        try IPriceOracle(IBabController(controller).priceOracle()).getPrice(_assetOne, _assetTwo) returns (
-            uint256 price
-        ) {
-            return price;
-        } catch {
-            return 0;
-        }
     }
 
     function _updateExpectedReturn(
