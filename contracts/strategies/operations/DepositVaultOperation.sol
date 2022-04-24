@@ -95,13 +95,11 @@ contract DepositVaultOperation is Operation {
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             yieldVault,
-            1,
+            1, // TODO: change from priceOracle
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
         vaultAsset = _getResultAsset(_integration, yieldVault);
-        uint256 NAV = _getCoreNAV(_integration, yieldVault, _garden);
-        require(NAV >= _capital.preciseMul(SLIPPAGE_ALLOWED), 'NAV borked after execution');
         return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
 
@@ -186,14 +184,22 @@ contract DepositVaultOperation is Operation {
         uint256 balance = IERC20(_getResultAsset(_integration, _vault)).balanceOf(msg.sender);
         // Get price through oracle
         uint256 price = _getPrice(_vault, _garden.reserveAsset());
-        // Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(_vault, _garden.reserveAsset(), balance);
         uint256 NAV = balance.preciseMul(price);
+        // normalize amount token does not fix this
+        if (ERC20(_garden.reserveAsset()).decimals() < 18) {
+          NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
+        }
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
-        balance = IERC20(vaultAsset).balanceOf(msg.sender);
+        balance = ERC20(vaultAsset).balanceOf(msg.sender);
         price = _getPrice(vaultAsset, _garden.reserveAsset());
-        return NAV.add(balance.preciseMul(price));
+        if (balance > 0) {
+          NAV = NAV.add(balance.preciseMul(price));
+          if (ERC20(_garden.reserveAsset()).decimals() < 18) {
+            NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
+          }
+        }
+        return NAV;
     }
 
     // Function to provide backward compatibility

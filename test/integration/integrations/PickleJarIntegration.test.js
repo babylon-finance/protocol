@@ -10,6 +10,7 @@ const { GARDENS, STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = requ
 describe('PickleJarIntegrationTest', function () {
   let pickleJarIntegration;
   let curvePoolIntegration;
+  let pickleFarmIntegration;
   let sushiswapPoolIntegration;
   let uniswapPoolIntegration;
   let signer1;
@@ -20,6 +21,7 @@ describe('PickleJarIntegrationTest', function () {
     ({
       pickleJarIntegration,
       curvePoolIntegration,
+      pickleFarmIntegration,
       sushiswapPoolIntegration,
       uniswapPoolIntegration,
       signer1,
@@ -71,6 +73,12 @@ describe('PickleJarIntegrationTest', function () {
       params = [jarObj.uni, 0, jarAddress, 0];
     }
 
+    if (jarObj.farm) {
+      strategyKind = 'custom';
+      integrations = [...integrations, pickleFarmIntegration.address];
+      params = [...params, jarAddress, 0];
+    }
+
     const strategyContract = await createStrategy(
       strategyKind,
       'vote',
@@ -87,7 +95,7 @@ describe('PickleJarIntegrationTest', function () {
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.gt(amount.sub(amount.div(35)));
+    expect(nav).to.be.closeTo(amount.sub(amount.div(35)), amount.div(10));
     expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
