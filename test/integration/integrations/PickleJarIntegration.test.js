@@ -43,7 +43,17 @@ describe('PickleJarIntegrationTest', function () {
     });
   });
 
-  async function depositIntoJar(jarAddress, token, jarObj) {
+  describe('Pickle Farm Multigarden multiasset', function () {
+    pick(GARDENS.slice(0, 3)).forEach(async ({ token, name }) => {
+      pick(addresses.pickle.jars).forEach((jar) => {
+        it(`can enter into ${jar.name} and farm into gauge from a ${name} garden`, async function () {
+          await depositIntoJar(jar.address, token, jar, true);
+        });
+      });
+    });
+  });
+
+  async function depositIntoJar(jarAddress, token, jarObj, farm) {
     await transferFunds(token);
     const garden = await createGarden({ reserveAsset: token });
     const gardenReserveAsset = await getERC20(token);

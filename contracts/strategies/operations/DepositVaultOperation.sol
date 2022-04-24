@@ -172,7 +172,7 @@ contract DepositVaultOperation is Operation {
         uint256 NAV = _getCoreNAV(_integration, vault, _garden);
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
-        require(NAV != 0, 'NAV has to be bigger 0');
+        require(NAV != 0, 'NAV has to be bigger v 0');
         return (NAV, true);
     }
 
@@ -181,20 +181,13 @@ contract DepositVaultOperation is Operation {
         address _vault,
         IGarden _garden
     ) internal view returns (uint256) {
-        uint256 balance = IERC20(_getResultAsset(_integration, _vault)).balanceOf(msg.sender);
+        address resultAsset = _getResultAsset(_integration, _vault);
+        uint256 balance = IERC20(resultAsset).balanceOf(msg.sender);
         // Get price through oracle
-        // console.log('balance core nav', balance);
-        // console.log('asset', _getResultAsset(_integration, _vault));
-        // console.log('vault', _vault);
+        // TODO: we should use result asset here but for convex doesn't work
         uint256 price = _getPrice(_vault, _garden.reserveAsset());
-        // console.log('price', price);
-        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(
-            _getResultAsset(_integration, _vault),
-            _garden.reserveAsset(),
-            balance.preciseMul(price)
-        );
-        // console.log('NAV', NAV);
-        // // normalize amount token does not fix this
+        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(_vault, _garden.reserveAsset(), balance.preciseMul(price));
+        // normalize amount token does not fix this
         // if (ERC20(_garden.reserveAsset()).decimals() < 18) {
         //   NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
         // }
