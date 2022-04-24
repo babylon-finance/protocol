@@ -191,7 +191,9 @@ contract StakewiseIntegration is PassiveIntegration {
         return (swapRouter, 0, methodData);
     }
 
-    function _preActionNeedsApproval(address /* _asset */) internal pure override returns (address) {
+    function _preActionNeedsApproval(
+        address /* _asset */
+    ) internal pure override returns (address) {
         return address(rETH2);
     }
 

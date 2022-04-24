@@ -93,11 +93,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             address approvalAsset = _preActionNeedsApproval(_investmentAddress);
             if (approvalAsset != address(0)) {
                 uint256 bal = IERC20(approvalAsset).balanceOf(_strategy);
-                investmentInfo.strategy.invokeApprove(
-                    _getSpender(_investmentAddress, 0),
-                    approvalAsset,
-                    bal
-                );
+                investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), approvalAsset, bal);
             }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -111,6 +107,26 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getEnterInvestmentCalldata(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
+
+        // Post actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _strategy,
+            _investmentAddress,
+            _investmentTokensOut,
+            0
+        );
+
+        if (targetAddressP != address(0)) {
+            // Approve spending of the post action token
+            address approvalAsset = _postActionNeedsApproval(_investmentAddress);
+            if (approvalAsset != address(0)) {
+                uint256 bal = IERC20(approvalAsset).balanceOf(_strategy);
+                investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 1), approvalAsset, bal);
+            }
+            // Invoke protocol specific call
+            investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         _validatePostEnterInvestmentData(investmentInfo);
 
         emit InvestmentEntered(
@@ -174,18 +190,19 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
         // Post actions
-        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(_strategy, _investmentAddress, _investmentTokenIn, 1);
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _strategy,
+            _investmentAddress,
+            _investmentTokenIn,
+            1
+        );
 
         if (targetAddressP != address(0)) {
             // Approve spending of the post action token
             address approvalAsset = _postActionNeedsApproval(_investmentAddress);
             if (approvalAsset != address(0)) {
                 uint256 bal = IERC20(approvalAsset).balanceOf(_strategy);
-                investmentInfo.strategy.invokeApprove(
-                    _getSpender(_investmentAddress, 1),
-                    approvalAsset,
-                    bal
-                );
+                investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 1), approvalAsset, bal);
             }
             // Invoke protocol specific call
             investmentInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -456,11 +473,15 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return (address(0), 0);
     }
 
-    function _preActionNeedsApproval(address /* _asset */) internal view virtual returns (address) {
+    function _preActionNeedsApproval(
+        address /* _asset */
+    ) internal view virtual returns (address) {
         return address(0);
     }
 
-    function _postActionNeedsApproval(address /* _asset */) internal view virtual returns (address) {
+    function _postActionNeedsApproval(
+        address /* _asset */
+    ) internal view virtual returns (address) {
         return address(0);
     }
 

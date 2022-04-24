@@ -75,7 +75,7 @@ contract PickleFarmIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address _asset,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */

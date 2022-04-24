@@ -136,7 +136,7 @@ contract HarvestV3StakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getPostActionCallData(
-        address /* _strategy */,
+        address, /* _strategy */
         address _pool,
         uint256, /* _amount */
         uint256 _passiveOp

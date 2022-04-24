@@ -178,9 +178,25 @@ contract PickleJarIntegration is PassiveIntegration {
             if (pickleRegistry.noSwapParam(_asset)) {
                 // Sell half of token 0 to token 1
                 uint256 token0Amount = ERC20(IJarUniV3(_asset).token0()).balanceOf(_strategy).div(2);
-                uint256 minAmount = IPriceOracle(controller.priceOracle()).getPrice(IJarUniV3(_asset).token0(), IJarUniV3(_asset).token1()).preciseMul(token0Amount).preciseMul(95e16);
-                minAmount = SafeDecimalMath.normalizeAmountTokens(IJarUniV3(_asset).token0(), IJarUniV3(_asset).token1(), minAmount);
-                bytes memory methodData = abi.encodeWithSignature('trade(address,address,uint256,address,uint256)', _strategy, IJarUniV3(_asset).token0(), token0Amount, IJarUniV3(_asset).token1(), minAmount);
+                uint256 minAmount =
+                    IPriceOracle(controller.priceOracle())
+                        .getPrice(IJarUniV3(_asset).token0(), IJarUniV3(_asset).token1())
+                        .preciseMul(token0Amount)
+                        .preciseMul(95e16);
+                minAmount = SafeDecimalMath.normalizeAmountTokens(
+                    IJarUniV3(_asset).token0(),
+                    IJarUniV3(_asset).token1(),
+                    minAmount
+                );
+                bytes memory methodData =
+                    abi.encodeWithSignature(
+                        'trade(address,address,uint256,address,uint256)',
+                        _strategy,
+                        IJarUniV3(_asset).token0(),
+                        token0Amount,
+                        IJarUniV3(_asset).token1(),
+                        minAmount
+                    );
                 return (controller.masterSwapper(), 0, methodData);
             }
         }
@@ -217,10 +233,26 @@ contract PickleJarIntegration is PassiveIntegration {
             // Sell token 1 to token 0
             uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
             if (token1Amount > 1000) {
-              uint256 minAmount = IPriceOracle(controller.priceOracle()).getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0()).preciseMul(token1Amount).preciseMul(95e16);
-              minAmount = SafeDecimalMath.normalizeAmountTokens(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0(), minAmount);
-              bytes memory methodData = abi.encodeWithSignature('trade(address,address,uint256,address,uint256)', _strategy, IJarUniV3(_asset).token1(), token1Amount, IJarUniV3(_asset).token0(), minAmount);
-              return (controller.masterSwapper(), 0, methodData);
+                uint256 minAmount =
+                    IPriceOracle(controller.priceOracle())
+                        .getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0())
+                        .preciseMul(token1Amount)
+                        .preciseMul(95e16);
+                minAmount = SafeDecimalMath.normalizeAmountTokens(
+                    IJarUniV3(_asset).token1(),
+                    IJarUniV3(_asset).token0(),
+                    minAmount
+                );
+                bytes memory methodData =
+                    abi.encodeWithSignature(
+                        'trade(address,address,uint256,address,uint256)',
+                        _strategy,
+                        IJarUniV3(_asset).token1(),
+                        token1Amount,
+                        IJarUniV3(_asset).token0(),
+                        minAmount
+                    );
+                return (controller.masterSwapper(), 0, methodData);
             }
         }
         return (address(0), 0, bytes(''));
@@ -232,9 +264,10 @@ contract PickleJarIntegration is PassiveIntegration {
         }
         return address(0);
     }
+
     function _preActionNeedsApproval(address _jar) internal view override returns (address) {
         if (pickleRegistry.noSwapParam(_jar)) {
-          return IJarUniV3(_jar).token0();
+            return IJarUniV3(_jar).token0();
         }
         return address(0);
     }

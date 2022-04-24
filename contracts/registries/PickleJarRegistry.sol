@@ -138,7 +138,7 @@ contract PickleJarRegistry is IPickleJarRegistry {
 
     function getJarStrategy(address _jar) external view override returns (address) {
         if (isUniv3[_jar]) {
-          return pickleControlller.strategies(IJarUniV3(_jar).pool());
+            return pickleControlller.strategies(IJarUniV3(_jar).pool());
         }
         return address(0);
     }

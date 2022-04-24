@@ -8,7 +8,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {ConvexStakeIntegration} from '../../integrations/passive/ConvexStakeIntegration.sol';
-import {IBooster} from '../../interfaces/external/convex/IBooster.sol';
+import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
 import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -30,10 +30,6 @@ contract DepositVaultOperation is Operation {
     using BytesLib for bytes;
 
     /* ============ Constructor ============ */
-
-    IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
-    address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32; // lDO
 
     /**
      * Creates the integration
@@ -186,7 +182,11 @@ contract DepositVaultOperation is Operation {
         return (NAV, true);
     }
 
-    function _getCoreNAV(address _integration, address _vault, IGarden _garden) internal view returns (uint256) {
+    function _getCoreNAV(
+        address _integration,
+        address _vault,
+        IGarden _garden
+    ) internal view returns (uint256) {
         uint256 balance = IERC20(_getResultAsset(_integration, _vault)).balanceOf(msg.sender);
         // Get price through oracle
         uint256 price = _getPrice(_vault, _garden.reserveAsset());

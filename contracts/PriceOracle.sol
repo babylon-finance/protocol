@@ -288,7 +288,9 @@ contract PriceOracle is Ownable, IPriceOracle {
             uint256 pricePerShare = IJar(_tokenIn).getRatio();
             if (tokenInType == 14) {
                 // univ3
-                price = pricePerShare.preciseMul(_getPriceJarUniV3(_tokenIn, WETH)).preciseMul(getPrice(WETH, _tokenOut));
+                price = pricePerShare.preciseMul(_getPriceJarUniV3(_tokenIn, WETH)).preciseMul(
+                    getPrice(WETH, _tokenOut)
+                );
             } else {
                 price = pricePerShare.preciseMul(getPrice(IJar(_tokenIn).token(), _tokenOut));
             }
@@ -302,7 +304,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (tokenOutType == 13 || tokenOutType == 14) {
             if (tokenOutType == 14) {
                 // univ3
-                price = getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH)).preciseDiv(IJar(_tokenOut).getRatio());
+                price = getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH)).preciseDiv(
+                    IJar(_tokenOut).getRatio()
+                );
             } else {
                 price = getPrice(_tokenIn, IJar(_tokenOut).token()).preciseDiv(IJar(_tokenOut).getRatio());
             }
@@ -717,14 +721,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
         uint256 positionId = IJarStrategy(pickleRegistry.getJarStrategy(_jar)).tokenId();
         (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(positionId);
-        return
-            _getPriceUniV3Pool(
-                IUniswapV3Pool(IJarUniV3(_jar).pool()),
-                _reserve,
-                totalLiquidity,
-                amount0,
-                amount1
-            );
+        return _getPriceUniV3Pool(IUniswapV3Pool(IJarUniV3(_jar).pool()), _reserve, totalLiquidity, amount0, amount1);
     }
 
     /**

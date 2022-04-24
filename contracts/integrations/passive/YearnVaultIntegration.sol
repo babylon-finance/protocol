@@ -34,7 +34,9 @@ contract YearnVaultIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller, IYearnVaultRegistry _yearnVaultRegistry) PassiveIntegration('yearnvaultsv2', _controller) {
+    constructor(IBabController _controller, IYearnVaultRegistry _yearnVaultRegistry)
+        PassiveIntegration('yearnvaultsv2', _controller)
+    {
         yearnVaultRegistry = _yearnVaultRegistry;
     }
 
