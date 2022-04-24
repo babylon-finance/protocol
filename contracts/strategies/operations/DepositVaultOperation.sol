@@ -99,12 +99,8 @@ contract DepositVaultOperation is Operation {
             vaultAsset,
             vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
         );
-        console.log('token 0', IERC20(vaultAsset).balanceOf(msg.sender));
-        console.log('token 1', IERC20(WETH).balanceOf(msg.sender));
-        console.log('balance', address(msg.sender).balance);
         vaultAsset = _getResultAsset(_integration, yieldVault);
         uint256 NAV = _getCoreNAV(_integration, yieldVault, _garden);
-        console.log('nav in reserve', NAV);
         require(NAV >= _capital.preciseMul(SLIPPAGE_ALLOWED), 'NAV borked after execution');
         return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
     }
