@@ -183,10 +183,10 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
         uint256 balance = IERC20(_getResultAsset(_integration, vault)).balanceOf(msg.sender);
+        // Get price through oracle
         uint256 price = _getPrice(vault, _garden.reserveAsset());
-        //Balance normalization
+        // Balance normalization
         balance = SafeDecimalMath.normalizeAmountTokens(vault, _garden.reserveAsset(), balance);
         uint256 NAV = balance.preciseMul(price);
         // Get value of pending rewards
