@@ -23,6 +23,7 @@ async function setUpFixture(
   const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
   const curveMetaRegistry = await getContract('CurveMetaRegistry');
+  const convexRegistry = await getContract('ConvexRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -318,6 +319,7 @@ async function setUpFixture(
     fuseBorrowIntegration,
     lidoIntegration,
     stakewiseIntegration,
+    convexRegistry,
     timelockController,
     babGovernor,
     masterSwapper,

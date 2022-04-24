@@ -243,6 +243,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
+        // Curve lp
         if (tokenInType == 5) {
             address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
             if (crvPool != address(0)) {

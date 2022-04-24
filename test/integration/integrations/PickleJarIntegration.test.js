@@ -73,7 +73,7 @@ describe('PickleJarIntegrationTest', function () {
       params = [jarObj.uni, 0, jarAddress, 0];
     }
 
-    if (jarObj.farm) {
+    if (farm) {
       strategyKind = 'custom';
       integrations = [...integrations, pickleFarmIntegration.address];
       params = [...params, jarAddress, 0];

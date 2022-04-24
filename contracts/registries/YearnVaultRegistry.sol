@@ -36,6 +36,8 @@ contract YearnVaultRegistry is IYearnVaultRegistry {
         // Yearn vaults
         // https://medium.com/yearn-state-of-the-vaults/the-vaults-at-yearn-9237905ffed3
         _addVault(0xc5bDdf9843308380375a611c18B50Fb9341f502A);
+        _addVault(0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE);
+        _addVault(0x378cb52b00F9D0921cb46dFc099CFf73b42419dC);
         _addVault(0x9d409a0A012CFbA9B15F6D4B36Ac57A46966Ab9a);
         _addVault(0xdb25cA703181E7484a155DD612b06f57E12Be5F0);
         _addVault(0xF29AE508698bDeF169B89834F76704C3B205aedf);
