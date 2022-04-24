@@ -197,8 +197,8 @@ contract BorrowOperation is Operation {
         uint256 tokensOwed = IBorrowIntegration(_integration).getBorrowBalance(msg.sender, borrowToken);
         uint256 price = _getPrice(_garden.reserveAsset(), borrowToken);
         // if there are liquidations or it is the last op (borrowings not used)
-        uint256 borrowTokenBalance = IERC20(borrowToken == address(0) ? WETH :
-                                            borrowToken).universalBalanceOf(msg.sender);
+        uint256 borrowTokenBalance =
+            IERC20(borrowToken == address(0) ? WETH : borrowToken).universalBalanceOf(msg.sender);
         if (borrowTokenBalance > 0) {
             tokensOwed = tokensOwed >= borrowTokenBalance ? tokensOwed.sub(borrowTokenBalance) : 0;
         }

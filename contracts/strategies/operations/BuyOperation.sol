@@ -140,8 +140,7 @@ contract BuyOperation is Operation {
         uint256 price = _getPriceNAV(_garden.reserveAsset(), token);
         uint256 NAV =
             SafeDecimalMath
-                .normalizeAmountTokens(token, _garden.reserveAsset(),
-                                       IERC20(token).universalBalanceOf(msg.sender))
+                .normalizeAmountTokens(token, _garden.reserveAsset(), IERC20(token).universalBalanceOf(msg.sender))
                 .preciseDiv(price);
         require(NAV != 0, 'NAV has to be bigger 0');
         return (NAV, true);

@@ -202,8 +202,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
 
         uint256 receivedQuantity = IERC20(_receiveToken).universalBalanceOf(address(_strategy)).sub(preReceiveQuantity);
 
-        uint256 spentQuantity =
-            preSendQuantity.sub(IERC20(_sendToken).universalBalanceOf(address(_strategy)));
+        uint256 spentQuantity = preSendQuantity.sub(IERC20(_sendToken).universalBalanceOf(address(_strategy)));
 
         // Unfortunatelly some protocols, e.g., Curve, leave dust and do not use
         // full send token quantity

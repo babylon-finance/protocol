@@ -160,8 +160,7 @@ contract DepositVaultOperation is Operation {
             return (0, true);
         }
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
-        uint256 balance = IERC20(_getResultAsset(_integration,
-                                                 vault)).universalBalanceOf(msg.sender);
+        uint256 balance = IERC20(_getResultAsset(_integration, vault)).universalBalanceOf(msg.sender);
         // try to get price of an investment token from Oracle
         // markets sometimes price assets differently than
         // their underlying protocols, e.g., stETH/Lido
@@ -215,7 +214,7 @@ contract DepositVaultOperation is Operation {
             _vaultAsset != _asset
                 ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset)
                 : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
-                console.log('vaultAssetQuantity:', vaultAssetQuantity);
+        console.log('vaultAssetQuantity:', vaultAssetQuantity);
 
         uint256 minAmountExpected =
             IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(

@@ -149,7 +149,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 _minReceiveQuantity
             );
 
-            console.log('receivedQuantity:', receivedQuantity);
+        console.log('receivedQuantity:', receivedQuantity);
 
         // unrwap WETH if ETH is a receive token
         if (_receiveToken == address(0)) {

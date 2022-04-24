@@ -96,15 +96,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         } catch {}
-        return _joinPool(
-            _asset,
-            _capital,
-            _data,
-            _garden,
-            _integration,
-            poolWeights,
-            poolTokens
-        );
+        return _joinPool(_asset, _capital, _data, _garden, _integration, poolWeights, poolTokens);
     }
 
     /**
@@ -133,7 +125,9 @@ contract AddLiquidityOperation is Operation {
         address pool = BytesLib.decodeOpDataAddress(_data);
         address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
         uint256 lpTokens =
-            IERC20(IPoolIntegration(_integration).getLPToken(pool)).universalBalanceOf(msg.sender).preciseMul(_percentage); // Sell all pool tokens
+            IERC20(IPoolIntegration(_integration).getLPToken(pool)).universalBalanceOf(msg.sender).preciseMul(
+                _percentage
+            ); // Sell all pool tokens
         uint256[] memory _minAmountsOut = IPoolIntegration(_integration).getPoolMinAmountsOut(_data, lpTokens);
         IPoolIntegration(_integration).exitPool(
             msg.sender,
@@ -208,8 +202,7 @@ contract AddLiquidityOperation is Operation {
         // get rewards if hanging around
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) &&
-                    IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     price = _getPrice(_garden.reserveAsset(), rewards[i]);
                     if (price > 0) {
                         NAV += SafeDecimalMath.normalizeAmountTokens(
@@ -269,8 +262,9 @@ contract AddLiquidityOperation is Operation {
         IGarden _garden,
         address _integration,
         uint256[] memory _poolWeights,
-        address[] memory _poolTokens 
-    ) internal
+        address[] memory _poolTokens
+    )
+        internal
         returns (
             address,
             uint256,
@@ -278,10 +272,8 @@ contract AddLiquidityOperation is Operation {
         )
     {
         // Get the tokens needed to enter the pool
-        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden,
-                                                      _poolWeights, _poolTokens);
-        uint256 poolTokensOut =
-            IPoolIntegration(_integration).getPoolTokensOut(_data, _poolTokens[0], maxAmountsIn[0]);
+        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, _poolTokens);
+        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, _poolTokens[0], maxAmountsIn[0]);
         IPoolIntegration(_integration).joinPool(
             msg.sender,
             _data,
@@ -289,13 +281,9 @@ contract AddLiquidityOperation is Operation {
             _poolTokens,
             maxAmountsIn
         );
-       address lpToken = IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
+        address lpToken = IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
 
-        return (
-            lpToken,
-            IERC20(lpToken).balanceOf(msg.sender),
-            0
-        ); // liquid
+        return (lpToken, IERC20(lpToken).balanceOf(msg.sender), 0); // liquid
     }
 
     // TODO: Make a lib helper
@@ -316,8 +304,7 @@ contract AddLiquidityOperation is Operation {
     ) internal {
         try IPoolIntegration(_integration).getRewardTokens(_data) returns (address[] memory rewards) {
             for (uint256 i = 0; i < rewards.length; i++) {
-                if (rewards[i] != address(0) &&
-                    IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
+                if (rewards[i] != address(0) && IERC20(rewards[i]).universalBalanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     try
                         IStrategy(msg.sender).trade(
                             rewards[i],

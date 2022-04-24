@@ -233,8 +233,7 @@ contract SynthetixTradeIntegration is TradeIntegration {
         } catch {
             receiveTokenImpl = address(0);
         }
-        return (sendTokenImpl, receiveTokenImpl,
-                IERC20(_sendToken).universalBalanceOf(_strategy));
+        return (sendTokenImpl, receiveTokenImpl, IERC20(_sendToken).universalBalanceOf(_strategy));
     }
 
     function stringToBytes32(string memory source) private pure returns (bytes32 result) {

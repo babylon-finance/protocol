@@ -118,8 +118,11 @@ contract AaveLendIntegration is LendIntegration {
     {
         // Encode method data for Garden to invoke
         bytes memory methodData =
-            abi.encodeWithSignature('claimRewards(address,uint256)', _strategy,
-                                    IERC20(stkAAVE).universalBalanceOf(_strategy));
+            abi.encodeWithSignature(
+                'claimRewards(address,uint256)',
+                _strategy,
+                IERC20(stkAAVE).universalBalanceOf(_strategy)
+            );
 
         return (stkAAVE, 0, methodData);
     }

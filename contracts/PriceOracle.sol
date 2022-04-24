@@ -622,8 +622,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
             uint256 price = getPrice(_denominator, asset);
-            uint256 balance = !_isETH(poolTokens[i]) ?
-                IERC20(poolTokens[i]).universalBalanceOf(_pool) : _pool.balance;
+            uint256 balance = !_isETH(poolTokens[i]) ? IERC20(poolTokens[i]).universalBalanceOf(_pool) : _pool.balance;
             // Special case for weth in some pools
             if (poolTokens[i] == WETH && balance == 0) {
                 balance = _pool.balance;
