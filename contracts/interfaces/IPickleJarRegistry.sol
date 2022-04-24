@@ -25,5 +25,9 @@ interface IPickleJarRegistry {
 
     function isUniv3(address _jarAddress) external view returns (bool);
 
+    function getJarStrategy(address _jarAddress) external view returns (address);
+
+    function getJarGauge(address _jarAddress) external view returns (address);
+
     function getAllJars() external view returns (address[] memory);
 }

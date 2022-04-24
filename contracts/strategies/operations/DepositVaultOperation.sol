@@ -96,7 +96,8 @@ contract DepositVaultOperation is Operation {
                 IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
             }
         }
-        uint256 minAmountExpected = _getMinAmountExpected(yieldVault, _capital, _integration);
+        uint256 minAmountExpected = _getMinAmountExpected(yieldVault, IERC20(vaultAsset).balanceOf(msg.sender), _integration);
+        console.log('before enter investment', minAmountExpected);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             yieldVault,

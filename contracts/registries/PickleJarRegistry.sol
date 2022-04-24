@@ -5,6 +5,9 @@ pragma solidity 0.7.6;
 import {IBabController} from '../interfaces/IBabController.sol';
 import {IPickleJarRegistry} from '../interfaces/IPickleJarRegistry.sol';
 import {IJar} from '../interfaces/external/pickle/IJar.sol';
+import {IJarUniV3} from '../interfaces/external/pickle/IJarUniV3.sol';
+import {IPickleController} from '../interfaces/external/pickle/IPickleController.sol';
+import {IGaugeProxy} from '../interfaces/external/pickle/IGaugeProxy.sol';
 
 import {ControllerLib} from '../lib/ControllerLib.sol';
 
@@ -20,6 +23,8 @@ contract PickleJarRegistry is IPickleJarRegistry {
     /* ============ Constants ============ */
 
     IBabController public immutable controller;
+    IPickleController public immutable pickleControlller;
+    IGaugeProxy public immutable gaugeProxy;
 
     /* ============ State Variables ============ */
 
@@ -36,6 +41,8 @@ contract PickleJarRegistry is IPickleJarRegistry {
     constructor(IBabController _controller) {
         require(address(_controller) != address(0), 'Controller is not valid');
         controller = _controller;
+        pickleControlller = IPickleController(0x7B5916C61bCEeaa2646cf49D9541ac6F5DCe3637);
+        gaugeProxy = IGaugeProxy(0x2e57627ACf6c1812F99e274d0ac61B786c19E74f);
         // https://github.com/pickle-finance/contracts
         _addJar(0x68d14d66B2B0d6E157c06Dc8Fefa3D8ba0e66a89, false);
         _addJar(0x2E35392F4c36EBa7eCAFE4de34199b2373Af22ec, false);
@@ -127,6 +134,17 @@ contract PickleJarRegistry is IPickleJarRegistry {
 
     function getAllJars() external view override returns (address[] memory) {
         return jarList;
+    }
+
+    function getJarStrategy(address _jar) external view override returns (address) {
+        if (isUniv3[_jar]) {
+          return pickleControlller.strategies(IJarUniV3(_jar).pool());
+        }
+        return address(0);
+    }
+
+    function getJarGauge(address _jar) external view override returns (address) {
+        return gaugeProxy.gauges(_jar);
     }
 
     /* ============ Internal Functions ============ */

@@ -14,9 +14,11 @@ import '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol';
 
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import {IPickleJarRegistry} from './interfaces/IPickleJarRegistry.sol';
 import {IPriceOracle} from './interfaces/IPriceOracle.sol';
 import {ICToken} from './interfaces/external/compound/ICToken.sol';
 import {IJar} from './interfaces/external/pickle/IJar.sol';
+import {IJarStrategy} from './interfaces/external/pickle/IJarStrategy.sol';
 import {IJarUniV3} from './interfaces/external/pickle/IJarUniV3.sol';
 import {ITokenIdentifier} from './interfaces/ITokenIdentifier.sol';
 import {ISnxExchangeRates} from './interfaces/external/synthetix/ISnxExchangeRates.sol';
@@ -95,6 +97,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     IBabController public immutable controller;
     ICurveMetaRegistry public immutable curveMetaRegistry;
     IConvexRegistry public immutable convexRegistry;
+    IPickleJarRegistry public immutable pickleRegistry;
     mapping(address => bool) public hopTokens;
     address[] public hopTokensList;
     int24 private maxTwapDeviation;
@@ -109,6 +112,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         maxTwapDeviation = INITIAL_TWAP_DEVIATION;
         curveMetaRegistry = _tokenIdentifier.curveMetaRegistry();
         convexRegistry = _tokenIdentifier.convexRegistry();
+        pickleRegistry = _tokenIdentifier.jarRegistry();
         _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
     }
 
@@ -284,9 +288,10 @@ contract PriceOracle is Ownable, IPriceOracle {
             uint256 pricePerShare = IJar(_tokenIn).getRatio();
             if (tokenInType == 14) {
                 // univ3
-                return _getPriceJarUniV3(_tokenIn, WETH).preciseMul(getPrice(WETH, _tokenOut));
+                price = pricePerShare.preciseMul(_getPriceJarUniV3(_tokenIn, WETH)).preciseMul(getPrice(WETH, _tokenOut));
+            } else {
+                price = pricePerShare.preciseMul(getPrice(IJar(_tokenIn).token(), _tokenOut));
             }
-            price = pricePerShare.preciseMul(getPrice(IJar(_tokenIn).token(), _tokenOut));
             uint256 pDecimals = ERC20(_tokenIn).decimals();
             if (pDecimals < 18) {
                 price = price.mul(10**(18 - pDecimals));
@@ -295,13 +300,12 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         if (tokenOutType == 13 || tokenOutType == 14) {
-            uint256 pricePerShare = IJar(_tokenOut).getRatio();
             if (tokenOutType == 14) {
                 // univ3
-                return getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH));
+                price = getPrice(_tokenIn, WETH).preciseDiv(_getPriceJarUniV3(_tokenOut, WETH)).preciseDiv(IJar(_tokenOut).getRatio());
+            } else {
+                price = getPrice(_tokenIn, IJar(_tokenOut).token()).preciseDiv(IJar(_tokenOut).getRatio());
             }
-            address jarAsset = IJar(_tokenOut).token();
-            price = getPrice(_tokenIn, jarAsset).preciseDiv(IJar(_tokenOut).getRatio());
 
             uint256 yvDecimals = ERC20(_tokenOut).decimals();
             if (yvDecimals < 18) {
@@ -711,16 +715,15 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (totalSupply == 0) {
             return 0;
         }
-        uint256 totalLiquidity = IJarUniV3(_jar).totalLiquidity();
-        uint256 proportion = IJarUniV3(_jar).getProportion();
-        uint256 amount0 = totalLiquidity.preciseDiv(proportion.add(1e18));
+        uint256 positionId = IJarStrategy(pickleRegistry.getJarStrategy(_jar)).tokenId();
+        (uint256 amount0, uint256 amount1) = uniswapViewer.getAmountsForPosition(positionId);
         return
             _getPriceUniV3Pool(
                 IUniswapV3Pool(IJarUniV3(_jar).pool()),
                 _reserve,
                 totalSupply,
                 amount0,
-                totalLiquidity.sub(amount0)
+                amount1
             );
     }
 

@@ -53,13 +53,12 @@ contract PickleJarIntegration is PassiveIntegration {
     }
 
     function _getExpectedShares(address _jar, uint256 _amount) internal view override returns (uint256) {
-        uint256 amountNormalized;
+        uint256 amountNormalized = SafeDecimalMath.normalizeAmountTokens(_getInvestmentAsset(_jar), _jar, _amount);
+
         // Normalize to 18 decimals
         if (pickleRegistry.isUniv3(_jar)) {
-            amountNormalized = SafeDecimalMath.normalizeAmountTokens(IJarUniV3(_jar).token0(), _jar, _amount);
             return IPriceOracle(controller.priceOracle()).getPrice(_getInvestmentAsset(_jar), _jar).preciseMul(amountNormalized);
         }
-        amountNormalized = SafeDecimalMath.normalizeAmountTokens(IJar(_jar).token(), _jar, _amount);
         return amountNormalized.preciseDiv(IJar(_jar).getRatio());
     }
 
@@ -189,6 +188,7 @@ contract PickleJarIntegration is PassiveIntegration {
                 // Sell token 1 to token 0
                 uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
                 uint256 minAmount = IPriceOracle(controller.priceOracle()).getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0()).preciseMul(token1Amount).preciseMul(95e16);
+                minAmount = SafeDecimalMath.normalizeAmountTokens(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0(), minAmount);
                 bytes memory methodData = abi.encodeWithSignature('trade(address,address,uint256,address,uint256)', _strategy, IJarUniV3(_asset).token1(), token1Amount, IJarUniV3(_asset).token0(), minAmount);
                 return (controller.masterSwapper(), 0, methodData);
             }
