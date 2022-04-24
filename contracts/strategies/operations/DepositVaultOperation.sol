@@ -183,21 +183,34 @@ contract DepositVaultOperation is Operation {
     ) internal view returns (uint256) {
         uint256 balance = IERC20(_getResultAsset(_integration, _vault)).balanceOf(msg.sender);
         // Get price through oracle
+        // console.log('balance core nav', balance);
+        // console.log('asset', _getResultAsset(_integration, _vault));
+        // console.log('vault', _vault);
         uint256 price = _getPrice(_vault, _garden.reserveAsset());
-        uint256 NAV = balance.preciseMul(price);
-        // normalize amount token does not fix this
-        if (ERC20(_garden.reserveAsset()).decimals() < 18) {
-          NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
-        }
+        // console.log('price', price);
+        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(
+            _getResultAsset(_integration, _vault),
+            _garden.reserveAsset(),
+            balance.preciseMul(price)
+        );
+        // console.log('NAV', NAV);
+        // // normalize amount token does not fix this
+        // if (ERC20(_garden.reserveAsset()).decimals() < 18) {
+        //   NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
+        // }
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         balance = ERC20(vaultAsset).balanceOf(msg.sender);
         price = _getPrice(vaultAsset, _garden.reserveAsset());
         if (balance > 0) {
-          NAV = NAV.add(balance.preciseMul(price));
-          if (ERC20(_garden.reserveAsset()).decimals() < 18) {
-            NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
-          }
+          NAV = NAV.add(SafeDecimalMath.normalizeAmountTokens(
+              vaultAsset,
+              _garden.reserveAsset(),
+              balance.preciseMul(price)
+          ));
+          // if (ERC20(_garden.reserveAsset()).decimals() < 18) {
+          //   NAV = NAV.div(10**(18 - ERC20(_garden.reserveAsset()).decimals()));
+          // }
         }
         return NAV;
     }

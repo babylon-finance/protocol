@@ -55,7 +55,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
     }
 
     function _getResultAsset(address _investment) internal view virtual override returns (address) {
-        return _investment;
+        return convexRegistry.getRewardPool(_investment);
     }
 
     /**
