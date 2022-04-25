@@ -159,6 +159,26 @@ contract TokenIdentifier is ITokenIdentifier {
         _updateConvexPools();
     }
 
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external override {
+        controller.onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _vaults.length; i++) {
+            vaults[_vaults[i]] = _values[i];
+        }
+    }
+
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external override {
+        controller.onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _aaveTokens.length; i++) {
+            aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
+        }
+    }
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external override {
+        controller.onlyGovernanceOrEmergency();
+        for (uint256 i = 0; i < _cTokens.length; i++) {
+            cTokenToAsset[_cTokens[i]] = _underlyings[i];
+        }
+    }
+
     /**
      * Adds/deletes visor vaults
      */
@@ -166,6 +186,7 @@ contract TokenIdentifier is ITokenIdentifier {
         controller.onlyGovernanceOrEmergency();
         _updateVisor(_visors, _values);
     }
+
 
     /**
      * Returns the types of the two tokens

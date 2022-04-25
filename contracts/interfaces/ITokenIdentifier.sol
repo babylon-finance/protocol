@@ -61,4 +61,10 @@ interface ITokenIdentifier {
     function updatePickleJars() external;
 
     function updateConvexPools() external;
+
+    function updateYearnVault(address[] calldata _vaults, bool[] calldata _values) external;
+
+    function updateAavePair(address[] calldata _aaveTokens, address[] calldata _underlyings) external;
+
+    function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external;
 }
