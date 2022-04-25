@@ -501,7 +501,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return _investment;
     }
 
-    function _getExtraAssetToApproveEnter(address _asset) internal view virtual returns (address) {
+    function _getExtraAssetToApproveEnter(
+        address /* _asset */
+    ) internal view virtual returns (address) {
         return address(0);
     }
 }

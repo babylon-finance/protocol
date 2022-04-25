@@ -15,6 +15,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IJar} from '../../interfaces/external/pickle/IJar.sol';
+import {IPickleGauge} from '../../interfaces/external/pickle/IPickleGauge.sol';
 import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
 
 /**
@@ -30,6 +31,7 @@ contract PickleFarmIntegration is PassiveIntegration {
 
     /* ============ State Variables ============ */
     IPickleJarRegistry public immutable pickleRegistry;
+    address public constant PICKLE = 0x429881672B9AE42b8EbA0E26cD9C73711b891Ca5;
 
     /* ============ Constructor ============ */
 
@@ -132,5 +134,51 @@ contract PickleFarmIntegration is PassiveIntegration {
         bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
         // Go through the reward pool instead of the booster
         return (gauge, 0, methodData);
+    }
+
+    /**
+     * Return post action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address _strategy,
+        address _asset,
+        uint256, /* _amount */
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_passiveOp == 1) {
+            // Claim PICKLE
+            address gauge = pickleRegistry.getJarGauge(_asset);
+            bytes memory methodData = abi.encodeWithSignature('getReward()');
+            return (gauge, 0, methodData);
+        }
+        return (address(0), 0, bytes(''));
+    }
+
+    function _getRewards(address _strategy, address _asset)
+        internal
+        view
+        override
+        returns (address token, uint256 balance)
+    {
+        address gauge = pickleRegistry.getJarGauge(_asset);
+        uint256 rewards = IPickleGauge(gauge).earned(_strategy);
+        return (PICKLE, rewards);
     }
 }

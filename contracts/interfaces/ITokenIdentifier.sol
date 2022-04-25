@@ -30,6 +30,8 @@ interface ITokenIdentifier {
 
     function jars(address _jar) external view returns (uint8);
 
+    function pickleGauges(address _gauge) external view returns (bool);
+
     function visors(address _visor) external view returns (bool);
 
     function vaults(address _vault) external view returns (bool);

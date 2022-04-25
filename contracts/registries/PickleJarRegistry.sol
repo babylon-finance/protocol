@@ -24,7 +24,7 @@ contract PickleJarRegistry is IPickleJarRegistry {
 
     IBabController public immutable controller;
     IPickleController public immutable pickleControlller;
-    IGaugeProxy public immutable gaugeProxy;
+    IGaugeProxy public gaugeProxy;
 
     /* ============ State Variables ============ */
 
@@ -32,7 +32,9 @@ contract PickleJarRegistry is IPickleJarRegistry {
     mapping(address => bool) public override jars;
     mapping(address => bool) public override isUniv3;
     mapping(address => bool) public override noSwapParam;
+    mapping(address => address) private gaugeToJar;
     address[] public jarList;
+    address[] public gaugeList;
 
     /* ============ Modifiers ============ */
 
@@ -136,6 +138,10 @@ contract PickleJarRegistry is IPickleJarRegistry {
         return jarList;
     }
 
+    function getAllGauges() external view override returns (address[] memory) {
+        return gaugeList;
+    }
+
     function getJarStrategy(address _jar) external view override returns (address) {
         if (isUniv3[_jar]) {
             return pickleControlller.strategies(IJarUniV3(_jar).pool());
@@ -147,6 +153,10 @@ contract PickleJarRegistry is IPickleJarRegistry {
         return gaugeProxy.gauges(_jar);
     }
 
+    function getJarFromGauge(address _gauge) external view override returns (address) {
+        return gaugeToJar[_gauge];
+    }
+
     /* ============ Internal Functions ============ */
 
     function _addJar(address _jar, bool _univ3) private {
@@ -154,6 +164,9 @@ contract PickleJarRegistry is IPickleJarRegistry {
         if (totalSupply > 0) {
             jarList.push(_jar);
             jars[_jar] = true;
+            address gauge = gaugeProxy.gauges(_jar);
+            gaugeToJar[gauge] = _jar;
+            gaugeList.push(gauge);
             isUniv3[_jar] = _univ3;
         }
     }
@@ -162,7 +175,9 @@ contract PickleJarRegistry is IPickleJarRegistry {
         (bool found, uint256 index) = _findJar(_jar);
         if (found) {
             jarList[index] = jarList[jarList.length - 1];
+            gaugeList[index] = gaugeList[gaugeList.length - 1];
             jarList.pop();
+            gaugeList.pop();
             jars[_jar] = false;
             isUniv3[_jar] = false;
         }

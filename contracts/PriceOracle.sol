@@ -311,16 +311,24 @@ contract PriceOracle is Ownable, IPriceOracle {
             return price;
         }
 
-        // Convex Pools
+        // Pickle Gauge
         if (tokenInType == 15) {
-            // price per share is 1 to 1 in convex
-            price = getPrice(convexRegistry.getConvexInputToken(_tokenIn), _tokenOut);
-            return price;
+            // price per share is 1 to 1 vs jar
+            return getPrice(pickleRegistry.getJarFromGauge(_tokenIn), _tokenOut);
         }
 
         if (tokenOutType == 15) {
-            price = getPrice(_tokenIn, convexRegistry.getConvexInputToken(_tokenOut));
-            return price;
+            return getPrice(_tokenIn, pickleRegistry.getJarFromGauge(_tokenOut));
+        }
+
+        // Convex Pools
+        if (tokenInType == 16) {
+            // price per share is 1 to 1 vs jar
+            return getPrice(convexRegistry.getConvexInputToken(_tokenIn), _tokenOut);
+        }
+
+        if (tokenOutType == 16) {
+            return getPrice(_tokenIn, convexRegistry.getConvexInputToken(_tokenOut));
         }
 
         // univ2 or sushi or mooniswap

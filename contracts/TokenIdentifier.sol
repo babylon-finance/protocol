@@ -59,7 +59,8 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant VISOR_LP_TOKEN = 12;
     uint8 private constant PICKLE_JAR_TOKEN = 13;
     uint8 private constant PICKLE_JAR_TOKEN_V3 = 14;
-    uint8 private constant CONVEX_TOKEN = 15;
+    uint8 private constant PICKLE_JAR_GAUGE_TOKEN = 15;
+    uint8 private constant CONVEX_TOKEN = 16;
 
     /* ============ State Variables ============ */
 
@@ -79,6 +80,8 @@ contract TokenIdentifier is ITokenIdentifier {
     mapping(address => bool) public override visors;
     // Mapping of pickle jars
     mapping(address => uint8) public override jars;
+    // Mapping of pickle gauges
+    mapping(address => bool) public override pickleGauges;
     // Mapping of convex vaults
     mapping(address => bool) public override convexPools;
 
@@ -233,6 +236,15 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = jars[_tokenOut] == 1 ? PICKLE_JAR_TOKEN : PICKLE_JAR_TOKEN_V3;
         }
 
+        // Pickle gauges
+        if (pickleGauges[_tokenIn]) {
+            tokenInType = PICKLE_JAR_GAUGE_TOKEN;
+        }
+
+        if (pickleGauges[_tokenOut]) {
+            tokenOutType = PICKLE_JAR_GAUGE_TOKEN;
+        }
+
         // Convex tokens
         if (convexPools[_tokenIn]) {
             tokenInType = CONVEX_TOKEN;
@@ -339,6 +351,10 @@ contract TokenIdentifier is ITokenIdentifier {
         address[] memory pjars = jarRegistry.getAllJars();
         for (uint256 i = 0; i < pjars.length; i++) {
             jars[pjars[i]] = jarRegistry.isUniv3(pjars[i]) ? 2 : 1;
+        }
+        address[] memory pgauges = jarRegistry.getAllGauges();
+        for (uint256 i = 0; i < pgauges.length; i++) {
+            pickleGauges[pgauges[i]] = true;
         }
     }
 

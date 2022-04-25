@@ -144,6 +144,20 @@ contract DepositVaultOperation is Operation {
                 vaultAsset,
                 minAmount
             );
+            // Only claim and sell rewards on final exit
+            if (_percentage == HUNDRED_PERCENT) {
+                try IPassiveIntegration(_integration).getRewards(msg.sender, yieldVault) returns (
+                    address rewardToken,
+                    uint256 amount
+                ) {
+                    if (rewardToken != address(0)) {
+                        amount = ERC20(rewardToken).balanceOf(msg.sender);
+                        if (amount > MIN_TRADE_AMOUNT) {
+                            IStrategy(msg.sender).trade(rewardToken, amount, vaultAsset);
+                        }
+                    }
+                } catch {}
+            }
         }
         return (
             vaultAsset,

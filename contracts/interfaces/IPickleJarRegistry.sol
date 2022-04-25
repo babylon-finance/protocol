@@ -29,5 +29,9 @@ interface IPickleJarRegistry {
 
     function getJarGauge(address _jarAddress) external view returns (address);
 
+    function getJarFromGauge(address _gauge) external view returns (address);
+
     function getAllJars() external view returns (address[] memory);
+
+    function getAllGauges() external view returns (address[] memory);
 }
