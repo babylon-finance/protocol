@@ -64,6 +64,13 @@ contract PickleJarIntegration is PassiveIntegration {
         return _jar;
     }
 
+    function _getExtraAssetToApproveEnter(address _jar) internal view override returns (address) {
+        if (pickleRegistry.noSwapParam(_jar)) {
+            return IJarUniV3(_jar).token1();
+        }
+        return address(0);
+    }
+
     /**
      * Return join investment calldata which is already generated from the investment API
      *

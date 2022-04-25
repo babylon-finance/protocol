@@ -102,6 +102,10 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         // Approve spending of the token
         if (_tokenIn != address(0)) {
             investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
+            address extraApproval = _getExtraAssetToApproveEnter(_investmentAddress);
+            if (extraApproval != address(0)) {
+              investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), extraApproval, IERC20(extraApproval).balanceOf(_strategy));
+            }
         }
 
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
@@ -491,5 +495,9 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
     function _getResultAsset(address _investment) internal view virtual returns (address) {
         return _investment;
+    }
+
+    function _getExtraAssetToApproveEnter(address _asset) internal view virtual returns (address) {
+        return address(0);
     }
 }

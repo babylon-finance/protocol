@@ -137,8 +137,25 @@ library SafeDecimalMath {
         address _to,
         uint256 _amount
     ) internal view returns (uint256) {
-        uint256 fromDecimals = _isETH(_from) ? 18 : ERC20(_from).decimals();
-        uint256 toDecimals = _isETH(_to) ? 18 : ERC20(_to).decimals();
+
+        uint256 fromDecimals = _isETH(_from) ? 18 : 0;
+        uint256 toDecimals = _isETH(_to) ? 18 : 0;
+
+        if (fromDecimals == 0) {
+          try ERC20(_from).decimals() returns (uint8 decimals) {
+              fromDecimals = decimals;
+          } catch {
+              fromDecimals = 18;
+          }
+        }
+
+        if (toDecimals == 0) {
+            try ERC20(_to).decimals() returns (uint8 decimals) {
+                toDecimals = decimals;
+            } catch {
+                toDecimals = 18;
+            }
+        }
 
         if (fromDecimals == toDecimals) {
             return _amount;

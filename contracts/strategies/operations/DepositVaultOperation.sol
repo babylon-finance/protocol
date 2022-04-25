@@ -185,8 +185,7 @@ contract DepositVaultOperation is Operation {
         uint256 balance = IERC20(resultAsset).balanceOf(msg.sender);
         // Get price through oracle
         uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
-        // TODO: make safe decimal math ressistant to decimals
-        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(_vault, _garden.reserveAsset(), balance.preciseMul(price));
+        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(resultAsset, _garden.reserveAsset(), balance.preciseMul(price));
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         balance = ERC20(vaultAsset).balanceOf(msg.sender);
