@@ -44,6 +44,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
+
 /**
  * @title PriceOracle
  * @author Babylon Finance Protocol
@@ -284,6 +285,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
             return price;
         }
+
         // Pickle jars
         if (tokenInType == 13 || tokenInType == 14) {
             uint256 pricePerShare = IJar(_tokenIn).getRatio();
