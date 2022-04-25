@@ -44,7 +44,6 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
-
 /**
  * @title PriceOracle
  * @author Babylon Finance Protocol

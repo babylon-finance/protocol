@@ -20,7 +20,6 @@ describe('LidoIntegrationTest', function () {
   });
 
   describe('Lido Staking', function () {
-
     describe('getInvestmentAsset', function () {
       it('get investment asset', async function () {
         expect(await lidoIntegration.getInvestmentAsset(stETH.address)).to.equal(ADDRESS_ZERO);

@@ -173,6 +173,7 @@ contract TokenIdentifier is ITokenIdentifier {
             aTokenToAsset[_aaveTokens[i]] = _underlyings[i];
         }
     }
+
     function updateCompoundPair(address[] calldata _cTokens, address[] calldata _underlyings) external override {
         controller.onlyGovernanceOrEmergency();
         for (uint256 i = 0; i < _cTokens.length; i++) {
@@ -187,7 +188,6 @@ contract TokenIdentifier is ITokenIdentifier {
         controller.onlyGovernanceOrEmergency();
         _updateVisor(_visors, _values);
     }
-
 
     /**
      * Returns the types of the two tokens

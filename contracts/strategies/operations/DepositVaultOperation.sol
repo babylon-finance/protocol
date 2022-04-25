@@ -99,8 +99,7 @@ contract DepositVaultOperation is Operation {
             yieldVault,
             1, // TODO: change from priceOracle
             vaultAsset,
-            vaultAsset == address(0) ? address(msg.sender).balance :
-                IERC20(vaultAsset).universalBalanceOf(msg.sender)
+            vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).universalBalanceOf(msg.sender)
         );
         vaultAsset = _getResultAsset(_integration, yieldVault);
         return (vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0); // liquid

@@ -44,9 +44,9 @@ describe('PickleJarIntegrationTest', function () {
   });
 
   describe('Pickle Farm Multigarden multiasset', function () {
-    pick(GARDENS.slice(0, 3)).forEach(async ({ token, name }) => {
-      pick(addresses.pickle.jars).forEach((jar) => {
-        it.skip(`can enter into ${jar.name} and farm into gauge from a ${name} garden`, async function () {
+    pick(GARDENS).forEach(async ({ token, name }) => {
+      pick(addresses.pickle.jars.filter((p) => !p.nogauge)).forEach((jar) => {
+        it(`can enter into ${jar.name} and farm into gauge from a ${name} garden`, async function () {
           await depositIntoJar(jar.address, token, jar, true);
         });
       });

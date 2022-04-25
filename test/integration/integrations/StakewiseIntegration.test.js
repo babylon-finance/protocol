@@ -19,7 +19,6 @@ describe('StakewiseIntegrationTest', function () {
   });
 
   describe('Stakewise Staking', function () {
-
     describe('getInvestmentAsset', function () {
       it('get investment asset', async function () {
         expect(await stakewiseIntegration.getInvestmentAsset(sETH2.address)).to.equal(addresses.tokens.WETH);
