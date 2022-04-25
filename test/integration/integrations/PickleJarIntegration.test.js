@@ -66,7 +66,7 @@ describe('PickleJarIntegrationTest', function () {
       return 'Jar does not have a gauge';
     }
 
-    let integrations = [pickleJarIntegration.address];
+    let integrations = farm ? [pickleJarIntegration.address] : pickleJarIntegration.address;
     let params = [jarAddress, 0];
     let strategyKind = 'vault';
     let ops = [2];
