@@ -700,7 +700,7 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _reserve                    Address of the reserve to price tokens in
      */
     function _getPriceJarUniV3(address _jar, address _reserve) internal view returns (uint256) {
-        uint256 totalSupply = IJarUniV3(_jar).totalSupply();
+        uint256 totalSupply = IJarUniV3(_jar).totalLiquidity();
         if (totalSupply == 0) {
             return 0;
         }
