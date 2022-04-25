@@ -20,23 +20,6 @@ describe('LidoIntegrationTest', function () {
   });
 
   describe('Lido Staking', function () {
-    describe('getPricePerShare', function () {
-      it('gets price per share', async function () {
-        const stPrice = await stETH.getPooledEthByShares(eth());
-        expect(await lidoIntegration.getPricePerShare(stETH.address)).to.equal(stPrice);
-        expect(await lidoIntegration.getPricePerShare(wstETH.address)).to.equal(await wstETH.getStETHByWstETH(stPrice));
-      });
-    });
-
-    describe('getExpectedShares', function () {
-      it('get expected shares', async function () {
-        const stShares = await stETH.getSharesByPooledEth(eth());
-        expect(await lidoIntegration.getExpectedShares(stETH.address, eth())).to.equal(stShares);
-        expect(await lidoIntegration.getExpectedShares(wstETH.address, eth())).to.equal(
-          await wstETH.getWstETHByStETH(stShares),
-        );
-      });
-    });
 
     describe('getInvestmentAsset', function () {
       it('get investment asset', async function () {

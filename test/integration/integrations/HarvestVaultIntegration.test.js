@@ -18,23 +18,6 @@ describe('HarvestVaultIntegrationTest', function () {
     daiVault = await ethers.getContractAt('IHarvestVault', addresses.harvest.vaults.fDAI);
   });
 
-  describe('getPricePerShare', function () {
-    it('get price per share', async function () {
-      expect(await harvestVaultIntegration.getPricePerShare(daiVault.address)).to.be.closeTo(
-        '1081140202465126861',
-        parse('1081140202465126861').div(20),
-      );
-    });
-  });
-
-  describe('getExpectedShares', function () {
-    it('get expected shares', async function () {
-      expect(await harvestVaultIntegration.getExpectedShares(daiVault.address, eth())).to.be.closeTo(
-        '924949417032020774',
-        parse('924949417032020774').div(20),
-      );
-    });
-  });
   describe('getInvestmentAsset', function () {
     it('get investment asset', async function () {
       expect(await harvestVaultIntegration.getInvestmentAsset(daiVault.address)).to.equal(addresses.tokens.DAI);
