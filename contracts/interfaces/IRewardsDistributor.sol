@@ -14,6 +14,8 @@ import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 interface IRewardsDistributor {
     /* ========== View functions ========== */
 
+    function babltoken() external view returns (TimeLockedToken);
+
     function getStrategyRewards(address _strategy) external view returns (uint256);
 
     function getRewards(

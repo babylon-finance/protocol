@@ -352,4 +352,6 @@ library Errors {
     uint256 internal constant INVALID_AMOUNT = 130;
     // Not enough BABL
     uint256 internal constant NOT_ENOUGH_AMOUNT = 131;
+    // Error minting
+    uint256 internal constant MINT_ERROR = 132;
 }

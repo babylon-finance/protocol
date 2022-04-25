@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -35,6 +34,8 @@ import {IERC1271} from '../interfaces/IERC1271.sol';
 
 import {VTableBeaconProxy} from '../proxy/VTableBeaconProxy.sol';
 import {VTableBeacon} from '../proxy/VTableBeacon.sol';
+
+import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 /**
  * @title BaseGarden
@@ -205,6 +206,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     address private signer;
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
+    // BABL Token
+    TimeLockedToken private bablToken;
 
     /* ============ Modifiers ============ */
 
@@ -268,7 +271,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     ) external payable override nonReentrant {
         // calculate pricePerShare
         // if there are no strategies then NAV === liquidReserve
-
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution, _referrer);
     }
 
@@ -954,8 +956,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Only used to approve Heart Garden to stake
      */
     function _approveBABL(address _garden, uint256 _amount) internal {
-        _require(BABL.balanceOf(address(this)) >= _amount, Errors.NOT_ENOUGH_BABL);
-        BABL.safeApprove(address(_garden), _amount);
+        if (address(bablToken) == address(0)) {
+            // Backward compatible
+            bablToken = rewardsDistributor.babltoken();
+        }
+        IERC20(bablToken).safeApprove(address(_garden), _amount);
     }
 
     /**
