@@ -103,7 +103,7 @@ contract TokenIdentifier is ITokenIdentifier {
         convexRegistry = _convexRegistry;
 
         // Fetches and copies data for faster & cheaper reads
-        _refreshAAveReserves();
+        _refreshAaveReserves();
         _refreshCompoundTokens();
         _updateYearnVaults();
         _updatePickleJars();
@@ -124,7 +124,7 @@ contract TokenIdentifier is ITokenIdentifier {
      */
     function refreshAAveReserves() external override {
         controller.onlyGovernanceOrEmergency();
-        _refreshAAveReserves();
+        _refreshAaveReserves();
     }
 
     /**
@@ -313,7 +313,7 @@ contract TokenIdentifier is ITokenIdentifier {
 
     /* ============ Internal Functions ============ */
 
-    function _refreshAAveReserves() private {
+    function _refreshAaveReserves() private {
         IProtocolDataProvider.TokenData[] memory atokens = AAVE_PROVIDER.getAllATokens();
         for (uint256 i = 0; i < atokens.length; i++) {
             aTokenToAsset[atokens[i].tokenAddress] = AaveToken(atokens[i].tokenAddress).UNDERLYING_ASSET_ADDRESS();
