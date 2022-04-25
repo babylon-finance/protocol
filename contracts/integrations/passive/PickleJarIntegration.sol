@@ -236,10 +236,7 @@ contract PickleJarIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        // console.log('post');
         if (_passiveOp == 0 && pickleRegistry.isUniv3(_asset)) {
-            // console.log('token 0', ERC20(IJarUniV3(_asset).token0()).balanceOf(_strategy));
-            // console.log('token 1', ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy));
             // Sell token 1 to token 0
             uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
             if (token1Amount > 1000) {
