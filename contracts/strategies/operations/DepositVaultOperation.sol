@@ -15,6 +15,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -28,6 +29,7 @@ contract DepositVaultOperation is Operation {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -87,7 +89,7 @@ contract DepositVaultOperation is Operation {
                 if (_asset != WETH) {
                     IStrategy(msg.sender).trade(_asset, _capital, WETH);
                 }
-                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).balanceOf(msg.sender));
+                IStrategy(msg.sender).handleWeth(false, IERC20(WETH).universalBalanceOf(msg.sender));
             } else {
                 IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
             }
@@ -97,10 +99,11 @@ contract DepositVaultOperation is Operation {
             yieldVault,
             1, // TODO: change from priceOracle
             vaultAsset,
-            vaultAsset == address(0) ? address(msg.sender).balance : IERC20(vaultAsset).balanceOf(msg.sender)
+            vaultAsset == address(0) ? address(msg.sender).balance :
+                IERC20(vaultAsset).universalBalanceOf(msg.sender)
         );
         vaultAsset = _getResultAsset(_integration, yieldVault);
-        return (vaultAsset, IERC20(vaultAsset).balanceOf(msg.sender), 0); // liquid
+        return (vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0); // liquid
     }
 
     /**
@@ -129,7 +132,7 @@ contract DepositVaultOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
-            IERC20(_getResultAsset(_integration, yieldVault)).balanceOf(msg.sender).preciseMul(_percentage);
+            IERC20(_getResultAsset(_integration, yieldVault)).universalBalanceOf(msg.sender).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
@@ -151,7 +154,7 @@ contract DepositVaultOperation is Operation {
                     uint256 amount
                 ) {
                     if (rewardToken != address(0)) {
-                        amount = ERC20(rewardToken).balanceOf(msg.sender);
+                        amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
                         if (amount > MIN_TRADE_AMOUNT) {
                             IStrategy(msg.sender).trade(rewardToken, amount, vaultAsset);
                         }
@@ -161,7 +164,7 @@ contract DepositVaultOperation is Operation {
         }
         return (
             vaultAsset,
-            vaultAsset != address(0) ? IERC20(vaultAsset).balanceOf(msg.sender) : address(msg.sender).balance,
+            vaultAsset != address(0) ? IERC20(vaultAsset).universalBalanceOf(msg.sender) : address(msg.sender).balance,
             0
         );
     }
@@ -196,14 +199,14 @@ contract DepositVaultOperation is Operation {
         IGarden _garden
     ) internal view returns (uint256) {
         address resultAsset = _getResultAsset(_integration, _vault);
-        uint256 balance = IERC20(resultAsset).balanceOf(msg.sender);
+        uint256 balance = IERC20(resultAsset).universalBalanceOf(msg.sender);
         // Get price through oracle
         uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(resultAsset, _garden.reserveAsset(), balance.preciseMul(price));
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
-        balance = ERC20(vaultAsset).balanceOf(msg.sender);
+        balance = IERC20(vaultAsset).universalBalanceOf(msg.sender);
         price = _getPrice(vaultAsset, _garden.reserveAsset());
         if (balance > 0) {
             NAV = NAV.add(

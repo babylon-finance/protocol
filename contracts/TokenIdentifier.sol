@@ -47,11 +47,11 @@ contract TokenIdentifier is ITokenIdentifier {
     // Token Types
     uint8 private constant COMP_TOKEN = 1;
     uint8 private constant AAVE_TOKEN = 2;
-    uint8 private constant CREAM_TOKEN = 3; // deprecated but keep
-    uint8 private constant SYNTH_TOKEN = 4; // deprecated but keep. may enable later
+    uint8 private constant CREAM_TOKEN = 3; // DEPRECATED
+    uint8 private constant SYNTH_TOKEN = 4; // DEPRECATED
     uint8 private constant CURVE_LP_TOKEN = 5;
     uint8 private constant YEARN_TOKEN = 6;
-    uint8 private constant LIDO_TOKEN = 7;
+    uint8 private constant LIDO_TOKEN = 7; // DEPRECATED
     uint8 private constant SUSHI_LP_TOKEN = 8;
     uint8 private constant UNIV2_LP_TOKEN = 9;
     uint8 private constant ONEINCH_LP_TOKEN = 10;
@@ -279,14 +279,6 @@ contract TokenIdentifier is ITokenIdentifier {
         // Early exit
         if (tokenInType > 0 && tokenOutType > 0) {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
-        }
-
-        // Checks stETH && wstETH (Lido tokens)
-        if (_tokenIn == address(stETH) || _tokenIn == address(wstETH)) {
-            tokenInType = LIDO_TOKEN;
-        }
-        if (_tokenOut == address(stETH) || _tokenOut == address(wstETH)) {
-            tokenOutType = LIDO_TOKEN;
         }
 
         // Early exit
