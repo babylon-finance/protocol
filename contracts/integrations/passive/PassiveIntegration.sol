@@ -30,7 +30,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         IStrategy strategy; // Strategy address
         IGarden garden; // Garden address
         address investment; // Investment address
-        uint256 totalSupply; // Total Supply of the investment
         uint256 investmentTokensInTransaction; // Investment tokens affected by this transaction
         uint256 investmentTokensInStrategy; // Investment tokens garden balance
         uint256 limitDepositTokenQuantity; // Limit deposit/withdrawal token amount
@@ -84,7 +83,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         InvestmentInfo memory investmentInfo =
             _createInvestmentInfo(_strategy, _investmentAddress, _investmentTokensOut, _tokenIn, _maxAmountIn);
         _validatePreJoinInvestmentData(investmentInfo);
-
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
             _getPreActionCallData(_strategy, _investmentAddress, _maxAmountIn, 0);
@@ -285,7 +283,6 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.investment = _getResultAsset(_investment);
-        investmentInfo.totalSupply = IERC20(_investment).totalSupply();
         investmentInfo.investmentTokensInStrategy = IERC20(investmentInfo.investment).balanceOf(_strategy);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;

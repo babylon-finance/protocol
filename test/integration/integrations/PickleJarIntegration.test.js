@@ -59,6 +59,12 @@ describe('PickleJarIntegrationTest', function () {
     const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
     const jar = await ethers.getContractAt('IJar', jarAddress);
+    const gaugeProxy = await ethers.getContractAt('IGaugeProxy', '0x2e57627ACf6c1812F99e274d0ac61B786c19E74f');
+    const gauge = await gaugeProxy.gauges(jarAddress);
+    const hasgauge = gauge !== ADDRESS_ZERO;
+    if (farm && !hasgauge) {
+      return 'Jar does not have a gauge';
+    }
 
     let integrations = [pickleJarIntegration.address];
     let params = [jarAddress, 0];
