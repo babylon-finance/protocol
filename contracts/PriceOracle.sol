@@ -708,21 +708,20 @@ contract PriceOracle is Ownable, IPriceOracle {
      * @param _reserve                    Address of the reserve to price tokens in
      */
     function _getPriceJarUniV3(address _jar, address _reserve) internal view returns (uint256) {
-        uint256 totalSupply = IJarUniV3(_jar).totalLiquidity();
-        if (totalSupply == 0) {
+        uint256 totalLiquidity = IJarUniV3(_jar).totalLiquidity();
+        if (totalLiquidity == 0) {
             return 0;
         }
         uint256 amount0;
         uint256 amount1;
         // Equal amounts of liquidity
         if (pickleRegistry.noSwapParam(_jar)) {
-            amount0 = IJarUniV3(_jar).totalLiquidity().div(2);
-            amount1 = amount0;
+            (amount0, amount1) = IJarUniV3(_jar).getAmountsForLiquidity(uint128(totalLiquidity));
         } else {
             uint256 positionId = IJarStrategy(pickleRegistry.getJarStrategy(_jar)).tokenId();
             (amount0, amount1) = uniswapViewer.getAmountsForPosition(positionId);
         }
-        return _getPriceUniV3Pool(IUniswapV3Pool(IJarUniV3(_jar).pool()), _reserve, totalSupply, amount0, amount1);
+        return _getPriceUniV3Pool(IUniswapV3Pool(IJarUniV3(_jar).pool()), _reserve, totalLiquidity, amount0, amount1);
     }
 
     /**

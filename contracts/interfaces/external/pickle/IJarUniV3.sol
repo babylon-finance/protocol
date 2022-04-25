@@ -10,6 +10,8 @@ interface IJarUniV3 is IJar {
 
     function totalLiquidity() external view returns (uint256);
 
+    function getAmountsForLiquidity(uint128 liquidity) external view returns (uint256, uint256);
+
     function token0() external view returns (address);
 
     function token1() external view returns (address);

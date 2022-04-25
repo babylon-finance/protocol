@@ -133,7 +133,7 @@ contract PickleJarIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address, /* _strategy */
+        address _strategy,
         address _asset,
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
@@ -236,7 +236,7 @@ contract PickleJarIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        if (_passiveOp == 0 && pickleRegistry.isUniv3(_asset)) {
+        if (pickleRegistry.isUniv3(_asset)) {
             // Sell token 1 to token 0
             uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
             if (token1Amount > 1000) {
