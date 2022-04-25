@@ -60,35 +60,39 @@ describe('PickleJarIntegrationTest', function () {
     await depositFunds(token, garden);
     const jar = await ethers.getContractAt('IJar', jarAddress);
 
-    let integrations = pickleJarIntegration.address;
+    let integrations = [pickleJarIntegration.address];
     let params = [jarAddress, 0];
     let strategyKind = 'vault';
+    let ops = [2];
 
     // If needs to enter crv first
     if (jarObj.crvpool) {
       strategyKind = 'lpStack';
       integrations = [curvePoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.crvpool, 0, jarAddress, 0];
+      ops = [1, 2];
     }
     // If needs to enter sushi first
     if (jarObj.sushi) {
       strategyKind = 'lpStack';
       integrations = [sushiswapPoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.sushi, 0, jarAddress, 0];
+      ops = [1, 2];
     }
     // If needs to enter univ2 first
     if (jarObj.uni) {
       strategyKind = 'lpStack';
       integrations = [uniswapPoolIntegration.address, pickleJarIntegration.address];
       params = [jarObj.uni, 0, jarAddress, 0];
+      ops = [1, 2];
     }
 
     if (farm) {
       strategyKind = 'custom';
       integrations = [...integrations, pickleFarmIntegration.address];
       params = [...params, jarAddress, 0];
+      ops = [...ops, 2];
     }
-
     const strategyContract = await createStrategy(
       strategyKind,
       'vote',
@@ -97,7 +101,7 @@ describe('PickleJarIntegrationTest', function () {
       garden,
       false,
       params,
-      { maxTradeSlippagePercentage: eth(0.15) },
+      ops,
     );
 
     const amount = STRATEGY_EXECUTE_MAP[token];
