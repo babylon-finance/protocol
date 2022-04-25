@@ -169,7 +169,7 @@ contract PickleJarIntegration is PassiveIntegration {
     function _getPreActionCallData(
         address _strategy,
         address _asset,
-        uint256, /* _amount */
+        uint256 _amount,
         uint256 _passiveOp
     )
         internal
@@ -184,7 +184,7 @@ contract PickleJarIntegration is PassiveIntegration {
         if (_passiveOp == 0) {
             if (pickleRegistry.noSwapParam(_asset)) {
                 // Sell half of token 0 to token 1
-                uint256 token0Amount = ERC20(IJarUniV3(_asset).token0()).balanceOf(_strategy).div(2);
+                uint256 token0Amount = _amount.div(2);
                 uint256 minAmount =
                     IPriceOracle(controller.priceOracle())
                         .getPrice(IJarUniV3(_asset).token0(), IJarUniV3(_asset).token1())
@@ -237,7 +237,7 @@ contract PickleJarIntegration is PassiveIntegration {
         )
     {
         // console.log('post');
-        if (pickleRegistry.isUniv3(_asset)) {
+        if (_passiveOp == 0 && pickleRegistry.isUniv3(_asset)) {
             // console.log('token 0', ERC20(IJarUniV3(_asset).token0()).balanceOf(_strategy));
             // console.log('token 1', ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy));
             // Sell token 1 to token 0

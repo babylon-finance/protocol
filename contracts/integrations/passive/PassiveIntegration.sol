@@ -104,7 +104,11 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), _tokenIn, _maxAmountIn);
             address extraApproval = _getExtraAssetToApproveEnter(_investmentAddress);
             if (extraApproval != address(0)) {
-              investmentInfo.strategy.invokeApprove(_getSpender(_investmentAddress, 0), extraApproval, IERC20(extraApproval).balanceOf(_strategy));
+                investmentInfo.strategy.invokeApprove(
+                    _getSpender(_investmentAddress, 0),
+                    extraApproval,
+                    IERC20(extraApproval).balanceOf(_strategy)
+                );
             }
         }
 

@@ -76,7 +76,7 @@ contract ConvexRegistry is IConvexRegistry {
             return (false, 0);
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            (, address token, , address reward , , ) = booster.poolInfo(i);
+            (, address token, , address reward, , ) = booster.poolInfo(i);
             if (token == _asset || reward == _asset) {
                 return (true, i);
             }

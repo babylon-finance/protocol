@@ -67,7 +67,7 @@ contract DepositVaultOperation is Operation {
         uint256 _capital,
         uint8, /* _assetStatus */
         bytes calldata _data,
-        IGarden _garden,
+        IGarden, /* _garden */
         address _integration
     )
         external
@@ -185,17 +185,16 @@ contract DepositVaultOperation is Operation {
         uint256 balance = IERC20(resultAsset).balanceOf(msg.sender);
         // Get price through oracle
         uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
-        uint256 NAV = SafeDecimalMath.normalizeAmountTokens(resultAsset, _garden.reserveAsset(), balance.preciseMul(price));
+        uint256 NAV =
+            SafeDecimalMath.normalizeAmountTokens(resultAsset, _garden.reserveAsset(), balance.preciseMul(price));
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         balance = ERC20(vaultAsset).balanceOf(msg.sender);
         price = _getPrice(vaultAsset, _garden.reserveAsset());
         if (balance > 0) {
-          NAV = NAV.add(SafeDecimalMath.normalizeAmountTokens(
-              vaultAsset,
-              _garden.reserveAsset(),
-              balance.preciseMul(price)
-          ));
+            NAV = NAV.add(
+                SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance.preciseMul(price))
+            );
         }
         return NAV;
     }
