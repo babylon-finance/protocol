@@ -10,19 +10,19 @@ const tokens = [
     name: 'CVX -> DAI',
     tokenIn: addresses.tokens.CVX,
     tokenOut: addresses.tokens.DAI,
-    value: from('18916848874892702022'),
+    value: from('25816848874892702022'),
   },
   {
     name: 'BABL -> DAI',
     tokenIn: addresses.tokens.BABL,
     tokenOut: addresses.tokens.DAI,
-    value: from('37525426832925405722'),
+    value: from('39325426832925405722'),
   },
   {
     name: 'BABL -> USDC',
     tokenIn: addresses.tokens.BABL,
     tokenOut: addresses.tokens.USDC,
-    value: from('37428091267848260825'),
+    value: from('39228091267848260825'),
   },
   {
     name: 'BABL -> WETH',
@@ -34,13 +34,13 @@ const tokens = [
     name: 'BABL -> WBTC',
     tokenIn: addresses.tokens.BABL,
     tokenOut: addresses.tokens.WBTC,
-    value: from('911018134143773'),
+    value: from('989018134143773'),
   },
   {
     name: 'GF->DAI',
     tokenIn: '0xaaef88cea01475125522e117bfe45cf32044e238',
     tokenOut: addresses.tokens.DAI,
-    value: from('1718192621347487005'),
+    value: from('1368192621347487005'),
   },
   {
     name: 'FRAX->DAI',
@@ -64,91 +64,79 @@ const tokens = [
     name: 'DPI->USDC',
     tokenIn: addresses.tokens.DPI,
     tokenOut: addresses.tokens.USDC,
-    value: parse('168.731279839378735346'),
+    value: parse('175.731279839378735346'),
   },
   {
     name: 'CRV->LDO',
     tokenIn: addresses.tokens.CRV,
     tokenOut: '0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32',
-    value: from('693099527885592297'),
+    value: from('979099527885592297'),
   },
   {
     name: 'USDC->DPI',
     tokenIn: addresses.tokens.USDC,
     tokenOut: addresses.tokens.DPI,
-    value: parse('0.00592'),
+    value: parse('0.00568'),
   },
   {
     name: 'WETH-> YEARN dai',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0xdA816459F1AB5631232FE5e97a05BBBb94970c95',
-    value: parse('2797.915612614859653532'),
+    value: parse('2877.915612614859653532'),
   },
   {
     name: 'WETH-> YEARN USDC',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9',
-    value: parse('2609.495439740702037995'),
+    value: parse('2690.495439740702037995'),
   },
   {
     name: 'YEARN dai-> WETH dai',
     tokenIn: '0xdA816459F1AB5631232FE5e97a05BBBb94970c95',
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000357'),
+    value: parse('0.000347'),
   },
   {
     name: 'YEARN USDC-> WETH dai',
     tokenIn: '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9',
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000383'),
+    value: parse('0.000371'),
   },
   {
     name: 'WETH->tripool direct',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
-    value: parse('2810.546655754214311685'),
+    value: parse('2898.546655754214311685'),
   },
   {
     name: 'tripool->WETH',
     tokenIn: '0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490',
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000355'),
+    value: parse('0.000345'),
   },
   {
     name: 'WETH->tricrypto2',
     tokenIn: addresses.tokens.WETH,
     tokenOut: '0xc4AD29ba4B3c580e6D59105FFf484999997675Ff',
-    value: parse('1.92'),
+    value: parse('1.98'),
   },
   {
     name: 'tricrypto2->WETH',
     tokenIn: '0xc4AD29ba4B3c580e6D59105FFf484999997675Ff',
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.518'),
+    value: parse('0.502'),
   },
   {
     name: 'WETH->renBTC',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.renBTC,
-    value: from('69769057437774994'),
+    value: from('74569057437774994'),
   },
   {
     name: 'WETH->CRV',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.CRV,
-    value: parse('1330.875307441108806091'),
-  },
-  {
-    name: 'WETH->sAAVE',
-    tokenIn: addresses.tokens.WETH,
-    tokenOut: addresses.tokens.sAAVE,
-    value: from('18480932235824908260'),
-  },
-  {
-    name: 'DAI->sAAVE',
-    tokenIn: addresses.tokens.DAI,
-    tokenOut: addresses.tokens.sAAVE,
-    value: from('6457298556989790'),
+    value: parse('1095.875307441108806091'),
   },
   {
     name: 'DAI->USDC',
@@ -166,79 +154,79 @@ const tokens = [
     name: 'WETH->TUSD',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.TUSD,
-    value: parse('2876.407804575983940687'),
+    value: parse('2972.407804575983940687'),
   },
   {
     name: 'TUSD->WETH',
     tokenIn: addresses.tokens.TUSD,
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000347'),
+    value: parse('0.000336'),
   },
   {
     name: 'YFI->DAI',
     tokenIn: addresses.tokens.YFI,
     tokenOut: addresses.tokens.DAI,
-    value: from('20002345647042003061063'),
+    value: from('18482345647042003061063'),
   },
   {
     name: 'SNX->USDT',
     tokenIn: addresses.tokens.SNX,
     tokenOut: addresses.tokens.USDT,
-    value: from('5159401602685015632'),
+    value: from('5789401602685015632'),
   },
   {
     name: 'WBTC->DAI',
     tokenIn: addresses.tokens.WBTC,
     tokenOut: addresses.tokens.DAI,
-    value: from('41211246946852495742103'),
+    value: from('39511246946852495742103'),
   },
   {
     name: 'COMP->USDC',
     tokenIn: addresses.tokens.COMP,
     tokenOut: addresses.tokens.USDC,
-    value: from('116031876952872801245'),
+    value: from('133031876952872801245'),
   },
   {
     name: 'YFI',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.YFI,
-    value: parse('0.143'),
+    value: parse('0.160'),
   },
   {
     name: 'WBTC',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.WBTC,
-    value: parse('0.0696'),
+    value: parse('0.07438'),
   },
   {
     name: 'WETH->DAI',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.DAI,
-    value: parse('2868.277281503964185794'),
+    value: parse('2958.277281503964185794'),
   },
   {
     name: 'USDC',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.USDC,
-    value: parse('2861.163851352164116664'),
+    value: parse('2950.163851352164116664'),
   },
   {
     name: 'USDT',
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokens.USDT,
-    value: parse('2864.532489433037288362'),
+    value: parse('2955.532489433037288362'),
   },
   {
     name: 'USDT inverse',
     tokenIn: addresses.tokens.USDT,
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.000349'),
+    value: parse('0.0003383'),
   },
   {
     name: 'DAI inverse',
     tokenIn: addresses.tokens.DAI,
     tokenOut: addresses.tokens.WETH,
-    value: parse('0.0003485'),
+    value: parse('0.0003380'),
   },
   {
     name: 'CRV 3 Pool',
@@ -317,33 +305,5 @@ describe('PriceOracle', function () {
           expect(price).to.be.equal(priceUnderlying);
         });
       });
-
-    pick(addresses.cream.crtokens)
-      .slice(0, 5)
-      .forEach(({ ctoken, token }) => {
-        it(`should get the price of crtokens ${ctoken}`, async function () {
-          const price = await priceOracle.connect(owner).getPrice(ctoken, addresses.tokens.DAI);
-          const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-          const exchangeRate = await priceOracle.getCreamExchangeRate(ctoken, token);
-          expect(price).to.be.equal(
-            priceUnderlying
-              .mul(exchangeRate)
-              .div(10 ** 10)
-              .div(10 ** 8),
-          );
-        });
-      });
-
-    pick(addresses.synthetix.synths.slice(0, 5)).forEach(({ synth, token }) => {
-      // TODO: synths get price is broken due to updated block nuumber
-      it.skip(`should get the price of synthetix ${synth}`, async function () {
-        const price = await priceOracle.connect(owner).getPrice(synth, addresses.tokens.DAI);
-        expect(price).to.be.gt(0);
-        if (token) {
-          const priceUnderlying = await priceOracle.connect(owner).getPrice(token, addresses.tokens.DAI);
-          expect(price).to.be.closeTo(priceUnderlying, eth('0.01'));
-        }
-      });
-    });
   });
 });
