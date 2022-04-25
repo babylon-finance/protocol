@@ -60,8 +60,8 @@ describe('PickleJarIntegrationTest', function () {
     await depositFunds(token, garden);
     const jar = await ethers.getContractAt('IJar', jarAddress);
     const gaugeProxy = await ethers.getContractAt('IGaugeProxy', '0x2e57627ACf6c1812F99e274d0ac61B786c19E74f');
-    const gauge = await gaugeProxy.gauges(jarAddress);
-    const hasgauge = gauge !== ADDRESS_ZERO;
+    const gaugeAdd = await gaugeProxy.gauges(jarAddress);
+    const hasgauge = gaugeAdd !== ADDRESS_ZERO;
     if (farm && !hasgauge) {
       return 'Jar does not have a gauge';
     }
@@ -113,16 +113,25 @@ describe('PickleJarIntegrationTest', function () {
     const amount = STRATEGY_EXECUTE_MAP[token];
     const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
     await executeStrategy(strategyContract, { amount });
+    const gauge = await ethers.getContractAt('IGauge', gaugeAdd);
     // Check NAV
     const nav = await strategyContract.getNAV();
     expect(nav).to.be.closeTo(amount.sub(amount.div(35)), amount.div(10));
-    expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
+    if (!farm) {
+      expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
+    } else {
+      expect(await gauge.balanceOf(strategyContract.address)).to.gt(0);
+    }
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
     expect(await strategyContract.getNAV()).to.be.gte(nav);
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });
-    expect(await jar.balanceOf(strategyContract.address)).to.equal(0);
+    if (farm) {
+      expect(await gauge.balanceOf(strategyContract.address)).to.equal(0);
+    } else {
+      expect(await jar.balanceOf(strategyContract.address)).to.equal(0);
+    }
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(

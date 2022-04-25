@@ -116,7 +116,7 @@ contract DepositVaultOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden, /* _garden */
+        IGarden _garden,
         address _integration
     )
         external
@@ -156,7 +156,8 @@ contract DepositVaultOperation is Operation {
                     if (rewardToken != address(0)) {
                         amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
                         if (amount > MIN_TRADE_AMOUNT) {
-                            IStrategy(msg.sender).trade(rewardToken, amount, vaultAsset);
+                            address rasset = _garden.reserveAsset();
+                            IStrategy(msg.sender).trade(rewardToken, amount, rasset);
                         }
                     }
                 } catch {}
