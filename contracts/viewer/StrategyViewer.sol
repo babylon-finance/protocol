@@ -47,6 +47,47 @@ contract StrategyViewer is IStrategyViewer {
     /* ============ External Getter Functions ============ */
 
     /**
+     * Get the non-state related details of a Strategy
+     *
+     */
+    function getStrategyDetails(IStrategy _strategy)
+        external
+        view
+        override
+        returns (
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            address,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            _strategy.strategist(),
+            _strategy.opIntegrations().length,
+            _strategy.stake(),
+            _strategy.totalPositiveVotes(),
+            _strategy.totalNegativeVotes(),
+            _strategy.capitalAllocated(),
+            _strategy.capitalReturned(),
+            _strategy.duration(),
+            _strategy.expectedReturn(),
+            _strategy.maxCapitalRequested(),
+            IBabController(controller).strategyNFT(),
+            _strategy.enteredAt(),
+            _strategy.getNAV()
+        );
+    }
+
+    /**
      * Gets complete strategy details
      *
      * @param _strategy            Address of the strategy to fetch

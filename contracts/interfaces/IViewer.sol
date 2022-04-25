@@ -5,8 +5,29 @@ pragma abicoder v2;
 
 import {IGarden} from '../interfaces/IGarden.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
+import {IStrategy} from '../interfaces/IStrategy.sol';
 
 interface IStrategyViewer {
+
+    function getStrategyDetails(IStrategy _strategy)
+        external
+        view
+        returns (
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            address,
+            uint256,
+            uint256
+        );
+
     function getCompleteStrategy(address _strategy)
         external
         view
