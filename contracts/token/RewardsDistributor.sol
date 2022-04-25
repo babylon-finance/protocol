@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+
 import {TimeLockedToken} from './TimeLockedToken.sol';
 
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -503,7 +503,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             }
             // str[0]: capitalAllocated, str[1]: capitalReturned
             uint256[] memory str = new uint256[](2);
-            (, , , , , , str[0], str[1], , , , , , ) = strategy.getStrategyDetails();
+            str[0] = strategy.capitalAllocated();
+            str[1] = strategy.capitalReturned();
+
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;

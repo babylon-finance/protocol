@@ -72,8 +72,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     ITradeIntegration public synthetix;
     ITradeIntegration public heartTradeIntegration;
     ITradeIntegration public paladinTradeIntegration;
-    // should always be empty; only used for view functions
-    ITradeIntegration.TradeInfo[] public trades;
 
     /* ============ Constructor ============ */
 

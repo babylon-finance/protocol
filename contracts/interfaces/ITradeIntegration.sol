@@ -28,12 +28,4 @@ interface ITradeIntegration is IBaseIntegration {
         address _hopToken
     ) external returns (uint256);
 
-    struct TradeInfo {
-        address _strategy;
-        address _sendToken;
-        uint256 _sendQuantity;
-        address _receiveToken;
-        uint256 _minReceiveQuantity;
-        address _hopToken;
-    }
 }

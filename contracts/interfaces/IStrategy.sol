@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IGarden} from '../interfaces/IGarden.sol';
 
@@ -11,6 +12,16 @@ import {IGarden} from '../interfaces/IGarden.sol';
  * Interface for strategy
  */
 interface IStrategy {
+
+    struct TradeInfo {
+        address _strategy;
+        address _sendToken;
+        uint256 _sendQuantity;
+        address _receiveToken;
+        uint256 _minReceiveQuantity;
+        address _hopToken;
+    }
+
     function initialize(
         address _strategist,
         address _garden,
@@ -42,7 +53,7 @@ interface IStrategy {
         bytes memory _opEncodedData
     ) external;
 
-    function executeStrategy(uint256 _capital, uint256 fee) external;
+    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory trades) external;
 
     function getNAV() external view returns (uint256);
 
@@ -91,26 +102,6 @@ interface IStrategy {
         address _receiveToken,
         uint256 _overrideSlippage
     ) external returns (uint256);
-
-    function getStrategyDetails()
-        external
-        view
-        returns (
-            address,
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            address,
-            uint256,
-            uint256
-        );
 
     function getStrategyState()
         external

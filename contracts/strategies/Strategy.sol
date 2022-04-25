@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -340,7 +341,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee) external override nonReentrant {
+    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory trades) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
@@ -582,49 +583,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function getOperationsCount() external view override returns (uint256) {
         return opTypes.length;
-    }
-
-    /**
-     * Get the non-state related details of a Strategy
-     *
-     */
-    function getStrategyDetails()
-        external
-        view
-        override
-        returns (
-            address,
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            address,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            address(this),
-            strategist,
-            opIntegrations.length,
-            stake,
-            totalPositiveVotes,
-            totalNegativeVotes,
-            capitalAllocated,
-            capitalReturned,
-            duration,
-            expectedReturn,
-            maxCapitalRequested,
-            IBabController(controller).strategyNFT(),
-            enteredAt,
-            getNAV()
-        );
     }
 
     /**
@@ -949,15 +907,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) private returns (uint256) {
         console.log('trade');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 pricePerTokenUnit = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
-        console.log('pricePerTokenUnit:', pricePerTokenUnit);
-        _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
+        uint256 price = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
+        console.log('price:', price);
+        _require(price != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(
                 _sendToken,
                 _receiveToken,
-                _sendQuantity.preciseMul(pricePerTokenUnit)
+                _sendQuantity.preciseMul(price)
             );
         uint256 slippage =
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
