@@ -105,6 +105,7 @@ contract TokenIdentifier is ITokenIdentifier {
         // Fetches and copies data for faster & cheaper reads
         _refreshAAveReserves();
         _refreshCompoundTokens();
+        _refreshFuseTokens();
         _updateYearnVaults();
         _updatePickleJars();
         _updateConvexPools();
@@ -337,7 +338,7 @@ contract TokenIdentifier is ITokenIdentifier {
     function _refreshFuseTokens() private {
         address[] memory markets = IComptroller(0xC7125E3A2925877C7371d579D29dAe4729Ac9033).getAllMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            if (markets[i] == 0x7dbc3af9251756561ce755fcc11c754184af71f7) {
+            if (markets[i] == 0x7DBC3aF9251756561Ce755fcC11c754184Af71F7) {
                 cTokenToAsset[markets[i]] = WETH;
             } else {
                 cTokenToAsset[markets[i]] = ICToken(markets[i]).underlying();
