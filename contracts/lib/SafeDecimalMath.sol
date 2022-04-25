@@ -2,11 +2,14 @@
 
 pragma solidity 0.7.6;
 
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
-import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
 library SafeDecimalMath {
     using LowGasSafeMath for uint256;
+    using UniversalERC20 for IERC20;
 
     /* Number of decimal places in the representations. */
     uint8 internal constant decimals = 18;
@@ -137,24 +140,8 @@ library SafeDecimalMath {
         address _to,
         uint256 _amount
     ) internal view returns (uint256) {
-        uint256 fromDecimals = _isETH(_from) ? 18 : 0;
-        uint256 toDecimals = _isETH(_to) ? 18 : 0;
-
-        if (fromDecimals == 0) {
-            try ERC20(_from).decimals() returns (uint8 decimals) {
-                fromDecimals = decimals;
-            } catch {
-                fromDecimals = 18;
-            }
-        }
-
-        if (toDecimals == 0) {
-            try ERC20(_to).decimals() returns (uint8 decimals) {
-                toDecimals = decimals;
-            } catch {
-                toDecimals = 18;
-            }
-        }
+        uint256 fromDecimals = IERC20(_from).universalDecimals();
+        uint256 toDecimals = IERC20(_to).universalDecimals();
 
         if (fromDecimals == toDecimals) {
             return _amount;
