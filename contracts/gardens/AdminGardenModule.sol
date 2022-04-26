@@ -124,7 +124,6 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         rewardsDistributor = IRewardsDistributor(controller.rewardsDistributor());
 
         _onlyNonZero(address(rewardsDistributor));
-        bablToken = rewardsDistributor.babltoken();
 
         privateGarden = !(controller.allowPublicGardens() && _publicGardenStrategistsStewards[0]);
         publicStrategists = !privateGarden && _publicGardenStrategistsStewards[1];

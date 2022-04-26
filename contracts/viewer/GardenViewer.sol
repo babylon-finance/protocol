@@ -87,22 +87,21 @@ contract GardenViewer {
      * Gets garden details
      *
      * @param _garden            Address of the garden to fetch
-     * @return                   Garden complete details
      */
     function getGardenDetails(address _garden)
         external
         view
         returns (
-            string memory,
-            string memory,
-            address[5] memory,
-            address,
-            bool[4] memory,
-            address[] memory,
-            address[] memory,
-            uint256[13] memory,
-            uint256[10] memory,
-            uint256[3] memory
+            string memory name,
+            string memory symbol,
+            address[5] memory creators,
+            address reserveAsset,
+            bool[4] memory actors,
+            address[] memory strategies,
+            address[] memory finalizedStrategies,
+            uint256[13] memory params,
+            uint256[10] memory stats,
+            uint256[3] memory profits
         )
     {
         IGarden garden = IGarden(_garden);
