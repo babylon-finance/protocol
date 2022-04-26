@@ -143,8 +143,6 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     address internal signer;
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 internal canMintNftAfter;
-    // BABL Token
-    TimeLockedToken internal bablToken;
 
     /* ============ Modifiers ============ */
 

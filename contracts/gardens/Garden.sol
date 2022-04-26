@@ -81,7 +81,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     // Wrapped ETH address
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    IERC20 private constant BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
+    IERC20 private immutable BABL;
 
     // Strategy cooldown period
     uint256 private constant MIN_COOLDOWN_PERIOD = 60 seconds;
@@ -206,8 +206,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     address private signer;
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
-    // BABL Token
-    TimeLockedToken private bablToken;
 
     /* ============ Modifiers ============ */
 
@@ -245,7 +243,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /* ============ Constructor ============ */
 
-    constructor(VTableBeacon _beacon) VTableBeaconProxy(_beacon) {}
+    constructor(VTableBeacon _beacon, IERC20 _babl) VTableBeaconProxy(_beacon) {
+        BABL = _babl;
+    }
 
     /* ============ External Functions ============ */
 
@@ -956,11 +956,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Only used to approve Heart Garden to stake
      */
     function _approveBABL(address _garden, uint256 _amount) internal {
-        if (address(bablToken) == address(0)) {
-            // Backward compatible
-            bablToken = rewardsDistributor.babltoken();
-        }
-        IERC20(bablToken).safeApprove(address(_garden), _amount);
+        IERC20(BABL).safeApprove(address(_garden), _amount);
     }
 
     /**
@@ -1085,5 +1081,5 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 }
 
 contract GardenV20 is Garden {
-    constructor(VTableBeacon _beacon) Garden(_beacon) {}
+    constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
