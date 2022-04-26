@@ -42,19 +42,6 @@ describe('StakewiseIntegrationTest', function () {
   });
 
   describe('Stakewise Staking', function () {
-    describe('getPricePerShare', function () {
-      it('gets price per share', async function () {
-        expect(await stakewiseIntegration.getPricePerShare(sETH2.address)).to.equal(eth());
-        expect(await stakewiseIntegration.getPricePerShare(rETH2.address)).to.equal(eth());
-      });
-    });
-
-    describe('getExpectedShares', function () {
-      it('get expected shares', async function () {
-        expect(await stakewiseIntegration.getExpectedShares(sETH2.address, eth())).to.equal(eth());
-      });
-    });
-
     describe('getInvestmentAsset', function () {
       it('get investment asset', async function () {
         expect(await stakewiseIntegration.getInvestmentAsset(sETH2.address)).to.equal(addresses.tokens.WETH);

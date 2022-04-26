@@ -55,19 +55,6 @@ contract StakewiseIntegration is PassiveIntegration {
         return swapRouter;
     }
 
-    function _getExpectedShares(
-        address, /* _asset */
-        uint256 _amount
-    ) internal pure override returns (uint256) {
-        return _amount;
-    }
-
-    function _getPricePerShare(
-        address /* _asset */
-    ) internal pure override returns (uint256) {
-        return 1e18;
-    }
-
     function _getInvestmentAsset(
         address /* _asset */
     ) internal pure override returns (address) {
@@ -127,10 +114,10 @@ contract StakewiseIntegration is PassiveIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPreActionCallData(
+        address _strategy,
         address, /* _asset */
         uint256, /* _amount */
-        uint256 _op,
-        address _strategy
+        uint256 _op
     )
         internal
         view
@@ -204,7 +191,9 @@ contract StakewiseIntegration is PassiveIntegration {
         return (swapRouter, 0, methodData);
     }
 
-    function _preActionNeedsApproval() internal pure override returns (address) {
+    function _preActionNeedsApproval(
+        address /* _asset */
+    ) internal pure override returns (address) {
         return address(rETH2);
     }
 
