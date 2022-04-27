@@ -55,7 +55,7 @@ contract AddLiquidityOperation is Operation {
     /**
      * Executes the add liquidity operation
      */
-    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
+    function executeOperation(Args memory _args, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -130,7 +130,9 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
-                    IStrategy(msg.sender).trade(poolTokens[i], address(msg.sender).balance, reserveAsset, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) );
+                    IStrategy(msg.sender).trade(poolTokens[i],
+                                                address(msg.sender).balance,
+                                                reserveAsset, 0, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) );
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
@@ -139,6 +141,7 @@ contract AddLiquidityOperation is Operation {
                             poolTokens[i],
                             IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
                             reserveAsset,
+                            0,
                              IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) 
                         );
                     }
@@ -216,6 +219,7 @@ contract AddLiquidityOperation is Operation {
         if (_poolToken != _asset) {
             return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount,
                                                _poolToken,
+                                               0,
                              IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) 
                                               );
         }

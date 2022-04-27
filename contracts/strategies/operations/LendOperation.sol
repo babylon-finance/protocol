@@ -56,7 +56,7 @@ contract LendOperation is Operation {
     /**
      * Executes the lend operation
      */
-    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
+    function executeOperation(Args memory _args, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -72,6 +72,7 @@ contract LendOperation is Operation {
         uint256 numTokensToSupply = IStrategy(msg.sender).trade(_args.asset,
                                                                 _args.capital,
                                                                 assetToken,
+                                                                0,
                                                                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
         console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
@@ -109,6 +110,7 @@ contract LendOperation is Operation {
         if (assetToken == address(0)) {
             IStrategy(msg.sender).trade(assetToken, address(msg.sender).balance,
                                         WETH,
+                                        0,
                                        IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
             assetToken = WETH;
         }
@@ -230,6 +232,7 @@ contract LendOperation is Operation {
         if (borrowBalance > 1e6) {
             IStrategy(msg.sender).trade(_borrowToken, borrowBalance,
                                         _assetToken,
+                                        0,
                                        IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
         }
     }

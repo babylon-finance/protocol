@@ -55,6 +55,7 @@ interface IStrategy {
     function executeStrategy(
         uint256 _capital,
         uint256 _fee,
+        uint256[] memory _prices,
         TradeInfo[] memory trades
     ) external;
 
@@ -97,6 +98,7 @@ interface IStrategy {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
+        uint256 _price,
         TradeInfo memory _tradeInfo
     ) external returns (uint256);
 

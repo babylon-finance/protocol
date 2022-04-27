@@ -344,12 +344,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function executeStrategy(
         uint256 _capital,
         uint256 _fee,
+        uint256[] memory _prices,
         TradeInfo[] memory _trades
     ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
-        _executesStrategy(_capital, _fee, msg.sender, _trades);
+
+        _executesStrategy(_capital, _fee, msg.sender, _prices, _trades);
     }
 
     /**
@@ -486,7 +488,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
@@ -550,18 +552,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+        return _trade(_sendToken, _sendQuantity, _receiveToken,
+                      _overrideSlippage, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
     }
 
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
+        uint256 _price,
         TradeInfo memory _tradeInfo
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken, 0, _tradeInfo);
+        return _trade(_sendToken, _sendQuantity, _receiveToken, 0, _price, _tradeInfo);
     }
 
     /** PRIVILEGE FUNCTION
@@ -779,6 +783,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _capital,
         uint256 _fee,
         address payable _keeper,
+        uint256[] memory _prices,
         TradeInfo[] memory _trades
     ) private {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
@@ -790,7 +795,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
-        _enterStrategy(_capital, _trades);
+        _enterStrategy(_capital, _prices, _trades);
         console.log('_enterStrategy:');
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
@@ -812,7 +817,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Executes all the operations in order
      * @param _capital  Amount of capital that the strategy receives
      */
-    function _enterStrategy(uint256 _capital, IStrategy.TradeInfo[] memory _trades) private {
+    function _enterStrategy(uint256 _capital, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
@@ -829,6 +834,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     garden,
                     _getIntegration(opIntegrations[i])
                 ),
+                _prices,
                 _trades
             );
             console.log('after opTypes[i]:', opTypes[i]);
@@ -861,7 +867,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-            _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+            _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
         }
     }
 
@@ -913,6 +919,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _overrideSlippage,
+        uint256 _price,
         TradeInfo memory _tradeInfo
     ) private returns (uint256) {
         console.log('trade');
