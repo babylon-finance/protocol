@@ -75,7 +75,7 @@ abstract contract BaseIntegration is IBaseIntegration {
 
     function _getDurationStrategy(address _strategy) internal view returns (uint256) {
         IStrategy strategy = IStrategy(_strategy);
-        (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
+        (, , , uint256 executedAt, , ) = strategy.getStrategyState();
         return block.timestamp.sub(executedAt);
     }
 }

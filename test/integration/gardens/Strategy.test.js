@@ -237,7 +237,7 @@ describe('Strategy', function () {
   });
 
   describe('executeStrategy', async function () {
-    it('should execute strategy', async function () {
+    it.only('should execute strategy', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -248,9 +248,8 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract, { amount: eth().mul(2), fee: 42 });
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
-      expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);

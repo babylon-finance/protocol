@@ -15,6 +15,8 @@ import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title BuyOperation
  * @author Babylon Finance
@@ -74,7 +76,9 @@ contract BuyOperation is Operation {
         }
         uint256 receivedQuantity = IStrategy(msg.sender).trade(_args.asset,
                                                                _args.capital,
-                                                               token, _prices[0], _trades[0]);
+                                                               token,
+                                                               _prices.length > 0 ? _prices[0] : 0,
+                                                               _trades.length > 0 ? _trades[0] : IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
         return (token, receivedQuantity, 0); // liquid
     }
 

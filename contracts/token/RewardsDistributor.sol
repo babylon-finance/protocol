@@ -492,7 +492,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         IStrategy strategy = IStrategy(_strategy);
         // ts[0]: executedAt, ts[1]: exitedAt, ts[2]: updatedAt
         uint256[] memory ts = new uint256[](3);
-        (, , , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
+        (, , , ts[0], ts[1], ts[2]) = strategy.getStrategyState();
         _require(ts[1] != 0, Errors.STRATEGY_IS_NOT_OVER_YET);
         if (ts[1] >= START_TIME) {
             // We avoid gas consuming once a strategy got its BABL rewards during its finalization
@@ -917,7 +917,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _updateStrategyPowerPerQuarter(address _strategy) private {
         uint256[] memory data = new uint256[](5);
         // data[0]: executedAt, data[1]: updatedAt, data[2]: time difference, data[3]: quarter, data[4]: debtPower
-        (, , , , data[0], , data[1]) = IStrategy(_strategy).getStrategyState();
+        (, , , data[0], , data[1]) = IStrategy(_strategy).getStrategyState();
         if (data[1] < START_TIME) {
             // We check the initialization only for beta gardens, quarter = 1
             StrategyPerQuarter storage betaStrategyCheckpoint = strategyPerQuarter[_strategy][1];

@@ -161,6 +161,8 @@ async function executeStrategy(
     time = ONE_DAY_IN_SECONDS,
     amount = 0,
     fee = 0,
+    prices = [],
+    trades = [],
     gasPrice = 0,
     gasLimit = 9500000,
   } = {},
@@ -176,7 +178,7 @@ async function executeStrategy(
     strategy
       // use keeper
       .connect(signers[1])
-      .executeStrategy(amount, fee, {
+      .executeStrategy(amount, fee, prices, trades, {
         gasPrice,
         gasLimit,
       })

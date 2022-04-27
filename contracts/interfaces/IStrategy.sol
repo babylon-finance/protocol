@@ -113,7 +113,6 @@ interface IStrategy {
         external
         view
         returns (
-            address,
             bool,
             bool,
             bool,

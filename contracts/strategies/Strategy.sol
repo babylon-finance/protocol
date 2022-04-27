@@ -646,7 +646,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         view
         override
         returns (
-            address,
             bool,
             bool,
             bool,
@@ -655,7 +654,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             uint256
         )
     {
-        return (address(this), active, dataSet, finalized, executedAt, exitedAt, updatedAt);
+        return (active, dataSet, finalized, executedAt, exitedAt, updatedAt);
     }
 
     /**
