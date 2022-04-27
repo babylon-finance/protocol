@@ -27,5 +27,4 @@ interface ITradeIntegration is IBaseIntegration {
         uint256 _minReceiveQuantity,
         address _hopToken
     ) external returns (uint256);
-
 }

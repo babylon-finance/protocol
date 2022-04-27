@@ -341,7 +341,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory _trades) external override nonReentrant {
+    function executeStrategy(
+        uint256 _capital,
+        uint256 _fee,
+        TradeInfo[] memory _trades
+    ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
@@ -482,7 +486,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
@@ -546,17 +550,18 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage);
+        return _trade(_sendToken, _sendQuantity, _receiveToken, _overrideSlippage, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
     }
 
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        TradeInfo memory _tradeInfo
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
-        return _trade(_sendToken, _sendQuantity, _receiveToken, 0);
+        return _trade(_sendToken, _sendQuantity, _receiveToken, 0, _tradeInfo);
     }
 
     /** PRIVILEGE FUNCTION
@@ -817,13 +822,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
                 IOperation.Args(
-                assetAccumulated,
-                capitalForNexOperation,
-                assetStatus,
-                _getOpDecodedData(i),
-                garden,
-                _getIntegration(opIntegrations[i])
-            ),
+                    assetAccumulated,
+                    capitalForNexOperation,
+                    assetStatus,
+                    _getOpDecodedData(i),
+                    garden,
+                    _getIntegration(opIntegrations[i])
+                ),
                 _trades
             );
             console.log('after opTypes[i]:', opTypes[i]);
@@ -856,7 +861,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-            _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
+            _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
         }
     }
 
@@ -907,7 +912,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _overrideSlippage
+        uint256 _overrideSlippage,
+        TradeInfo memory _tradeInfo
     ) private returns (uint256) {
         console.log('trade');
         // Uses on chain oracle for all internal strategy operations to avoid attacks
@@ -916,11 +922,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(price != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
-            SafeDecimalMath.normalizeAmountTokens(
-                _sendToken,
-                _receiveToken,
-                _sendQuantity.preciseMul(price)
-            );
+            SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken, _sendQuantity.preciseMul(price));
         uint256 slippage =
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
                 ? maxTradeSlippagePercentage

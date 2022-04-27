@@ -29,10 +29,7 @@ interface IOperation {
         uint256 _index
     ) external view;
 
-    function executeOperation(
-        Args memory args,
-        IStrategy.TradeInfo[] memory _trades
-    )
+    function executeOperation(Args memory args, IStrategy.TradeInfo[] memory _trades)
         external
         returns (
             address,

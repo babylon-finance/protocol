@@ -8,7 +8,6 @@ import {IHeart} from '../interfaces/IHeart.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 
 interface IStrategyViewer {
-
     function getStrategyDetails(IStrategy _strategy)
         external
         view

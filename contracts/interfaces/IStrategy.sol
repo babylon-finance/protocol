@@ -12,7 +12,6 @@ import {IGarden} from '../interfaces/IGarden.sol';
  * Interface for strategy
  */
 interface IStrategy {
-
     struct TradeInfo {
         address _strategy;
         address _sendToken;
@@ -53,7 +52,11 @@ interface IStrategy {
         bytes memory _opEncodedData
     ) external;
 
-    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory trades) external;
+    function executeStrategy(
+        uint256 _capital,
+        uint256 _fee,
+        TradeInfo[] memory trades
+    ) external;
 
     function getNAV() external view returns (uint256);
 
@@ -93,7 +96,8 @@ interface IStrategy {
     function trade(
         address _sendToken,
         uint256 _sendQuantity,
-        address _receiveToken
+        address _receiveToken,
+        TradeInfo memory _tradeInfo
     ) external returns (uint256);
 
     function trade(

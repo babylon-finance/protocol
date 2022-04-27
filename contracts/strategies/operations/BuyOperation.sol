@@ -57,10 +57,7 @@ contract BuyOperation is Operation {
     /**
      * Executes the buy operation
      */
-    function executeOperation(
-        Args memory _args,
-        IStrategy.TradeInfo[] memory _trades
-    )
+    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -75,7 +72,7 @@ contract BuyOperation is Operation {
         if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
-        uint256 receivedQuantity = IStrategy(msg.sender).trade(_args.asset, _args.capital, token);
+        uint256 receivedQuantity = IStrategy(msg.sender).trade(_args.asset, _args.capital, token, _trades[0]);
         return (token, receivedQuantity, 0); // liquid
     }
 

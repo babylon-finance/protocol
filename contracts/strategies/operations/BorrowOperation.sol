@@ -63,10 +63,7 @@ contract BorrowOperation is Operation {
     /**
      * Executes the borrow operation
      */
-    function executeOperation(
-        Args memory _args,
-        IStrategy.TradeInfo[] memory _trades
-    )
+    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -81,7 +78,10 @@ contract BorrowOperation is Operation {
         if (msg.sender == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
             rate = 85e16;
         }
-        require(args.capital > 0 && args.assetStatus == 1 && args.asset != borrowToken, 'There is no collateral locked');
+        require(
+            args.capital > 0 && args.assetStatus == 1 && args.asset != borrowToken,
+            'There is no collateral locked'
+        );
 
         console.log('get borrow amount');
         // Because we are not using AAVE/Compound price oracles there is a price
@@ -93,7 +93,8 @@ contract BorrowOperation is Operation {
         // Use the % max we can borrow (maxCollateral)
         // Use the % of the collateral asset
         uint256 amountToBorrow =
-            args.capital
+            args
+                .capital
                 .preciseMul(price)
                 .preciseMul(rate != 0 ? rate : IBorrowIntegration(args.integration).maxCollateralFactor())
                 .preciseMul(IBorrowIntegration(args.integration).getCollateralFactor(args.asset));
@@ -105,7 +106,7 @@ contract BorrowOperation is Operation {
         // if borrowToken is ETH wrap it to WETH
         console.log('borrowToken:', borrowToken);
         if (borrowToken == address(0)) {
-            IStrategy(msg.sender).trade(borrowToken, normalizedAmount, WETH);
+            IStrategy(msg.sender).trade(borrowToken, normalizedAmount, WETH, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) );
             borrowToken = WETH;
         }
         console.log('after trade');
@@ -201,7 +202,7 @@ contract BorrowOperation is Operation {
     ) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance < _debtAmount) {
-            IStrategy(msg.sender).trade(_asset, IERC20(_asset).universalBalanceOf(msg.sender), _assetToken);
+            IStrategy(msg.sender).trade(_asset, IERC20(_asset).universalBalanceOf(msg.sender), _assetToken, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
         }
     }
 }

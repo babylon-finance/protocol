@@ -61,10 +61,7 @@ contract DepositVaultOperation is Operation {
     /**
      * Executes the deposit vault operation
      */
-    function executeOperation(
-        Args memory _args,
-        IStrategy.TradeInfo[] memory _trades
-    )
+    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -131,7 +128,7 @@ contract DepositVaultOperation is Operation {
                         amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
                         if (amount > MIN_TRADE_AMOUNT) {
                             address rasset = _garden.reserveAsset();
-                            IStrategy(msg.sender).trade(rewardToken, amount, rasset);
+                            IStrategy(msg.sender).trade(rewardToken, amount, rasset, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
                         }
                     }
                 } catch {}
@@ -216,7 +213,7 @@ contract DepositVaultOperation is Operation {
     {
         uint256 vaultAssetQuantity =
             _vaultAsset != _asset
-                ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset)
+                ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) )
                 : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
 
         //uint256 minAmountExpected =

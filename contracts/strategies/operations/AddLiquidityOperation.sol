@@ -55,10 +55,7 @@ contract AddLiquidityOperation is Operation {
     /**
      * Executes the add liquidity operation
      */
-    function executeOperation(
-        Args memory _args,
-        IStrategy.TradeInfo[] memory _trades
-    )
+    function executeOperation(Args memory _args, IStrategy.TradeInfo[] memory _trades)
         external
         override
         onlyStrategy
@@ -87,7 +84,8 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         } catch {}
-        return _joinPool(_args.asset, _args.capital, _args.data, _args.garden, _args.integration, poolWeights, poolTokens);
+        return
+            _joinPool(_args.asset, _args.capital, _args.data, _args.garden, _args.integration, poolWeights, poolTokens);
     }
 
     /**
@@ -132,7 +130,7 @@ contract AddLiquidityOperation is Operation {
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
                 if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
-                    IStrategy(msg.sender).trade(poolTokens[i], address(msg.sender).balance, reserveAsset);
+                    IStrategy(msg.sender).trade(poolTokens[i], address(msg.sender).balance, reserveAsset, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) );
                     poolTokens[i] = WETH;
                 }
                 if (poolTokens[i] != reserveAsset) {
@@ -140,7 +138,8 @@ contract AddLiquidityOperation is Operation {
                         IStrategy(msg.sender).trade(
                             poolTokens[i],
                             IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
-                            reserveAsset
+                            reserveAsset,
+                             IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) 
                         );
                     }
                 }
@@ -215,7 +214,10 @@ contract AddLiquidityOperation is Operation {
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
         if (_poolToken != _asset) {
-            return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
+            return IStrategy(msg.sender).trade(_asset, normalizedAssetAmount,
+                                               _poolToken,
+                             IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) 
+                                              );
         }
         // Reserve asset
         uint256 reserveBalance = IERC20(_poolToken).universalBalanceOf(msg.sender);

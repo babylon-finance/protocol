@@ -1,4 +1,3 @@
-
 pragma solidity 0.7.6;
 
 import {TimeLockedToken} from './TimeLockedToken.sol';
