@@ -11,6 +11,7 @@ describe('ConvexStakeIntegrationTest', function () {
   let convexStakeIntegration;
   let curvePoolIntegration;
   let curveMetaRegistry;
+  let convexRegistry;
   let signer1;
   let signer2;
   let signer3;
@@ -60,6 +61,7 @@ describe('ConvexStakeIntegrationTest', function () {
     ({
       curvePoolIntegration,
       curveMetaRegistry,
+      convexRegistry,
       convexStakeIntegration,
       signer1,
       signer2,
@@ -93,7 +95,7 @@ describe('ConvexStakeIntegrationTest', function () {
     await depositFunds(token, garden);
     const convexBooster = await ethers.getContractAt('IBooster', '0xF403C135812408BFbE8713b5A23a04b3D48AAE31');
     const crvLpToken = await getERC20(await curveMetaRegistry.getLpToken(crvpool));
-    const pid = (await convexStakeIntegration.getPid(cvxpool))[1].toNumber();
+    const pid = (await convexRegistry.getPid(cvxpool))[1].toNumber();
     const poolInfo = await convexBooster.poolInfo(pid);
     const convexRewardToken = await getERC20(poolInfo[3]);
 

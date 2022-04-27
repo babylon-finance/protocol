@@ -1,0 +1,190 @@
+{
+  "address": "0x61c733fE0Eb89b75440A21cD658C4011ec512EB8",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "controller",
+      "outputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllVaults",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "_vaults",
+          "type": "address[]"
+        },
+        {
+          "internalType": "bool[]",
+          "name": "_values",
+          "type": "bool[]"
+        }
+      ],
+      "name": "updateVaults",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "vaultList",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "vaults",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x9791861e577e9cd1a297c147078f80355f2ee96e47ffab5177863d53aad21d2b",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0x61c733fE0Eb89b75440A21cD658C4011ec512EB8",
+    "transactionIndex": 60,
+    "gasUsed": "3699321",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x15e6bd7c8c1a2bf98360eb5ab105e0df255a15472a2c7f07717a075bf71a2263",
+    "transactionHash": "0x9791861e577e9cd1a297c147078f80355f2ee96e47ffab5177863d53aad21d2b",
+    "logs": [],
+    "blockNumber": 14664627,
+    "cumulativeGasUsed": "7466279",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "b449cb5aec67dc49b858dceef0213a91",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"_controller\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"controller\",\"outputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllVaults\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_vaults\",\"type\":\"address[]\"},{\"internalType\":\"bool[]\",\"name\":\"_values\",\"type\":\"bool[]\"}],\"name\":\"updateVaults\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"vaultList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"vaults\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Babylon Finance Protocol Abstraction for all the different vaults\",\"kind\":\"dev\",\"methods\":{\"updateVaults(address[],bool[])\":{\"params\":{\"_values\":\"List of booleans. True means valid vault\",\"_vaults\":\"List of Vault addresses\"}}},\"title\":\"YearnVaultRegistry\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"updateVaults(address[],bool[])\":{\"notice\":\"Adds/deletes Vaults\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/registries/YearnVaultRegistry.sol\":\"YearnVaultRegistry\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IBabController.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title IBabController\\n * @author Babylon Finance\\n *\\n * Interface for interacting with BabController\\n */\\ninterface IBabController {\\n    /* ============ Functions ============ */\\n\\n    function createGarden(\\n        address _reserveAsset,\\n        string memory _name,\\n        string memory _symbol,\\n        string memory _tokenURI,\\n        uint256 _seed,\\n        uint256[] calldata _gardenParams,\\n        uint256 _initialContribution,\\n        bool[] memory _publicGardenStrategistsStewards,\\n        uint256[] memory _profitSharing\\n    ) external payable returns (address);\\n\\n    function removeGarden(address _garden) external;\\n\\n    function addReserveAsset(address _reserveAsset) external;\\n\\n    function removeReserveAsset(address _reserveAsset) external;\\n\\n    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;\\n\\n    function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external;\\n\\n    function addAffiliateReward(\\n        address _depositor,\\n        address _referrer,\\n        uint256 _reserveAmount\\n    ) external;\\n\\n    function claimRewards() external;\\n\\n    function editPriceOracle(address _priceOracle) external;\\n\\n    function editMardukGate(address _mardukGate) external;\\n\\n    function editGardenValuer(address _gardenValuer) external;\\n\\n    function editTreasury(address _newTreasury) external;\\n\\n    function editHeart(address _newHeart) external;\\n\\n    function editRewardsDistributor(address _rewardsDistributor) external;\\n\\n    function editGardenFactory(address _newGardenFactory) external;\\n\\n    function editGardenNFT(address _newGardenNFT) external;\\n\\n    function editCurveMetaRegistry(address _curveMetaRegistry) external;\\n\\n    function editStrategyNFT(address _newStrategyNFT) external;\\n\\n    function editStrategyFactory(address _newStrategyFactory) external;\\n\\n    function setOperation(uint8 _kind, address _operation) external;\\n\\n    function setMasterSwapper(address _newMasterSwapper) external;\\n\\n    function addKeeper(address _keeper) external;\\n\\n    function addKeepers(address[] memory _keepers) external;\\n\\n    function removeKeeper(address _keeper) external;\\n\\n    function enableGardenTokensTransfers() external;\\n\\n    function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;\\n\\n    function patchIntegration(address _old, address _new) external;\\n\\n    function gardenCreationIsOpen() external view returns (bool);\\n\\n    function owner() external view returns (address);\\n\\n    function EMERGENCY_OWNER() external view returns (address);\\n\\n    function guardianGlobalPaused() external view returns (bool);\\n\\n    function guardianPaused(address _address) external view returns (bool);\\n\\n    function setPauseGuardian(address _guardian) external;\\n\\n    function setGlobalPause(bool _state) external returns (bool);\\n\\n    function setSomePause(address[] memory _address, bool _state) external returns (bool);\\n\\n    function isPaused(address _contract) external view returns (bool);\\n\\n    function priceOracle() external view returns (address);\\n\\n    function gardenValuer() external view returns (address);\\n\\n    function heart() external view returns (address);\\n\\n    function gardenNFT() external view returns (address);\\n\\n    function strategyNFT() external view returns (address);\\n\\n    function curveMetaRegistry() external view returns (address);\\n\\n    function rewardsDistributor() external view returns (address);\\n\\n    function gardenFactory() external view returns (address);\\n\\n    function treasury() external view returns (address);\\n\\n    function ishtarGate() external view returns (address);\\n\\n    function mardukGate() external view returns (address);\\n\\n    function strategyFactory() external view returns (address);\\n\\n    function masterSwapper() external view returns (address);\\n\\n    function gardenTokensTransfersEnabled() external view returns (bool);\\n\\n    function bablMiningProgramEnabled() external view returns (bool);\\n\\n    function allowPublicGardens() external view returns (bool);\\n\\n    function enabledOperations(uint256 _kind) external view returns (address);\\n\\n    function getGardens() external view returns (address[] memory);\\n\\n    function getReserveAssets() external view returns (address[] memory);\\n\\n    function getOperations() external view returns (address[20] memory);\\n\\n    function isGarden(address _garden) external view returns (bool);\\n\\n    function protocolWantedAssets(address _wantedAsset) external view returns (bool);\\n\\n    function gardenAffiliateRates(address _wantedAsset) external view returns (uint256);\\n\\n    function affiliateRewards(address _user) external view returns (uint256);\\n\\n    function patchedIntegrations(address _integration) external view returns (address);\\n\\n    function isValidReserveAsset(address _reserveAsset) external view returns (bool);\\n\\n    function isValidKeeper(address _keeper) external view returns (bool);\\n\\n    function isSystemContract(address _contractAddress) external view returns (bool);\\n\\n    function protocolPerformanceFee() external view returns (uint256);\\n\\n    function protocolManagementFee() external view returns (uint256);\\n\\n    function minLiquidityPerReserve(address _reserve) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x50e8738ec1b06ef43d80b16701c977e7700d01987f0c27a73402d16a1a0cf20d\",\"license\":\"Apache-2.0\"},\"contracts/interfaces/IYearnVaultRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title IYearnVaultRegistry\\n * @author Babylon Finance\\n *\\n * Interface for interacting with all the pickle jars\\n */\\ninterface IYearnVaultRegistry {\\n    /* ============ Functions ============ */\\n\\n    function updateVaults(address[] calldata _jars, bool[] calldata _values) external;\\n\\n    /* ============ View Functions ============ */\\n\\n    function vaults(address _vaultAddress) external view returns (bool);\\n\\n    function getAllVaults() external view returns (address[] memory);\\n}\\n\",\"keccak256\":\"0x73992e6e7885cdf208bd6c61a5724f38573c0fc8b68ac3b33a8e0988ee902aae\",\"license\":\"Apache-2.0\"},\"contracts/lib/ControllerLib.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\n\\nlibrary ControllerLib {\\n    /**\\n     * Throws if the sender is not the protocol\\n     */\\n    function onlyGovernanceOrEmergency(IBabController _controller) internal view {\\n        require(\\n            msg.sender == _controller.owner() || msg.sender == _controller.EMERGENCY_OWNER(),\\n            'Only governance or emergency can call this'\\n        );\\n    }\\n}\\n\",\"keccak256\":\"0xfb8440b3c915eb148e4ef721ce6b240642a8c35c3f8729dc6d20db9f307b4cae\",\"license\":\"Apache-2.0\"},\"contracts/registries/YearnVaultRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\nimport {IYearnVaultRegistry} from '../interfaces/IYearnVaultRegistry.sol';\\n\\nimport {ControllerLib} from '../lib/ControllerLib.sol';\\n\\n/**\\n * @title YearnVaultRegistry\\n * @author Babylon Finance Protocol\\n *\\n * Abstraction for all the different vaults\\n */\\ncontract YearnVaultRegistry is IYearnVaultRegistry {\\n    using ControllerLib for IBabController;\\n\\n    /* ============ Constants ============ */\\n\\n    IBabController public immutable controller;\\n\\n    /* ============ State Variables ============ */\\n\\n    // Mapping of valid Vaults\\n    mapping(address => bool) public override vaults;\\n    address[] public vaultList;\\n\\n    /* ============ Modifiers ============ */\\n\\n    /* ============ Constructor ============ */\\n\\n    constructor(IBabController _controller) {\\n        require(address(_controller) != address(0), 'Controller is not valid');\\n        controller = _controller;\\n        // Yearn vaults\\n        // https://medium.com/yearn-state-of-the-vaults/the-vaults-at-yearn-9237905ffed3\\n        _addVault(0xc5bDdf9843308380375a611c18B50Fb9341f502A);\\n        _addVault(0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE);\\n        _addVault(0x378cb52b00F9D0921cb46dFc099CFf73b42419dC);\\n        _addVault(0x9d409a0A012CFbA9B15F6D4B36Ac57A46966Ab9a);\\n        _addVault(0xdb25cA703181E7484a155DD612b06f57E12Be5F0);\\n        _addVault(0xF29AE508698bDeF169B89834F76704C3B205aedf);\\n        _addVault(0x873fB544277FD7b977B196a826459a69E27eA4ea);\\n        _addVault(0x671a912C10bba0CFA74Cfc2d6Fba9BA1ed9530B2);\\n        _addVault(0xa5cA62D95D24A4a350983D5B8ac4EB8638887396);\\n        _addVault(0xB8C3B7A2A618C552C23B1E4701109a9E756Bab67);\\n        _addVault(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);\\n        _addVault(0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9);\\n        _addVault(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);\\n        _addVault(0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E);\\n        _addVault(0x7Da96a3891Add058AdA2E826306D812C638D87a7);\\n        _addVault(0xFBEB78a723b8087fD2ea7Ef1afEc93d35E8Bed42);\\n        _addVault(0xd9788f3931Ede4D5018184E198699dC6d66C1915);\\n        _addVault(0x4A3FE75762017DB0eD73a71C9A06db7768DB5e66);\\n        _addVault(0x6d765CbE5bC922694afE112C140b8878b9FB0390);\\n        _addVault(0xFD0877d9095789cAF24c98F7CCe092fa8E120775);\\n        // Curve yearn vaults\\n        _addVault(0xE537B5cc158EB71037D4125BDD7538421981E6AA); // Curve 3Crypto Pool yVault\\n        _addVault(0x6FAfCA7f49B4Fd9dC38117469cd31A1E5aec91F5); // Curve USDM Pool yVault\\n        _addVault(0x718AbE90777F5B778B52D553a5aBaa148DD0dc5D); // Curve alETH Pool yVault\\n        _addVault(0x8b9C0c24307344B6D7941ab654b2Aeee25347473); // Curve EURN Pool yVault\\n        _addVault(0xd8C620991b8E626C099eAaB29B1E3eEa279763bb); // Curve MIM-UST\\n        _addVault(0x0d4EA8536F9A13e4FBa16042a46c30f092b06aA5); // Curve EURT Pool yVault\\n        _addVault(0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8); // Curve MIM Pool yVault\\n        _addVault(0x4560b99C904aAD03027B5178CCa81584744AC01f); // Curve cvxCRV Pool yVault\\n        _addVault(0x67e019bfbd5a67207755D04467D6A70c0B75bF60); // Curve ibEUR Pool yVault\\n        _addVault(0x528D50dC9a333f01544177a924893FA1F5b9F748); // Curve ibKRW Pool yVault\\n        _addVault(0x595a68a8c9D5C230001848B69b1947ee2A607164); // Curve ibGBP Pool yVault\\n        _addVault(0x1b905331F7dE2748F4D6a0678e1521E20347643F); // Curve ibAUD Pool yVault\\n        _addVault(0x490bD0886F221A5F79713D3E84404355A9293C50); // Curve ibCHF Pool yVault\\n        _addVault(0x59518884EeBFb03e90a18ADBAAAB770d4666471e); // Curve ibJPY Pool yVault\\n        _addVault(0x8cc94ccd0f3841a468184aCA3Cc478D2148E1757); // Curve mUSD Pool yVault\\n        _addVault(0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E); // Curve HBTC Pool yVault\\n        _addVault(0x3D27705c64213A5DcD9D26880c1BcFa72d5b6B0E); // Curve USDK Pool yVault\\n        _addVault(0x80bbeE2fa460dA291e796B9045e93d19eF948C6A); // Curve Pax Pool yVault\\n        _addVault(0xC116dF49c02c5fD147DE25Baa105322ebF26Bd97); // Curve RSV Pool yVault\\n        _addVault(0x28a5b95C101df3Ded0C0d9074DB80C438774B6a9); // Curve USDT Pool yVault\\n        _addVault(0x3D980E50508CFd41a13837A60149927a11c03731); // Curve triCrypto Pool yVault\\n        _addVault(0x25212Df29073FfFA7A67399AcEfC2dd75a831A1A); // Curve EURS Pool yVault\\n        _addVault(0x5a770DbD3Ee6bAF2802D29a901Ef11501C44797A); // Curve sUSD Pool yVault\\n        _addVault(0x39CAF13a104FF567f71fd2A4c68C026FDB6E740B); // Curve Aave Pool yVault\\n        _addVault(0x054AF22E1519b020516D72D749221c24756385C9); // Curve HUSD Pool yVault\\n        _addVault(0x3B96d491f067912D18563d56858Ba7d6EC67a6fa); // Curve USDN Pool yVault\\n        _addVault(0xBfedbcbe27171C418CDabC2477042554b1904857); // Curve rETH Pool yVault\\n        _addVault(0x132d8D2C76Db3812403431fAcB00F3453Fc42125); // Curve ankrETH Pool yVault\\n        _addVault(0xf2db9a7c0ACd427A680D640F02d90f6186E71725); // Curve LINK Pool yVault\\n        _addVault(0xA74d4B67b3368E83797a35382AFB776bAAE4F5C8); // Curve alUSD Pool yVault\\n        _addVault(0xC4dAf3b5e2A9e93861c3FBDd25f1e943B8D87417); // Curve USDP Pool yVault\\n        _addVault(0x1C6a9783F812b3Af3aBbf7de64c3cD7CC7D1af44); // Curve UST Pool yVault\\n        _addVault(0x30FCf7c6cDfC46eC237783D94Fc78553E79d4E9C); // Curve DUSD Pool yVault\\n        _addVault(0xf8768814b88281DE4F532a3beEfA5b85B69b9324); // Curve TUSD Pool yVault\\n        _addVault(0x4B5BfD52124784745c1071dcB244C6688d2533d3); // Curve Y Pool yVault\\n        _addVault(0x84E13785B5a27879921D6F685f041421C7F482dA); // Curve 3pool yVault\\n        _addVault(0x2a38B9B0201Ca39B17B460eD2f11e4929559071E); // Curve GUSD Pool yVault\\n        _addVault(0x27b7b1ad7288079A66d12350c828D3C00A6F07d7); // Curve Iron Bank Pool yVault\\n        _addVault(0x986b4AFF588a109c09B50A03f42E4110E29D353F); // Curve sETH Pool yVault\\n        _addVault(0xdCD90C7f6324cfa40d7169ef80b12031770B4325); // Curve stETH Pool yVault\\n        _addVault(0x8414Db07a7F743dEbaFb402070AB01a4E0d2E45e); // Curve sBTC Pool yVault\\n        _addVault(0x7047F90229a057C13BF847C0744D646CFb6c9E1A); // Curve renBTC Pool yVault\\n        _addVault(0xe9Dc63083c464d6EDcCFf23444fF3CFc6886f6FB); // Curve oBTC Pool yVault\\n        _addVault(0x3c5DF3077BcF800640B5DAE8c91106575a4826E6); // Curve pBTC Pool yVault\\n        _addVault(0x23D3D0f1c697247d5e0a9efB37d8b0ED0C464f7f); // Curve tBTC Pool yVault\\n        _addVault(0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139); // Curve FRAX Pool yVault\\n        _addVault(0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6); // Curve LUSD Pool yVault\\n        _addVault(0xb4D1Be44BfF40ad6e506edf43156577a3f8672eC); // Curve SAAVE Pool yVault\\n        _addVault(0x8fA3A9ecd9EFb07A8CE90A6eb014CF3c0E3B32Ef); // Curve BBTC Pool yVault\\n        _addVault(0x6Ede7F19df5df6EF23bD5B9CeDb651580Bdf56Ca); // Curve BUSD Pool yVault\\n        _addVault(0x2994529C0652D127b7842094103715ec5299bBed); // yearn Curve.fi yDAI/yUSDC/yUSDT/yBUSD\\n        _addVault(0xD6Ea40597Be05c201845c0bFd2e96A60bACde267); // Curve Compound Pool yVault\\n    }\\n\\n    /* ============ External Functions ============ */\\n\\n    /**\\n     * Adds/deletes Vaults\\n     * @param _vaults             List of Vault addresses\\n     * @param _values             List of booleans. True means valid vault\\n     *\\n     */\\n    function updateVaults(address[] calldata _vaults, bool[] calldata _values) external override {\\n        controller.onlyGovernanceOrEmergency();\\n        for (uint256 i = 0; i < _vaults.length; i++) {\\n            if (_values[i]) {\\n                _addVault(_vaults[i]);\\n            } else {\\n                _removeVault(_vaults[i]);\\n            }\\n        }\\n    }\\n\\n    function getAllVaults() external view override returns (address[] memory) {\\n        return vaultList;\\n    }\\n\\n    /* ============ Internal Functions ============ */\\n\\n    function _addVault(address _vault) private {\\n        vaultList.push(_vault);\\n        vaults[_vault] = true;\\n    }\\n\\n    function _removeVault(address _vault) private {\\n        (bool found, uint256 index) = _findVault(_vault);\\n        if (found) {\\n            vaultList[index] = vaultList[vaultList.length - 1];\\n            vaultList.pop();\\n            vaults[_vault] = false;\\n        }\\n    }\\n\\n    function _findVault(address _vault) private view returns (bool, uint256) {\\n        for (uint256 i = 0; i < vaultList.length; i++) {\\n            if (vaultList[i] == _vault) {\\n                return (true, i);\\n            }\\n        }\\n        return (false, 0);\\n    }\\n}\\n\",\"keccak256\":\"0x648ec5f782fbd20282c01526e5819fc2f366159cc8c348ca7fb7e43e27aaf36c\",\"license\":\"Apache-2.0\"}},\"version\":1}",
+  "bytecode": "0x60a06040523480156200001157600080fd5b50604051620010b4380380620010b4833981810160405260208110156200003757600080fd5b50516001600160a01b03811662000095576040805162461bcd60e51b815260206004820152601760248201527f436f6e74726f6c6c6572206973206e6f742076616c6964000000000000000000604482015290519081900360640190fd5b6001600160601b0319606082901b16608052620000c673c5bddf9843308380375a611c18b50fb9341f502a62000966565b620000e573a354f35829ae975e850e23e9615b11da1b3dc4de62000966565b6200010473378cb52b00f9d0921cb46dfc099cff73b42419dc62000966565b62000123739d409a0a012cfba9b15f6d4b36ac57a46966ab9a62000966565b6200014273db25ca703181e7484a155dd612b06f57e12be5f062000966565b6200016173f29ae508698bdef169b89834f76704c3b205aedf62000966565b6200018073873fb544277fd7b977b196a826459a69e27ea4ea62000966565b6200019f73671a912c10bba0cfa74cfc2d6fba9ba1ed9530b262000966565b620001be73a5ca62d95d24a4a350983d5b8ac4eb863888739662000966565b620001dd73b8c3b7a2a618c552c23b1e4701109a9e756bab6762000966565b620001fc73a258c4606ca8206d8aa700ce2143d7db854d168c62000966565b6200021b735f18c75abdae578b483e5f43f12a39cf75b973a962000966565b6200023a73da816459f1ab5631232fe5e97a05bbbb94970c9562000966565b6200025973a696a63cc78dffa1a63e9e50587c197387ff6c7e62000966565b62000278737da96a3891add058ada2e826306d812c638d87a762000966565b6200029773fbeb78a723b8087fd2ea7ef1afec93d35e8bed4262000966565b620002b673d9788f3931ede4d5018184e198699dc6d66c191562000966565b620002d5734a3fe75762017db0ed73a71c9a06db7768db5e6662000966565b620002f4736d765cbe5bc922694afe112c140b8878b9fb039062000966565b6200031373fd0877d9095789caf24c98f7cce092fa8e12077562000966565b6200033273e537b5cc158eb71037d4125bdd7538421981e6aa62000966565b62000351736fafca7f49b4fd9dc38117469cd31a1e5aec91f562000966565b6200037073718abe90777f5b778b52d553a5abaa148dd0dc5d62000966565b6200038f738b9c0c24307344b6d7941ab654b2aeee2534747362000966565b620003ae73d8c620991b8e626c099eaab29b1e3eea279763bb62000966565b620003cd730d4ea8536f9a13e4fba16042a46c30f092b06aa562000966565b620003ec732dfb14e32e2f8156ec15a2c21c3a6c053af52be862000966565b6200040b734560b99c904aad03027b5178cca81584744ac01f62000966565b6200042a7367e019bfbd5a67207755d04467d6a70c0b75bf6062000966565b6200044973528d50dc9a333f01544177a924893fa1f5b9f74862000966565b6200046873595a68a8c9d5c230001848b69b1947ee2a60716462000966565b62000487731b905331f7de2748f4d6a0678e1521e20347643f62000966565b620004a673490bd0886f221a5f79713d3e84404355a9293c5062000966565b620004c57359518884eebfb03e90a18adbaaab770d4666471e62000966565b620004e4738cc94ccd0f3841a468184aca3cc478d2148e175762000966565b6200050373625b7df2fa8abe21b0a976736cda4775523aed1e62000966565b62000522733d27705c64213a5dcd9d26880c1bcfa72d5b6b0e62000966565b620005417380bbee2fa460da291e796b9045e93d19ef948c6a62000966565b6200056073c116df49c02c5fd147de25baa105322ebf26bd9762000966565b6200057f7328a5b95c101df3ded0c0d9074db80c438774b6a962000966565b6200059e733d980e50508cfd41a13837a60149927a11c0373162000966565b620005bd7325212df29073fffa7a67399acefc2dd75a831a1a62000966565b620005dc735a770dbd3ee6baf2802d29a901ef11501c44797a62000966565b620005fb7339caf13a104ff567f71fd2a4c68c026fdb6e740b62000966565b6200061a73054af22e1519b020516d72d749221c24756385c962000966565b62000639733b96d491f067912d18563d56858ba7d6ec67a6fa62000966565b6200065873bfedbcbe27171c418cdabc2477042554b190485762000966565b6200067773132d8d2c76db3812403431facb00f3453fc4212562000966565b6200069673f2db9a7c0acd427a680d640f02d90f6186e7172562000966565b620006b573a74d4b67b3368e83797a35382afb776baae4f5c862000966565b620006d473c4daf3b5e2a9e93861c3fbdd25f1e943b8d8741762000966565b620006f3731c6a9783f812b3af3abbf7de64c3cd7cc7d1af4462000966565b620007127330fcf7c6cdfc46ec237783d94fc78553e79d4e9c62000966565b6200073173f8768814b88281de4f532a3beefa5b85b69b932462000966565b62000750734b5bfd52124784745c1071dcb244c6688d2533d362000966565b6200076f7384e13785b5a27879921d6f685f041421c7f482da62000966565b6200078e732a38b9b0201ca39b17b460ed2f11e4929559071e62000966565b620007ad7327b7b1ad7288079a66d12350c828d3c00a6f07d762000966565b620007cc73986b4aff588a109c09b50a03f42e4110e29d353f62000966565b620007eb73dcd90c7f6324cfa40d7169ef80b12031770b432562000966565b6200080a738414db07a7f743debafb402070ab01a4e0d2e45e62000966565b62000829737047f90229a057c13bf847c0744d646cfb6c9e1a62000966565b6200084873e9dc63083c464d6edccff23444ff3cfc6886f6fb62000966565b62000867733c5df3077bcf800640b5dae8c91106575a4826e662000966565b620008867323d3d0f1c697247d5e0a9efb37d8b0ed0c464f7f62000966565b620008a573b4ada607b9d6b2c9ee07a275e9616b84ac56013962000966565b620008c4735fa5b62c8af877cb37031e0a3b2f34a78e3c56a662000966565b620008e373b4d1be44bff40ad6e506edf43156577a3f8672ec62000966565b62000902738fa3a9ecd9efb07a8ce90a6eb014cf3c0e3b32ef62000966565b62000921736ede7f19df5df6ef23bd5b9cedb651580bdf56ca62000966565b62000940732994529c0652d127b7842094103715ec5299bbed62000966565b6200095f73d6ea40597be05c201845c0bfd2e96a60bacde26762000966565b50620009ca565b6001805480820182557fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b039093166001600160a01b031990931683179055600091825260208290526040909120805460ff19169091179055565b60805160601c6106c7620009ed600039806102a9528061035752506106c76000f3fe608060405234801561001057600080fd5b50600436106100675760003560e01c8063a622ee7c11610050578063a622ee7c146100fd578063bab6213514610137578063f77c4791146101fb57610067565b80632d8efbc51461006c57806397331bf9146100a5575b600080fd5b6100896004803603602081101561008257600080fd5b5035610203565b604080516001600160a01b039092168252519081900360200190f35b6100ad61022d565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156100e95781810151838201526020016100d1565b505050509050019250505060405180910390f35b6101236004803603602081101561011357600080fd5b50356001600160a01b031661028f565b604080519115158252519081900360200190f35b6101f96004803603604081101561014d57600080fd5b81019060208101813564010000000081111561016857600080fd5b82018360208201111561017a57600080fd5b8035906020019184602083028401116401000000008311171561019c57600080fd5b9193909290916020810190356401000000008111156101ba57600080fd5b8201836020820111156101cc57600080fd5b803590602001918460208302840111640100000000831117156101ee57600080fd5b5090925090506102a4565b005b610089610355565b6001818154811061021357600080fd5b6000918252602090912001546001600160a01b0316905081565b6060600180548060200260200160405190810160405280929190818152602001828054801561028557602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610267575b5050505050905090565b60006020819052908152604090205460ff1681565b6102d67f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610379565b60005b8381101561034e578282828181106102ed57fe5b90506020020135156103225761031d85858381811061030857fe5b905060200201356001600160a01b03166104b8565b610346565b61034685858381811061033157fe5b905060200201356001600160a01b0316610529565b6001016102d9565b5050505050565b7f000000000000000000000000000000000000000000000000000000000000000081565b806001600160a01b0316638da5cb5b6040518163ffffffff1660e01b815260040160206040518083038186803b1580156103b257600080fd5b505afa1580156103c6573d6000803e3d6000fd5b505050506040513d60208110156103dc57600080fd5b50516001600160a01b03163314806104605750806001600160a01b0316638d97e0436040518163ffffffff1660e01b815260040160206040518083038186803b15801561042857600080fd5b505afa15801561043c573d6000803e3d6000fd5b505050506040513d602081101561045257600080fd5b50516001600160a01b031633145b6104b5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602a815260200180610668602a913960400191505060405180910390fd5b50565b6001805480820182557fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0390931673ffffffffffffffffffffffffffffffffffffffff1990931683179055600091825260208290526040909120805460ff19169091179055565b60008061053583610604565b9150915081156105ff5760018054600019810190811061055157fe5b600091825260209091200154600180546001600160a01b03909216918390811061057757fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b0316021790555060018054806105b057fe5b600082815260208082208301600019908101805473ffffffffffffffffffffffffffffffffffffffff191690559092019092556001600160a01b038516825281905260409020805460ff191690555b505050565b60008060005b60015481101561065957836001600160a01b03166001828154811061062b57fe5b6000918252602090912001546001600160a01b0316141561065157600192509050610662565b60010161060a565b50600080915091505b91509156fe4f6e6c7920676f7665726e616e6365206f7220656d657267656e63792063616e2063616c6c2074686973a2646970667358221220130d568e5af5c8850045954c0db1a8031e6b540b46f552b330024dc9884cfe3364736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100675760003560e01c8063a622ee7c11610050578063a622ee7c146100fd578063bab6213514610137578063f77c4791146101fb57610067565b80632d8efbc51461006c57806397331bf9146100a5575b600080fd5b6100896004803603602081101561008257600080fd5b5035610203565b604080516001600160a01b039092168252519081900360200190f35b6100ad61022d565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156100e95781810151838201526020016100d1565b505050509050019250505060405180910390f35b6101236004803603602081101561011357600080fd5b50356001600160a01b031661028f565b604080519115158252519081900360200190f35b6101f96004803603604081101561014d57600080fd5b81019060208101813564010000000081111561016857600080fd5b82018360208201111561017a57600080fd5b8035906020019184602083028401116401000000008311171561019c57600080fd5b9193909290916020810190356401000000008111156101ba57600080fd5b8201836020820111156101cc57600080fd5b803590602001918460208302840111640100000000831117156101ee57600080fd5b5090925090506102a4565b005b610089610355565b6001818154811061021357600080fd5b6000918252602090912001546001600160a01b0316905081565b6060600180548060200260200160405190810160405280929190818152602001828054801561028557602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610267575b5050505050905090565b60006020819052908152604090205460ff1681565b6102d67f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610379565b60005b8381101561034e578282828181106102ed57fe5b90506020020135156103225761031d85858381811061030857fe5b905060200201356001600160a01b03166104b8565b610346565b61034685858381811061033157fe5b905060200201356001600160a01b0316610529565b6001016102d9565b5050505050565b7f000000000000000000000000000000000000000000000000000000000000000081565b806001600160a01b0316638da5cb5b6040518163ffffffff1660e01b815260040160206040518083038186803b1580156103b257600080fd5b505afa1580156103c6573d6000803e3d6000fd5b505050506040513d60208110156103dc57600080fd5b50516001600160a01b03163314806104605750806001600160a01b0316638d97e0436040518163ffffffff1660e01b815260040160206040518083038186803b15801561042857600080fd5b505afa15801561043c573d6000803e3d6000fd5b505050506040513d602081101561045257600080fd5b50516001600160a01b031633145b6104b5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602a815260200180610668602a913960400191505060405180910390fd5b50565b6001805480820182557fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf60180546001600160a01b0390931673ffffffffffffffffffffffffffffffffffffffff1990931683179055600091825260208290526040909120805460ff19169091179055565b60008061053583610604565b9150915081156105ff5760018054600019810190811061055157fe5b600091825260209091200154600180546001600160a01b03909216918390811061057757fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b0316021790555060018054806105b057fe5b600082815260208082208301600019908101805473ffffffffffffffffffffffffffffffffffffffff191690559092019092556001600160a01b038516825281905260409020805460ff191690555b505050565b60008060005b60015481101561065957836001600160a01b03166001828154811061062b57fe5b6000918252602090912001546001600160a01b0316141561065157600192509050610662565b60010161060a565b50600080915091505b91509156fe4f6e6c7920676f7665726e616e6365206f7220656d657267656e63792063616e2063616c6c2074686973a2646970667358221220130d568e5af5c8850045954c0db1a8031e6b540b46f552b330024dc9884cfe3364736f6c63430007060033",
+  "devdoc": {
+    "author": "Babylon Finance Protocol Abstraction for all the different vaults",
+    "kind": "dev",
+    "methods": {
+      "updateVaults(address[],bool[])": {
+        "params": {
+          "_values": "List of booleans. True means valid vault",
+          "_vaults": "List of Vault addresses"
+        }
+      }
+    },
+    "title": "YearnVaultRegistry",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "updateVaults(address[],bool[])": {
+        "notice": "Adds/deletes Vaults"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 54792,
+        "contract": "contracts/registries/YearnVaultRegistry.sol:YearnVaultRegistry",
+        "label": "vaults",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 54795,
+        "contract": "contracts/registries/YearnVaultRegistry.sol:YearnVaultRegistry",
+        "label": "vaultList",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_array(t_address)dyn_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      }
+    }
+  }
+}

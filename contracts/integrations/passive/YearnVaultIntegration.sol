@@ -6,10 +6,10 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 
 import {IBabController} from '../../interfaces/IBabController.sol';
+import {IYearnVaultRegistry} from '../../interfaces/IYearnVaultRegistry.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IYearnRegistry} from '../../interfaces/external/yearn/IYearnRegistry.sol';
 import {IYearnVault} from '../../interfaces/external/yearn/IYearnVault.sol';
 
 /**
@@ -25,7 +25,7 @@ contract YearnVaultIntegration is PassiveIntegration {
 
     /* ============ State Variables ============ */
 
-    IYearnRegistry private constant registry = IYearnRegistry(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
+    IYearnVaultRegistry private immutable yearnVaultRegistry;
 
     /* ============ Constructor ============ */
 
@@ -34,7 +34,11 @@ contract YearnVaultIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller) PassiveIntegration('yearnvaultsv2', _controller) {}
+    constructor(IBabController _controller, IYearnVaultRegistry _yearnVaultRegistry)
+        PassiveIntegration('yearnvaultsv2', _controller)
+    {
+        yearnVaultRegistry = _yearnVaultRegistry;
+    }
 
     /* ============ Internal Functions ============ */
 
@@ -43,18 +47,6 @@ contract YearnVaultIntegration is PassiveIntegration {
         uint8 /* _op */
     ) internal pure override returns (address) {
         return _asset;
-    }
-
-    function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        // Normalizing pricePerShare returned by Yearn
-        return
-            _amount.preciseDiv(IYearnVault(_asset).pricePerShare()).div(
-                10**PreciseUnitMath.decimals().sub(ERC20(_asset).decimals())
-            );
-    }
-
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        return IYearnVault(_asset).pricePerShare();
     }
 
     function _getInvestmentAsset(address _asset) internal view override returns (address) {
@@ -82,7 +74,7 @@ contract YearnVaultIntegration is PassiveIntegration {
         uint256 _maxAmountIn
     )
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -90,6 +82,7 @@ contract YearnVaultIntegration is PassiveIntegration {
             bytes memory
         )
     {
+        require(yearnVaultRegistry.vaults(_asset), 'Yearn vault is not valid');
         // Encode method data for Garden to invoke
         bytes memory methodData = abi.encodeWithSelector(IYearnVault.deposit.selector, _maxAmountIn);
 

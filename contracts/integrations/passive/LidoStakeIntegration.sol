@@ -47,23 +47,6 @@ contract LidoStakeIntegration is PassiveIntegration {
         return _asset;
     }
 
-    function _getExpectedShares(address _asset, uint256 _amount) internal view override returns (uint256) {
-        uint256 shares = stETH.getSharesByPooledEth(_amount);
-        if (_asset == address(wstETH)) {
-            return wstETH.getWstETHByStETH(shares);
-        }
-        return shares;
-    }
-
-    function _getPricePerShare(address _asset) internal view override returns (uint256) {
-        uint256 shares = 1e18;
-        // wrapped steth
-        if (_asset == address(wstETH)) {
-            shares = wstETH.getStETHByWstETH(shares);
-        }
-        return stETH.getPooledEthByShares(shares);
-    }
-
     function _getInvestmentAsset(
         address /* _asset */
     ) internal pure override returns (address) {
@@ -105,6 +88,7 @@ contract LidoStakeIntegration is PassiveIntegration {
         if (_asset == address(stETH)) {
             methodData = abi.encodeWithSignature('submit(address)', controller.treasury());
         } else {
+            require(_asset == address(wstETH), 'Not a valid address');
             // wstETH is just a raw transfer and does both
             methodData = bytes('');
         }
@@ -124,10 +108,10 @@ contract LidoStakeIntegration is PassiveIntegration {
      * @return bytes                     Trade calldata
      */
     function _getPreActionCallData(
+        address, /* _strategy */
         address _asset,
         uint256 _amount,
-        uint256 _op,
-        address /* _strategy */
+        uint256 _op
     )
         internal
         pure
@@ -182,7 +166,9 @@ contract LidoStakeIntegration is PassiveIntegration {
         return (curveSteth, 0, methodData);
     }
 
-    function _preActionNeedsApproval() internal pure override returns (address) {
+    function _preActionNeedsApproval(
+        address /* _asset */
+    ) internal pure override returns (address) {
         return address(wstETH);
     }
 

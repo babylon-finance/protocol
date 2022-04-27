@@ -13,7 +13,7 @@ const { normalizeDecimals, getERC20, eth, pick } = require('utils/test-helpers')
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
-// TODO: Fais due to old block number. Fix the block nubmer issue
+// TODO: DEPRECATED. Fais due to old block number. Fix the block nubmer issue
 describe.skip('HarvestUniV3PoolIntegrationTest', function () {
   let harvestV3VaultIntegration;
   let garden1;

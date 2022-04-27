@@ -165,7 +165,7 @@ contract BabController is OwnableUpgradeable, IBabController {
 
     address public override mardukGate;
     address public override heart;
-    address public override curveMetaRegistry;
+    address private curveMetaRegistry; // DEPRECATED
     mapping(address => bool) public override protocolWantedAssets;
     mapping(address => uint256) public override gardenAffiliateRates; // 18 decimals
     mapping(address => uint256) public override affiliateRewards;
@@ -490,18 +490,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         heart = _newHeart;
 
         emit HeartChanged(_newHeart, oldHeart);
-    }
-
-    /**
-     * PRIVILEGED GOVERNANCE FUNCTION. Allows governance to edit the curve meta registry
-     *
-     * @param _curveMetaRegistry      Address of the new curve meta registry
-     */
-    function editCurveMetaRegistry(address _curveMetaRegistry) external override {
-        _onlyGovernanceOrEmergency();
-        require(_curveMetaRegistry != address(0), 'Address must not be 0');
-
-        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /**

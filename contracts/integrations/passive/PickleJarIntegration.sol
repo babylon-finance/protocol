@@ -8,11 +8,13 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IPickleJarRegistry} from '../../interfaces/IPickleJarRegistry.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IJar} from '../../interfaces/external/pickle/IJar.sol';
+import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
 
 /**
  * @title PickleJarIntegration
@@ -26,6 +28,7 @@ contract PickleJarIntegration is PassiveIntegration {
     using SafeDecimalMath for uint256;
 
     /* ============ State Variables ============ */
+    IPickleJarRegistry public immutable pickleRegistry;
 
     /* ============ Constructor ============ */
 
@@ -33,8 +36,13 @@ contract PickleJarIntegration is PassiveIntegration {
      * Creates the integration
      *
      * @param _controller                   Address of the controller
+     * @param _pickleJarRegistry            Address of our pickle jar registry
      */
-    constructor(IBabController _controller) PassiveIntegration('pickle_jar', _controller) {}
+    constructor(IBabController _controller, IPickleJarRegistry _pickleJarRegistry)
+        PassiveIntegration('pickle_jar', _controller)
+    {
+        pickleRegistry = _pickleJarRegistry;
+    }
 
     /* ============ Internal Functions ============ */
     function _getSpender(
@@ -44,22 +52,23 @@ contract PickleJarIntegration is PassiveIntegration {
         return _jar;
     }
 
-    function _getExpectedShares(address _jar, uint256 _amount) internal view override returns (uint256) {
-        // Normalize to 18 decimals
-        uint256 amoountNormalized = SafeDecimalMath.normalizeAmountTokens(IJar(_jar).token(), _jar, _amount);
-        return amoountNormalized.preciseDiv(IJar(_jar).getRatio());
+    function _getInvestmentAsset(address _jar) internal view override returns (address) {
+        if (pickleRegistry.isUniv3(_jar)) {
+            return IJarUniV3(_jar).token0();
+        } else {
+            return IJar(_jar).token();
+        }
     }
 
-    function _getPricePerShare(address _jar) internal view override returns (uint256) {
-        return IJar(_jar).getRatio();
-    }
-
-    function _getInvestmentAsset(address _jar) internal view override returns (address lptoken) {
-        return IJar(_jar).token();
-    }
-
-    function _getResultAsset(address _jar) internal view virtual override returns (address) {
+    function _getResultAsset(address _jar) internal pure override returns (address) {
         return _jar;
+    }
+
+    function _getExtraAssetToApproveEnter(address _jar) internal view override returns (address) {
+        if (pickleRegistry.noSwapParam(_jar)) {
+            return IJarUniV3(_jar).token1();
+        }
+        return address(0);
     }
 
     /**
@@ -76,7 +85,7 @@ contract PickleJarIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address, /* _strategy */
+        address _strategy,
         address _asset,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
@@ -91,10 +100,22 @@ contract PickleJarIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        address token = _getInvestmentAsset(_asset);
-        require(token != address(0), 'Pickle jar does not exist');
+        require(pickleRegistry.jars(_asset), 'Pickle jar does not exist');
+        bytes memory methodData;
+        if (pickleRegistry.isUniv3(_asset)) {
+            if (pickleRegistry.noSwapParam(_asset)) {
+                methodData = abi.encodeWithSignature(
+                    'deposit(uint256,uint256)',
+                    ERC20(IJarUniV3(_asset).token0()).balanceOf(_strategy),
+                    ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy)
+                );
+            } else {
+                methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', _maxAmountIn, 0, true);
+            }
+        } else {
+            methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+        }
         // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
         return (_asset, 0, methodData);
     }
 
@@ -112,7 +133,7 @@ contract PickleJarIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address, /* _strategy */
+        address _strategy,
         address _asset,
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
@@ -131,5 +152,130 @@ contract PickleJarIntegration is PassiveIntegration {
         bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
         // Go through the reward pool instead of the booster
         return (_asset, 0, methodData);
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * @param  _strategy                 Address of the strategy
+     * @param  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * @param  _passiveOp                 Type of Passive op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address _strategy,
+        address _asset,
+        uint256 _amount,
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_passiveOp == 0) {
+            if (pickleRegistry.noSwapParam(_asset)) {
+                // Sell half of token 0 to token 1
+                uint256 token0Amount = _amount.div(2);
+                uint256 minAmount =
+                    IPriceOracle(controller.priceOracle())
+                        .getPrice(IJarUniV3(_asset).token0(), IJarUniV3(_asset).token1())
+                        .preciseMul(token0Amount)
+                        .preciseMul(95e16);
+                minAmount = SafeDecimalMath.normalizeAmountTokens(
+                    IJarUniV3(_asset).token0(),
+                    IJarUniV3(_asset).token1(),
+                    minAmount
+                );
+                bytes memory methodData =
+                    abi.encodeWithSignature(
+                        'trade(address,address,uint256,address,uint256)',
+                        _strategy,
+                        IJarUniV3(_asset).token0(),
+                        token0Amount,
+                        IJarUniV3(_asset).token1(),
+                        minAmount
+                    );
+                return (controller.masterSwapper(), 0, methodData);
+            }
+        }
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return post action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address _strategy,
+        address _asset,
+        uint256, /* _amount */
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (pickleRegistry.isUniv3(_asset)) {
+            // Sell token 1 to token 0
+            uint256 token1Amount = ERC20(IJarUniV3(_asset).token1()).balanceOf(_strategy);
+            if (token1Amount > 1000) {
+                uint256 minAmount =
+                    IPriceOracle(controller.priceOracle())
+                        .getPrice(IJarUniV3(_asset).token1(), IJarUniV3(_asset).token0())
+                        .preciseMul(token1Amount)
+                        .preciseMul(95e16);
+                minAmount = SafeDecimalMath.normalizeAmountTokens(
+                    IJarUniV3(_asset).token1(),
+                    IJarUniV3(_asset).token0(),
+                    minAmount
+                );
+                bytes memory methodData =
+                    abi.encodeWithSignature(
+                        'trade(address,address,uint256,address,uint256)',
+                        _strategy,
+                        IJarUniV3(_asset).token1(),
+                        token1Amount,
+                        IJarUniV3(_asset).token0(),
+                        minAmount
+                    );
+                return (controller.masterSwapper(), 0, methodData);
+            }
+        }
+        return (address(0), 0, bytes(''));
+    }
+
+    function _postActionNeedsApproval(address _jar) internal view override returns (address) {
+        if (pickleRegistry.isUniv3(_jar)) {
+            return IJarUniV3(_jar).token1();
+        }
+        return address(0);
+    }
+
+    function _preActionNeedsApproval(address _jar) internal view override returns (address) {
+        if (pickleRegistry.noSwapParam(_jar)) {
+            return IJarUniV3(_jar).token0();
+        }
+        return address(0);
     }
 }

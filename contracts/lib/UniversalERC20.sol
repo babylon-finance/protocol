@@ -10,8 +10,8 @@ library UniversalERC20 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address private constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
-    address private constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    IERC20 private constant ZERO_ADDRESS = IERC20(0x0000000000000000000000000000000000000000);
+    IERC20 private constant ETH_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     function universalTransfer(
         IERC20 token,
@@ -86,6 +86,6 @@ library UniversalERC20 {
     }
 
     function isETH(IERC20 token) internal pure returns (bool) {
-        return address(token) == ZERO_ADDRESS || address(token) == ETH_ADDRESS;
+        return token == ZERO_ADDRESS || token == ETH_ADDRESS;
     }
 }

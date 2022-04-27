@@ -71,16 +71,16 @@ interface IGardenViewer {
         external
         view
         returns (
-            string memory,
-            string memory,
-            address[5] memory,
-            address,
-            bool[4] memory,
-            address[] memory,
-            address[] memory,
-            uint256[13] memory,
-            uint256[10] memory,
-            uint256[3] memory
+            string memory name,
+            string memory symbol,
+            address[5] memory creators,
+            address reserveAsset,
+            bool[4] memory actors,
+            address[] memory strategies,
+            address[] memory finalizedStrategies,
+            uint256[13] memory params,
+            uint256[10] memory stats,
+            uint256[3] memory profits
         );
 
     function getGardenPermissions(address _garden, address _user)

@@ -70,11 +70,6 @@ contract HarvestPoolV3Integration is PoolIntegration {
         return result;
     }
 
-    function getPricePerShare(bytes calldata _pool) external view override returns (uint256) {
-        address poolAddress = BytesLib.decodeOpDataAddress(_pool);
-        return IHarvestUniv3Pool(poolAddress).getPricePerFullShare();
-    }
-
     function getPoolTokensOut(
         bytes calldata, /* _pool */
         address, /* _poolToken */

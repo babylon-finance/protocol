@@ -8,7 +8,7 @@ import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {ConvexStakeIntegration} from '../../integrations/passive/ConvexStakeIntegration.sol';
-import {IBooster} from '../../interfaces/external/convex/IBooster.sol';
+import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
 import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -34,10 +34,6 @@ contract DepositVaultOperation is Operation {
     using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
-
-    IBooster private constant booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
-    address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32; // lDO
 
     /**
      * Creates the integration
@@ -103,7 +99,7 @@ contract DepositVaultOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden, /* _garden */
+        IGarden _garden,
         address _integration
     )
         external
@@ -123,7 +119,7 @@ contract DepositVaultOperation is Operation {
         if (amountVault > 0) {
             uint256 minAmount =
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
-                    IPassiveIntegration(_integration).getPricePerShare(yieldVault).mul(
+                    _getPrice(yieldVault, vaultAsset).mul(
                         10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
                     )
                 );
@@ -134,6 +130,21 @@ contract DepositVaultOperation is Operation {
                 vaultAsset,
                 minAmount
             );
+            // Only claim and sell rewards on final exit
+            if (_percentage == HUNDRED_PERCENT) {
+                try IPassiveIntegration(_integration).getRewards(msg.sender, yieldVault) returns (
+                    address rewardToken,
+                    uint256 amount
+                ) {
+                    if (rewardToken != address(0)) {
+                        amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
+                        if (amount > MIN_TRADE_AMOUNT) {
+                            address rasset = _garden.reserveAsset();
+                            IStrategy(msg.sender).trade(rewardToken, amount, rasset);
+                        }
+                    }
+                } catch {}
+            }
         }
         return (
             vaultAsset,
@@ -159,31 +170,34 @@ contract DepositVaultOperation is Operation {
         if (!IStrategy(msg.sender).isStrategyActive()) {
             return (0, true);
         }
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(vault); // USDC, DAI, WETH
-        uint256 balance = IERC20(_getResultAsset(_integration, vault)).universalBalanceOf(msg.sender);
-        // try to get price of an investment token from Oracle
-        // markets sometimes price assets differently than
-        // their underlying protocols, e.g., stETH/Lido
-        uint256 price = _getPrice(_garden.reserveAsset(), vaultAsset);
-        // If vault asset cannot be priced
-        require(price != 0, 'Vault asset cannot be priced');
-        uint256 pricePerShare = _getPrice(vault, vaultAsset);
-        // if failed to fetch price from Oracle get it from the underlying protocol
-        if (pricePerShare == 0) {
-            pricePerShare = IPassiveIntegration(_integration).getPricePerShare(vault);
-            // Normalization of pricePerShare
-            pricePerShare = pricePerShare.mul(
-                10**PreciseUnitMath.decimals().sub(vaultAsset == address(0) ? 18 : ERC20(vaultAsset).decimals())
-            );
-        }
-        uint256 NAV;
-        //Balance normalization
-        balance = SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance);
-        NAV = pricePerShare.preciseMul(balance).preciseDiv(price);
+        uint256 NAV = _getCoreNAV(_integration, vault, _garden);
         // Get value of pending rewards
         NAV = NAV.add(_getRewardsNAV(_integration, vault, _garden.reserveAsset()));
-        require(NAV != 0, 'NAV has to be bigger 0');
+        require(NAV != 0, 'NAV has to be bigger v 0');
         return (NAV, true);
+    }
+
+    function _getCoreNAV(
+        address _integration,
+        address _vault,
+        IGarden _garden
+    ) internal view returns (uint256) {
+        address resultAsset = _getResultAsset(_integration, _vault);
+        uint256 balance = IERC20(resultAsset).universalBalanceOf(msg.sender);
+        // Get price through oracle
+        uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
+        uint256 NAV =
+            SafeDecimalMath.normalizeAmountTokens(resultAsset, _garden.reserveAsset(), balance.preciseMul(price));
+        // Get remaining investment asset
+        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
+        balance = IERC20(vaultAsset).universalBalanceOf(msg.sender);
+        price = _getPrice(vaultAsset, _garden.reserveAsset());
+        if (balance > 0) {
+            NAV = NAV.add(
+                SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance.preciseMul(price))
+            );
+        }
+        return NAV;
     }
 
     // Function to provide backward compatibility
@@ -209,26 +223,20 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        console.log('before Lido trade');
         uint256 vaultAssetQuantity =
             _vaultAsset != _asset
                 ? IStrategy(msg.sender).trade(_asset, _capital, _vaultAsset)
                 : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
-        console.log('vaultAssetQuantity:', vaultAssetQuantity);
 
-        uint256 minAmountExpected =
-            IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
-                uint256(1e18).sub(SLIPPAGE_ALLOWED)
-            );
-        console.log('minAmountExpected:', minAmountExpected);
+        //uint256 minAmountExpected =
+        //    IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
+        //        uint256(1e18).sub(SLIPPAGE_ALLOWED)
+        //    );
 
-        console.log('vaultAssetQuantity:', vaultAssetQuantity);
-        console.log('_yieldVault:', _yieldVault);
-        console.log('_vaultAsset:', _vaultAsset);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             _yieldVault,
-            minAmountExpected,
+            1, // TODO: change from priceOracle
             _vaultAsset,
             vaultAssetQuantity
         );

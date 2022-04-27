@@ -2,17 +2,17 @@
 
 pragma solidity 0.7.6;
 
-import {IBabController} from './interfaces/IBabController.sol';
-import {ICurveMetaRegistry} from './interfaces/ICurveMetaRegistry.sol';
-import {IPriceTri} from './interfaces/external/curve/IPriceTri.sol';
-import {ICurvePoolV3} from './interfaces/external/curve/ICurvePoolV3.sol';
-import {ICurveAddressProvider} from './interfaces/external/curve/ICurveAddressProvider.sol';
-import {ICurveRegistry} from './interfaces/external/curve/ICurveRegistry.sol';
-import {IFactoryRegistry} from './interfaces/external/curve/IFactoryRegistry.sol';
-import {ICryptoRegistry} from './interfaces/external/curve/ICryptoRegistry.sol';
-import {ICryptoFactoryRegistry} from './interfaces/external/curve/ICryptoFactoryRegistry.sol';
+import {IBabController} from '../interfaces/IBabController.sol';
+import {ICurveMetaRegistry} from '../interfaces/ICurveMetaRegistry.sol';
+import {IPriceTri} from '../interfaces/external/curve/IPriceTri.sol';
+import {ICurvePoolV3} from '../interfaces/external/curve/ICurvePoolV3.sol';
+import {ICurveAddressProvider} from '../interfaces/external/curve/ICurveAddressProvider.sol';
+import {ICurveRegistry} from '../interfaces/external/curve/ICurveRegistry.sol';
+import {IFactoryRegistry} from '../interfaces/external/curve/IFactoryRegistry.sol';
+import {ICryptoRegistry} from '../interfaces/external/curve/ICryptoRegistry.sol';
+import {ICryptoFactoryRegistry} from '../interfaces/external/curve/ICryptoFactoryRegistry.sol';
 
-import {ControllerLib} from './lib/ControllerLib.sol';
+import {ControllerLib} from '../lib/ControllerLib.sol';
 
 /**
  * @title CurveMetaRegistry

@@ -23,6 +23,7 @@ async function setUpFixture(
   const mardukGate = await getContract('MardukGate');
   const priceOracle = await getContract('PriceOracle');
   const curveMetaRegistry = await getContract('CurveMetaRegistry');
+  const convexRegistry = await getContract('ConvexRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -36,6 +37,7 @@ async function setUpFixture(
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
   const balancerIntegration = await getContract('BalancerIntegration');
   const pickleJarIntegration = await getContract('PickleJarIntegration');
+  const pickleFarmIntegration = await getContract('PickleFarmIntegration');
   const gammaIntegration = await getContract('GammaIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
@@ -296,6 +298,7 @@ async function setUpFixture(
     balancerIntegration,
     uniswapPoolIntegration,
     harvestVaultIntegration,
+    pickleFarmIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
     curvePoolIntegration,
@@ -316,6 +319,7 @@ async function setUpFixture(
     fuseBorrowIntegration,
     lidoIntegration,
     stakewiseIntegration,
+    convexRegistry,
     timelockController,
     babGovernor,
     masterSwapper,

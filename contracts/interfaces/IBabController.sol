@@ -57,8 +57,6 @@ interface IBabController {
 
     function editGardenNFT(address _newGardenNFT) external;
 
-    function editCurveMetaRegistry(address _curveMetaRegistry) external;
-
     function editStrategyNFT(address _newStrategyNFT) external;
 
     function editStrategyFactory(address _newStrategyFactory) external;
@@ -106,8 +104,6 @@ interface IBabController {
     function gardenNFT() external view returns (address);
 
     function strategyNFT() external view returns (address);
-
-    function curveMetaRegistry() external view returns (address);
 
     function rewardsDistributor() external view returns (address);
 

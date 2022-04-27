@@ -258,10 +258,8 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
 
     /*
      * Remove an expire candidate from the strategy Array
-     * @param _strategy      Strategy to remove
-     * TODO: Remove parameter, use msg.sender instead
      */
-    function expireCandidateStrategy(address _strategy) external override {
+    function expireCandidateStrategy() external override {
         _onlyStrategy();
         strategies = strategies.remove(msg.sender);
         strategyMapping[msg.sender] = false;
