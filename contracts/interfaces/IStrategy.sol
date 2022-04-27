@@ -129,8 +129,6 @@ interface IStrategy {
 
     function getUserVotes(address _address) external view returns (int256);
 
-    function opIntegrations() external view returns (address[] memory);
-
     function strategist() external view returns (address);
 
     function enteredAt() external view returns (uint256);

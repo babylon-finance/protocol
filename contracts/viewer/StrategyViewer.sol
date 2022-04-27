@@ -65,25 +65,24 @@ contract StrategyViewer is IStrategyViewer {
             uint256,
             uint256,
             uint256,
-            address,
             uint256,
             uint256
         )
     {
+        IStrategy strategy = IStrategy(_strategy);
         return (
-            _strategy.strategist(),
-            _strategy.opIntegrations().length,
-            _strategy.stake(),
-            _strategy.totalPositiveVotes(),
-            _strategy.totalNegativeVotes(),
-            _strategy.capitalAllocated(),
-            _strategy.capitalReturned(),
-            _strategy.duration(),
-            _strategy.expectedReturn(),
-            _strategy.maxCapitalRequested(),
-            IBabController(controller).strategyNFT(),
-            _strategy.enteredAt(),
-            _strategy.getNAV()
+            strategy.strategist(),
+            strategy.getOperationsCount(),
+            strategy.stake(),
+            strategy.totalPositiveVotes(),
+            strategy.totalNegativeVotes(),
+            strategy.capitalAllocated(),
+            strategy.capitalReturned(),
+            strategy.duration(),
+            strategy.expectedReturn(),
+            strategy.maxCapitalRequested(),
+            strategy.enteredAt(),
+            strategy.getNAV()
         );
     }
 

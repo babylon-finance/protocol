@@ -159,7 +159,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     // Types and data for the operations of this strategy
     uint8[] private opTypes;
-    address[] public override opIntegrations;
+    address[] private opIntegrations;
     address[] private opDatas; // DEPRECATED
 
     // Garden that these strategies belong to
