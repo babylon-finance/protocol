@@ -501,7 +501,7 @@ library BytesLib {
         return toAddress(_data, _startingByte);
     }
 
-    function decodeOpDataAddress(bytes calldata _data) internal pure returns (address) {
+    function decodeOpDataAddress(bytes memory _data) internal pure returns (address) {
         // Expects no prefix (e.g. signature of bytes4 should be removed before using it)
         return abi.decode(_data, (address));
     }

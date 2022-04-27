@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -55,20 +56,10 @@ contract BuyOperation is Operation {
 
     /**
      * Executes the buy operation
-     * @param _asset              Asset to receive into this operation
-     * @param _capital            Amount of asset received
-     * param _assetStatus        Status of the asset amount
-     * @param _data               OpData e.g. Address of the token to buy
-     * param _garden             Garden of the strategy
-     * param _integration        Address of the integration to execute
      */
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8, /* _assetStatus */
-        bytes calldata _data,
-        IGarden, /* _garden */
-        address /* _integration */
+        Args memory _args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         override
@@ -79,12 +70,12 @@ contract BuyOperation is Operation {
             uint8
         )
     {
-        address token = BytesLib.decodeOpDataAddress(_data);
+        address token = BytesLib.decodeOpDataAddress(_args.data);
         // Replace old AXS with new AXS
         if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
-        uint256 receivedQuantity = IStrategy(msg.sender).trade(_asset, _capital, token);
+        uint256 receivedQuantity = IStrategy(msg.sender).trade(_args.asset, _args.capital, token);
         return (token, receivedQuantity, 0); // liquid
     }
 

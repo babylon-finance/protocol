@@ -72,12 +72,8 @@ abstract contract Operation is IOperation {
     ) external view virtual override;
 
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8 _assetStatus,
-        bytes calldata _data,
-        IGarden _garden,
-        address _integration
+        Args memory args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         virtual

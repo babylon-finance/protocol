@@ -341,11 +341,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _capital                  The capital to allocate to this strategy.
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
-    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory trades) external override nonReentrant {
+    function executeStrategy(uint256 _capital, uint256 _fee, TradeInfo[] memory _trades) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
         _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
-        _executesStrategy(_capital, _fee, msg.sender);
+        _executesStrategy(_capital, _fee, msg.sender, _trades);
     }
 
     /**
@@ -773,7 +773,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _executesStrategy(
         uint256 _capital,
         uint256 _fee,
-        address payable _keeper
+        address payable _keeper,
+        TradeInfo[] memory _trades
     ) private {
         _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
         _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
@@ -784,7 +785,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
-        _enterStrategy(_capital);
+        _enterStrategy(_capital, _trades);
         console.log('_enterStrategy:');
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
@@ -806,7 +807,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Executes all the operations in order
      * @param _capital  Amount of capital that the strategy receives
      */
-    function _enterStrategy(uint256 _capital) private {
+    function _enterStrategy(uint256 _capital, IStrategy.TradeInfo[] memory _trades) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
@@ -815,12 +816,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             console.log('opTypes[i]:', opTypes[i]);
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
+                IOperation.Args(
                 assetAccumulated,
                 capitalForNexOperation,
                 assetStatus,
                 _getOpDecodedData(i),
                 garden,
                 _getIntegration(opIntegrations[i])
+            ),
+                _trades
             );
             console.log('after opTypes[i]:', opTypes[i]);
         }

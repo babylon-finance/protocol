@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IGarden} from './IGarden.sol';
 import {IStrategy} from './IStrategy.sol';
@@ -12,6 +13,15 @@ import {IStrategy} from './IStrategy.sol';
  * Interface for an strategy operation
  */
 interface IOperation {
+    struct Args {
+        address asset;
+        uint256 capital;
+        uint8 assetStatus;
+        bytes data;
+        IGarden garden;
+        address integration;
+    }
+
     function validateOperation(
         bytes calldata _data,
         IGarden _garden,
@@ -20,12 +30,8 @@ interface IOperation {
     ) external view;
 
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8 _assetStatus,
-        bytes calldata _data,
-        IGarden _garden,
-        address _integration
+        Args memory args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         returns (

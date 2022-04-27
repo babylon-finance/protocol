@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -53,20 +54,10 @@ contract AddLiquidityOperation is Operation {
 
     /**
      * Executes the add liquidity operation
-     * @param _asset              Asset to receive into this operation
-     * @param _capital            Amount of asset received
-     * param _assetStatus        Status of the asset amount
-     * @param _data               OpData e.g. Address of the pool to enter
-     * @param _garden             Garden of the strategy
-     * @param _integration        Address of the integration to execute
      */
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8, /* _assetStatus */
-        bytes calldata _data,
-        IGarden _garden,
-        address _integration
+        Args memory _args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         override
@@ -77,10 +68,10 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        address[] memory poolTokens = IPoolIntegration(_integration).getPoolTokens(_data, false);
-        uint256[] memory poolWeights = IPoolIntegration(_integration).getPoolWeights(_data);
+        address[] memory poolTokens = IPoolIntegration(_args.integration).getPoolTokens(_args.data, false);
+        uint256[] memory poolWeights = IPoolIntegration(_args.integration).getPoolWeights(_args.data);
         // if the weights need to be adjusted by price, do so
-        try IPoolIntegration(_integration).poolWeightsByPrice(_data) returns (bool priceWeights) {
+        try IPoolIntegration(_args.integration).poolWeightsByPrice(_args.data) returns (bool priceWeights) {
             if (priceWeights) {
                 uint256 poolTotal = 0;
                 for (uint256 i = 0; i < poolTokens.length; i++) {
@@ -96,7 +87,7 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         } catch {}
-        return _joinPool(_asset, _capital, _data, _garden, _integration, poolWeights, poolTokens);
+        return _joinPool(_args.asset, _args.capital, _args.data, _args.garden, _args.integration, poolWeights, poolTokens);
     }
 
     /**
@@ -250,7 +241,7 @@ contract AddLiquidityOperation is Operation {
     function _joinPool(
         address _asset,
         uint256 _capital,
-        bytes calldata _data,
+        bytes memory _data,
         IGarden _garden,
         address _integration,
         uint256[] memory _poolWeights,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -54,20 +55,10 @@ contract LendOperation is Operation {
 
     /**
      * Executes the lend operation
-     * @param _asset              Asset to receive into this operation
-     * @param _capital            Amount of asset received
-     * param _assetStatus         Status of the asset amount
-     * @param _data               OpData e.g. Address of the asset to lend
-     * param _garden              Garden of the strategy
-     * @param _integration        Address of the integration to execute
      */
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8, /* _assetStatus */
-        bytes calldata _data,
-        IGarden, /* _garden */
-        address _integration
+        Args memory _args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         override
@@ -78,14 +69,14 @@ contract LendOperation is Operation {
             uint8
         )
     {
-        address assetToken = BytesLib.decodeOpDataAddress(_data); // We just use the first 20 bytes from the whole opEncodedData
+        address assetToken = BytesLib.decodeOpDataAddress(_args.data); // We just use the first 20 bytes from the whole opEncodedData
         console.log('lend');
         // Trade _asset to _assetToken
-        uint256 numTokensToSupply = IStrategy(msg.sender).trade(_asset, _capital, assetToken);
+        uint256 numTokensToSupply = IStrategy(msg.sender).trade(_args.asset, _args.capital, assetToken);
         console.log('numTokensToSupply:', numTokensToSupply);
-        uint256 exactAmount = ILendIntegration(_integration).getExpectedShares(assetToken, numTokensToSupply);
+        uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
-        ILendIntegration(_integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
+        ILendIntegration(_args.integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
         return (assetToken, numTokensToSupply, 1); // put as collateral
     }
 

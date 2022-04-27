@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -59,20 +60,10 @@ contract DepositVaultOperation is Operation {
 
     /**
      * Executes the deposit vault operation
-     * @param _asset              Asset to receive into this operation
-     * @param _capital            Amount of asset received
-     * param _assetStatus         Status of the asset amount
-     * @param _data               OpData e.g. Address of the vault to enter
-     * param _garden              Garden of the strategy
-     * @param _integration        Address of the integration to execute
      */
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8, /* _assetStatus */
-        bytes calldata _data,
-        IGarden, /* _garden */
-        address _integration
+        Args memory _args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         override
@@ -83,10 +74,10 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = BytesLib.decodeOpDataAddress(_data);
-        address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
+        address yieldVault = BytesLib.decodeOpDataAddress(_args.data);
+        address vaultAsset = IPassiveIntegration(_args.integration).getInvestmentAsset(yieldVault);
 
-        return _enterVault(_asset, _capital, _integration, yieldVault, vaultAsset);
+        return _enterVault(_args.asset, _args.capital, _args.integration, yieldVault, vaultAsset);
     }
 
     /**

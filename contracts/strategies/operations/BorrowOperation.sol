@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -61,20 +62,10 @@ contract BorrowOperation is Operation {
 
     /**
      * Executes the borrow operation
-     * @param _asset              Asset to receive into this operation
-     * @param _capital            Amount of asset received
-     * @param _assetStatus        Status of the asset amount
-     * @param _data               Operation data (e.g. Token to borrow)
-     * param _garden              Garden of the strategy
-     * @param _integration        Address of the integration to execute
      */
     function executeOperation(
-        address _asset,
-        uint256 _capital,
-        uint8 _assetStatus,
-        bytes memory _data,
-        IGarden, /* _garden */
-        address _integration
+        Args memory _args,
+        IStrategy.TradeInfo[] memory _trades
     )
         external
         override
@@ -85,18 +76,32 @@ contract BorrowOperation is Operation {
             uint8
         )
     {
-        (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(_data);
+        Args memory args = _args;
+        (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(args.data);
         if (msg.sender == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
             rate = 85e16;
         }
-        require(_capital > 0 && _assetStatus == 1 && _asset != borrowToken, 'There is no collateral locked');
+        require(args.capital > 0 && args.assetStatus == 1 && args.asset != borrowToken, 'There is no collateral locked');
 
         console.log('get borrow amount');
-        uint256 normalizedAmount = _getBorrowAmount(_asset, borrowToken, _capital, _integration, rate);
+        // Because we are not using AAVE/Compound price oracles there is a price
+        // difference between our price and AAVE/Compound price which may result
+        // in borrow amount being to high. That is why we decrease the price by
+        // 0.1%
+        uint256 price = _getPrice(args.asset, borrowToken).mul(999).div(1000);
+        // % of the total collateral value in the borrow token
+        // Use the % max we can borrow (maxCollateral)
+        // Use the % of the collateral asset
+        uint256 amountToBorrow =
+            args.capital
+                .preciseMul(price)
+                .preciseMul(rate != 0 ? rate : IBorrowIntegration(args.integration).maxCollateralFactor())
+                .preciseMul(IBorrowIntegration(args.integration).getCollateralFactor(args.asset));
+        uint256 normalizedAmount = SafeDecimalMath.normalizeAmountTokens(args.asset, borrowToken, amountToBorrow);
         console.log('normalizedAmount:', normalizedAmount);
 
         console.log('borrow');
-        IBorrowIntegration(_integration).borrow(msg.sender, borrowToken, normalizedAmount);
+        IBorrowIntegration(args.integration).borrow(msg.sender, borrowToken, normalizedAmount);
         // if borrowToken is ETH wrap it to WETH
         console.log('borrowToken:', borrowToken);
         if (borrowToken == address(0)) {
@@ -105,29 +110,6 @@ contract BorrowOperation is Operation {
         }
         console.log('after trade');
         return (borrowToken, normalizedAmount, 0); // borrowings are liquid
-    }
-
-    function _getBorrowAmount(
-        address _asset,
-        address _borrowToken,
-        uint256 _capital,
-        address _integration,
-        uint256 _rate
-    ) internal view returns (uint256) {
-        // Because we are not using AAVE/Compound price oracles there is a price
-        // difference between our price and AAVE/Compound price which may result
-        // in borrow amount being to high. That is why we decrease the price by
-        // 0.1%
-        uint256 price = _getPrice(_asset, _borrowToken).mul(999).div(1000);
-        // % of the total collateral value in the borrow token
-        // Use the % max we can borrow (maxCollateral)
-        // Use the % of the collateral asset
-        uint256 amountToBorrow =
-            _capital
-                .preciseMul(price)
-                .preciseMul(_rate != 0 ? _rate : IBorrowIntegration(_integration).maxCollateralFactor())
-                .preciseMul(IBorrowIntegration(_integration).getCollateralFactor(_asset));
-        return SafeDecimalMath.normalizeAmountTokens(_asset, _borrowToken, amountToBorrow);
     }
 
     /**
