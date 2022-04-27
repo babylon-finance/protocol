@@ -1,0 +1,317 @@
+{
+  "address": "0xB95d213cdDBd256D3B9ae98b21CC6B9D8a1818ef",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "booster",
+      "outputs": [
+        {
+          "internalType": "contract IBooster",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "controller",
+      "outputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "convexList",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "convexPools",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllConvexPools",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_pool",
+          "type": "address"
+        }
+      ],
+      "name": "getConvexInputToken",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "inputToken",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_asset",
+          "type": "address"
+        }
+      ],
+      "name": "getPid",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_asset",
+          "type": "address"
+        }
+      ],
+      "name": "getRewardPool",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "reward",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "updateCache",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x109e62c9e283086c2c58e15e18a063085a5282b9c592477693a2b03ec928cb3b",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0xB95d213cdDBd256D3B9ae98b21CC6B9D8a1818ef",
+    "transactionIndex": 29,
+    "gasUsed": "12661303",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x343a6c86c7400be1002199318afd0e4030d282da32fd186cbea6715e6f635e0c",
+    "transactionHash": "0x109e62c9e283086c2c58e15e18a063085a5282b9c592477693a2b03ec928cb3b",
+    "logs": [],
+    "blockNumber": 14664636,
+    "cumulativeGasUsed": "15386729",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "b449cb5aec67dc49b858dceef0213a91",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"_controller\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"booster\",\"outputs\":[{\"internalType\":\"contract IBooster\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"controller\",\"outputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"convexList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"convexPools\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllConvexPools\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pool\",\"type\":\"address\"}],\"name\":\"getConvexInputToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"inputToken\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_asset\",\"type\":\"address\"}],\"name\":\"getPid\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_asset\",\"type\":\"address\"}],\"name\":\"getRewardPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"reward\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updateCache\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Babylon Finance Protocol Abstraction for all the different convex pools\",\"kind\":\"dev\",\"methods\":{\"getAllConvexPools()\":{\"returns\":{\"_0\":\"address[]                       Addresses of the convex tokens\"}},\"getConvexInputToken(address)\":{\"params\":{\"_pool\":\"Address of the convex token\"},\"returns\":{\"inputToken\":\"                   Address of the input token\"}},\"getPid(address)\":{\"params\":{\"_asset\":\"Address of the convex lp token\"},\"returns\":{\"_0\":\"uint256                       Pid of the pool in convex\"}},\"getRewardPool(address)\":{\"params\":{\"_asset\":\"Address of the convex token\"},\"returns\":{\"reward\":\"                       Address of the reward pool\"}}},\"title\":\"ConvexRegistry\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getAllConvexPools()\":{\"notice\":\"Gets all the convex tokens\"},\"getConvexInputToken(address)\":{\"notice\":\"Gets the input token address given a convex token\"},\"getPid(address)\":{\"notice\":\"Gets the PID in convex of a convex lp token\"},\"getRewardPool(address)\":{\"notice\":\"Gets the reward pool address given a convex token\"},\"updateCache()\":{\"notice\":\"Refreshes convex vaults\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/registries/ConvexRegistry.sol\":\"ConvexRegistry\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IBabController.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title IBabController\\n * @author Babylon Finance\\n *\\n * Interface for interacting with BabController\\n */\\ninterface IBabController {\\n    /* ============ Functions ============ */\\n\\n    function createGarden(\\n        address _reserveAsset,\\n        string memory _name,\\n        string memory _symbol,\\n        string memory _tokenURI,\\n        uint256 _seed,\\n        uint256[] calldata _gardenParams,\\n        uint256 _initialContribution,\\n        bool[] memory _publicGardenStrategistsStewards,\\n        uint256[] memory _profitSharing\\n    ) external payable returns (address);\\n\\n    function removeGarden(address _garden) external;\\n\\n    function addReserveAsset(address _reserveAsset) external;\\n\\n    function removeReserveAsset(address _reserveAsset) external;\\n\\n    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;\\n\\n    function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external;\\n\\n    function addAffiliateReward(\\n        address _depositor,\\n        address _referrer,\\n        uint256 _reserveAmount\\n    ) external;\\n\\n    function claimRewards() external;\\n\\n    function editPriceOracle(address _priceOracle) external;\\n\\n    function editMardukGate(address _mardukGate) external;\\n\\n    function editGardenValuer(address _gardenValuer) external;\\n\\n    function editTreasury(address _newTreasury) external;\\n\\n    function editHeart(address _newHeart) external;\\n\\n    function editRewardsDistributor(address _rewardsDistributor) external;\\n\\n    function editGardenFactory(address _newGardenFactory) external;\\n\\n    function editGardenNFT(address _newGardenNFT) external;\\n\\n    function editCurveMetaRegistry(address _curveMetaRegistry) external;\\n\\n    function editStrategyNFT(address _newStrategyNFT) external;\\n\\n    function editStrategyFactory(address _newStrategyFactory) external;\\n\\n    function setOperation(uint8 _kind, address _operation) external;\\n\\n    function setMasterSwapper(address _newMasterSwapper) external;\\n\\n    function addKeeper(address _keeper) external;\\n\\n    function addKeepers(address[] memory _keepers) external;\\n\\n    function removeKeeper(address _keeper) external;\\n\\n    function enableGardenTokensTransfers() external;\\n\\n    function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;\\n\\n    function patchIntegration(address _old, address _new) external;\\n\\n    function gardenCreationIsOpen() external view returns (bool);\\n\\n    function owner() external view returns (address);\\n\\n    function EMERGENCY_OWNER() external view returns (address);\\n\\n    function guardianGlobalPaused() external view returns (bool);\\n\\n    function guardianPaused(address _address) external view returns (bool);\\n\\n    function setPauseGuardian(address _guardian) external;\\n\\n    function setGlobalPause(bool _state) external returns (bool);\\n\\n    function setSomePause(address[] memory _address, bool _state) external returns (bool);\\n\\n    function isPaused(address _contract) external view returns (bool);\\n\\n    function priceOracle() external view returns (address);\\n\\n    function gardenValuer() external view returns (address);\\n\\n    function heart() external view returns (address);\\n\\n    function gardenNFT() external view returns (address);\\n\\n    function strategyNFT() external view returns (address);\\n\\n    function curveMetaRegistry() external view returns (address);\\n\\n    function rewardsDistributor() external view returns (address);\\n\\n    function gardenFactory() external view returns (address);\\n\\n    function treasury() external view returns (address);\\n\\n    function ishtarGate() external view returns (address);\\n\\n    function mardukGate() external view returns (address);\\n\\n    function strategyFactory() external view returns (address);\\n\\n    function masterSwapper() external view returns (address);\\n\\n    function gardenTokensTransfersEnabled() external view returns (bool);\\n\\n    function bablMiningProgramEnabled() external view returns (bool);\\n\\n    function allowPublicGardens() external view returns (bool);\\n\\n    function enabledOperations(uint256 _kind) external view returns (address);\\n\\n    function getGardens() external view returns (address[] memory);\\n\\n    function getReserveAssets() external view returns (address[] memory);\\n\\n    function getOperations() external view returns (address[20] memory);\\n\\n    function isGarden(address _garden) external view returns (bool);\\n\\n    function protocolWantedAssets(address _wantedAsset) external view returns (bool);\\n\\n    function gardenAffiliateRates(address _wantedAsset) external view returns (uint256);\\n\\n    function affiliateRewards(address _user) external view returns (uint256);\\n\\n    function patchedIntegrations(address _integration) external view returns (address);\\n\\n    function isValidReserveAsset(address _reserveAsset) external view returns (bool);\\n\\n    function isValidKeeper(address _keeper) external view returns (bool);\\n\\n    function isSystemContract(address _contractAddress) external view returns (bool);\\n\\n    function protocolPerformanceFee() external view returns (uint256);\\n\\n    function protocolManagementFee() external view returns (uint256);\\n\\n    function minLiquidityPerReserve(address _reserve) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x50e8738ec1b06ef43d80b16701c977e7700d01987f0c27a73402d16a1a0cf20d\",\"license\":\"Apache-2.0\"},\"contracts/interfaces/IConvexRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBooster} from './external/convex/IBooster.sol';\\n\\n/**\\n * @title IConvexRegistry\\n * @author Babylon Finance\\n *\\n * Interface for interacting with all the convex pools\\n */\\ninterface IConvexRegistry {\\n    /* ============ Functions ============ */\\n\\n    function updateCache() external;\\n\\n    /* ============ View Functions ============ */\\n\\n    function getPid(address _asset) external view returns (bool, uint256);\\n\\n    function convexPools(address _convexAddress) external view returns (bool);\\n\\n    function booster() external view returns (IBooster);\\n\\n    function getRewardPool(address _asset) external view returns (address reward);\\n\\n    function getConvexInputToken(address _pool) external view returns (address inputToken);\\n\\n    function getAllConvexPools() external view returns (address[] memory);\\n}\\n\",\"keccak256\":\"0xcec04ac179aec85a06b2a21e5f7251059421e3dc89721900b421680757760d33\",\"license\":\"Apache-2.0\"},\"contracts/interfaces/external/convex/IBooster.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.7.6;\\n\\ninterface IBooster {\\n    function depositAll(uint256 _pid, bool _stake) external returns (bool);\\n\\n    function poolInfo(uint256)\\n        external\\n        view\\n        returns (\\n            address,\\n            address,\\n            address,\\n            address,\\n            address,\\n            bool\\n        );\\n\\n    function deposit(\\n        uint256 _pid,\\n        uint256 _amount,\\n        bool _stake\\n    ) external returns (bool);\\n\\n    function withdraw(uint256 _pid, uint256 _amount) external returns (bool);\\n\\n    function withdrawAll(uint256 _pid) external returns (bool);\\n\\n    function poolLength() external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x051e36045256c2b170fc4bc58f3e5ccad7df1cf18d81eb4ebdfa0203273de9dd\",\"license\":\"MIT\"},\"contracts/lib/ControllerLib.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\n\\nlibrary ControllerLib {\\n    /**\\n     * Throws if the sender is not the protocol\\n     */\\n    function onlyGovernanceOrEmergency(IBabController _controller) internal view {\\n        require(\\n            msg.sender == _controller.owner() || msg.sender == _controller.EMERGENCY_OWNER(),\\n            'Only governance or emergency can call this'\\n        );\\n    }\\n}\\n\",\"keccak256\":\"0xfb8440b3c915eb148e4ef721ce6b240642a8c35c3f8729dc6d20db9f307b4cae\",\"license\":\"Apache-2.0\"},\"contracts/registries/ConvexRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\nimport {IConvexRegistry} from '../interfaces/IConvexRegistry.sol';\\nimport {IBooster} from '../interfaces/external/convex/IBooster.sol';\\nimport {ControllerLib} from '../lib/ControllerLib.sol';\\n\\n/**\\n * @title ConvexRegistry\\n * @author Babylon Finance Protocol\\n *\\n * Abstraction for all the different convex pools\\n */\\ncontract ConvexRegistry is IConvexRegistry {\\n    using ControllerLib for IBabController;\\n\\n    /* ============ Constants ============ */\\n\\n    IBabController public immutable controller;\\n    IBooster public constant override booster = IBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);\\n\\n    /* ============ State Variables ============ */\\n\\n    mapping(address => uint256) private cacheConvexTokenToPid;\\n    uint256 private elementsCached = 0;\\n\\n    // Mapping of valid Vaults\\n    mapping(address => bool) public override convexPools;\\n    address[] public convexList;\\n\\n    /* ============ Modifiers ============ */\\n\\n    /* ============ Constructor ============ */\\n\\n    constructor(IBabController _controller) {\\n        require(address(_controller) != address(0), 'Controller is not valid');\\n        controller = _controller;\\n        updateCache();\\n    }\\n\\n    /* ============ External Functions ============ */\\n\\n    /**\\n     * Refreshes convex vaults\\n     */\\n    function updateCache() public override {\\n        uint256 poolLength = booster.poolLength();\\n        if (elementsCached >= poolLength) {\\n            return;\\n        }\\n        for (uint256 i = elementsCached; i < poolLength; i++) {\\n            (, address token, , address reward, , ) = booster.poolInfo(i);\\n            cacheConvexTokenToPid[token] = i + 1;\\n            cacheConvexTokenToPid[reward] = i + 1;\\n            convexPools[token] = true;\\n            convexPools[reward] = true;\\n            convexList.push(token);\\n            convexList.push(reward);\\n        }\\n        elementsCached = poolLength;\\n    }\\n\\n    /**\\n     * Gets the PID in convex of a convex lp token\\n     * @param _asset                         Address of the convex lp token\\n     * @return uint256                       Pid of the pool in convex\\n     */\\n    function getPid(address _asset) public view override returns (bool, uint256) {\\n        if (cacheConvexTokenToPid[_asset] > 0) {\\n            return (true, cacheConvexTokenToPid[_asset] - 1);\\n        }\\n        uint256 poolLength = booster.poolLength();\\n        if (elementsCached >= poolLength) {\\n            return (false, 0);\\n        }\\n        for (uint256 i = elementsCached; i < poolLength; i++) {\\n            (, address token, , address reward, , ) = booster.poolInfo(i);\\n            if (token == _asset || reward == _asset) {\\n                return (true, i);\\n            }\\n        }\\n        return (false, 0);\\n    }\\n\\n    /**\\n     * Gets the reward pool address given a convex token\\n     * @param _asset                         Address of the convex token\\n     * @return reward                        Address of the reward pool\\n     */\\n    function getRewardPool(address _asset) external view override returns (address reward) {\\n        (bool found, uint256 pid) = getPid(_asset);\\n        require(found, 'Pid not found');\\n        (, , , reward, , ) = booster.poolInfo(pid);\\n    }\\n\\n    /**\\n     * Gets the input token address given a convex token\\n     * @param _pool                          Address of the convex token\\n     * @return inputToken                    Address of the input token\\n     */\\n    function getConvexInputToken(address _pool) external view override returns (address inputToken) {\\n        (bool found, uint256 pid) = getPid(_pool);\\n        require(found, 'Pid not found');\\n        (inputToken, , , , , ) = booster.poolInfo(pid);\\n    }\\n\\n    /**\\n     * Gets all the convex tokens\\n     * @return address[]                       Addresses of the convex tokens\\n     */\\n    function getAllConvexPools() external view override returns (address[] memory) {\\n        return convexList;\\n    }\\n}\\n\",\"keccak256\":\"0xc4b2aae0ba54230797eaa73d227d9ef6a3e687b1f02eff65f16fea51ad21241b\",\"license\":\"Apache-2.0\"}},\"version\":1}",
+  "bytecode": "0x60a0604052600060015534801561001557600080fd5b50604051610b7c380380610b7c8339818101604052602081101561003857600080fd5b50516001600160a01b038116610095576040805162461bcd60e51b815260206004820152601760248201527f436f6e74726f6c6c6572206973206e6f742076616c6964000000000000000000604482015290519081900360640190fd5b6001600160601b0319606082901b166080526100af6100b5565b5061029b565b600073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b031663081e3eda6040518163ffffffff1660e01b815260040160206040518083038186803b15801561010457600080fd5b505afa158015610118573d6000803e3d6000fd5b505050506040513d602081101561012e57600080fd5b505160015490915081116101425750610299565b6001545b818110156102945760008073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27846040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b1580156101a957600080fd5b505afa1580156101bd573d6000803e3d6000fd5b505050506040513d60c08110156101d357600080fd5b506020808201516060909201516001600160a01b03928316600081815280845260408082206001998a0190819055959093168082528382208690558282526002909452828120805460ff199081168a1790915584825292812080549093168817909255600380548089018255928190527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b92830180546001600160a01b03199081169093179055805497880190559501805490951617909355506101469050565b506001555b565b60805160601c6108c46102b86000398061086c52506108c46000f3fe608060405234801561001057600080fd5b50600436106100a35760003560e01c8063c38c1d9d11610076578063d523d1c51161005b578063d523d1c5146101b0578063f01fbcc714610208578063f77c479114610212576100a3565b8063c38c1d9d14610182578063c6def076146101a8576100a3565b8063017cb1f4146100a85780630a59b148146100e257806343b55f351461011b578063514a90091461015c575b600080fd5b6100ce600480360360208110156100be57600080fd5b50356001600160a01b031661021a565b604080519115158252519081900360200190f35b6100ff600480360360208110156100f857600080fd5b503561022f565b604080516001600160a01b039092168252519081900360200190f35b6101416004803603602081101561013157600080fd5b50356001600160a01b0316610259565b60408051921515835260208301919091528051918290030190f35b6100ff6004803603602081101561017257600080fd5b50356001600160a01b031661042f565b6100ff6004803603602081101561019857600080fd5b50356001600160a01b0316610512565b6100ff6105f2565b6101b861060a565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156101f45781810151838201526020016101dc565b505050509050019250505060405180910390f35b61021061066c565b005b6100ff61086a565b60026020526000908152604090205460ff1681565b6003818154811061023f57600080fd5b6000918252602090912001546001600160a01b0316905081565b6001600160a01b0381166000908152602081905260408120548190156102a05750506001600160a01b0381166000908152602081905260409020546001906000190161042a565b600073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b031663081e3eda6040518163ffffffff1660e01b815260040160206040518083038186803b1580156102ef57600080fd5b505afa158015610303573d6000803e3d6000fd5b505050506040513d602081101561031957600080fd5b5051600154909150811161033457600080925092505061042a565b6001545b818110156104205760008073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27846040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b15801561039b57600080fd5b505afa1580156103af573d6000803e3d6000fd5b505050506040513d60c08110156103c557600080fd5b50602081015160609091015190925090506001600160a01b0380831690881614806104015750866001600160a01b0316816001600160a01b0316145b1561041657600183955095505050505061042a565b5050600101610338565b5060008092509250505b915091565b600080600061043d84610259565b9150915081610483576040805162461bcd60e51b815260206004820152600d60248201526c141a59081b9bdd08199bdd5b99609a1b604482015290519081900360640190fd5b73f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27826040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b1580156104db57600080fd5b505afa1580156104ef573d6000803e3d6000fd5b505050506040513d60c081101561050557600080fd5b5060600151949350505050565b600080600061052084610259565b9150915081610566576040805162461bcd60e51b815260206004820152600d60248201526c141a59081b9bdd08199bdd5b99609a1b604482015290519081900360640190fd5b73f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27826040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b1580156105be57600080fd5b505afa1580156105d2573d6000803e3d6000fd5b505050506040513d60c08110156105e857600080fd5b5051949350505050565b73f403c135812408bfbe8713b5a23a04b3d48aae3181565b6060600380548060200260200160405190810160405280929190818152602001828054801561066257602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610644575b5050505050905090565b600073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b031663081e3eda6040518163ffffffff1660e01b815260040160206040518083038186803b1580156106bb57600080fd5b505afa1580156106cf573d6000803e3d6000fd5b505050506040513d60208110156106e557600080fd5b505160015490915081116106f95750610868565b6001545b818110156108635760008073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27846040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b15801561076057600080fd5b505afa158015610774573d6000803e3d6000fd5b505050506040513d60c081101561078a57600080fd5b506020808201516060909201516001600160a01b03928316600081815280845260408082206001998a0190819055959093168082528382208690558282526002909452828120805460ff199081168a1790915584825292812080549093168817909255600380548089018255928190527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b92830180547fffffffffffffffffffffffff00000000000000000000000000000000000000009081169093179055805497880190559501805490951617909355506106fd9050565b506001555b565b7f00000000000000000000000000000000000000000000000000000000000000008156fea264697066735822122087e65f56a1119a1a2b580905baed29fa4e3ce872535377c7cf4a1d2fccc80bcb64736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100a35760003560e01c8063c38c1d9d11610076578063d523d1c51161005b578063d523d1c5146101b0578063f01fbcc714610208578063f77c479114610212576100a3565b8063c38c1d9d14610182578063c6def076146101a8576100a3565b8063017cb1f4146100a85780630a59b148146100e257806343b55f351461011b578063514a90091461015c575b600080fd5b6100ce600480360360208110156100be57600080fd5b50356001600160a01b031661021a565b604080519115158252519081900360200190f35b6100ff600480360360208110156100f857600080fd5b503561022f565b604080516001600160a01b039092168252519081900360200190f35b6101416004803603602081101561013157600080fd5b50356001600160a01b0316610259565b60408051921515835260208301919091528051918290030190f35b6100ff6004803603602081101561017257600080fd5b50356001600160a01b031661042f565b6100ff6004803603602081101561019857600080fd5b50356001600160a01b0316610512565b6100ff6105f2565b6101b861060a565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156101f45781810151838201526020016101dc565b505050509050019250505060405180910390f35b61021061066c565b005b6100ff61086a565b60026020526000908152604090205460ff1681565b6003818154811061023f57600080fd5b6000918252602090912001546001600160a01b0316905081565b6001600160a01b0381166000908152602081905260408120548190156102a05750506001600160a01b0381166000908152602081905260409020546001906000190161042a565b600073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b031663081e3eda6040518163ffffffff1660e01b815260040160206040518083038186803b1580156102ef57600080fd5b505afa158015610303573d6000803e3d6000fd5b505050506040513d602081101561031957600080fd5b5051600154909150811161033457600080925092505061042a565b6001545b818110156104205760008073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27846040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b15801561039b57600080fd5b505afa1580156103af573d6000803e3d6000fd5b505050506040513d60c08110156103c557600080fd5b50602081015160609091015190925090506001600160a01b0380831690881614806104015750866001600160a01b0316816001600160a01b0316145b1561041657600183955095505050505061042a565b5050600101610338565b5060008092509250505b915091565b600080600061043d84610259565b9150915081610483576040805162461bcd60e51b815260206004820152600d60248201526c141a59081b9bdd08199bdd5b99609a1b604482015290519081900360640190fd5b73f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27826040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b1580156104db57600080fd5b505afa1580156104ef573d6000803e3d6000fd5b505050506040513d60c081101561050557600080fd5b5060600151949350505050565b600080600061052084610259565b9150915081610566576040805162461bcd60e51b815260206004820152600d60248201526c141a59081b9bdd08199bdd5b99609a1b604482015290519081900360640190fd5b73f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27826040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b1580156105be57600080fd5b505afa1580156105d2573d6000803e3d6000fd5b505050506040513d60c08110156105e857600080fd5b5051949350505050565b73f403c135812408bfbe8713b5a23a04b3d48aae3181565b6060600380548060200260200160405190810160405280929190818152602001828054801561066257602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610644575b5050505050905090565b600073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b031663081e3eda6040518163ffffffff1660e01b815260040160206040518083038186803b1580156106bb57600080fd5b505afa1580156106cf573d6000803e3d6000fd5b505050506040513d60208110156106e557600080fd5b505160015490915081116106f95750610868565b6001545b818110156108635760008073f403c135812408bfbe8713b5a23a04b3d48aae316001600160a01b0316631526fe27846040518263ffffffff1660e01b81526004018082815260200191505060c06040518083038186803b15801561076057600080fd5b505afa158015610774573d6000803e3d6000fd5b505050506040513d60c081101561078a57600080fd5b506020808201516060909201516001600160a01b03928316600081815280845260408082206001998a0190819055959093168082528382208690558282526002909452828120805460ff199081168a1790915584825292812080549093168817909255600380548089018255928190527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b92830180547fffffffffffffffffffffffff00000000000000000000000000000000000000009081169093179055805497880190559501805490951617909355506106fd9050565b506001555b565b7f00000000000000000000000000000000000000000000000000000000000000008156fea264697066735822122087e65f56a1119a1a2b580905baed29fa4e3ce872535377c7cf4a1d2fccc80bcb64736f6c63430007060033",
+  "devdoc": {
+    "author": "Babylon Finance Protocol Abstraction for all the different convex pools",
+    "kind": "dev",
+    "methods": {
+      "getAllConvexPools()": {
+        "returns": {
+          "_0": "address[]                       Addresses of the convex tokens"
+        }
+      },
+      "getConvexInputToken(address)": {
+        "params": {
+          "_pool": "Address of the convex token"
+        },
+        "returns": {
+          "inputToken": "                   Address of the input token"
+        }
+      },
+      "getPid(address)": {
+        "params": {
+          "_asset": "Address of the convex lp token"
+        },
+        "returns": {
+          "_0": "uint256                       Pid of the pool in convex"
+        }
+      },
+      "getRewardPool(address)": {
+        "params": {
+          "_asset": "Address of the convex token"
+        },
+        "returns": {
+          "reward": "                       Address of the reward pool"
+        }
+      }
+    },
+    "title": "ConvexRegistry",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "getAllConvexPools()": {
+        "notice": "Gets all the convex tokens"
+      },
+      "getConvexInputToken(address)": {
+        "notice": "Gets the input token address given a convex token"
+      },
+      "getPid(address)": {
+        "notice": "Gets the PID in convex of a convex lp token"
+      },
+      "getRewardPool(address)": {
+        "notice": "Gets the reward pool address given a convex token"
+      },
+      "updateCache()": {
+        "notice": "Refreshes convex vaults"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 52735,
+        "contract": "contracts/registries/ConvexRegistry.sol:ConvexRegistry",
+        "label": "cacheConvexTokenToPid",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_address,t_uint256)"
+      },
+      {
+        "astId": 52738,
+        "contract": "contracts/registries/ConvexRegistry.sol:ConvexRegistry",
+        "label": "elementsCached",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 52743,
+        "contract": "contracts/registries/ConvexRegistry.sol:ConvexRegistry",
+        "label": "convexPools",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 52746,
+        "contract": "contracts/registries/ConvexRegistry.sol:ConvexRegistry",
+        "label": "convexList",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_array(t_address)dyn_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_address,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

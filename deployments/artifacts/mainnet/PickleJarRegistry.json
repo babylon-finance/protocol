@@ -1,0 +1,401 @@
+{
+  "address": "0xB3fE136A9Cc0c0Bc37e31E21f681E7Cff8FcCE80",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "controller",
+      "outputs": [
+        {
+          "internalType": "contract IBabController",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "gaugeList",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gaugeProxy",
+      "outputs": [
+        {
+          "internalType": "contract IGaugeProxy",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllGauges",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllJars",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_gauge",
+          "type": "address"
+        }
+      ],
+      "name": "getJarFromGauge",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_jar",
+          "type": "address"
+        }
+      ],
+      "name": "getJarGauge",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_jar",
+          "type": "address"
+        }
+      ],
+      "name": "getJarStrategy",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isUniv3",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "jarList",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "jars",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "noSwapParam",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pickleControlller",
+      "outputs": [
+        {
+          "internalType": "contract IPickleController",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "_jars",
+          "type": "address[]"
+        },
+        {
+          "internalType": "bool[]",
+          "name": "_values",
+          "type": "bool[]"
+        },
+        {
+          "internalType": "bool[]",
+          "name": "_uniflags",
+          "type": "bool[]"
+        }
+      ],
+      "name": "updateJars",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xe738b59a3eb0336bc12f128f710c63866d4ad99bf4124fdfc8a56d88b41dc65a",
+  "receipt": {
+    "to": null,
+    "from": "0xAeC6233A45A3866e9F1c64ab121e4eE9DBEaFbfF",
+    "contractAddress": "0xB3fE136A9Cc0c0Bc37e31E21f681E7Cff8FcCE80",
+    "transactionIndex": 49,
+    "gasUsed": "6521727",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xfa909279998bbc795e5ac181da562600e2d585c9ef6ff7bfaf9762ceafc60ee9",
+    "transactionHash": "0xe738b59a3eb0336bc12f128f710c63866d4ad99bf4124fdfc8a56d88b41dc65a",
+    "logs": [],
+    "blockNumber": 14664614,
+    "cumulativeGasUsed": "9726603",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xD4a5b5fcB561dAF3aDF86F8477555B92FBa43b5F"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "b449cb5aec67dc49b858dceef0213a91",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"_controller\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"controller\",\"outputs\":[{\"internalType\":\"contract IBabController\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"gaugeList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gaugeProxy\",\"outputs\":[{\"internalType\":\"contract IGaugeProxy\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllGauges\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllJars\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_gauge\",\"type\":\"address\"}],\"name\":\"getJarFromGauge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_jar\",\"type\":\"address\"}],\"name\":\"getJarGauge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_jar\",\"type\":\"address\"}],\"name\":\"getJarStrategy\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isUniv3\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"jarList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"jars\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"noSwapParam\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pickleControlller\",\"outputs\":[{\"internalType\":\"contract IPickleController\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_jars\",\"type\":\"address[]\"},{\"internalType\":\"bool[]\",\"name\":\"_values\",\"type\":\"bool[]\"},{\"internalType\":\"bool[]\",\"name\":\"_uniflags\",\"type\":\"bool[]\"}],\"name\":\"updateJars\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Babylon Finance Protocol Abstraction for all the different Jars\",\"kind\":\"dev\",\"methods\":{\"updateJars(address[],bool[],bool[])\":{\"params\":{\"_jars\":\"List of jar addresses\",\"_uniflags\":\"List of booleans. True means univ3 jar\",\"_values\":\"List of booleans. True means valid jar\"}}},\"title\":\"PickleJarRegistry\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"updateJars(address[],bool[],bool[])\":{\"notice\":\"Adds/deletes jars\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/registries/PickleJarRegistry.sol\":\"PickleJarRegistry\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":999},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `recipient`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `sender` to `recipient` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0x5f02220344881ce43204ae4a6281145a67bc52c2bb1290a791857df3d19d78f5\",\"license\":\"MIT\"},\"contracts/interfaces/IBabController.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title IBabController\\n * @author Babylon Finance\\n *\\n * Interface for interacting with BabController\\n */\\ninterface IBabController {\\n    /* ============ Functions ============ */\\n\\n    function createGarden(\\n        address _reserveAsset,\\n        string memory _name,\\n        string memory _symbol,\\n        string memory _tokenURI,\\n        uint256 _seed,\\n        uint256[] calldata _gardenParams,\\n        uint256 _initialContribution,\\n        bool[] memory _publicGardenStrategistsStewards,\\n        uint256[] memory _profitSharing\\n    ) external payable returns (address);\\n\\n    function removeGarden(address _garden) external;\\n\\n    function addReserveAsset(address _reserveAsset) external;\\n\\n    function removeReserveAsset(address _reserveAsset) external;\\n\\n    function updateProtocolWantedAsset(address _wantedAsset, bool _wanted) external;\\n\\n    function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external;\\n\\n    function addAffiliateReward(\\n        address _depositor,\\n        address _referrer,\\n        uint256 _reserveAmount\\n    ) external;\\n\\n    function claimRewards() external;\\n\\n    function editPriceOracle(address _priceOracle) external;\\n\\n    function editMardukGate(address _mardukGate) external;\\n\\n    function editGardenValuer(address _gardenValuer) external;\\n\\n    function editTreasury(address _newTreasury) external;\\n\\n    function editHeart(address _newHeart) external;\\n\\n    function editRewardsDistributor(address _rewardsDistributor) external;\\n\\n    function editGardenFactory(address _newGardenFactory) external;\\n\\n    function editGardenNFT(address _newGardenNFT) external;\\n\\n    function editCurveMetaRegistry(address _curveMetaRegistry) external;\\n\\n    function editStrategyNFT(address _newStrategyNFT) external;\\n\\n    function editStrategyFactory(address _newStrategyFactory) external;\\n\\n    function setOperation(uint8 _kind, address _operation) external;\\n\\n    function setMasterSwapper(address _newMasterSwapper) external;\\n\\n    function addKeeper(address _keeper) external;\\n\\n    function addKeepers(address[] memory _keepers) external;\\n\\n    function removeKeeper(address _keeper) external;\\n\\n    function enableGardenTokensTransfers() external;\\n\\n    function editLiquidityReserve(address _reserve, uint256 _minRiskyPairLiquidityEth) external;\\n\\n    function patchIntegration(address _old, address _new) external;\\n\\n    function gardenCreationIsOpen() external view returns (bool);\\n\\n    function owner() external view returns (address);\\n\\n    function EMERGENCY_OWNER() external view returns (address);\\n\\n    function guardianGlobalPaused() external view returns (bool);\\n\\n    function guardianPaused(address _address) external view returns (bool);\\n\\n    function setPauseGuardian(address _guardian) external;\\n\\n    function setGlobalPause(bool _state) external returns (bool);\\n\\n    function setSomePause(address[] memory _address, bool _state) external returns (bool);\\n\\n    function isPaused(address _contract) external view returns (bool);\\n\\n    function priceOracle() external view returns (address);\\n\\n    function gardenValuer() external view returns (address);\\n\\n    function heart() external view returns (address);\\n\\n    function gardenNFT() external view returns (address);\\n\\n    function strategyNFT() external view returns (address);\\n\\n    function curveMetaRegistry() external view returns (address);\\n\\n    function rewardsDistributor() external view returns (address);\\n\\n    function gardenFactory() external view returns (address);\\n\\n    function treasury() external view returns (address);\\n\\n    function ishtarGate() external view returns (address);\\n\\n    function mardukGate() external view returns (address);\\n\\n    function strategyFactory() external view returns (address);\\n\\n    function masterSwapper() external view returns (address);\\n\\n    function gardenTokensTransfersEnabled() external view returns (bool);\\n\\n    function bablMiningProgramEnabled() external view returns (bool);\\n\\n    function allowPublicGardens() external view returns (bool);\\n\\n    function enabledOperations(uint256 _kind) external view returns (address);\\n\\n    function getGardens() external view returns (address[] memory);\\n\\n    function getReserveAssets() external view returns (address[] memory);\\n\\n    function getOperations() external view returns (address[20] memory);\\n\\n    function isGarden(address _garden) external view returns (bool);\\n\\n    function protocolWantedAssets(address _wantedAsset) external view returns (bool);\\n\\n    function gardenAffiliateRates(address _wantedAsset) external view returns (uint256);\\n\\n    function affiliateRewards(address _user) external view returns (uint256);\\n\\n    function patchedIntegrations(address _integration) external view returns (address);\\n\\n    function isValidReserveAsset(address _reserveAsset) external view returns (bool);\\n\\n    function isValidKeeper(address _keeper) external view returns (bool);\\n\\n    function isSystemContract(address _contractAddress) external view returns (bool);\\n\\n    function protocolPerformanceFee() external view returns (uint256);\\n\\n    function protocolManagementFee() external view returns (uint256);\\n\\n    function minLiquidityPerReserve(address _reserve) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x50e8738ec1b06ef43d80b16701c977e7700d01987f0c27a73402d16a1a0cf20d\",\"license\":\"Apache-2.0\"},\"contracts/interfaces/IPickleJarRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\n/**\\n * @title IPickleJarRegistry\\n * @author Babylon Finance\\n *\\n * Interface for interacting with all the pickle jars\\n */\\ninterface IPickleJarRegistry {\\n    /* ============ Functions ============ */\\n\\n    function updateJars(\\n        address[] calldata _jars,\\n        bool[] calldata _values,\\n        bool[] calldata _uniflags\\n    ) external;\\n\\n    /* ============ View Functions ============ */\\n\\n    function jars(address _jarAddress) external view returns (bool);\\n\\n    function noSwapParam(address _jarAddress) external view returns (bool);\\n\\n    function isUniv3(address _jarAddress) external view returns (bool);\\n\\n    function getJarStrategy(address _jarAddress) external view returns (address);\\n\\n    function getJarGauge(address _jarAddress) external view returns (address);\\n\\n    function getJarFromGauge(address _gauge) external view returns (address);\\n\\n    function getAllJars() external view returns (address[] memory);\\n\\n    function getAllGauges() external view returns (address[] memory);\\n}\\n\",\"keccak256\":\"0x4e16ccc53a3e071cc90eaa954cc9ac476d8c45231b14ad7bff40f3e4dc83b00f\",\"license\":\"Apache-2.0\"},\"contracts/interfaces/external/pickle/IGaugeProxy.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity >=0.7.0 <0.9.0;\\n\\ninterface IGaugeProxy {\\n    function gauges(address _jar) external view returns (address);\\n}\\n\",\"keccak256\":\"0x8ce884d2be40983154ba1b71b33129d1ae18e58742c593d1705b792d3870618d\",\"license\":\"GPL-3.0\"},\"contracts/interfaces/external/pickle/IJar.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity >=0.7.0 <0.9.0;\\n\\nimport '@openzeppelin/contracts/token/ERC20/IERC20.sol';\\n\\ninterface IJar is IERC20 {\\n    function token() external view returns (address);\\n\\n    function reward() external view returns (address);\\n\\n    function claimInsurance() external; // NOTE: Only yDelegatedVault implements this\\n\\n    function getRatio() external view returns (uint256);\\n\\n    function depositAll() external;\\n\\n    function balance() external view returns (uint256);\\n\\n    function deposit(uint256) external;\\n\\n    function withdrawAll() external;\\n\\n    function withdraw(uint256) external;\\n\\n    function earn() external;\\n\\n    function decimals() external view returns (uint8);\\n}\\n\",\"keccak256\":\"0xcc8344e107770d92091b5836aa5acb6287ae5ed06450f8e344cec6e28e110b19\",\"license\":\"GPL-3.0\"},\"contracts/interfaces/external/pickle/IJarUniV3.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity >=0.7.0 <0.9.0;\\n\\nimport './IJar.sol';\\n\\ninterface IJarUniV3 is IJar {\\n    function pool() external view returns (address);\\n\\n    function getProportion() external view returns (uint256);\\n\\n    function totalLiquidity() external view returns (uint256);\\n\\n    function getAmountsForLiquidity(uint128 liquidity) external view returns (uint256, uint256);\\n\\n    function token0() external view returns (address);\\n\\n    function token1() external view returns (address);\\n}\\n\",\"keccak256\":\"0xd8bc90f2978399ac5f4b5203499f41f7b90f9db908ff0f4252190ff0a01c4024\",\"license\":\"GPL-3.0\"},\"contracts/interfaces/external/pickle/IPickleController.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity >=0.7.0 <0.9.0;\\n\\ninterface IPickleController {\\n    function strategies(address _pool) external view returns (address);\\n}\\n\",\"keccak256\":\"0x0bda89caa7df18afec9a779714a5624ec4e3919a90ff45d030720b5ed9bb26bc\",\"license\":\"GPL-3.0\"},\"contracts/lib/ControllerLib.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\n\\nlibrary ControllerLib {\\n    /**\\n     * Throws if the sender is not the protocol\\n     */\\n    function onlyGovernanceOrEmergency(IBabController _controller) internal view {\\n        require(\\n            msg.sender == _controller.owner() || msg.sender == _controller.EMERGENCY_OWNER(),\\n            'Only governance or emergency can call this'\\n        );\\n    }\\n}\\n\",\"keccak256\":\"0xfb8440b3c915eb148e4ef721ce6b240642a8c35c3f8729dc6d20db9f307b4cae\",\"license\":\"Apache-2.0\"},\"contracts/registries/PickleJarRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: Apache-2.0\\n\\npragma solidity 0.7.6;\\n\\nimport {IBabController} from '../interfaces/IBabController.sol';\\nimport {IPickleJarRegistry} from '../interfaces/IPickleJarRegistry.sol';\\nimport {IJar} from '../interfaces/external/pickle/IJar.sol';\\nimport {IJarUniV3} from '../interfaces/external/pickle/IJarUniV3.sol';\\nimport {IPickleController} from '../interfaces/external/pickle/IPickleController.sol';\\nimport {IGaugeProxy} from '../interfaces/external/pickle/IGaugeProxy.sol';\\n\\nimport {ControllerLib} from '../lib/ControllerLib.sol';\\n\\n/**\\n * @title PickleJarRegistry\\n * @author Babylon Finance Protocol\\n *\\n * Abstraction for all the different Jars\\n */\\ncontract PickleJarRegistry is IPickleJarRegistry {\\n    using ControllerLib for IBabController;\\n\\n    /* ============ Constants ============ */\\n\\n    IBabController public immutable controller;\\n    IPickleController public immutable pickleControlller;\\n    IGaugeProxy public gaugeProxy;\\n\\n    /* ============ State Variables ============ */\\n\\n    // Mapping of valid jars\\n    mapping(address => bool) public override jars;\\n    mapping(address => bool) public override isUniv3;\\n    mapping(address => bool) public override noSwapParam;\\n    mapping(address => address) private gaugeToJar;\\n    address[] public jarList;\\n    address[] public gaugeList;\\n\\n    /* ============ Modifiers ============ */\\n\\n    /* ============ Constructor ============ */\\n\\n    constructor(IBabController _controller) {\\n        require(address(_controller) != address(0), 'Controller is not valid');\\n        controller = _controller;\\n        pickleControlller = IPickleController(0x7B5916C61bCEeaa2646cf49D9541ac6F5DCe3637);\\n        gaugeProxy = IGaugeProxy(0x2e57627ACf6c1812F99e274d0ac61B786c19E74f);\\n        // https://github.com/pickle-finance/contracts\\n        _addJar(0x68d14d66B2B0d6E157c06Dc8Fefa3D8ba0e66a89, false);\\n        _addJar(0x2E35392F4c36EBa7eCAFE4de34199b2373Af22ec, false);\\n        _addJar(0x1BB74b5DdC1f4fC91D6f9E7906cf68bc93538e33, false);\\n        _addJar(0x77C8A58D940a322Aea02dBc8EE4A30350D4239AD, false);\\n        _addJar(0xCbA1FE4Fdbd90531EFD929F1A1831F38e91cff1e, false);\\n        _addJar(0x65B2532474f717D5A8ba38078B78106D56118bbb, false);\\n        _addJar(0x55282dA27a3a02ffe599f6D11314D239dAC89135, false);\\n        _addJar(0x8c2D16B7F6D3F989eb4878EcF13D695A7d504E43, false);\\n        _addJar(0xa7a37aE5Cb163a3147DE83F15e15D8E5f94D6bCE, false);\\n        _addJar(0xde74b6c547bd574c3527316a2eE30cd8F6041525, false);\\n        _addJar(0x3261D9408604CC8607b687980D40135aFA26FfED, false);\\n        _addJar(0x5Eff6d166D66BacBC1BF52E2C54dD391AE6b1f48, false);\\n        _addJar(0x3Bcd97dCA7b1CED292687c97702725F37af01CaC, false);\\n        _addJar(0xaFB2FE266c215B5aAe9c4a9DaDC325cC7a497230, false);\\n        _addJar(0xF303B35D5bCb4d9ED20fB122F5E268211dEc0EBd, false);\\n        _addJar(0x7C8de3eE2244207A54b57f45286c9eE1465fee9f, false);\\n        _addJar(0x1ed1fD33b62bEa268e527A622108fe0eE0104C07, false);\\n        _addJar(0x1CF137F651D8f0A4009deD168B442ea2E870323A, false);\\n        _addJar(0xECb520217DccC712448338B0BB9b08Ce75AD61AE, false);\\n        _addJar(0xC1513C1b0B359Bc5aCF7b772100061217838768B, false);\\n        _addJar(0xCeD67a187b923F0E5ebcc77C7f2F7da20099e378, false);\\n        _addJar(0x927e3bCBD329e89A8765B52950861482f0B227c4, false);\\n        _addJar(0x9eb0aAd5Bb943D3b2F7603Deb772faa35f60aDF9, false);\\n        _addJar(0xDCfAE44244B3fABb5b351b01Dc9f050E589cF24F, false);\\n        _addJar(0xe6487033F5C8e2b4726AF54CA1449FEC18Bd1484, false);\\n        _addJar(0xEB801AB73E9A2A482aA48CaCA13B1954028F4c94, false);\\n        _addJar(0x4fFe73Cf2EEf5E8C8E0E10160bCe440a029166D2, false);\\n        _addJar(0x822Ba8e3b95A26264Cd726828Af47Ee150729afd, false);\\n        _addJar(0x729C6248f9B1Ce62B3d5e31D4eE7EE95cAB32dfD, false);\\n        _addJar(0x993f35FaF4AEA39e1dfF28f45098429E0c87126C, false);\\n        _addJar(0xdB84a6A48881545E8595218b7a2A3c9bd28498aE, false);\\n        _addJar(0x1Bf62aCb8603Ef7F3A0DFAF79b25202fe1FAEE06, false);\\n        _addJar(0xeb8174F94FDAcCB099422d9A816B8E17d5e393E3, false);\\n        _addJar(0x1d92e1702D7054f74eAC3a9569AeB87FC93e101D, false);\\n        _addJar(0x4E9806345fb39FFebd70A01f177A675805019ba8, false);\\n        _addJar(0x0989a227E7c50311f7De61e5e61F7c28Df8936f0, false);\\n        _addJar(0xF1478A8387C449c55708a3ec11c143c35daf5E74, false);\\n        _addJar(0xB245280Fd1795f5068DEf8E8f32DB7846b030b2B, false);\\n        _addJar(0xD38A7E64677d92D3966285fa3aD1dc68A02b7c33, false);\\n        _addJar(0x506748d736b77f51c5b490e4aC6c26B8c3975b14, true);\\n        _addJar(0x1c5Dbb5d9864738e84c126782460C18828859648, false);\\n        _addJar(0xc97f3fd224d90609831a2B74b46642aC43afE5ee, false);\\n        _addJar(0xBc57294Fc20bD23983dB598fa6B3f306aA1a414f, false);\\n        _addJar(0x69CC22B240bdcDf4A33c7B3D04a660D4cF714370, false);\\n        _addJar(0xb4EBc2C371182DeEa04B2264B9ff5AC4F0159C69, false);\\n        _addJar(0xe7b69a17B3531d01FCEAd66FaF7d9f7655469267, true);\\n        _addJar(0x8CA1D047541FE183aE7b5d80766eC6d5cEeb942A, true);\\n        _addJar(0x3b79f29d7979D7DE22A0d09098e898157ea32dD5, true);\\n        _addJar(0x0A3a5764945E29E38408637bC659981f0172b961, true);\\n        _addJar(0x563c77b40c7f08bA735426393Cf5f0e527D16C10, true);\\n        _addJar(0xAaCDaAad9a9425bE2d666d08F741bE4F081C7ab1, true);\\n        _addJar(0x575a9E386c33732880DEF8BE1BAD9dbc5dDDf7D7, true);\\n        _addJar(0x7f3514CBC6825410Ca3fA4deA41d46964a953Afb, true);\\n        _addJar(0xf0Fb82757B9f8A3A3AE3524e385E2E9039633948, true);\\n        _addJar(0x49ED0e6B438430CEEdDa8C6d06B6A2797aFA81cA, true);\\n        _addJar(0x81740AAc02ae2F3c61D5a0c012b3e18f9dc02b5c, false);\\n        _addJar(0x363e7CD14AEcf4f7d0e66Ae1DEff830343D760a7, false);\\n\\n        // A couple of univ3 pools don't have a swap param\\n        noSwapParam[0xe7b69a17B3531d01FCEAd66FaF7d9f7655469267] = true;\\n        noSwapParam[0x7f3514CBC6825410Ca3fA4deA41d46964a953Afb] = true;\\n        noSwapParam[0x506748d736b77f51c5b490e4aC6c26B8c3975b14] = true;\\n    }\\n\\n    /* ============ External Functions ============ */\\n\\n    /**\\n     * Adds/deletes jars\\n     * @param _jars             List of jar addresses\\n     * @param _values           List of booleans. True means valid jar\\n     * @param _uniflags         List of booleans. True means univ3 jar\\n     *\\n     */\\n    function updateJars(\\n        address[] calldata _jars,\\n        bool[] calldata _values,\\n        bool[] calldata _uniflags\\n    ) external override {\\n        controller.onlyGovernanceOrEmergency();\\n        for (uint256 i = 0; i < _jars.length; i++) {\\n            if (_values[i]) {\\n                _addJar(_jars[i], _uniflags[i]);\\n            } else {\\n                _removeJar(_jars[i]);\\n            }\\n        }\\n    }\\n\\n    function getAllJars() external view override returns (address[] memory) {\\n        return jarList;\\n    }\\n\\n    function getAllGauges() external view override returns (address[] memory) {\\n        return gaugeList;\\n    }\\n\\n    function getJarStrategy(address _jar) external view override returns (address) {\\n        if (isUniv3[_jar]) {\\n            return pickleControlller.strategies(IJarUniV3(_jar).pool());\\n        }\\n        return address(0);\\n    }\\n\\n    function getJarGauge(address _jar) external view override returns (address) {\\n        return gaugeProxy.gauges(_jar);\\n    }\\n\\n    function getJarFromGauge(address _gauge) external view override returns (address) {\\n        return gaugeToJar[_gauge];\\n    }\\n\\n    /* ============ Internal Functions ============ */\\n\\n    function _addJar(address _jar, bool _univ3) private {\\n        uint256 totalSupply = IJar(_jar).totalSupply();\\n        if (totalSupply > 0) {\\n            jarList.push(_jar);\\n            jars[_jar] = true;\\n            address gauge = gaugeProxy.gauges(_jar);\\n            gaugeToJar[gauge] = _jar;\\n            gaugeList.push(gauge);\\n            isUniv3[_jar] = _univ3;\\n        }\\n    }\\n\\n    function _removeJar(address _jar) private {\\n        (bool found, uint256 index) = _findJar(_jar);\\n        if (found) {\\n            jarList[index] = jarList[jarList.length - 1];\\n            gaugeList[index] = gaugeList[gaugeList.length - 1];\\n            jarList.pop();\\n            gaugeList.pop();\\n            jars[_jar] = false;\\n            isUniv3[_jar] = false;\\n        }\\n    }\\n\\n    function _findJar(address _jar) private view returns (bool, uint256) {\\n        for (uint256 i = 0; i < jarList.length; i++) {\\n            if (jarList[i] == _jar) {\\n                return (true, i);\\n            }\\n        }\\n        return (false, 0);\\n    }\\n}\\n\",\"keccak256\":\"0xf61da8f331e0287301bb441dda5087e03c7ad47863d84cf95f9f385333d71afc\",\"license\":\"Apache-2.0\"}},\"version\":1}",
+  "bytecode": "0x60c06040523480156200001157600080fd5b506040516200183f3803806200183f833981810160405260208110156200003757600080fd5b50516001600160a01b03811662000095576040805162461bcd60e51b815260206004820152601760248201527f436f6e74726f6c6c6572206973206e6f742076616c6964000000000000000000604482015290519081900360640190fd5b6001600160601b0319606082901b166080527f7b5916c61bceeaa2646cf49d9541ac6f5dce363700000000000000000000000060a052600080546001600160a01b031916732e57627acf6c1812f99e274d0ac61b786c19e74f17815562000112907368d14d66b2b0d6e157c06dc8fefa3d8ba0e66a8990620008f2565b62000133732e35392f4c36eba7ecafe4de34199b2373af22ec6000620008f2565b62000154731bb74b5ddc1f4fc91d6f9e7906cf68bc93538e336000620008f2565b620001757377c8a58d940a322aea02dbc8ee4a30350d4239ad6000620008f2565b6200019673cba1fe4fdbd90531efd929f1a1831f38e91cff1e6000620008f2565b620001b77365b2532474f717d5a8ba38078b78106d56118bbb6000620008f2565b620001d87355282da27a3a02ffe599f6d11314d239dac891356000620008f2565b620001f9738c2d16b7f6d3f989eb4878ecf13d695a7d504e436000620008f2565b6200021a73a7a37ae5cb163a3147de83f15e15d8e5f94d6bce6000620008f2565b6200023b73de74b6c547bd574c3527316a2ee30cd8f60415256000620008f2565b6200025c733261d9408604cc8607b687980d40135afa26ffed6000620008f2565b6200027d735eff6d166d66bacbc1bf52e2c54dd391ae6b1f486000620008f2565b6200029e733bcd97dca7b1ced292687c97702725f37af01cac6000620008f2565b620002bf73afb2fe266c215b5aae9c4a9dadc325cc7a4972306000620008f2565b620002e073f303b35d5bcb4d9ed20fb122f5e268211dec0ebd6000620008f2565b62000301737c8de3ee2244207a54b57f45286c9ee1465fee9f6000620008f2565b62000322731ed1fd33b62bea268e527a622108fe0ee0104c076000620008f2565b62000343731cf137f651d8f0a4009ded168b442ea2e870323a6000620008f2565b6200036473ecb520217dccc712448338b0bb9b08ce75ad61ae6000620008f2565b6200038573c1513c1b0b359bc5acf7b772100061217838768b6000620008f2565b620003a673ced67a187b923f0e5ebcc77c7f2f7da20099e3786000620008f2565b620003c773927e3bcbd329e89a8765b52950861482f0b227c46000620008f2565b620003e8739eb0aad5bb943d3b2f7603deb772faa35f60adf96000620008f2565b6200040973dcfae44244b3fabb5b351b01dc9f050e589cf24f6000620008f2565b6200042a73e6487033f5c8e2b4726af54ca1449fec18bd14846000620008f2565b6200044b73eb801ab73e9a2a482aa48caca13b1954028f4c946000620008f2565b6200046c734ffe73cf2eef5e8c8e0e10160bce440a029166d26000620008f2565b6200048d73822ba8e3b95a26264cd726828af47ee150729afd6000620008f2565b620004ae73729c6248f9b1ce62b3d5e31d4ee7ee95cab32dfd6000620008f2565b620004cf73993f35faf4aea39e1dff28f45098429e0c87126c6000620008f2565b620004f073db84a6a48881545e8595218b7a2a3c9bd28498ae6000620008f2565b62000511731bf62acb8603ef7f3a0dfaf79b25202fe1faee066000620008f2565b6200053273eb8174f94fdaccb099422d9a816b8e17d5e393e36000620008f2565b62000553731d92e1702d7054f74eac3a9569aeb87fc93e101d6000620008f2565b62000574734e9806345fb39ffebd70a01f177a675805019ba86000620008f2565b62000595730989a227e7c50311f7de61e5e61f7c28df8936f06000620008f2565b620005b673f1478a8387c449c55708a3ec11c143c35daf5e746000620008f2565b620005d773b245280fd1795f5068def8e8f32db7846b030b2b6000620008f2565b620005f873d38a7e64677d92d3966285fa3ad1dc68a02b7c336000620008f2565b6200061973506748d736b77f51c5b490e4ac6c26b8c3975b146001620008f2565b6200063a731c5dbb5d9864738e84c126782460c188288596486000620008f2565b6200065b73c97f3fd224d90609831a2b74b46642ac43afe5ee6000620008f2565b6200067c73bc57294fc20bd23983db598fa6b3f306aa1a414f6000620008f2565b6200069d7369cc22b240bdcdf4a33c7b3d04a660d4cf7143706000620008f2565b620006be73b4ebc2c371182deea04b2264b9ff5ac4f0159c696000620008f2565b620006df73e7b69a17b3531d01fcead66faf7d9f76554692676001620008f2565b62000700738ca1d047541fe183ae7b5d80766ec6d5ceeb942a6001620008f2565b62000721733b79f29d7979d7de22a0d09098e898157ea32dd56001620008f2565b62000742730a3a5764945e29e38408637bc659981f0172b9616001620008f2565b6200076373563c77b40c7f08ba735426393cf5f0e527d16c106001620008f2565b6200078473aacdaaad9a9425be2d666d08f741be4f081c7ab16001620008f2565b620007a573575a9e386c33732880def8be1bad9dbc5dddf7d76001620008f2565b620007c6737f3514cbc6825410ca3fa4dea41d46964a953afb6001620008f2565b620007e773f0fb82757b9f8a3a3ae3524e385e2e90396339486001620008f2565b620008087349ed0e6b438430ceedda8c6d06b6a2797afa81ca6001620008f2565b620008297381740aac02ae2f3c61d5a0c012b3e18f9dc02b5c6000620008f2565b6200084a73363e7cd14aecf4f7d0e66ae1deff830343d760a76000620008f2565b5060036020527f037af3b5d092ff7919fb609ad35a6fe47fba2c2647b946afcdba1327da05192b8054600160ff1991821681179092557fe2dd5dc13db9998f871d16c630475e2427f28b0e7718e0240dab2df51e024950805482168317905573506748d736b77f51c5b490e4ac6c26b8c3975b146000527f74cd6b021f23a138bfdfdb0aad518d653566813c586cfb95df1f3303d4979e3d8054909116909117905562000ac1565b6000826001600160a01b03166318160ddd6040518163ffffffff1660e01b815260040160206040518083038186803b1580156200092e57600080fd5b505afa15801562000943573d6000803e3d6000fd5b505050506040513d60208110156200095a57600080fd5b50519050801562000abc576005805460018082019092557f036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db00180546001600160a01b0319166001600160a01b03868116918217909255600081815260208481526040808320805460ff19169096179095558154855163b9a09fd560e01b81526004810194909452945191949093169263b9a09fd59260248082019391829003018186803b15801562000a0b57600080fd5b505afa15801562000a20573d6000803e3d6000fd5b505050506040513d602081101562000a3757600080fd5b50516001600160a01b0390811660008181526004602090815260408083208054958a166001600160a01b0319968716811790915560068054600181019091557ff652222313e28459528d920b65115c16c04f3efc82aaedc97be59f3f377c0d3f018054909616909417909455918152600290915220805484151560ff19909116179055505b505050565b60805160601c60a05160601c610d4a62000af560003980610450528061077952508061062a52806107df5250610d4a6000f3fe608060405234801561001057600080fd5b50600436106100ea5760003560e01c8063c946c5cc1161008c578063ca6a48c211610066578063ca6a48c21461035a578063edce080614610380578063f77c4791146103a6578063fbcbf20e146103ae576100ea565b8063c946c5cc14610342578063c98c05a61461034a578063ca1c9b7514610352576100ea565b8063690f7390116100c8578063690f7390146101af57806382136a60146101e957806398a994c11461020f578063b4b1013c14610325576100ea565b806311820e46146100ef578063499bcb17146101475780634e450a9614610189575b600080fd5b6100f76103cb565b60408051602080825283518183015283519192839290830191858101910280838360005b8381101561013357818101518382015260200161011b565b505050509050019250505060405180910390f35b61016d6004803603602081101561015d57600080fd5b50356001600160a01b031661042d565b604080516001600160a01b039092168252519081900360200190f35b61016d6004803603602081101561019f57600080fd5b50356001600160a01b031661057b565b6101d5600480360360208110156101c557600080fd5b50356001600160a01b03166105fb565b604080519115158252519081900360200190f35b6101d5600480360360208110156101ff57600080fd5b50356001600160a01b0316610610565b6103236004803603606081101561022557600080fd5b81019060208101813564010000000081111561024057600080fd5b82018360208201111561025257600080fd5b8035906020019184602083028401116401000000008311171561027457600080fd5b91939092909160208101903564010000000081111561029257600080fd5b8201836020820111156102a457600080fd5b803590602001918460208302840111640100000000831117156102c657600080fd5b9193909290916020810190356401000000008111156102e457600080fd5b8201836020820111156102f657600080fd5b8035906020019184602083028401116401000000008311171561031857600080fd5b509092509050610625565b005b61016d6004803603602081101561033b57600080fd5b50356106ed565b6100f7610717565b61016d610777565b61016d61079b565b6101d56004803603602081101561037057600080fd5b50356001600160a01b03166107aa565b61016d6004803603602081101561039657600080fd5b50356001600160a01b03166107bf565b61016d6107dd565b61016d600480360360208110156103c457600080fd5b5035610801565b6060600580548060200260200160405190810160405280929190818152602001828054801561042357602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610405575b5050505050905090565b6001600160a01b03811660009081526002602052604081205460ff1615610572577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166339ebf823836001600160a01b03166316f0115b6040518163ffffffff1660e01b815260040160206040518083038186803b1580156104b657600080fd5b505afa1580156104ca573d6000803e3d6000fd5b505050506040513d60208110156104e057600080fd5b5051604080517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b039092166004830152516024808301926020929190829003018186803b15801561053f57600080fd5b505afa158015610553573d6000803e3d6000fd5b505050506040513d602081101561056957600080fd5b50519050610576565b5060005b919050565b600080546040805163b9a09fd560e01b81526001600160a01b0385811660048301529151919092169163b9a09fd5916024808301926020929190829003018186803b1580156105c957600080fd5b505afa1580156105dd573d6000803e3d6000fd5b505050506040513d60208110156105f357600080fd5b505192915050565b60036020526000908152604090205460ff1681565b60026020526000908152604090205460ff1681565b6106577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610811565b60005b858110156106e45784848281811061066e57fe5b90506020020135156106b8576106b387878381811061068957fe5b905060200201356001600160a01b03168484848181106106a557fe5b905060200201351515610950565b6106dc565b6106dc8787838181106106c757fe5b905060200201356001600160a01b0316610b18565b60010161065a565b50505050505050565b600681815481106106fd57600080fd5b6000918252602090912001546001600160a01b0316905081565b60606006805480602002602001604051908101604052809291908181526020018280548015610423576020028201919060005260206000209081546001600160a01b03168152600190910190602001808311610405575050505050905090565b7f000000000000000000000000000000000000000000000000000000000000000081565b6000546001600160a01b031681565b60016020526000908152604090205460ff1681565b6001600160a01b039081166000908152600460205260409020541690565b7f000000000000000000000000000000000000000000000000000000000000000081565b600581815481106106fd57600080fd5b806001600160a01b0316638da5cb5b6040518163ffffffff1660e01b815260040160206040518083038186803b15801561084a57600080fd5b505afa15801561085e573d6000803e3d6000fd5b505050506040513d602081101561087457600080fd5b50516001600160a01b03163314806108f85750806001600160a01b0316638d97e0436040518163ffffffff1660e01b815260040160206040518083038186803b1580156108c057600080fd5b505afa1580156108d4573d6000803e3d6000fd5b505050506040513d60208110156108ea57600080fd5b50516001600160a01b031633145b61094d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602a815260200180610ceb602a913960400191505060405180910390fd5b50565b6000826001600160a01b03166318160ddd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561098b57600080fd5b505afa15801561099f573d6000803e3d6000fd5b505050506040513d60208110156109b557600080fd5b505190508015610b13576005805460018082019092557f036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db00180546001600160a01b0319166001600160a01b03868116918217909255600081815260208481526040808320805460ff19169096179095558154855163b9a09fd560e01b81526004810194909452945191949093169263b9a09fd59260248082019391829003018186803b158015610a6457600080fd5b505afa158015610a78573d6000803e3d6000fd5b505050506040513d6020811015610a8e57600080fd5b50516001600160a01b0390811660008181526004602090815260408083208054958a166001600160a01b0319968716811790915560068054600181019091557ff652222313e28459528d920b65115c16c04f3efc82aaedc97be59f3f377c0d3f018054909616909417909455918152600290915220805484151560ff19909116179055505b505050565b600080610b2483610c87565b915091508115610b1357600580546000198101908110610b4057fe5b600091825260209091200154600580546001600160a01b039092169183908110610b6657fe5b600091825260209091200180546001600160a01b0319166001600160a01b0392909216919091179055600680546000198101908110610ba157fe5b600091825260209091200154600680546001600160a01b039092169183908110610bc757fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055506005805480610c0057fe5b600082815260209020810160001990810180546001600160a01b03191690550190556006805480610c2d57fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b0385168252600181526040808320805460ff19908116909155600290925290912080549091169055505050565b60008060005b600554811015610cdc57836001600160a01b031660058281548110610cae57fe5b6000918252602090912001546001600160a01b03161415610cd457600192509050610ce5565b600101610c8d565b50600080915091505b91509156fe4f6e6c7920676f7665726e616e6365206f7220656d657267656e63792063616e2063616c6c2074686973a264697066735822122094e7e02b7a400e6885656cf6de4166739632e7c291db355cd08d7c42f32a276d64736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100ea5760003560e01c8063c946c5cc1161008c578063ca6a48c211610066578063ca6a48c21461035a578063edce080614610380578063f77c4791146103a6578063fbcbf20e146103ae576100ea565b8063c946c5cc14610342578063c98c05a61461034a578063ca1c9b7514610352576100ea565b8063690f7390116100c8578063690f7390146101af57806382136a60146101e957806398a994c11461020f578063b4b1013c14610325576100ea565b806311820e46146100ef578063499bcb17146101475780634e450a9614610189575b600080fd5b6100f76103cb565b60408051602080825283518183015283519192839290830191858101910280838360005b8381101561013357818101518382015260200161011b565b505050509050019250505060405180910390f35b61016d6004803603602081101561015d57600080fd5b50356001600160a01b031661042d565b604080516001600160a01b039092168252519081900360200190f35b61016d6004803603602081101561019f57600080fd5b50356001600160a01b031661057b565b6101d5600480360360208110156101c557600080fd5b50356001600160a01b03166105fb565b604080519115158252519081900360200190f35b6101d5600480360360208110156101ff57600080fd5b50356001600160a01b0316610610565b6103236004803603606081101561022557600080fd5b81019060208101813564010000000081111561024057600080fd5b82018360208201111561025257600080fd5b8035906020019184602083028401116401000000008311171561027457600080fd5b91939092909160208101903564010000000081111561029257600080fd5b8201836020820111156102a457600080fd5b803590602001918460208302840111640100000000831117156102c657600080fd5b9193909290916020810190356401000000008111156102e457600080fd5b8201836020820111156102f657600080fd5b8035906020019184602083028401116401000000008311171561031857600080fd5b509092509050610625565b005b61016d6004803603602081101561033b57600080fd5b50356106ed565b6100f7610717565b61016d610777565b61016d61079b565b6101d56004803603602081101561037057600080fd5b50356001600160a01b03166107aa565b61016d6004803603602081101561039657600080fd5b50356001600160a01b03166107bf565b61016d6107dd565b61016d600480360360208110156103c457600080fd5b5035610801565b6060600580548060200260200160405190810160405280929190818152602001828054801561042357602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610405575b5050505050905090565b6001600160a01b03811660009081526002602052604081205460ff1615610572577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166339ebf823836001600160a01b03166316f0115b6040518163ffffffff1660e01b815260040160206040518083038186803b1580156104b657600080fd5b505afa1580156104ca573d6000803e3d6000fd5b505050506040513d60208110156104e057600080fd5b5051604080517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b039092166004830152516024808301926020929190829003018186803b15801561053f57600080fd5b505afa158015610553573d6000803e3d6000fd5b505050506040513d602081101561056957600080fd5b50519050610576565b5060005b919050565b600080546040805163b9a09fd560e01b81526001600160a01b0385811660048301529151919092169163b9a09fd5916024808301926020929190829003018186803b1580156105c957600080fd5b505afa1580156105dd573d6000803e3d6000fd5b505050506040513d60208110156105f357600080fd5b505192915050565b60036020526000908152604090205460ff1681565b60026020526000908152604090205460ff1681565b6106577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610811565b60005b858110156106e45784848281811061066e57fe5b90506020020135156106b8576106b387878381811061068957fe5b905060200201356001600160a01b03168484848181106106a557fe5b905060200201351515610950565b6106dc565b6106dc8787838181106106c757fe5b905060200201356001600160a01b0316610b18565b60010161065a565b50505050505050565b600681815481106106fd57600080fd5b6000918252602090912001546001600160a01b0316905081565b60606006805480602002602001604051908101604052809291908181526020018280548015610423576020028201919060005260206000209081546001600160a01b03168152600190910190602001808311610405575050505050905090565b7f000000000000000000000000000000000000000000000000000000000000000081565b6000546001600160a01b031681565b60016020526000908152604090205460ff1681565b6001600160a01b039081166000908152600460205260409020541690565b7f000000000000000000000000000000000000000000000000000000000000000081565b600581815481106106fd57600080fd5b806001600160a01b0316638da5cb5b6040518163ffffffff1660e01b815260040160206040518083038186803b15801561084a57600080fd5b505afa15801561085e573d6000803e3d6000fd5b505050506040513d602081101561087457600080fd5b50516001600160a01b03163314806108f85750806001600160a01b0316638d97e0436040518163ffffffff1660e01b815260040160206040518083038186803b1580156108c057600080fd5b505afa1580156108d4573d6000803e3d6000fd5b505050506040513d60208110156108ea57600080fd5b50516001600160a01b031633145b61094d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602a815260200180610ceb602a913960400191505060405180910390fd5b50565b6000826001600160a01b03166318160ddd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561098b57600080fd5b505afa15801561099f573d6000803e3d6000fd5b505050506040513d60208110156109b557600080fd5b505190508015610b13576005805460018082019092557f036b6384b5eca791c62761152d0c79bb0604c104a5fb6f4eb0703f3154bb3db00180546001600160a01b0319166001600160a01b03868116918217909255600081815260208481526040808320805460ff19169096179095558154855163b9a09fd560e01b81526004810194909452945191949093169263b9a09fd59260248082019391829003018186803b158015610a6457600080fd5b505afa158015610a78573d6000803e3d6000fd5b505050506040513d6020811015610a8e57600080fd5b50516001600160a01b0390811660008181526004602090815260408083208054958a166001600160a01b0319968716811790915560068054600181019091557ff652222313e28459528d920b65115c16c04f3efc82aaedc97be59f3f377c0d3f018054909616909417909455918152600290915220805484151560ff19909116179055505b505050565b600080610b2483610c87565b915091508115610b1357600580546000198101908110610b4057fe5b600091825260209091200154600580546001600160a01b039092169183908110610b6657fe5b600091825260209091200180546001600160a01b0319166001600160a01b0392909216919091179055600680546000198101908110610ba157fe5b600091825260209091200154600680546001600160a01b039092169183908110610bc757fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055506005805480610c0057fe5b600082815260209020810160001990810180546001600160a01b03191690550190556006805480610c2d57fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b0385168252600181526040808320805460ff19908116909155600290925290912080549091169055505050565b60008060005b600554811015610cdc57836001600160a01b031660058281548110610cae57fe5b6000918252602090912001546001600160a01b03161415610cd457600192509050610ce5565b600101610c8d565b50600080915091505b91509156fe4f6e6c7920676f7665726e616e6365206f7220656d657267656e63792063616e2063616c6c2074686973a264697066735822122094e7e02b7a400e6885656cf6de4166739632e7c291db355cd08d7c42f32a276d64736f6c63430007060033",
+  "devdoc": {
+    "author": "Babylon Finance Protocol Abstraction for all the different Jars",
+    "kind": "dev",
+    "methods": {
+      "updateJars(address[],bool[],bool[])": {
+        "params": {
+          "_jars": "List of jar addresses",
+          "_uniflags": "List of booleans. True means univ3 jar",
+          "_values": "List of booleans. True means valid jar"
+        }
+      }
+    },
+    "title": "PickleJarRegistry",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "updateJars(address[],bool[],bool[])": {
+        "notice": "Adds/deletes jars"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 54121,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "gaugeProxy",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_contract(IGaugeProxy)47363"
+      },
+      {
+        "astId": 54126,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "jars",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 54131,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "isUniv3",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 54136,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "noSwapParam",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 54140,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "gaugeToJar",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_mapping(t_address,t_address)"
+      },
+      {
+        "astId": 54143,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "jarList",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_array(t_address)dyn_storage"
+      },
+      {
+        "astId": 54146,
+        "contract": "contracts/registries/PickleJarRegistry.sol:PickleJarRegistry",
+        "label": "gaugeList",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_array(t_address)dyn_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_contract(IGaugeProxy)47363": {
+        "encoding": "inplace",
+        "label": "contract IGaugeProxy",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_address)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => address)",
+        "numberOfBytes": "32",
+        "value": "t_address"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      }
+    }
+  }
+}
