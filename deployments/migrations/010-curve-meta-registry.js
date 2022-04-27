@@ -24,11 +24,6 @@ module.exports = async ({
     ...(await getGasPrice()),
   });
 
-  if (deployment.newlyDeployed) {
-    console.log(`Setting curve meta registry on controller ${deployment.address}`);
-    await (await controller.editCurveMetaRegistry(deployment.address, { ...(await getGasPrice()) })).wait();
-  }
-
   if (network.live && deployment.newlyDeployed) {
     await tenderly.push(await getTenderlyContract(contract));
   }
