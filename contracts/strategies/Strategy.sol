@@ -209,6 +209,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     uint256 public override maxTradeSlippagePercentage; // Relative to the capital of the trade (1% = 1e16, 10% 1e17)
 
+    uint256[] private prices;
+
+    TradeInfo[] private trades;
+
     /* ============ Constructor ============ */
 
     /**
@@ -346,12 +350,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _fee,
         uint256[] memory _prices,
         TradeInfo[] memory _trades
-    ) external override nonReentrant {
+    ) external override nonReentrant returns (uint256[] memory prices, TradeInfo[] memory trades) {
         _onlyUnpaused();
         _onlyKeeper();
-        _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
 
-        _executesStrategy(_capital, _fee, msg.sender, _prices, _trades);
+        _require(_capital > 0, Errors.MIN_REBALANCE_CAPITAL);
+        _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
+        _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
+        _require(
+            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
+            Errors.STRATEGY_IN_COOLDOWN
+        );
+
+        return _executesStrategy(_capital, _fee, msg.sender, _prices, _trades);
     }
 
     /**
@@ -784,17 +795,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address payable _keeper,
         uint256[] memory _prices,
         TradeInfo[] memory _trades
-    ) private {
-        _require(active, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        _require(capitalAllocated.add(_capital) <= maxCapitalRequested, Errors.MAX_CAPITAL_REACHED);
-        _require(
-            block.timestamp.sub(enteredCooldownAt) >= garden.strategyCooldownPeriod(),
-            Errors.STRATEGY_IN_COOLDOWN
-        );
+    ) private returns (uint256[] memory prices, TradeInfo[] memory trades) {
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
+
         _enterStrategy(_capital, _prices, _trades);
+
         console.log('_enterStrategy:');
         // Sets the executed timestamp on first execution
         if (executedAt == 0) {
@@ -805,10 +812,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // expected return update
             expectedReturn = _updateExpectedReturn(capitalAllocated, _capital, true);
         }
+
         _updateProtocolPrincipal(_capital, true);
+
         garden.payKeeper(_keeper, _fee);
         updatedAt = block.timestamp;
+
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
+
+        return (prices, trades);
     }
 
     /**

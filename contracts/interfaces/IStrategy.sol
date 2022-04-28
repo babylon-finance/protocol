@@ -56,8 +56,8 @@ interface IStrategy {
         uint256 _capital,
         uint256 _fee,
         uint256[] memory _prices,
-        TradeInfo[] memory trades
-    ) external;
+        TradeInfo[] memory _trades
+    ) external returns (uint256[] memory prices, TradeInfo[] memory trades);
 
     function getNAV() external view returns (uint256);
 

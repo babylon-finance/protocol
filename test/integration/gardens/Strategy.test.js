@@ -237,7 +237,7 @@ describe('Strategy', function () {
   });
 
   describe('executeStrategy', async function () {
-    it.only('should execute strategy', async function () {
+    it('should execute strategy', async function () {
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -249,6 +249,46 @@ describe('Strategy', function () {
       await executeStrategy(strategyContract, { amount: eth().mul(2), fee: 42 });
 
       const [active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+
+      expect(active).to.equal(true);
+      expect(dataSet).to.equal(true);
+      expect(finalized).to.equal(false);
+      expect(executedAt).to.not.equal(0);
+      expect(exitedAt).to.equal(ethers.BigNumber.from(0));
+    });
+
+    it.only('can pre-fetch prices and trades', async function () {
+      const strategy = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+
+      await increaseTime(ONE_DAY_IN_SECONDS);
+
+      const [prices, trades] = await strategy
+        // use keeper
+        .connect(keeper)
+        .callStatic
+        .executeStrategy(eth(), 0, [], [], {
+          gasPrice: 0,
+          gasLimit: 9999999,
+        });
+
+      console.log('prices:', prices);
+      console.log('trades:', trades);
+
+      await strategy
+        // use keeper
+        .connect(keeper)
+        .executeStrategy(eth(), 0, prices, trades, {
+          gasPrice: 0,
+          gasLimit: 9999999,
+        });
+
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();
 
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
