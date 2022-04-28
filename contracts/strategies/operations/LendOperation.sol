@@ -79,7 +79,7 @@ contract LendOperation is Operation {
                 _args.capital,
                 assetToken,
                 0,
-                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
         console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
@@ -120,7 +120,7 @@ contract LendOperation is Operation {
                 address(msg.sender).balance,
                 WETH,
                 0,
-                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
             assetToken = WETH;
         }
@@ -245,7 +245,7 @@ contract LendOperation is Operation {
                 borrowBalance,
                 _assetToken,
                 0,
-                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
         }
     }

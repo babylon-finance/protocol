@@ -131,7 +131,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 _sendToken == address(0) ? WETH : _sendToken,
                 _sendQuantity,
                 _receiveToken == address(0) ? WETH : _receiveToken,
-                _minReceiveQuantity
+                _minReceiveQuantity,
+                _tradeInfo
             );
 
         console.log('receivedQuantity:', receivedQuantity);
@@ -192,7 +193,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _minReceiveQuantity
+        uint256 _minReceiveQuantity,
+        IStrategy.TradeInfo memory _tradeInfo
     ) private returns (uint256) {
         require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
 

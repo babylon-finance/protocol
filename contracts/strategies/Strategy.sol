@@ -39,8 +39,6 @@ import 'hardhat/console.sol';
  * @title Strategy
  * @author Babylon Finance
  *
- * Base Strategy contract. Belongs to a garden. Abstract.
- * Will be extended from specific strategy contracts.
  */
 contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     using SignedSafeMath for int256;
@@ -499,13 +497,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
+        address[] memory arr; 
+        IStrategy.TradeProtocol[] memory ar1;
         _trade(
             _token,
             balance,
             garden.reserveAsset(),
             _newSlippage,
             0,
-            TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
         );
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
@@ -578,7 +578,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _overrideSlippage,
                 0,
-                TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
     }
 
@@ -905,7 +905,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 garden.reserveAsset(),
                 0,
                 0,
-                TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
         }
     }

@@ -137,7 +137,7 @@ contract DepositVaultOperation is Operation {
                                 amount,
                                 rasset,
                                 0,
-                                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
                             );
                         }
                     }
@@ -228,7 +228,7 @@ contract DepositVaultOperation is Operation {
                     _capital,
                     _vaultAsset,
                     0,
-                    IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                    IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
                 )
                 : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
 

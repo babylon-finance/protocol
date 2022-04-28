@@ -115,7 +115,7 @@ contract BorrowOperation is Operation {
                 normalizedAmount,
                 WETH,
                 0,
-                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
             borrowToken = WETH;
         }
@@ -217,7 +217,7 @@ contract BorrowOperation is Operation {
                 IERC20(_asset).universalBalanceOf(msg.sender),
                 _assetToken,
                 0,
-                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
         }
     }

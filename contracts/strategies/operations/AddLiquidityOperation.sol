@@ -139,7 +139,7 @@ contract AddLiquidityOperation is Operation {
                         address(msg.sender).balance,
                         reserveAsset,
                         0,
-                        IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                        IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
                     );
                     poolTokens[i] = WETH;
                 }
@@ -150,7 +150,7 @@ contract AddLiquidityOperation is Operation {
                             IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
                             reserveAsset,
                             0,
-                            IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                            IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
                         );
                     }
                 }
@@ -231,7 +231,7 @@ contract AddLiquidityOperation is Operation {
                     normalizedAssetAmount,
                     _poolToken,
                     0,
-                    IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                    IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
                 );
         }
         // Reserve asset

@@ -12,13 +12,12 @@ import {IGarden} from '../interfaces/IGarden.sol';
  * Interface for strategy
  */
 interface IStrategy {
+
+    enum TradeProtocol { Curve, UniV2, UniV3, Heart, Paladin }
+
     struct TradeInfo {
-        address _strategy;
-        address _sendToken;
-        uint256 _sendQuantity;
-        address _receiveToken;
-        uint256 _minReceiveQuantity;
-        address _hopToken;
+        TradeProtocol[] path;
+        address[] hops;
     }
 
     function initialize(

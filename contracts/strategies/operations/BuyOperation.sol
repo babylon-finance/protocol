@@ -86,7 +86,7 @@ contract BuyOperation is Operation {
                 _prices.length > 0 ? _prices[0] : 0,
                 _trades.length > 0
                     ? _trades[0]
-                    : IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+                    : IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
             );
         return (token, receivedQuantity, 0); // liquid
     }
