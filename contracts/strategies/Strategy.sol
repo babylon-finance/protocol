@@ -350,7 +350,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _fee,
         uint256[] memory _prices,
         TradeInfo[] memory _trades
-    ) external override nonReentrant returns (uint256[] memory prices, TradeInfo[] memory trades) {
+    ) external override nonReentrant returns (uint256[] memory, TradeInfo[] memory) {
         _onlyUnpaused();
         _onlyKeeper();
 
@@ -563,6 +563,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (uint256) {
         _onlyOperation();
         _onlyUnpaused();
+
         return _trade(_sendToken, _sendQuantity, _receiveToken,
                       _overrideSlippage, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
     }
@@ -795,7 +796,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         address payable _keeper,
         uint256[] memory _prices,
         TradeInfo[] memory _trades
-    ) private returns (uint256[] memory prices, TradeInfo[] memory trades) {
+    ) private returns (uint256[] memory, TradeInfo[] memory) {
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
         capitalAllocated = capitalAllocated.add(_capital);
@@ -820,6 +821,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
         emit StrategyExecuted(address(garden), _capital, _fee, block.timestamp);
 
+        console.log('prices.length:', prices.length);
+        console.log('before return');
         return (prices, trades);
     }
 
@@ -934,13 +937,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         TradeInfo memory _tradeInfo
     ) private returns (uint256) {
         console.log('trade');
-        // Uses on chain oracle for all internal strategy operations to avoid attacks
-        uint256 price = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
-        console.log('price:', price);
-        _require(price != 0, Errors.NO_PRICE_FOR_TRADE);
+        if (_price == 0) {
+            // Uses on chain oracle for all internal strategy operations to avoid attacks
+            _price = IPriceOracle(IBabController(controller).priceOracle()).getPrice(_sendToken, _receiveToken);
+            prices.push(_price);
+            console.log('prices.length:', prices.length);
+            console.log('prices:', prices[0]);
+        }
+        console.log('price:', _price);
+        _require(_price != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
-            SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken, _sendQuantity.preciseMul(price));
+            SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken,
+                                                  _sendQuantity.preciseMul(_price));
         uint256 slippage =
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
                 ? maxTradeSlippagePercentage
