@@ -219,14 +219,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         console.log('_tradeInfo.path.length :', _tradeInfo.path.length );
 
         if (_tradeInfo.path.length > 0) {
-            return (_tradeExecute(
+            return (_tradeExecute(TradeArgs(
                 _strategy,
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,
-                _minReceiveQuantity,
-                _tradeInfo
-            ), new IStrategy.TradeProtocol[](0), new address[](0));
+                _minReceiveQuantity
+            ), _tradeInfo), new IStrategy.TradeProtocol[](0), new address[](0));
         } else {
             return _tradeSearch(TradeArgs(
                 _strategy,
@@ -239,46 +238,51 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
     }
 
-    function _tradeExecute(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity,
-        IStrategy.TradeInfo memory _tradeInfo
-    ) private returns (uint256) {
+    function _tradeExecute(TradeArgs memory _args, IStrategy.TradeInfo memory _tradeInfo) private returns (uint256) {
+        address sendToken = _args.sendToken;
+        uint256 sendQuantity = _args.sendQuantity;
+        address receiveToken =  _args.receiveToken;
+        uint256 receivedQuantity;
+
         for (uint256 index = 0; index < _tradeInfo.path.length; index++) {
             bool isLast = index == _tradeInfo.path.length - 1;
             IStrategy.TradeProtocol protocol = _tradeInfo.path[index];
 
-            _minReceiveQuantity = isLast ? _minReceiveQuantity : 1;
+            uint256 minReceiveQuantity = isLast ? _args.minReceiveQuantity : 1;
+            ITradeIntegration integration;
 
             if (protocol == IStrategy.TradeProtocol.Paladin) {
-                // Palstake AAVE
-                if (_receiveToken == palStkAAVE) {
-                    uint256 aaveTradeQuantity = _sendToken != AAVE ? ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1) : _sendQuantity;
-                    return ITradeIntegration(paladinTradeIntegration).trade(
-                        _strategy,
-                        AAVE,
-                        aaveTradeQuantity,
-                        palStkAAVE,
-                        _minReceiveQuantity
-                    );
-                }
+                integration = paladinTradeIntegration;
+            } else if (protocol == IStrategy.TradeProtocol.Heart) {
+                integration = heartTradeIntegration;
+            } else if (protocol == IStrategy.TradeProtocol.UniV3) {
+                integration = univ3;
+            } else if (protocol == IStrategy.TradeProtocol.Curve) {
+                integration = curve;
+            } else if (protocol == IStrategy.TradeProtocol.UniV2) {
+                integration = univ2;
             }
 
-            if (protocol == IStrategy.TradeProtocol.UniV3) {
-                return ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    WETH
-                );
+            receivedQuantity = ITradeIntegration(univ3).trade(
+                _args.strategy,
+                sendToken,
+                sendQuantity,
+                receiveToken,
+                minReceiveQuantity,
+                address(0)
+            );
+
+
+            if (!isLast) {
+                // swap vars for the next loop
+                sendToken = receiveToken;
+                sendQuantity = receivedQuantity;
+                receiveToken = _tradeInfo.hops[index];
             }
 
         }
+
+        return receivedQuantity;
     }
 
     function _tradeSearch(TradeArgs memory _args) private returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory) {
