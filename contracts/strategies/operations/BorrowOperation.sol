@@ -63,7 +63,11 @@ contract BorrowOperation is Operation {
     /**
      * Executes the borrow operation
      */
-    function executeOperation(Args memory _args, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades)
+    function executeOperation(
+        Args memory _args,
+        uint256[] memory _prices,
+        IStrategy.TradeInfo[] memory _trades
+    )
         external
         override
         onlyStrategy
@@ -106,7 +110,13 @@ contract BorrowOperation is Operation {
         // if borrowToken is ETH wrap it to WETH
         console.log('borrowToken:', borrowToken);
         if (borrowToken == address(0)) {
-            IStrategy(msg.sender).trade(borrowToken, normalizedAmount, WETH, 0, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0)) );
+            IStrategy(msg.sender).trade(
+                borrowToken,
+                normalizedAmount,
+                WETH,
+                0,
+                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
             borrowToken = WETH;
         }
         console.log('after trade');
@@ -202,9 +212,13 @@ contract BorrowOperation is Operation {
     ) private {
         uint256 debtTokenBalance = IERC20(_assetToken).universalBalanceOf(address(msg.sender));
         if (_asset != _assetToken && debtTokenBalance < _debtAmount) {
-            IStrategy(msg.sender).trade(_asset,
-                                        IERC20(_asset).universalBalanceOf(msg.sender),
-                                        _assetToken, 0, IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
+            IStrategy(msg.sender).trade(
+                _asset,
+                IERC20(_asset).universalBalanceOf(msg.sender),
+                _assetToken,
+                0,
+                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
         }
     }
 }

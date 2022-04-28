@@ -109,24 +109,23 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
      * Executes a trade choosing the appropriate protocol for it
      * @dev
      *
-     * @param _strategy             Address of the strategy
      * @param _sendToken            Address of the token to be sent to the exchange
      * @param _sendQuantity         Units of reserve asset token sent to the exchange
      * @param _receiveToken         Address of the token that will be received from the exchange
      * @param _minReceiveQuantity   Min units of wanted token to be received from the exchange
      */
     function trade(
-        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity
     ) public override nonReentrant returns (uint256) {
+        address strategy = msg.sender;
         console.log('trade');
         // deposit ETH to WETH if it is a send token
         if (_sendToken == address(0)) {
             console.log('wrap');
-            IStrategy(_strategy).invokeFromIntegration(
+            IStrategy(strategy).invokeFromIntegration(
                 WETH,
                 _sendQuantity,
                 abi.encodeWithSelector(IWETH.deposit.selector)
@@ -140,7 +139,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         // handle ETH<>WETH as a special case
         uint256 receivedQuantity =
             _trade(
-                _strategy,
+                strategy,
                 _sendToken == address(0) ? WETH : _sendToken,
                 _sendQuantity,
                 _receiveToken == address(0) ? WETH : _receiveToken,
@@ -152,12 +151,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         // unrwap WETH if ETH is a receive token
         if (_receiveToken == address(0)) {
             console.log('unwrap');
-            IStrategy(_strategy).invokeFromIntegration(
+            IStrategy(strategy).invokeFromIntegration(
                 WETH,
                 0,
                 abi.encodeWithSelector(IWETH.withdraw.selector, receivedQuantity)
             );
-            console.log('_strategy.balance:', _strategy.balance);
+            console.log('strategy.balance:', strategy.balance);
         }
 
         return receivedQuantity;

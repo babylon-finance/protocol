@@ -499,7 +499,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+        _trade(
+            _token,
+            balance,
+            garden.reserveAsset(),
+            _newSlippage,
+            0,
+            TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+        );
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
     }
@@ -564,8 +571,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyOperation();
         _onlyUnpaused();
 
-        return _trade(_sendToken, _sendQuantity, _receiveToken,
-                      _overrideSlippage, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+        return
+            _trade(
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _overrideSlippage,
+                0,
+                TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
     }
 
     function trade(
@@ -831,7 +845,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Executes all the operations in order
      * @param _capital  Amount of capital that the strategy receives
      */
-    function _enterStrategy(uint256 _capital, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades) private {
+    function _enterStrategy(
+        uint256 _capital,
+        uint256[] memory _prices,
+        IStrategy.TradeInfo[] memory _trades
+    ) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
@@ -881,7 +899,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-            _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0, 0, TradeInfo(address(0), address(0), 0, address(0), 0, address(0)));
+            _trade(
+                assetFinalized,
+                capitalPending,
+                garden.reserveAsset(),
+                0,
+                0,
+                TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
         }
     }
 
@@ -948,8 +973,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(_price != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
         uint256 exactAmount =
-            SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken,
-                                                  _sendQuantity.preciseMul(_price));
+            SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken, _sendQuantity.preciseMul(_price));
         uint256 slippage =
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
                 ? maxTradeSlippagePercentage
@@ -957,8 +981,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         console.log('before trade');
         uint256 receivedQuantity =
-            ITradeIntegration(IBabController(controller).masterSwapper()).trade(
-                address(this),
+            IBabController(controller).masterSwapper().trade(
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,

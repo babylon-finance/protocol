@@ -14,7 +14,6 @@ interface IMasterSwapper {
     /* ============ Functions ============ */
 
     function trade(
-        address _strategy,
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,

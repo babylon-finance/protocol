@@ -15,6 +15,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IJar} from '../../interfaces/external/pickle/IJar.sol';
 import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
+import {IMasterSwapper} from '../../interfaces/IMasterSwapper.sol';
 
 /**
  * @title PickleJarIntegration
@@ -196,15 +197,14 @@ contract PickleJarIntegration is PassiveIntegration {
                     minAmount
                 );
                 bytes memory methodData =
-                    abi.encodeWithSignature(
-                        'trade(address,address,uint256,address,uint256)',
-                        _strategy,
+                    abi.encodeWithSelector(
+                        IMasterSwapper.trade.selector,
                         IJarUniV3(_asset).token0(),
                         token0Amount,
                         IJarUniV3(_asset).token1(),
                         minAmount
                     );
-                return (controller.masterSwapper(), 0, methodData);
+                return (address(controller.masterSwapper()), 0, methodData);
             }
         }
         return (address(0), 0, bytes(''));
@@ -251,15 +251,14 @@ contract PickleJarIntegration is PassiveIntegration {
                     minAmount
                 );
                 bytes memory methodData =
-                    abi.encodeWithSignature(
-                        'trade(address,address,uint256,address,uint256)',
-                        _strategy,
+                    abi.encodeWithSelector(
+                        IMasterSwapper.trade.selector,
                         IJarUniV3(_asset).token1(),
                         token1Amount,
                         IJarUniV3(_asset).token0(),
                         minAmount
                     );
-                return (controller.masterSwapper(), 0, methodData);
+                return (address(controller.masterSwapper()), 0, methodData);
             }
         }
         return (address(0), 0, bytes(''));

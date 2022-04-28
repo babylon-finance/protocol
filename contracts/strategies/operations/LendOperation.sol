@@ -56,7 +56,11 @@ contract LendOperation is Operation {
     /**
      * Executes the lend operation
      */
-    function executeOperation(Args memory _args, uint256[] memory _prices, IStrategy.TradeInfo[] memory _trades)
+    function executeOperation(
+        Args memory _args,
+        uint256[] memory _prices,
+        IStrategy.TradeInfo[] memory _trades
+    )
         external
         override
         onlyStrategy
@@ -69,11 +73,14 @@ contract LendOperation is Operation {
         address assetToken = BytesLib.decodeOpDataAddress(_args.data); // We just use the first 20 bytes from the whole opEncodedData
         console.log('lend');
         // Trade _asset to _assetToken
-        uint256 numTokensToSupply = IStrategy(msg.sender).trade(_args.asset,
-                                                                _args.capital,
-                                                                assetToken,
-                                                                0,
-                                                               IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
+        uint256 numTokensToSupply =
+            IStrategy(msg.sender).trade(
+                _args.asset,
+                _args.capital,
+                assetToken,
+                0,
+                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
         console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
@@ -108,10 +115,13 @@ contract LendOperation is Operation {
         _redeemTokens(_borrowToken, _debt, _percentage, msg.sender, _integration, assetToken);
         // Change to weth if needed
         if (assetToken == address(0)) {
-            IStrategy(msg.sender).trade(assetToken, address(msg.sender).balance,
-                                        WETH,
-                                        0,
-                                       IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
+            IStrategy(msg.sender).trade(
+                assetToken,
+                address(msg.sender).balance,
+                WETH,
+                0,
+                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
             assetToken = WETH;
         }
         address rewardsToken = _getRewardToken(_integration);
@@ -230,10 +240,13 @@ contract LendOperation is Operation {
         // Trade borrow token (from liquidations)
         uint256 borrowBalance = IERC20(_borrowToken).universalBalanceOf(msg.sender);
         if (borrowBalance > 1e6) {
-            IStrategy(msg.sender).trade(_borrowToken, borrowBalance,
-                                        _assetToken,
-                                        0,
-                                       IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))  );
+            IStrategy(msg.sender).trade(
+                _borrowToken,
+                borrowBalance,
+                _assetToken,
+                0,
+                IStrategy.TradeInfo(address(0), address(0), 0, address(0), 0, address(0))
+            );
         }
     }
 

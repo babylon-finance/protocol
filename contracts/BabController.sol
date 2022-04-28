@@ -19,6 +19,7 @@ import {IIntegration} from './interfaces/IIntegration.sol';
 import {IBabController} from './interfaces/IBabController.sol';
 import {IHypervisor} from './interfaces/IHypervisor.sol';
 import {IWETH} from './interfaces/external/weth/IWETH.sol';
+import {IMasterSwapper} from './interfaces/IMasterSwapper.sol';
 
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {LowGasSafeMath} from './lib/LowGasSafeMath.sol';
@@ -48,7 +49,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     event ControllerIntegrationRemoved(address _integration, string indexed _integrationName);
     event ControllerIntegrationEdited(address _newIntegration, string indexed _integrationName);
     event ControllerOperationSet(uint8 indexed _kind, address _address);
-    event MasterSwapperChanged(address indexed _newTradeIntegration, address _oldTradeIntegration);
+    event MasterSwapperChanged(IMasterSwapper indexed _newTradeIntegration, IMasterSwapper _oldTradeIntegration);
 
     event ReserveAssetAdded(address indexed _reserveAsset);
     event ReserveAssetRemoved(address indexed _reserveAsset);
@@ -105,7 +106,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     // Mapping of integration name => integration address
     mapping(bytes32 => address) private enabledIntegrations; // DEPRECATED
     // Address of the master swapper used by the protocol
-    address public override masterSwapper;
+    IMasterSwapper public override masterSwapper;
     // Mapping of valid operations
     address[MAX_OPERATIONS] public override enabledOperations;
 
@@ -229,7 +230,6 @@ contract BabController is OwnableUpgradeable, IBabController {
         bool[] memory _publicGardenStrategistsStewards,
         uint256[] memory _profitSharing
     ) external payable override returns (address) {
-        require(masterSwapper != address(0), 'Need a default trade integration');
         require(enabledOperations.length > 0, 'Need operations enabled');
         require(
             mardukGate != address(0) &&
@@ -607,11 +607,12 @@ contract BabController is OwnableUpgradeable, IBabController {
      *
      * @param _newDefaultMasterSwapper     Address of the new default trade integration
      */
-    function setMasterSwapper(address _newDefaultMasterSwapper) external override {
+    function setMasterSwapper(IMasterSwapper _newDefaultMasterSwapper) external override {
         _onlyGovernanceOrEmergency();
-        require(_newDefaultMasterSwapper != address(0), 'Address must not be 0');
+        require(address(_newDefaultMasterSwapper) != address(0), 'Address must not be 0');
         require(_newDefaultMasterSwapper != masterSwapper, 'Address must be different');
-        address oldMasterSwapper = masterSwapper;
+
+        IMasterSwapper oldMasterSwapper = masterSwapper;
         masterSwapper = _newDefaultMasterSwapper;
 
         emit MasterSwapperChanged(_newDefaultMasterSwapper, oldMasterSwapper);
@@ -749,7 +750,7 @@ contract BabController is OwnableUpgradeable, IBabController {
             gardenValuer == _contractAddress ||
             priceOracle == _contractAddress ||
             gardenFactory == _contractAddress ||
-            masterSwapper == _contractAddress ||
+            address(masterSwapper) == _contractAddress ||
             strategyFactory == _contractAddress ||
             rewardsDistributor == _contractAddress ||
             owner() == _contractAddress ||

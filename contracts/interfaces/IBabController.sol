@@ -2,6 +2,8 @@
 
 pragma solidity 0.7.6;
 
+import {IMasterSwapper} from './IMasterSwapper.sol';
+
 /**
  * @title IBabController
  * @author Babylon Finance
@@ -63,7 +65,7 @@ interface IBabController {
 
     function setOperation(uint8 _kind, address _operation) external;
 
-    function setMasterSwapper(address _newMasterSwapper) external;
+    function setMasterSwapper(IMasterSwapper _new) external;
 
     function addKeeper(address _keeper) external;
 
@@ -117,7 +119,7 @@ interface IBabController {
 
     function strategyFactory() external view returns (address);
 
-    function masterSwapper() external view returns (address);
+    function masterSwapper() external view returns (IMasterSwapper);
 
     function gardenTokensTransfersEnabled() external view returns (bool);
 

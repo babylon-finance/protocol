@@ -271,8 +271,7 @@ describe('Strategy', function () {
       const [prices, trades] = await strategy
         // use keeper
         .connect(keeper)
-        .callStatic
-        .executeStrategy(eth(), 0, [], [], {
+        .callStatic.executeStrategy(eth(), 0, [], [], {
           gasPrice: 0,
           gasLimit: 9999999,
         });
