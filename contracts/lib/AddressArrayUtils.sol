@@ -1,23 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-/*
-    Copyright 2020 Set Labs Inc.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    SPDX-License-Identifier: Apache License, Version 2.0
-*/
-
 pragma solidity 0.7.6;
 
 /**
@@ -130,6 +112,12 @@ library AddressArrayUtils {
       Unfortunately Solidity does not support convertion of the fixed array to dynamic array so these functions are
       required. This functionality would be supported in the future so these methods can be removed.
     */
+    function toDynamic(address _one) internal pure returns (address[] memory) {
+        address[] memory arr = new address[](1);
+        arr[0] = _one;
+        return arr;
+    }
+
     function toDynamic(address _one, address _two) internal pure returns (address[] memory) {
         address[] memory arr = new address[](2);
         arr[0] = _one;

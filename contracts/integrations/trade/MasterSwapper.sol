@@ -23,6 +23,7 @@ import {IWETH} from '../../interfaces/external/weth/IWETH.sol';
 import {String} from '../../lib/String.sol';
 import {DeFiUtils} from '../../lib/DeFiUtils.sol';
 import {AddressArrayUtils} from '../../lib/AddressArrayUtils.sol';
+import {IntegerUtils} from '../../lib/IntegerUtils.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {ControllerLib} from '../../lib/ControllerLib.sol';
@@ -46,6 +47,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
     /* ============ Struct ============ */
 
+    struct TradeArgs {
+        address strategy;
+        address sendToken;
+        uint256 sendQuantity;
+        address receiveToken;
+        uint256 minReceiveQuantity;
+    }
+
     /* ============ Events ============ */
 
     /* ============ Constants ============ */
@@ -62,6 +71,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     ITradeIntegration public curve;
     ITradeIntegration public heartTradeIntegration;
     ITradeIntegration public paladinTradeIntegration;
+    address[] curveUniHopTokens;
+    address[] uniV3HopTokens;
 
     /* ============ Constructor ============ */
 
@@ -88,6 +99,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         univ2 = _univ2;
         heartTradeIntegration = _hearttrade;
         paladinTradeIntegration = _paladinTrade;
+
+        curveUniHopTokens = [DAI, WETH, WBTC, AAVE];
+        uniV3HopTokens = [DAI, USDC, WBTC, USDT];
     }
 
     /* ============ External Functions ============ */
@@ -107,7 +121,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         IStrategy.TradeInfo memory _tradeInfo
-    ) public override nonReentrant returns (uint256) {
+    ) public override nonReentrant returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory) {
         address strategy = msg.sender;
         console.log('trade');
         // deposit ETH to WETH if it is a send token
@@ -125,7 +139,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         console.log('_receiveToken:', _receiveToken);
         console.log('_minReceiveQuantity:', _minReceiveQuantity);
         // handle ETH<>WETH as a special case
-        uint256 receivedQuantity =
+        (uint256 receivedQuantity,,) =
             _trade(
                 strategy,
                 _sendToken == address(0) ? WETH : _sendToken,
@@ -148,7 +162,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             console.log('strategy.balance:', strategy.balance);
         }
 
-        return receivedQuantity;
+        return (receivedQuantity, new IStrategy.TradeProtocol[](0), new address[](0));
     }
 
     /**
@@ -195,124 +209,219 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         IStrategy.TradeInfo memory _tradeInfo
-    ) private returns (uint256) {
+    ) private returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory) {
         require(_minReceiveQuantity > 0, 'minReceiveQuantity > 0');
 
         if (_sendToken == _receiveToken) {
-            return _sendQuantity;
+            return (_sendQuantity, new IStrategy.TradeProtocol[](0), new address[](0));
         }
 
-        string memory error;
-        uint256 receivedQuantity;
+        console.log('_tradeInfo.path.length :', _tradeInfo.path.length );
 
-        // Palstake AAVE
-        if (_receiveToken == palStkAAVE) {
-            uint256 aaveTradeQuantity =
-                _sendToken != AAVE
-                    ? ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1)
-                    : _sendQuantity;
-            try
-                ITradeIntegration(paladinTradeIntegration).trade(
-                    _strategy,
-                    AAVE,
-                    aaveTradeQuantity,
-                    palStkAAVE,
-                    _minReceiveQuantity
-                )
-            returns (uint256 receivedQuantity) {
-                return receivedQuantity;
-            } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'Paladin Trade Integration ', _sendToken, palStkAAVE);
-            }
-        }
-
-        // Heart Direct
-        if (controller.protocolWantedAssets(_sendToken)) {
-            // If the heart wants it go through the heart and get WETH
-            try ITradeIntegration(heartTradeIntegration).trade(_strategy, _sendToken, _sendQuantity, WETH, 1) returns (
-                uint256 receivedQuantity
-            ) {
-                _sendToken = WETH;
-                _sendQuantity = receivedQuantity;
-                if (_receiveToken == WETH) {
-                    return receivedQuantity;
-                }
-            } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'Heart Trade Integration ', _sendToken, WETH);
-            }
-        }
-
-        // Curve Direct
-        try
-            ITradeIntegration(curve).trade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity)
-        returns (uint256 receivedQuantity) {
-            return receivedQuantity;
-        } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'Curve ', _sendToken, _receiveToken);
-        }
-
-        // Go through UNIv3 first via WETH
-        try
-            ITradeIntegration(univ3).trade(
+        if (_tradeInfo.path.length > 0) {
+            return (_tradeExecute(
                 _strategy,
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,
                 _minReceiveQuantity,
+                _tradeInfo
+            ), new IStrategy.TradeProtocol[](0), new address[](0));
+        } else {
+            return _tradeSearch(TradeArgs(
+                _strategy,
+                _sendToken,
+                _sendQuantity,
+                _receiveToken,
+                _minReceiveQuantity
+            ));
+        }
+
+    }
+
+    function _tradeExecute(
+        address _strategy,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        IStrategy.TradeInfo memory _tradeInfo
+    ) private returns (uint256) {
+        for (uint256 index = 0; index < _tradeInfo.path.length; index++) {
+            bool isLast = index == _tradeInfo.path.length - 1;
+            IStrategy.TradeProtocol protocol = _tradeInfo.path[index];
+            if (protocol == IStrategy.TradeProtocol.Paladin) {
+                // Palstake AAVE
+                if (_receiveToken == palStkAAVE) {
+                    uint256 aaveTradeQuantity = _sendToken != AAVE ? ITradeIntegration(univ3).trade(_strategy, _sendToken, _sendQuantity, AAVE, 1) : _sendQuantity;
+                    return ITradeIntegration(paladinTradeIntegration).trade(
+                        _strategy,
+                        AAVE,
+                        aaveTradeQuantity,
+                        palStkAAVE,
+                        isLast ? _minReceiveQuantity : 1
+                    );
+                }
+            }
+        }
+    }
+
+    function _tradeSearch(TradeArgs memory _args) private returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory) {
+        TradeArgs memory args = _args;
+        string memory error;
+        uint256 receivedQuantity;
+        IStrategy.TradeProtocol[] memory path;
+        address[] memory hops;
+        // Palstake AAVE
+        if (args.receiveToken == palStkAAVE) {
+            uint256 aaveTradeQuantity =
+                args.sendToken != AAVE
+                    ? ITradeIntegration(univ3).trade(args.strategy, args.sendToken, args.sendQuantity, AAVE, 1)
+                    : args.sendQuantity;
+            try
+                ITradeIntegration(paladinTradeIntegration).trade(
+                    args.strategy,
+                    AAVE,
+                    aaveTradeQuantity,
+                    palStkAAVE,
+                    args.minReceiveQuantity
+                )
+            returns (uint256 receivedQuantity) {
+                return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.Paladin), AddressArrayUtils.toDynamic(address(0)));
+            } catch Error(string memory _err) {
+                error = _formatError(error, _err, 'Paladin Trade Integration ',
+                                     args.sendToken, palStkAAVE);
+            }
+        }
+
+        // Heart Direct
+        if (controller.protocolWantedAssets(args.sendToken)) {
+            // If the heart wants it go through the heart and get WETH
+            try ITradeIntegration(heartTradeIntegration).trade(args.strategy,
+                                                               args.sendToken,
+                                                               args.sendQuantity, WETH, 1) returns (
+                uint256 receivedQuantity
+            ) {
+                args.sendToken = WETH;
+                args.sendQuantity = receivedQuantity;
+                if (args.receiveToken == WETH) {
+                    return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.Heart), AddressArrayUtils.toDynamic(address(0)));
+                }
+            } catch Error(string memory _err) {
+                error = _formatError(error, _err, 'Heart Trade Integration ',
+                                     args.sendToken, WETH);
+            }
+        }
+
+        // Curve Direct
+        try
+            ITradeIntegration(curve).trade(args.strategy, args.sendToken,
+                                           args.sendQuantity, args.receiveToken,
+                                           args.minReceiveQuantity)
+        returns (uint256 receivedQuantity) {
+            return (receivedQuantity,
+                    IntegerUtils.toDynamic(IStrategy.TradeProtocol.Curve), AddressArrayUtils.toDynamic(address(0)));
+        } catch Error(string memory _err) {
+            error = _formatError(error, _err, 'Curve ', args.sendToken, args.receiveToken);
+        }
+
+        // Go through UNIv3 first via WETH
+        try
+            ITradeIntegration(univ3).trade(
+                args.strategy,
+                args.sendToken,
+                args.sendQuantity,
+                args.receiveToken,
+                args.minReceiveQuantity,
                 WETH
             )
         returns (uint256 receivedQuantity) {
-            return receivedQuantity;
+            return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.UniV3), AddressArrayUtils.toDynamic(WETH));
         } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'UniV3 ', _sendToken, WETH, _receiveToken);
+            error = _formatError(error, _err, 'UniV3 ', args.sendToken, WETH,
+                                 args.receiveToken);
         }
 
-        // Try Curve through reserve assets
-        (error, receivedQuantity) = _swapCurveUni(
-            _strategy,
-            _sendToken,
-            _sendQuantity,
-            _receiveToken,
-            _minReceiveQuantity,
-            error
-        );
-        if (receivedQuantity > 0) {
-            return receivedQuantity;
+        // Try Curve-Uni through reserve assets
+        for (uint256 i = 0; i < curveUniHopTokens.length; i++) {
+            if (args.sendToken != curveUniHopTokens[i] && args.receiveToken !=
+                curveUniHopTokens[i]) {
+                // Going through Curve but switching first to reserve
+                try
+                    this.swapSwap(
+                        univ3,
+                        curve,
+                        curveUniHopTokens[i],
+                        args.strategy,
+                        args.sendToken,
+                        args.sendQuantity,
+                        args.receiveToken,
+                        args.minReceiveQuantity
+                    )
+                returns (uint256 receivedQuantity) {
+                    return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.UniV3, IStrategy.TradeProtocol.Curve), AddressArrayUtils.toDynamic(address(0), address(0)));
+                } catch Error(string memory _err) {
+                    error = _formatError(error, _err, 'Uni-Curve ',
+                                         args.sendToken, curveUniHopTokens[i],
+                                         args.receiveToken);
+                }
+                // Going through Curve to reserve asset and
+                // then receive asset via Uni to reserve asset
+                try
+                    this.swapSwap(
+                        curve,
+                        univ3,
+                        curveUniHopTokens[i],
+                        args.strategy,
+                        args.sendToken,
+                        args.sendQuantity,
+                        args.receiveToken,
+                        args.minReceiveQuantity
+                    )
+                returns (uint256 receivedQuantity) {
+                    return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.Curve, IStrategy.TradeProtocol.UniV3), AddressArrayUtils.toDynamic(address(0), address(0)));
+                } catch Error(string memory _err) {
+                    error = _formatError(error, _err, 'Curve-Uni ',
+                                         args.sendToken, curveUniHopTokens[i],
+                                         args.receiveToken);
+                }
+            }
         }
 
-        // Try Univ3 through DAI, USDC, WBTC, USDT
-        address[4] memory reserves = [DAI, USDC, WBTC, USDT];
-        for (uint256 i = 0; i < reserves.length; i++) {
+        // Try Univ3 through uniV3HopTokens
+        for (uint256 i = 0; i < uniV3HopTokens.length; i++) {
             try
                 ITradeIntegration(univ3).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity,
-                    reserves[i]
+                    args.strategy,
+                    args.sendToken,
+                    args.sendQuantity,
+                    args.receiveToken,
+                    args.minReceiveQuantity,
+                    uniV3HopTokens[i]
                 )
             returns (uint256 receivedQuantity) {
-                return receivedQuantity;
+                return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.UniV3), AddressArrayUtils.toDynamic(uniV3HopTokens[i]));
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV3 ', _sendToken, reserves[i], _receiveToken);
+                error = _formatError(error, _err, 'UniV3 ', args.sendToken,
+                                     uniV3HopTokens[i], args.receiveToken);
             }
         }
 
         // Try on UniV2 through WETH
         try
             ITradeIntegration(univ2).trade(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity,
+                args.strategy,
+                args.sendToken,
+                args.sendQuantity,
+                args.receiveToken,
+                args.minReceiveQuantity,
                 WETH
             )
         returns (uint256 receivedQuantity) {
-            return receivedQuantity;
+            return (receivedQuantity, IntegerUtils.toDynamic(IStrategy.TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH));
         } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'UniV2 ', _sendToken, WETH, _receiveToken);
+            error = _formatError(error, _err, 'UniV2 ', args.sendToken, WETH,
+                                 args.receiveToken);
         }
 
         revert(string(abi.encodePacked('MasterSwapper:', error)));
@@ -332,57 +441,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
         uint256 receivedQuantity = ITradeIntegration(_one).trade(_strategy, _sendToken, _sendQuantity, _reserve, 1);
         return ITradeIntegration(_two).trade(_strategy, _reserve, receivedQuantity, _receiveToken, _minReceiveQuantity);
-    }
-
-    function _swapCurveUni(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity,
-        string memory error
-    ) internal returns (string memory, uint256) {
-        address[4] memory reserves = [DAI, WETH, WBTC, AAVE];
-        for (uint256 i = 0; i < reserves.length; i++) {
-            if (_sendToken != reserves[i] && _receiveToken != reserves[i]) {
-                // Going through Curve but switching first to reserve
-                try
-                    this.swapSwap(
-                        univ3,
-                        curve,
-                        reserves[i],
-                        _strategy,
-                        _sendToken,
-                        _sendQuantity,
-                        _receiveToken,
-                        _minReceiveQuantity
-                    )
-                returns (uint256 receivedQuantity) {
-                    return ('', receivedQuantity);
-                } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Uni-Curve ', _sendToken, reserves[i], _receiveToken);
-                }
-                // Going through Curve to reserve asset and
-                // then receive asset via Uni to reserve asset
-                try
-                    this.swapSwap(
-                        curve,
-                        univ3,
-                        reserves[i],
-                        _strategy,
-                        _sendToken,
-                        _sendQuantity,
-                        _receiveToken,
-                        _minReceiveQuantity
-                    )
-                returns (uint256 receivedQuantity) {
-                    return ('', receivedQuantity);
-                } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Curve-Uni ', _sendToken, reserves[i], _receiveToken);
-                }
-            }
-        }
-        return (error, 0);
     }
 
     function _swap(
@@ -445,15 +503,5 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     ';'
                 )
             );
-    }
-
-    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-        assembly {
-            result := mload(add(source, 32))
-        }
     }
 }

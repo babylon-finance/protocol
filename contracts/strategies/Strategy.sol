@@ -980,7 +980,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 : DEFAULT_TRADE_SLIPPAGE;
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         console.log('before trade');
-        uint256 receivedQuantity =
+        (uint256 receivedQuantity, IStrategy.TradeProtocol[] memory path, address[] memory hops) =
             IBabController(controller).masterSwapper().trade(
                 _sendToken,
                 _sendQuantity,

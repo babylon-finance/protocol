@@ -21,7 +21,7 @@ interface IMasterSwapper {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         IStrategy.TradeInfo memory _tradeInfo
-    ) external returns (uint256);
+    ) external returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory); 
 
     function isTradeIntegration(address _integration) external view returns (bool);
 }
