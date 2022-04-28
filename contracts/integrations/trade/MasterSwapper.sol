@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -118,7 +119,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         address _sendToken,
         uint256 _sendQuantity,
         address _receiveToken,
-        uint256 _minReceiveQuantity
+        uint256 _minReceiveQuantity,
+        IStrategy.TradeInfo memory _tradeInfo
     ) public override nonReentrant returns (uint256) {
         address strategy = msg.sender;
         console.log('trade');

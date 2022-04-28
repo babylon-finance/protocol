@@ -985,7 +985,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _sendToken,
                 _sendQuantity,
                 _receiveToken,
-                minAmountExpected
+                minAmountExpected,
+                _tradeInfo
             );
         console.log('receivedQuantity:', receivedQuantity);
         return receivedQuantity;
