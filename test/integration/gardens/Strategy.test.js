@@ -289,6 +289,8 @@ describe('Strategy', function () {
 
       const [active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();
 
+      expect(await strategy.getNAV()).to.be.closeTo(eth(), eth().div(100));
+
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);

@@ -139,7 +139,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         console.log('_receiveToken:', _receiveToken);
         console.log('_minReceiveQuantity:', _minReceiveQuantity);
         // handle ETH<>WETH as a special case
-        (uint256 receivedQuantity,,) =
+        (uint256 receivedQuantity, IStrategy.TradeProtocol[] memory path, address[] memory hops) =
             _trade(
                 strategy,
                 _sendToken == address(0) ? WETH : _sendToken,
@@ -162,7 +162,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             console.log('strategy.balance:', strategy.balance);
         }
 
-        return (receivedQuantity, new IStrategy.TradeProtocol[](0), new address[](0));
+        return (receivedQuantity, path, hops);
     }
 
     /**
@@ -250,6 +250,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         for (uint256 index = 0; index < _tradeInfo.path.length; index++) {
             bool isLast = index == _tradeInfo.path.length - 1;
             IStrategy.TradeProtocol protocol = _tradeInfo.path[index];
+
+            _minReceiveQuantity = isLast ? _minReceiveQuantity : 1;
+
             if (protocol == IStrategy.TradeProtocol.Paladin) {
                 // Palstake AAVE
                 if (_receiveToken == palStkAAVE) {
@@ -259,10 +262,22 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                         AAVE,
                         aaveTradeQuantity,
                         palStkAAVE,
-                        isLast ? _minReceiveQuantity : 1
+                        _minReceiveQuantity
                     );
                 }
             }
+
+            if (protocol == IStrategy.TradeProtocol.UniV3) {
+                return ITradeIntegration(univ3).trade(
+                    _strategy,
+                    _sendToken,
+                    _sendQuantity,
+                    _receiveToken,
+                    _minReceiveQuantity,
+                    WETH
+                );
+            }
+
         }
     }
 

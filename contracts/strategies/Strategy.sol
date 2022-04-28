@@ -988,6 +988,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 minAmountExpected,
                 _tradeInfo
             );
+        console.log('path.length:', path.length);
+        trades.push(TradeInfo(path, hops));
         console.log('receivedQuantity:', receivedQuantity);
         return receivedQuantity;
     }
