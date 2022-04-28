@@ -13,9 +13,6 @@ import {BaseIntegration} from '../BaseIntegration.sol';
 
 import {ICurveAddressProvider} from '../../interfaces/external/curve/ICurveAddressProvider.sol';
 import {ICurveRegistry} from '../../interfaces/external/curve/ICurveRegistry.sol';
-import {ISynthetix} from '../../interfaces/external/synthetix/ISynthetix.sol';
-import {ISnxProxy} from '../../interfaces/external/synthetix/ISnxProxy.sol';
-import {ISnxSynth} from '../../interfaces/external/synthetix/ISnxSynth.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
@@ -38,13 +35,6 @@ import 'hardhat/console.sol';
  *
  * Master class for integration with trading protocols
  */
-
-// - MasterSwapper
-//   * Uni V2 TWAP
-//   * Synthetix Contract. Exchange
-//     Support proxy or no proxy between synths
-//     - Only between pairs of synths. Great for bigger trades
-//
 contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
@@ -70,7 +60,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     ITradeIntegration public univ2;
     ITradeIntegration public univ3;
     ITradeIntegration public curve;
-    ITradeIntegration public synthetix;
     ITradeIntegration public heartTradeIntegration;
     ITradeIntegration public paladinTradeIntegration;
 
@@ -82,7 +71,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
      * @param _controller             Address of the controller
      * @param _curve                  Address of curve trade integration
      * @param _univ3                  Address of univ3 trade integration
-     * @param _synthetix              Address of synthetix trade integration
      * @param _univ2                  Address of univ2 trade integration
      * @param _hearttrade             Address of heart trade integration
      * @param _paladinTrade           Address of paladin trade integration
@@ -91,14 +79,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         IBabController _controller,
         ITradeIntegration _curve,
         ITradeIntegration _univ3,
-        ITradeIntegration _synthetix,
         ITradeIntegration _univ2,
         ITradeIntegration _hearttrade,
         ITradeIntegration _paladinTrade
     ) BaseIntegration('master_swapper_v3', _controller) {
         curve = _curve;
         univ3 = _univ3;
-        synthetix = _synthetix;
         univ2 = _univ2;
         heartTradeIntegration = _hearttrade;
         paladinTradeIntegration = _paladinTrade;
@@ -178,9 +164,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         if (_index == 1) {
             univ3 = ITradeIntegration(_newAddress);
         }
-        if (_index == 2) {
-            synthetix = ITradeIntegration(_newAddress);
-        }
         if (_index == 3) {
             univ2 = ITradeIntegration(_newAddress);
         }
@@ -197,7 +180,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             _integration == address(this) ||
             _integration == address(curve) ||
             _integration == address(univ3) ||
-            _integration == address(synthetix) ||
             _integration == address(univ2) ||
             _integration == address(heartTradeIntegration) ||
             _integration == address(paladinTradeIntegration);
@@ -256,15 +238,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Heart Trade Integration ', _sendToken, WETH);
             }
-        }
-
-        // Synthetix Direct
-        string memory err;
-        (err, receivedQuantity) = _swapSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
-        if (receivedQuantity > 0) {
-            return receivedQuantity;
-        } else {
-            error = string(abi.encodePacked(error, err));
         }
 
         // Curve Direct
@@ -359,86 +332,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         return ITradeIntegration(_two).trade(_strategy, _reserve, receivedQuantity, _receiveToken, _minReceiveQuantity);
     }
 
-    function _swapTradeSynt(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
-    ) internal returns (string memory, uint256) {
-        uint256 receivedQuantity = _sendQuantity;
-        if (_sendToken != DAI) {
-            receivedQuantity = _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
-        }
-        try
-            ITradeIntegration(synthetix).trade(_strategy, DAI, receivedQuantity, _receiveToken, _minReceiveQuantity)
-        returns (uint256 receivedQuantity) {
-            return ('', receivedQuantity);
-        } catch Error(string memory _err) {
-            revert(string(abi.encodePacked('Failed midway in out synth', _err, ';')));
-        }
-    }
-
-    function _swapSynthTrade(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
-    ) internal returns (string memory, uint256) {
-        // Trade to DAI through sUSD
-        try ITradeIntegration(synthetix).trade(_strategy, _sendToken, _sendQuantity, DAI, 1) returns (
-            uint256 receivedQuantity
-        ) {
-            // Change DAI to receive token
-            receivedQuantity = _trade(_strategy, DAI, receivedQuantity, _receiveToken, _minReceiveQuantity);
-            return ('', receivedQuantity);
-        } catch Error(string memory _err) {
-            return (_formatError('', _err, 'Synt ', _sendToken, DAI, _receiveToken), 0);
-        }
-    }
-
-    function _swapSynt(
-        address _strategy,
-        address _sendToken,
-        uint256 _sendQuantity,
-        address _receiveToken,
-        uint256 _minReceiveQuantity
-    ) internal returns (string memory, uint256) {
-        address _sendTokenSynth = _getSynth(_sendToken);
-        address _receiveTokenSynth = _getSynth(_receiveToken);
-        if (
-            (_sendTokenSynth != address(0) && _receiveTokenSynth != address(0)) ||
-            (_sendTokenSynth != address(0) && (_receiveToken == DAI || _receiveToken == USDC)) ||
-            (_receiveToken != address(0) && (_sendTokenSynth == DAI || _sendTokenSynth == USDC))
-        ) {
-            try
-                ITradeIntegration(synthetix).trade(
-                    _strategy,
-                    _sendToken,
-                    _sendQuantity,
-                    _receiveToken,
-                    _minReceiveQuantity
-                )
-            returns (uint256 receivedQuantity) {
-                return ('', receivedQuantity);
-            } catch Error(string memory _err) {
-                return (_formatError('', _err, 'Synt ', _sendToken, _receiveToken), 0);
-            }
-        }
-
-        // Abstract Synths out
-        if (_sendTokenSynth != address(0)) {
-            return _swapSynthTrade(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
-        }
-
-        // Trade to DAI and then do DAI to synh
-        if (_receiveTokenSynth != address(0)) {
-            return _swapTradeSynt(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
-        }
-        return ('', 0);
-    }
-
     function _swapCurveUni(
         address _strategy,
         address _sendToken,
@@ -513,15 +406,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             return ('', receivedQuantity);
         } catch Error(string memory _err) {
             return (_formatError(error, _err, _integration.name(), _sendToken, _hop, _receiveToken), 0);
-        }
-    }
-
-    function _getSynth(address _token) private view returns (address) {
-        ISynthetix snx = ISynthetix(ISnxProxy(SNX).target());
-        try snx.synths(stringToBytes32(ERC20(_token).symbol())) returns (ISnxSynth _synth) {
-            return address(_synth);
-        } catch {
-            return address(0);
         }
     }
 
