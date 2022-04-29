@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
@@ -66,7 +66,7 @@ contract BorrowOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         override
@@ -115,7 +115,7 @@ contract BorrowOperation is Operation {
                 normalizedAmount,
                 WETH,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
             borrowToken = WETH;
         }
@@ -217,7 +217,7 @@ contract BorrowOperation is Operation {
                 IERC20(_asset).universalBalanceOf(msg.sender),
                 _assetToken,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         }
     }

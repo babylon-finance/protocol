@@ -196,6 +196,10 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             )
         );
 
+        if (_sendToken == _receiveToken) {
+            return _sendQuantity;
+        }
+
         _preTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);
         _tradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity, _hopToken);
         _postTradeAction(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity);

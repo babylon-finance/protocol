@@ -28,7 +28,7 @@ import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
-import {IStrategy} from '../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
@@ -497,15 +497,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        address[] memory arr; 
-        IStrategy.TradeProtocol[] memory ar1;
         _trade(
             _token,
             balance,
             garden.reserveAsset(),
             _newSlippage,
             0,
-            TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+            TradeInfo(new TradeProtocol[](0), new address[](0))
         );
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
@@ -578,7 +576,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _overrideSlippage,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
     }
 
@@ -848,7 +846,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function _enterStrategy(
         uint256 _capital,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     ) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
@@ -905,7 +903,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 garden.reserveAsset(),
                 0,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         }
     }
@@ -980,7 +978,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 : DEFAULT_TRADE_SLIPPAGE;
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         console.log('before trade');
-        (uint256 receivedQuantity, IStrategy.TradeProtocol[] memory path, address[] memory hops) =
+        (uint256 receivedQuantity, TradeInfo memory tradeInfo) =
             IBabController(controller).masterSwapper().trade(
                 _sendToken,
                 _sendQuantity,
@@ -988,8 +986,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 minAmountExpected,
                 _tradeInfo
             );
-        console.log('path.length:', path.length);
-        trades.push(TradeInfo(path, hops));
+        trades.push(tradeInfo);
         console.log('receivedQuantity:', receivedQuantity);
         return receivedQuantity;
     }

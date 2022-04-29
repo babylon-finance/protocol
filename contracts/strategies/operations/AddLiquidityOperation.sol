@@ -7,7 +7,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
@@ -58,7 +58,7 @@ contract AddLiquidityOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         override
@@ -139,7 +139,7 @@ contract AddLiquidityOperation is Operation {
                         address(msg.sender).balance,
                         reserveAsset,
                         0,
-                        IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                        TradeInfo(new TradeProtocol[](0), new address[](0))
                     );
                     poolTokens[i] = WETH;
                 }
@@ -150,7 +150,7 @@ contract AddLiquidityOperation is Operation {
                             IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
                             reserveAsset,
                             0,
-                            IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                            TradeInfo(new TradeProtocol[](0), new address[](0))
                         );
                     }
                 }
@@ -231,7 +231,7 @@ contract AddLiquidityOperation is Operation {
                     normalizedAssetAmount,
                     _poolToken,
                     0,
-                    IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                    TradeInfo(new TradeProtocol[](0), new address[](0))
                 );
         }
         // Reserve asset

@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
 
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
@@ -59,7 +59,7 @@ contract LendOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         override
@@ -79,7 +79,7 @@ contract LendOperation is Operation {
                 _args.capital,
                 assetToken,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
@@ -120,7 +120,7 @@ contract LendOperation is Operation {
                 address(msg.sender).balance,
                 WETH,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
             assetToken = WETH;
         }
@@ -245,7 +245,7 @@ contract LendOperation is Operation {
                 borrowBalance,
                 _assetToken,
                 0,
-                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         }
     }

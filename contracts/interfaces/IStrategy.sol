@@ -5,6 +5,13 @@ pragma abicoder v2;
 
 import {IGarden} from '../interfaces/IGarden.sol';
 
+enum TradeProtocol { Curve, UniV2, UniV3, Heart, Paladin }
+
+struct TradeInfo {
+    TradeProtocol[] path;
+    address[] hops;
+}
+
 /**
  * @title IStrategy
  * @author Babylon Finance
@@ -12,13 +19,6 @@ import {IGarden} from '../interfaces/IGarden.sol';
  * Interface for strategy
  */
 interface IStrategy {
-
-    enum TradeProtocol { Curve, UniV2, UniV3, Heart, Paladin }
-
-    struct TradeInfo {
-        TradeProtocol[] path;
-        address[] hops;
-    }
 
     function initialize(
         address _strategist,

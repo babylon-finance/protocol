@@ -7,7 +7,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -62,7 +62,7 @@ contract BuyOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         override
@@ -86,7 +86,7 @@ contract BuyOperation is Operation {
                 _prices.length > 0 ? _prices[0] : 0,
                 _trades.length > 0
                     ? _trades[0]
-                    : IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                    : TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         return (token, receivedQuantity, 0); // liquid
     }

@@ -6,7 +6,7 @@ pragma abicoder v2;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {ConvexStakeIntegration} from '../../integrations/passive/ConvexStakeIntegration.sol';
 import {IJarUniV3} from '../../interfaces/external/pickle/IJarUniV3.sol';
@@ -64,7 +64,7 @@ contract DepositVaultOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         override
@@ -137,7 +137,7 @@ contract DepositVaultOperation is Operation {
                                 amount,
                                 rasset,
                                 0,
-                                IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                                TradeInfo(new TradeProtocol[](0), new address[](0))
                             );
                         }
                     }
@@ -228,7 +228,7 @@ contract DepositVaultOperation is Operation {
                     _capital,
                     _vaultAsset,
                     0,
-                    IStrategy.TradeInfo(new IStrategy.TradeProtocol[](0), new address[](0))
+                    TradeInfo(new TradeProtocol[](0), new address[](0))
                 )
                 : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
 

@@ -6,7 +6,7 @@ pragma abicoder v2;
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
-import {IStrategy} from '../../interfaces/IStrategy.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IOperation} from '../../interfaces/IOperation.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -74,7 +74,7 @@ abstract contract Operation is IOperation {
     function executeOperation(
         Args memory args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         virtual

@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IGarden} from './IGarden.sol';
-import {IStrategy} from './IStrategy.sol';
+import {IStrategy, TradeInfo} from './IStrategy.sol';
 
 /**
  * @title IOperation
@@ -32,7 +32,7 @@ interface IOperation {
     function executeOperation(
         Args memory args,
         uint256[] memory _prices,
-        IStrategy.TradeInfo[] memory _trades
+        TradeInfo[] memory _trades
     )
         external
         returns (

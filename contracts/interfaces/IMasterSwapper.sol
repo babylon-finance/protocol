@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {ITradeIntegration} from './ITradeIntegration.sol';
-import {IStrategy} from './IStrategy.sol';
+import {IStrategy, TradeInfo} from './IStrategy.sol';
 
 /**
  * @title IIshtarGate
@@ -20,8 +20,8 @@ interface IMasterSwapper {
         uint256 _sendQuantity,
         address _receiveToken,
         uint256 _minReceiveQuantity,
-        IStrategy.TradeInfo memory _tradeInfo
-    ) external returns (uint256, IStrategy.TradeProtocol[] memory, address[] memory); 
+        TradeInfo memory _tradeInfo
+    ) external returns (uint256, TradeInfo memory);
 
     function isTradeIntegration(address _integration) external view returns (bool);
 }
