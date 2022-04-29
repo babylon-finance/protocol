@@ -867,7 +867,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     garden,
                     _getIntegration(opIntegrations[i])
                 ),
-                _prices[pricesIndex:],
+                _prices,
                 tradesIter
             );
             console.log('after opTypes[i]:', opTypes[i]);

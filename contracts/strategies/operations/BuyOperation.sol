@@ -85,6 +85,7 @@ contract BuyOperation is Operation {
         if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
+        console.log('_iteratorIn:', _iteratorIn.iterator);
         uint256 receivedQuantity =
             IStrategy(msg.sender).trade(
                 _args.asset,
