@@ -84,9 +84,7 @@ contract BuyOperation is Operation {
                 _args.capital,
                 token,
                 _prices.length > 0 ? _prices[0] : 0,
-                _trades.length > 0
-                    ? _trades[0]
-                    : TradeInfo(new TradeProtocol[](0), new address[](0))
+                _trades.length > 0 ? _trades[0] : TradeInfo(new TradeProtocol[](0), new address[](0))
             );
         return (token, receivedQuantity, 0); // liquid
     }

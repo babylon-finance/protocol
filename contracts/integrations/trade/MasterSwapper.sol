@@ -216,32 +216,25 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             return (_sendQuantity, _tradeInfo);
         }
 
-        console.log('_tradeInfo.path.length :', _tradeInfo.path.length );
+        console.log('_tradeInfo.path.length :', _tradeInfo.path.length);
 
         if (_tradeInfo.path.length > 0) {
-            return (_execute(TradeArgs(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity
-            ), _tradeInfo), _tradeInfo);
+            return (
+                _execute(
+                    TradeArgs(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity),
+                    _tradeInfo
+                ),
+                _tradeInfo
+            );
         } else {
-            return _explore(TradeArgs(
-                _strategy,
-                _sendToken,
-                _sendQuantity,
-                _receiveToken,
-                _minReceiveQuantity
-            ));
+            return _explore(TradeArgs(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity));
         }
-
     }
 
     function _execute(TradeArgs memory _args, TradeInfo memory _tradeInfo) private returns (uint256) {
         address sendToken = _args.sendToken;
         uint256 sendQuantity = _args.sendQuantity;
-        address receiveToken =  _args.receiveToken;
+        address receiveToken = _args.receiveToken;
         uint256 receivedQuantity;
 
         for (uint256 index = 0; index < _tradeInfo.path.length; index++) {
@@ -278,7 +271,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 sendQuantity = receivedQuantity;
                 receiveToken = _tradeInfo.hops[index];
             }
-
         }
 
         return receivedQuantity;
@@ -290,7 +282,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
         // Palstake AAVE
         if (args.receiveToken == palStkAAVE) {
-            uint256 receivedQuantity = ITradeIntegration(univ3).trade(args.strategy, args.sendToken, args.sendQuantity, AAVE, 1);
+            uint256 receivedQuantity =
+                ITradeIntegration(univ3).trade(args.strategy, args.sendToken, args.sendQuantity, AAVE, 1);
             try
                 ITradeIntegration(paladinTradeIntegration).trade(
                     args.strategy,
@@ -300,23 +293,29 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     args.minReceiveQuantity
                 )
             returns (uint256 received) {
-                return (received,  TradeInfo(
-                    IntegerUtils.toDynamic(TradeProtocol.UniV3,
-                                           TradeProtocol.Paladin),
-                                           AddressArrayUtils.toDynamic(AAVE, address(0))));
+                return (
+                    received,
+                    TradeInfo(
+                        IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Paladin),
+                        AddressArrayUtils.toDynamic(AAVE, address(0))
+                    )
+                );
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'Paladin Trade Integration ',
-                                     args.sendToken, palStkAAVE);
+                error = _formatError(error, _err, 'Paladin Trade Integration ', args.sendToken, palStkAAVE);
             }
         }
 
         // Heart Direct
         if (controller.protocolWantedAssets(args.sendToken)) {
             // If the heart wants it go through the heart and get WETH
-            uint256 receivedQuantity = ITradeIntegration(heartTradeIntegration).trade(args.strategy,
-                                                               args.sendToken,
-                                                               args.sendQuantity,
-                                                               WETH, 1);
+            uint256 receivedQuantity =
+                ITradeIntegration(heartTradeIntegration).trade(
+                    args.strategy,
+                    args.sendToken,
+                    args.sendQuantity,
+                    WETH,
+                    1
+                );
             try
                 ITradeIntegration(univ3).trade(
                     args.strategy,
@@ -326,11 +325,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     args.minReceiveQuantity
                 )
             returns (uint256 received) {
-                    // TODO: Should be able to trade Heart->Curve->UniV3
-                    return (received,  TradeInfo(
-                    IntegerUtils.toDynamic(TradeProtocol.Heart,
-                                           TradeProtocol.UniV3),
-                                           AddressArrayUtils.toDynamic(WETH, address(0))) );
+                // TODO: Should be able to trade Heart->Curve->UniV3
+                return (
+                    received,
+                    TradeInfo(
+                        IntegerUtils.toDynamic(TradeProtocol.Heart, TradeProtocol.UniV3),
+                        AddressArrayUtils.toDynamic(WETH, address(0))
+                    )
+                );
             } catch Error(string memory _err) {
                 error = _formatError(error, _err, 'Heart Trade Integration ', args.sendToken, WETH);
             }
@@ -338,11 +340,21 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
 
         // Curve Direct
         try
-            ITradeIntegration(curve).trade(args.strategy, args.sendToken,
-                                           args.sendQuantity, args.receiveToken,
-                                           args.minReceiveQuantity)
+            ITradeIntegration(curve).trade(
+                args.strategy,
+                args.sendToken,
+                args.sendQuantity,
+                args.receiveToken,
+                args.minReceiveQuantity
+            )
         returns (uint256 receivedQuantity) {
-            return (receivedQuantity, TradeInfo( IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve), AddressArrayUtils.toDynamic(address(0), address(0))));
+            return (
+                receivedQuantity,
+                TradeInfo(
+                    IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve),
+                    AddressArrayUtils.toDynamic(address(0), address(0))
+                )
+            );
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'Curve ', args.sendToken, args.receiveToken);
         }
@@ -358,17 +370,17 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 WETH
             )
         returns (uint256 receivedQuantity) {
-            return (receivedQuantity, TradeInfo(
-                IntegerUtils.toDynamic(TradeProtocol.UniV3),
-                AddressArrayUtils.toDynamic(WETH)) );
+            return (
+                receivedQuantity,
+                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV3), AddressArrayUtils.toDynamic(WETH))
+            );
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'UniV3 ', args.sendToken, WETH, args.receiveToken);
         }
 
         // Try Curve-Uni through reserve assets
         for (uint256 i = 0; i < curveUniHopTokens.length; i++) {
-            if (args.sendToken != curveUniHopTokens[i] && args.receiveToken !=
-                curveUniHopTokens[i]) {
+            if (args.sendToken != curveUniHopTokens[i] && args.receiveToken != curveUniHopTokens[i]) {
                 // Going through Curve but switching first to reserve
                 try
                     this.swapSwap(
@@ -382,11 +394,22 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                         args.minReceiveQuantity
                     )
                 returns (uint256 receivedQuantity) {
-                    return (receivedQuantity, TradeInfo( IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve), AddressArrayUtils.toDynamic(address(0), address(0))) );
+                    return (
+                        receivedQuantity,
+                        TradeInfo(
+                            IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve),
+                            AddressArrayUtils.toDynamic(address(0), address(0))
+                        )
+                    );
                 } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Uni-Curve ',
-                                         args.sendToken, curveUniHopTokens[i],
-                                         args.receiveToken);
+                    error = _formatError(
+                        error,
+                        _err,
+                        'Uni-Curve ',
+                        args.sendToken,
+                        curveUniHopTokens[i],
+                        args.receiveToken
+                    );
                 }
                 // Going through Curve to reserve asset and
                 // then receive asset via Uni to reserve asset
@@ -402,11 +425,22 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                         args.minReceiveQuantity
                     )
                 returns (uint256 receivedQuantity) {
-                    return (receivedQuantity,  TradeInfo( IntegerUtils.toDynamic(TradeProtocol.Curve, TradeProtocol.UniV3), AddressArrayUtils.toDynamic(address(0), address(0))) );
+                    return (
+                        receivedQuantity,
+                        TradeInfo(
+                            IntegerUtils.toDynamic(TradeProtocol.Curve, TradeProtocol.UniV3),
+                            AddressArrayUtils.toDynamic(address(0), address(0))
+                        )
+                    );
                 } catch Error(string memory _err) {
-                    error = _formatError(error, _err, 'Curve-Uni ',
-                                         args.sendToken, curveUniHopTokens[i],
-                                         args.receiveToken);
+                    error = _formatError(
+                        error,
+                        _err,
+                        'Curve-Uni ',
+                        args.sendToken,
+                        curveUniHopTokens[i],
+                        args.receiveToken
+                    );
                 }
             }
         }
@@ -423,12 +457,15 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     uniV3HopTokens[i]
                 )
             returns (uint256 receivedQuantity) {
-                return (receivedQuantity, TradeInfo(
-                    IntegerUtils.toDynamic(TradeProtocol.UniV3),
-                    AddressArrayUtils.toDynamic(uniV3HopTokens[i])) );
+                return (
+                    receivedQuantity,
+                    TradeInfo(
+                        IntegerUtils.toDynamic(TradeProtocol.UniV3),
+                        AddressArrayUtils.toDynamic(uniV3HopTokens[i])
+                    )
+                );
             } catch Error(string memory _err) {
-                error = _formatError(error, _err, 'UniV3 ', args.sendToken,
-                                     uniV3HopTokens[i], args.receiveToken);
+                error = _formatError(error, _err, 'UniV3 ', args.sendToken, uniV3HopTokens[i], args.receiveToken);
             }
         }
 
@@ -444,12 +481,12 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             )
         returns (uint256 receivedQuantity) {
             // return (receivedQuantity, IntegerUtils.toDynamic(TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH));
-            return (receivedQuantity,  TradeInfo(
-                    IntegerUtils.toDynamic(TradeProtocol.UniV2),
-                    AddressArrayUtils.toDynamic(WETH)) );
+            return (
+                receivedQuantity,
+                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH))
+            );
         } catch Error(string memory _err) {
-            error = _formatError(error, _err, 'UniV2 ', args.sendToken, WETH,
-                                 args.receiveToken);
+            error = _formatError(error, _err, 'UniV2 ', args.sendToken, WETH, args.receiveToken);
         }
 
         revert(string(abi.encodePacked('MasterSwapper:', error)));

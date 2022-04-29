@@ -8,7 +8,6 @@ import {IStrategy, TradeProtocol} from '../interfaces/IStrategy.sol';
  * @title IntegerUtils
  */
 library IntegerUtils {
-
     function toDynamic(uint256 _one) internal pure returns (uint256[] memory) {
         uint256[] memory arr = new uint256[](1);
         arr[0] = _one;

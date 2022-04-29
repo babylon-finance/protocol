@@ -22,14 +22,7 @@ module.exports = async ({
 
   const deployment = await deploy(contract, {
     from: deployer,
-    args: [
-      controller.address,
-      curve.address,
-      univ3.address,
-      univ2.address,
-      heart.address,
-      paladin.address,
-    ],
+    args: [controller.address, curve.address, univ3.address, univ2.address, heart.address, paladin.address],
     log: true,
     ...(await getGasPrice()),
   });
