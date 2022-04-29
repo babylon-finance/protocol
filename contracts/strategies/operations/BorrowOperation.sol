@@ -80,6 +80,8 @@ contract BorrowOperation is Operation {
         returns (ExecRet memory ret)
     {
         Args memory args = _args;
+        TradesIterator memory tradesIterator = _tradesIterator;
+
         (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(args.data);
         if (msg.sender == 0x371B23eEdb1a5E3822AaCFf906187111A91fAE88) {
             rate = 85e16;
@@ -117,12 +119,12 @@ contract BorrowOperation is Operation {
                 normalizedAmount,
                 WETH,
                 0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                tradesIterator.none()
             );
             borrowToken = WETH;
         }
         console.log('after trade');
-        return ExecRet(borrowToken, normalizedAmount, 0, _pricesIterator.counter, _tradesIterator.counter);
+        return ExecRet(borrowToken, normalizedAmount, 0, _pricesIterator.counter, tradesIterator.counter);
     }
 
     /**

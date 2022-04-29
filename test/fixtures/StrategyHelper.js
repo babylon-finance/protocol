@@ -164,7 +164,7 @@ async function executeStrategy(
     prices = [],
     trades = [],
     gasPrice = 0,
-    gasLimit = 9500000,
+    gasLimit = 30000000,
   } = {},
 ) {
   const garden = await strategy.garden();

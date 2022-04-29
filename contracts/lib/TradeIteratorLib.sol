@@ -9,4 +9,8 @@ library TradeIteratorLib {
     function next(TradesIterator memory _iter) internal returns (TradeInfo memory) {
         return _iter.trades.length > (_iter.counter) ? _iter.trades[_iter.counter++] : TradeInfo(new TradeProtocol[](0), new address[](0));
     }
+
+    function none(TradesIterator memory _iter) internal returns (TradeInfo memory) {
+        return TradeInfo(new TradeProtocol[](0), new address[](0));
+    }
 }

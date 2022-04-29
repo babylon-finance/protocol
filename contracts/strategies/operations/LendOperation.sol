@@ -80,8 +80,8 @@ contract LendOperation is Operation {
                 _args.asset,
                 _args.capital,
                 assetToken,
-                0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                _pricesIterator.next(),
+                _tradesIterator.next()
             );
         console.log('numTokensToSupply:', numTokensToSupply);
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);

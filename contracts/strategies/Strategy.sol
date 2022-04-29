@@ -383,10 +383,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyKeeper();
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
+
+        console.log('finalizeStrategy');
+
+        uint256 balance = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
+        console.log('after finalizeStrategy');
+        capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(balance);
         // Mark as finalized
         finalized = true;
         active = false;
@@ -874,15 +878,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /**
      * Exits the strategy.
-     * Exists all the operations starting by the end.
+     * Exits all the operations starting from the end.
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) private {
         address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
         uint256 capitalPending;
         uint8 assetStatus;
-        for (uint256 i = opTypes.length; i > 0; i--) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
+        console.log('before loop');
+        console.log('opTypes.length:', opTypes.length);
+        for (uint256 i = opTypes.length; i > 0;) {
+            --i;
+            console.log('i:', i);
+            console.log('opTypes[i]:', opTypes[i]);
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             // _getOpDecodedData guarantee backward compatibility with OpData
             (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
                 assetFinalized,
@@ -891,13 +900,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 // should use the percentage only for the first operation because we do not want to take percentage of
                 // the percentage for the subsequent operations
                 i == opTypes.length ? _percentage : HUNDRED_PERCENT,
-                _getOpDecodedData(i - 1),
+                _getOpDecodedData(i),
                 garden,
-                _getIntegration(opIntegrations[i - 1])
+                _getIntegration(opIntegrations[i])
             );
+            console.log('after opTypes[i]:', opTypes[i]);
         }
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
+            console.log('consolidate');
             _trade(
                 assetFinalized,
                 capitalPending,
@@ -906,7 +917,9 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 0,
                 TradeInfo(new TradeProtocol[](0), new address[](0))
             );
+            console.log('consolidate');
         }
+        console.log('exit');
     }
 
     /**
@@ -988,6 +1001,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _tradeInfo
             );
 
+        console.log('before push');
         if (_tradeInfo.path.length == 0) {
             trades.push(tradeInfo);
         }

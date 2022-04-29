@@ -257,7 +257,7 @@ describe('Strategy', function () {
       expect(exitedAt).to.equal(ethers.BigNumber.from(0));
     });
 
-    it.only('can pre-fetch prices and trades', async function () {
+    it('can pre-fetch prices and trades', async function () {
       const strategy = await createStrategy(
         'buy',
         'vote',

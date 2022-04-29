@@ -227,7 +227,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 _tradeInfo
             );
         } else {
-            return _explore(TradeArgs(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity));
+            return _search(TradeArgs(_strategy, _sendToken, _sendQuantity, _receiveToken, _minReceiveQuantity));
         }
     }
 
@@ -276,7 +276,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         return receivedQuantity;
     }
 
-    function _explore(TradeArgs memory _args) private returns (uint256, TradeInfo memory) {
+    function _search(TradeArgs memory _args) private returns (uint256, TradeInfo memory) {
         TradeArgs memory args = _args;
         string memory error;
 
@@ -338,6 +338,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             }
         }
 
+        console.log('curve');
         // Curve Direct
         try
             ITradeIntegration(curve).trade(
@@ -351,13 +352,14 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             return (
                 receivedQuantity,
                 TradeInfo(
-                    IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve),
-                    AddressArrayUtils.toDynamic(address(0), address(0))
+                    IntegerUtils.toDynamic(TradeProtocol.Curve),
+                    AddressArrayUtils.toDynamic(address(0))
                 )
             );
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'Curve ', args.sendToken, args.receiveToken);
         }
+        console.log('after curve');
 
         // Go through UNIv3 first via WETH
         try
