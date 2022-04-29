@@ -6,7 +6,7 @@ pragma abicoder v2;
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
-import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
+import {TradesIterator, NumbersIterator} from '../../interfaces/IOperation.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
@@ -20,6 +20,8 @@ import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
+import {NumberIteratorLib} from '../../lib/NumberIteratorLib.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -36,6 +38,8 @@ contract DepositVaultOperation is Operation {
     using PreciseUnitMath for uint256;
     using BytesLib for bytes;
     using UniversalERC20 for IERC20;
+    using TradeIteratorLib for TradesIterator;
+    using NumberIteratorLib for NumbersIterator;
 
     /* ============ Constructor ============ */
 
@@ -66,18 +70,13 @@ contract DepositVaultOperation is Operation {
      */
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _tradesIteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
         override
         onlyStrategy
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        )
+        returns (ExecRet memory ret)
     {
         address yieldVault = BytesLib.decodeOpDataAddress(_args.data);
         address vaultAsset = IPassiveIntegration(_args.integration).getInvestmentAsset(yieldVault);
@@ -108,8 +107,7 @@ contract DepositVaultOperation is Operation {
 
         vaultAsset = _getResultAsset(_args.integration, yieldVault);
         console.log('after enter');
-        return (vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0, _tradesIteratorIn);
-        // return _enterVault(_args.asset, _args.capital, _args.integration, yieldVault, vaultAsset);
+        return ExecRet(vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0, _pricesIterator.counter, _tradesIterator.counter);
     }
 
     /**
@@ -236,22 +234,6 @@ contract DepositVaultOperation is Operation {
         } catch {
             return _yieldVault;
         }
-    }
-
-    function _enterVault(
-        address _asset,
-        uint256 _capital,
-        address _integration,
-        address _yieldVault,
-        address _vaultAsset
-    )
-        internal
-        returns (
-            address,
-            uint256,
-            uint8
-        )
-    {
     }
 
     function _getRewardsNAV(

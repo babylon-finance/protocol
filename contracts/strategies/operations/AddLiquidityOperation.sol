@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
+import {TradesIterator, NumbersIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
@@ -15,6 +15,8 @@ import {BytesLib} from '../../lib/BytesLib.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {NumberIteratorLib} from '../../lib/NumberIteratorLib.sol';
+import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -60,18 +62,13 @@ contract AddLiquidityOperation is Operation {
      */
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _iteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
         override
         onlyStrategy
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        )
+        returns (ExecRet memory ret)
     {
         Args memory args = _args;
         address[] memory poolTokens =
@@ -107,10 +104,11 @@ contract AddLiquidityOperation is Operation {
             poolTokens,
             maxAmountsIn
         );
-        address lpToken =
-            IPoolIntegration(args.integration).getLPToken(BytesLib.decodeOpDataAddress(args.data));
-
-        return (lpToken, IERC20(lpToken).balanceOf(msg.sender), 0, _iteratorIn); // liquid
+        ret.assetAccumulated = IPoolIntegration(args.integration).getLPToken(BytesLib.decodeOpDataAddress(args.data));
+        ret.amountOut = IERC20(ret.assetAccumulated).balanceOf(msg.sender);
+        ret.assetStatus = 0;
+        ret.pricesCounter =  _pricesIterator.counter;
+        ret.tradesCounter =  _tradesIterator.counter;
     }
 
     /**

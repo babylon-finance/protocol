@@ -11,6 +11,7 @@ import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
+
 import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
@@ -19,12 +20,13 @@ import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
+
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
 import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {IOperation, TradesIterator} from '../interfaces/IOperation.sol';
+import {IOperation, TradesIterator, NumbersIterator} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
@@ -848,27 +850,23 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256[] calldata _prices,
         TradeInfo[] calldata _trades
     ) private {
-        uint256 capitalForNexOperation = _capital;
-        address assetAccumulated = garden.reserveAsset();
-        uint8 assetStatus; // liquid
-        uint8 pricesIndex;
-        TradesIterator memory tradesIter = TradesIterator(_trades, 0);
+        IOperation.ExecRet memory execValues = IOperation.ExecRet(garden.reserveAsset(), _capital, 0, 0, 0);
 
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             console.log('opTypes[i]:', opTypes[i]);
             // _getOpDecodedData guarantee backward compatibility with OpData
-            (assetAccumulated, capitalForNexOperation, assetStatus, tradesIter) = operation.executeOperation(
+            execValues = operation.executeOperation(
                 IOperation.Args(
-                    assetAccumulated,
-                    capitalForNexOperation,
-                    assetStatus,
+                    execValues.assetAccumulated,
+                    execValues.amountOut,
+                    execValues.assetStatus,
                     _getOpDecodedData(i),
                     garden,
                     _getIntegration(opIntegrations[i])
                 ),
-                _prices,
-                tradesIter
+                NumbersIterator(_prices, execValues.pricesCounter),
+                TradesIterator(_trades, execValues.tradesCounter)
             );
             console.log('after opTypes[i]:', opTypes[i]);
         }

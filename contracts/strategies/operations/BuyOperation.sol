@@ -8,7 +8,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {Operation} from './Operation.sol';
 
-import {TradesIterator} from '../../interfaces/IOperation.sol';
+import {TradesIterator, NumbersIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
@@ -17,6 +17,7 @@ import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
+import {NumberIteratorLib} from '../../lib/NumberIteratorLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
@@ -35,6 +36,7 @@ contract BuyOperation is Operation {
     using BytesLib for bytes;
     using UniversalERC20 for IERC20;
     using TradeIteratorLib for TradesIterator;
+    using NumberIteratorLib for NumbersIterator;
 
     /* ============ Constructor ============ */
 
@@ -67,34 +69,29 @@ contract BuyOperation is Operation {
      */
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _iteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
         override
         onlyStrategy
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        )
+        returns (ExecRet memory ret)
     {
         address token = BytesLib.decodeOpDataAddress(_args.data);
         // Replace old AXS with new AXS
         if (token == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             token = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
         }
-        console.log('_iteratorIn:', _iteratorIn.iterator);
         uint256 receivedQuantity =
             IStrategy(msg.sender).trade(
                 _args.asset,
                 _args.capital,
                 token,
-                _prices.length > 0 ? _prices[0] : 0,
-                _iteratorIn.next()
+                _pricesIterator.next(),
+                _tradesIterator.next()
             );
-        return (token, receivedQuantity, 0, _iteratorIn); // liquid
+
+        return ExecRet( token, receivedQuantity, 0, _pricesIterator.counter, _tradesIterator.counter);
     }
 
     /**

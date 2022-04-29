@@ -7,9 +7,14 @@ import {IGarden} from './IGarden.sol';
 import {IStrategy, TradeInfo} from './IStrategy.sol';
 
 
+struct NumbersIterator {
+    uint256[] items;
+    uint256 counter;
+}
+
 struct TradesIterator {
     TradeInfo[] trades;
-    uint256 iterator;
+    uint256 counter;
 }
 
 /**
@@ -28,6 +33,14 @@ interface IOperation {
         address integration;
     }
 
+    struct ExecRet {
+        address assetAccumulated;
+        uint256 amountOut;
+        uint8 assetStatus;
+        uint256 pricesCounter;
+        uint256 tradesCounter;
+    }
+
     function validateOperation(
         bytes calldata _data,
         IGarden _garden,
@@ -37,16 +50,11 @@ interface IOperation {
 
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _iteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        );
+        returns (ExecRet memory);
 
     function exitOperation(
         address _asset,

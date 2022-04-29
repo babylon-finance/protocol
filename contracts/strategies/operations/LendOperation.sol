@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
+import {TradesIterator, NumbersIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
@@ -15,6 +15,8 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
+import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
+import {NumberIteratorLib} from '../../lib/NumberIteratorLib.sol';
 
 import {Operation} from './Operation.sol';
 
@@ -32,6 +34,8 @@ contract LendOperation is Operation {
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
     using UniversalERC20 for IERC20;
+    using TradeIteratorLib for TradesIterator;
+    using NumberIteratorLib for NumbersIterator;
 
     /* ============ Constructor ============ */
 
@@ -60,18 +64,13 @@ contract LendOperation is Operation {
      */
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _tradesIteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
         override
         onlyStrategy
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        )
+        returns (ExecRet memory ret)
     {
         address assetToken = BytesLib.decodeOpDataAddress(_args.data); // We just use the first 20 bytes from the whole opEncodedData
         console.log('lend');
@@ -88,7 +87,7 @@ contract LendOperation is Operation {
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_args.integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
-        return (assetToken, numTokensToSupply, 1, _tradesIteratorIn); // put as collateral
+        return ExecRet(assetToken, numTokensToSupply, 1, _pricesIterator.counter, _tradesIterator.counter);
     }
 
     /**

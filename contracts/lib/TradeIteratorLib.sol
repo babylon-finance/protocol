@@ -7,6 +7,6 @@ import {IStrategy, TradeInfo, TradeProtocol} from '../interfaces/IStrategy.sol';
 
 library TradeIteratorLib {
     function next(TradesIterator memory _iter) internal returns (TradeInfo memory) {
-        return _iter.trades.length > (_iter.iterator) ? _iter.trades[_iter.iterator++] : TradeInfo(new TradeProtocol[](0), new address[](0));
+        return _iter.trades.length > (_iter.counter) ? _iter.trades[_iter.counter++] : TradeInfo(new TradeProtocol[](0), new address[](0));
     }
 }

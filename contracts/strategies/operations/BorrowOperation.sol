@@ -5,12 +5,14 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
+import {TradesIterator, NumbersIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 
+import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
+import {NumberIteratorLib} from '../../lib/NumberIteratorLib.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -34,6 +36,8 @@ contract BorrowOperation is Operation {
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
     using UniversalERC20 for IERC20;
+    using TradeIteratorLib for TradesIterator;
+    using NumberIteratorLib for NumbersIterator;
 
     /* ============ Constructor ============ */
 
@@ -67,18 +71,13 @@ contract BorrowOperation is Operation {
      */
     function executeOperation(
         Args memory _args,
-        uint256[] memory _prices,
-        TradesIterator memory _iteratorIn
+        NumbersIterator memory _pricesIterator,
+        TradesIterator memory _tradesIterator
     )
         external
         override
         onlyStrategy
-        returns (
-            address assetAccumulated,
-            uint256 amountOut,
-            uint8 assetStatus,
-            TradesIterator memory _iteratorOut
-        )
+        returns (ExecRet memory ret)
     {
         Args memory args = _args;
         (address borrowToken, uint256 rate) = BytesLib.decodeOpDataAddressAndUint(args.data);
@@ -123,7 +122,7 @@ contract BorrowOperation is Operation {
             borrowToken = WETH;
         }
         console.log('after trade');
-        return (borrowToken, normalizedAmount, 0, _iteratorIn); // borrowings are liquid
+        return ExecRet(borrowToken, normalizedAmount, 0, _pricesIterator.counter, _tradesIterator.counter);
     }
 
     /**
