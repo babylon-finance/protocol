@@ -5,14 +5,19 @@ pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {Operation} from './Operation.sol';
+
+import {TradesIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
+import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {TradeIteratorLib} from '../../lib/TradeIteratorLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
-import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import 'hardhat/console.sol';
@@ -29,6 +34,7 @@ contract BuyOperation is Operation {
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
     using UniversalERC20 for IERC20;
+    using TradeIteratorLib for TradesIterator;
 
     /* ============ Constructor ============ */
 
@@ -62,15 +68,16 @@ contract BuyOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _iteratorIn
     )
         external
         override
         onlyStrategy
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         )
     {
         address token = BytesLib.decodeOpDataAddress(_args.data);
@@ -84,9 +91,9 @@ contract BuyOperation is Operation {
                 _args.capital,
                 token,
                 _prices.length > 0 ? _prices[0] : 0,
-                _trades.length > 0 ? _trades[0] : TradeInfo(new TradeProtocol[](0), new address[](0))
+                _iteratorIn.next()
             );
-        return (token, receivedQuantity, 0); // liquid
+        return (token, receivedQuantity, 0, _iteratorIn); // liquid
     }
 
     /**

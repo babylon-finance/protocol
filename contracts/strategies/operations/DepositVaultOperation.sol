@@ -5,6 +5,9 @@ pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+
+import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
+import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
@@ -64,21 +67,49 @@ contract DepositVaultOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _tradesIteratorIn
     )
         external
         override
         onlyStrategy
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         )
     {
         address yieldVault = BytesLib.decodeOpDataAddress(_args.data);
         address vaultAsset = IPassiveIntegration(_args.integration).getInvestmentAsset(yieldVault);
 
-        return _enterVault(_args.asset, _args.capital, _args.integration, yieldVault, vaultAsset);
+        uint256 vaultAssetQuantity =
+            vaultAsset != _args.asset
+                ? IStrategy(msg.sender).trade(
+                    _args.asset,
+                    _args.capital,
+                    vaultAsset,
+                    0,
+                    TradeInfo(new TradeProtocol[](0), new address[](0))
+                )
+                : IERC20(vaultAsset).universalBalanceOf(msg.sender);
+
+        //uint256 minAmountExpected =
+        //    IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
+        //        uint256(1e18).sub(SLIPPAGE_ALLOWED)
+        //    );
+
+        IPassiveIntegration(_args.integration).enterInvestment(
+            msg.sender,
+            yieldVault,
+            1, // TODO: change from priceOracle
+            vaultAsset,
+            vaultAssetQuantity
+        );
+
+        vaultAsset = _getResultAsset(_args.integration, yieldVault);
+        console.log('after enter');
+        return (vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0, _tradesIteratorIn);
+        // return _enterVault(_args.asset, _args.capital, _args.integration, yieldVault, vaultAsset);
     }
 
     /**
@@ -221,33 +252,6 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        uint256 vaultAssetQuantity =
-            _vaultAsset != _asset
-                ? IStrategy(msg.sender).trade(
-                    _asset,
-                    _capital,
-                    _vaultAsset,
-                    0,
-                    TradeInfo(new TradeProtocol[](0), new address[](0))
-                )
-                : IERC20(_vaultAsset).universalBalanceOf(msg.sender);
-
-        //uint256 minAmountExpected =
-        //    IPassiveIntegration(_integration).getExpectedShares(_yieldVault, _capital).preciseMul(
-        //        uint256(1e18).sub(SLIPPAGE_ALLOWED)
-        //    );
-
-        IPassiveIntegration(_integration).enterInvestment(
-            msg.sender,
-            _yieldVault,
-            1, // TODO: change from priceOracle
-            _vaultAsset,
-            vaultAssetQuantity
-        );
-
-        _vaultAsset = _getResultAsset(_integration, _yieldVault);
-        console.log('after enter');
-        return (_vaultAsset, IERC20(_vaultAsset).universalBalanceOf(msg.sender), 0);
     }
 
     function _getRewardsNAV(

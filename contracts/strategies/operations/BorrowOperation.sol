@@ -4,6 +4,8 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {IBorrowIntegration} from '../../interfaces/IBorrowIntegration.sol';
@@ -66,15 +68,16 @@ contract BorrowOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _iteratorIn
     )
         external
         override
         onlyStrategy
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         )
     {
         Args memory args = _args;
@@ -120,7 +123,7 @@ contract BorrowOperation is Operation {
             borrowToken = WETH;
         }
         console.log('after trade');
-        return (borrowToken, normalizedAmount, 0); // borrowings are liquid
+        return (borrowToken, normalizedAmount, 0, _iteratorIn); // borrowings are liquid
     }
 
     /**

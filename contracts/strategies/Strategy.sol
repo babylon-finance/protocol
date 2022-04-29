@@ -24,7 +24,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
-import {IOperation} from '../interfaces/IOperation.sol';
+import {IOperation, TradesIterator} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
@@ -346,8 +346,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function executeStrategy(
         uint256 _capital,
         uint256 _fee,
-        uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        uint256[] calldata _prices,
+        TradeInfo[] calldata _trades
     ) external override nonReentrant returns (uint256[] memory, TradeInfo[] memory) {
         _onlyUnpaused();
         _onlyKeeper();
@@ -806,8 +806,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _capital,
         uint256 _fee,
         address payable _keeper,
-        uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        uint256[] calldata _prices,
+        TradeInfo[] calldata _trades
     ) private returns (uint256[] memory, TradeInfo[] memory) {
         // Execute enter operation
         garden.allocateCapitalToStrategy(_capital);
@@ -845,17 +845,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function _enterStrategy(
         uint256 _capital,
-        uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        uint256[] calldata _prices,
+        TradeInfo[] calldata _trades
     ) private {
         uint256 capitalForNexOperation = _capital;
         address assetAccumulated = garden.reserveAsset();
         uint8 assetStatus; // liquid
+        uint8 pricesIndex;
+        TradesIterator memory tradesIter = TradesIterator(_trades, 0);
+
         for (uint256 i = 0; i < opTypes.length; i++) {
             IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i]));
             console.log('opTypes[i]:', opTypes[i]);
             // _getOpDecodedData guarantee backward compatibility with OpData
-            (assetAccumulated, capitalForNexOperation, assetStatus) = operation.executeOperation(
+            (assetAccumulated, capitalForNexOperation, assetStatus, tradesIter) = operation.executeOperation(
                 IOperation.Args(
                     assetAccumulated,
                     capitalForNexOperation,
@@ -864,8 +867,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                     garden,
                     _getIntegration(opIntegrations[i])
                 ),
-                _prices,
-                _trades
+                _prices[pricesIndex:],
+                tradesIter
             );
             console.log('after opTypes[i]:', opTypes[i]);
         }
@@ -987,7 +990,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _tradeInfo
             );
 
-        if (tradeInfo.path.length == 0) {
+        if (_tradeInfo.path.length == 0) {
             trades.push(tradeInfo);
         }
         console.log('receivedQuantity:', receivedQuantity);

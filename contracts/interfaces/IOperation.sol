@@ -6,6 +6,12 @@ pragma abicoder v2;
 import {IGarden} from './IGarden.sol';
 import {IStrategy, TradeInfo} from './IStrategy.sol';
 
+
+struct TradesIterator {
+    TradeInfo[] trades;
+    uint256 iterator;
+}
+
 /**
  * @title IOperation
  * @author Babylon Finance
@@ -30,15 +36,16 @@ interface IOperation {
     ) external view;
 
     function executeOperation(
-        Args memory args,
+        Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _iteratorIn
     )
         external
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         );
 
     function exitOperation(

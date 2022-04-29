@@ -7,11 +7,12 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
-import {IOperation} from '../../interfaces/IOperation.sol';
+import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IHarvestUniv3Pool} from '../../interfaces/external/harvest/IHarvestUniv3Pool.sol';
+
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
@@ -72,17 +73,18 @@ abstract contract Operation is IOperation {
     ) external view virtual override;
 
     function executeOperation(
-        Args memory args,
+        Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _tradesIteratorIn
     )
         external
         virtual
         override
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         );
 
     function exitOperation(

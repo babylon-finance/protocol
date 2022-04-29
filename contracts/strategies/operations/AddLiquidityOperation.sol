@@ -4,12 +4,15 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
-import {BytesLib} from '../../lib/BytesLib.sol';
+
+import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
+
+import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
@@ -58,21 +61,25 @@ contract AddLiquidityOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _iteratorIn
     )
         external
         override
         onlyStrategy
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         )
     {
-        address[] memory poolTokens = IPoolIntegration(_args.integration).getPoolTokens(_args.data, false);
-        uint256[] memory poolWeights = IPoolIntegration(_args.integration).getPoolWeights(_args.data);
+        Args memory args = _args;
+        address[] memory poolTokens =
+            IPoolIntegration(args.integration).getPoolTokens(args.data, false);
+        uint256[] memory poolWeights =
+            IPoolIntegration(args.integration).getPoolWeights(args.data);
         // if the weights need to be adjusted by price, do so
-        try IPoolIntegration(_args.integration).poolWeightsByPrice(_args.data) returns (bool priceWeights) {
+        try IPoolIntegration(args.integration).poolWeightsByPrice(args.data) returns (bool priceWeights) {
             if (priceWeights) {
                 uint256 poolTotal = 0;
                 for (uint256 i = 0; i < poolTokens.length; i++) {
@@ -88,8 +95,22 @@ contract AddLiquidityOperation is Operation {
                 }
             }
         } catch {}
-        return
-            _joinPool(_args.asset, _args.capital, _args.data, _args.garden, _args.integration, poolWeights, poolTokens);
+// Get the tokens needed to enter the pool
+        uint256[] memory maxAmountsIn = _maxAmountsIn(args.asset, args.capital,
+                                                      args.garden, poolWeights, poolTokens);
+        uint256 poolTokensOut =
+            IPoolIntegration(args.integration).getPoolTokensOut(args.data, poolTokens[0], maxAmountsIn[0]);
+        IPoolIntegration(args.integration).joinPool(
+            msg.sender,
+            args.data,
+            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            poolTokens,
+            maxAmountsIn
+        );
+        address lpToken =
+            IPoolIntegration(args.integration).getLPToken(BytesLib.decodeOpDataAddress(args.data));
+
+        return (lpToken, IERC20(lpToken).balanceOf(msg.sender), 0, _iteratorIn); // liquid
     }
 
     /**
@@ -271,19 +292,7 @@ contract AddLiquidityOperation is Operation {
             uint8
         )
     {
-        // Get the tokens needed to enter the pool
-        uint256[] memory maxAmountsIn = _maxAmountsIn(_asset, _capital, _garden, _poolWeights, _poolTokens);
-        uint256 poolTokensOut = IPoolIntegration(_integration).getPoolTokensOut(_data, _poolTokens[0], maxAmountsIn[0]);
-        IPoolIntegration(_integration).joinPool(
-            msg.sender,
-            _data,
-            poolTokensOut.sub(poolTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
-            _poolTokens,
-            maxAmountsIn
-        );
-        address lpToken = IPoolIntegration(_integration).getLPToken(BytesLib.decodeOpDataAddress(_data));
-
-        return (lpToken, IERC20(lpToken).balanceOf(msg.sender), 0); // liquid
+        
     }
 
     // TODO: Make a lib helper

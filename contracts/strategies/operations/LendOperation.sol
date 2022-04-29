@@ -4,6 +4,8 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import {IOperation, TradesIterator} from '../../interfaces/IOperation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy, TradeInfo, TradeProtocol} from '../../interfaces/IStrategy.sol';
 import {ILendIntegration} from '../../interfaces/ILendIntegration.sol';
@@ -59,15 +61,16 @@ contract LendOperation is Operation {
     function executeOperation(
         Args memory _args,
         uint256[] memory _prices,
-        TradeInfo[] memory _trades
+        TradesIterator memory _tradesIteratorIn
     )
         external
         override
         onlyStrategy
         returns (
-            address,
-            uint256,
-            uint8
+            address assetAccumulated,
+            uint256 amountOut,
+            uint8 assetStatus,
+            TradesIterator memory _iteratorOut
         )
     {
         address assetToken = BytesLib.decodeOpDataAddress(_args.data); // We just use the first 20 bytes from the whole opEncodedData
@@ -85,7 +88,7 @@ contract LendOperation is Operation {
         uint256 exactAmount = ILendIntegration(_args.integration).getExpectedShares(assetToken, numTokensToSupply);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(SLIPPAGE_ALLOWED));
         ILendIntegration(_args.integration).supplyTokens(msg.sender, assetToken, numTokensToSupply, minAmountExpected);
-        return (assetToken, numTokensToSupply, 1); // put as collateral
+        return (assetToken, numTokensToSupply, 1, _tradesIteratorIn); // put as collateral
     }
 
     /**
