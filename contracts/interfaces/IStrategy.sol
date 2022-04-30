@@ -10,6 +10,7 @@ enum TradeProtocol {Curve, UniV2, UniV3, Heart, Paladin}
 struct TradeInfo {
     TradeProtocol[] path;
     address[] hops;
+    address[] bridges;
 }
 
 /**

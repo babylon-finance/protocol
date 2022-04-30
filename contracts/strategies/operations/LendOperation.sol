@@ -122,7 +122,7 @@ contract LendOperation is Operation {
                 address(msg.sender).balance,
                 WETH,
                 0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                TradeIteratorLib.none()
             );
             assetToken = WETH;
         }
@@ -247,7 +247,7 @@ contract LendOperation is Operation {
                 borrowBalance,
                 _assetToken,
                 0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                TradeIteratorLib.none()
             );
         }
     }

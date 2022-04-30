@@ -174,6 +174,19 @@ async function executeStrategy(
   if (time > 0) {
     await increaseTime(time);
   }
+
+  if (prices.length == 0) {
+    [prices, trades] = await strategy
+      .connect(signers[1])
+      .callStatic
+      .executeStrategy(amount, fee, prices, trades, {
+        gasPrice,
+        gasLimit,
+      });
+  }
+  console.log('prices:', prices);
+  console.log('trades:', trades);
+
   return (
     strategy
       // use keeper

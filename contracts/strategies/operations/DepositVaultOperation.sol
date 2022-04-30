@@ -88,7 +88,7 @@ contract DepositVaultOperation is Operation {
                     _args.capital,
                     vaultAsset,
                     0,
-                    TradeInfo(new TradeProtocol[](0), new address[](0))
+                    TradeIteratorLib.none()
                 )
                 : IERC20(vaultAsset).universalBalanceOf(msg.sender);
 
@@ -166,7 +166,7 @@ contract DepositVaultOperation is Operation {
                                 amount,
                                 rasset,
                                 0,
-                                TradeInfo(new TradeProtocol[](0), new address[](0))
+                                TradeIteratorLib.none()
                             );
                         }
                     }

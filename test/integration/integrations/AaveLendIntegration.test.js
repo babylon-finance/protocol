@@ -57,7 +57,7 @@ describe('AaveLendIntegrationTest', function () {
       );
     });
 
-    it('can supply and redeem tokens from Aave', async function () {
+    it.only('can supply and redeem tokens from Aave', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',
@@ -67,10 +67,13 @@ describe('AaveLendIntegrationTest', function () {
       );
 
       await executeStrategy(strategyContract);
+
       expect(await USDC.balanceOf(strategyContract.address)).to.be.equal(0);
       const collateral = await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
       expect(collateral).to.be.gt(1);
+
       await finalizeStrategy(strategyContract);
+
       expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
       expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
       expect(await aaveBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address)).to.equal(0);

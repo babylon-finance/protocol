@@ -20,6 +20,7 @@ import {Math} from '../lib/Math.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
+import {TradeIteratorLib} from '../lib/TradeIteratorLib.sol';
 
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
@@ -384,26 +385,28 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
-        console.log('finalizeStrategy');
 
         uint256 balance = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Execute exit operations
         _exitStrategy(HUNDRED_PERCENT);
-        console.log('after finalizeStrategy');
         capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(balance);
         // Mark as finalized
         finalized = true;
         active = false;
         exitedAt = block.timestamp;
         // Mint NFT
+        console.log('mint');
         IStrategyNFT(IBabController(controller).strategyNFT()).grantStrategyNFT(strategist, _tokenURI);
         // Pay Keeper Fee
+        console.log('pay');
         garden.payKeeper(msg.sender, _fee);
         // MinReserveOut security check
         _require(capitalReturned >= _minReserveOut, Errors.INVALID_RESERVE_AMOUNT);
         // Transfer rewards
+        console.log('tranfer');
         _transferStrategyPrincipal();
         // Send rest to garden if any
+        console.log('send');
         _sendReserveAssetToGarden();
         updatedAt = exitedAt;
         emit StrategyFinalized(address(garden), capitalReturned, _fee, block.timestamp);
@@ -509,7 +512,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             garden.reserveAsset(),
             _newSlippage,
             0,
-            TradeInfo(new TradeProtocol[](0), new address[](0))
+            TradeIteratorLib.none()
         );
         // Send reserve asset to garden
         _sendReserveAssetToGarden();
@@ -582,7 +585,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 _receiveToken,
                 _overrideSlippage,
                 0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                TradeIteratorLib.none()
             );
     }
 
@@ -915,7 +918,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 garden.reserveAsset(),
                 0,
                 0,
-                TradeInfo(new TradeProtocol[](0), new address[](0))
+                TradeIteratorLib.none()
             );
             console.log('consolidate');
         }
@@ -984,12 +987,17 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         console.log('price:', _price);
         _require(_price != 0, Errors.NO_PRICE_FOR_TRADE);
         // minAmount must have receive token decimals
+        console.log('_sendQuantity:', _sendQuantity);
+        console.log('_sendToken:', _sendToken);
+        console.log('_receiveToken:', _receiveToken);
+        console.log(' _sendQuantity.preciseMul(_price):',  _sendQuantity.preciseMul(_price));
         uint256 exactAmount =
             SafeDecimalMath.normalizeAmountTokens(_sendToken, _receiveToken, _sendQuantity.preciseMul(_price));
         uint256 slippage =
             _overrideSlippage != 0 ? _overrideSlippage : maxTradeSlippagePercentage != 0
                 ? maxTradeSlippagePercentage
                 : DEFAULT_TRADE_SLIPPAGE;
+        console.log('exactAmount:', exactAmount);
         uint256 minAmountExpected = exactAmount.sub(exactAmount.preciseMul(slippage));
         console.log('before trade');
         (uint256 receivedQuantity, TradeInfo memory tradeInfo) =
@@ -1031,9 +1039,15 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 STAKE_QUADRATIC_PENALTY_FOR_LOSSES
             );
         }
+        console.log('safetransfer');
         // Return the balance back to the garden
+        console.log('capitalReturned:', capitalReturned);
+        console.log('protocolProfits:', protocolProfits);
+        console.log('capitalAllocated:', capitalAllocated);
         IERC20(reserveAsset).safeTransfer(address(garden), capitalReturned.sub(protocolProfits));
+        console.log('_updateProtocolPrincipal');
         _updateProtocolPrincipal(capitalAllocated, false);
+        console.log('_updateProtocolPrincipal after');
         // Assign BABL Mining Strategy Rewards
         strategyRewards = uint256(rewardsDistributor.getStrategyRewards(address(this)));
         // profitsSharing[0]: strategistProfit %, profitsSharing[1]: stewardsProfit %, profitsSharing[2]: lpProfit %
@@ -1046,6 +1060,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 : 0;
         // Checkpoint of garden supply (must go before burning tokens if penalty for strategist)
         endingGardenSupply = IERC20(address(garden)).totalSupply();
+        console.log('finalize strate');
         garden.finalizeStrategy(rewardsToSetAside, strategyReturns, burningAmount);
     }
 

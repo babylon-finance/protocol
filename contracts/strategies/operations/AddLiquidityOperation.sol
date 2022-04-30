@@ -158,7 +158,7 @@ contract AddLiquidityOperation is Operation {
                         address(msg.sender).balance,
                         reserveAsset,
                         0,
-                        TradeInfo(new TradeProtocol[](0), new address[](0))
+                        TradeIteratorLib.none()
                     );
                     poolTokens[i] = WETH;
                 }
@@ -169,7 +169,7 @@ contract AddLiquidityOperation is Operation {
                             IERC20(poolTokens[i]).universalBalanceOf(msg.sender),
                             reserveAsset,
                             0,
-                            TradeInfo(new TradeProtocol[](0), new address[](0))
+                            TradeIteratorLib.none()
                         );
                     }
                 }
@@ -250,7 +250,7 @@ contract AddLiquidityOperation is Operation {
                     normalizedAssetAmount,
                     _poolToken,
                     0,
-                    TradeInfo(new TradeProtocol[](0), new address[](0))
+                    TradeIteratorLib.none()
                 );
         }
         // Reserve asset

@@ -7,6 +7,8 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
+import 'hardhat/console.sol';
+
 library SafeDecimalMath {
     using LowGasSafeMath for uint256;
     using UniversalERC20 for IERC20;
@@ -141,7 +143,10 @@ library SafeDecimalMath {
         uint256 _amount
     ) internal view returns (uint256) {
         uint256 fromDecimals = IERC20(_from).universalDecimals();
+        console.log('fromDecimals:', fromDecimals);
         uint256 toDecimals = IERC20(_to).universalDecimals();
+        console.log('_to:', _to);
+        console.log('toDecimals:', toDecimals);
 
         if (fromDecimals == toDecimals) {
             return _amount;

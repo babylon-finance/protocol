@@ -234,13 +234,13 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
     function _execute(TradeArgs memory _args, TradeInfo memory _tradeInfo) private returns (uint256) {
         address sendToken = _args.sendToken;
         uint256 sendQuantity = _args.sendQuantity;
-        address receiveToken = _args.receiveToken;
         uint256 receivedQuantity;
 
         for (uint256 index = 0; index < _tradeInfo.path.length; index++) {
             bool isLast = index == _tradeInfo.path.length - 1;
             TradeProtocol protocol = _tradeInfo.path[index];
 
+            address receiveToken = isLast ? _args.receiveToken : _tradeInfo.bridges[index];
             uint256 minReceiveQuantity = isLast ? _args.minReceiveQuantity : 1;
             ITradeIntegration integration;
 
@@ -297,6 +297,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     received,
                     TradeInfo(
                         IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Paladin),
+                        AddressArrayUtils.toDynamic(address(0), address(0)),
                         AddressArrayUtils.toDynamic(AAVE, address(0))
                     )
                 );
@@ -330,6 +331,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     received,
                     TradeInfo(
                         IntegerUtils.toDynamic(TradeProtocol.Heart, TradeProtocol.UniV3),
+                        AddressArrayUtils.toDynamic(address(0), address(0)),
                         AddressArrayUtils.toDynamic(WETH, address(0))
                     )
                 );
@@ -353,6 +355,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                 receivedQuantity,
                 TradeInfo(
                     IntegerUtils.toDynamic(TradeProtocol.Curve),
+                    AddressArrayUtils.toDynamic(address(0)),
                     AddressArrayUtils.toDynamic(address(0))
                 )
             );
@@ -374,7 +377,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
         returns (uint256 receivedQuantity) {
             return (
                 receivedQuantity,
-                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV3), AddressArrayUtils.toDynamic(WETH))
+                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV3),
+                          AddressArrayUtils.toDynamic(WETH),
+                          AddressArrayUtils.toDynamic(address(0)))
             );
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'UniV3 ', args.sendToken, WETH, args.receiveToken);
@@ -400,7 +405,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                         receivedQuantity,
                         TradeInfo(
                             IntegerUtils.toDynamic(TradeProtocol.UniV3, TradeProtocol.Curve),
-                            AddressArrayUtils.toDynamic(address(0), address(0))
+                            AddressArrayUtils.toDynamic(address(0), address(0)),
+                            AddressArrayUtils.toDynamic(curveUniHopTokens[i], address(0))
                         )
                     );
                 } catch Error(string memory _err) {
@@ -431,7 +437,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                         receivedQuantity,
                         TradeInfo(
                             IntegerUtils.toDynamic(TradeProtocol.Curve, TradeProtocol.UniV3),
-                            AddressArrayUtils.toDynamic(address(0), address(0))
+                            AddressArrayUtils.toDynamic(address(0), address(0)),
+                            AddressArrayUtils.toDynamic(curveUniHopTokens[i], address(0))
                         )
                     );
                 } catch Error(string memory _err) {
@@ -463,7 +470,8 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
                     receivedQuantity,
                     TradeInfo(
                         IntegerUtils.toDynamic(TradeProtocol.UniV3),
-                        AddressArrayUtils.toDynamic(uniV3HopTokens[i])
+                        AddressArrayUtils.toDynamic(uniV3HopTokens[i]),
+                        AddressArrayUtils.toDynamic(address(0))
                     )
                 );
             } catch Error(string memory _err) {
@@ -485,7 +493,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, IMasterSwapper {
             // return (receivedQuantity, IntegerUtils.toDynamic(TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH));
             return (
                 receivedQuantity,
-                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH))
+                TradeInfo(IntegerUtils.toDynamic(TradeProtocol.UniV2), AddressArrayUtils.toDynamic(WETH), AddressArrayUtils.toDynamic(address(0)))
             );
         } catch Error(string memory _err) {
             error = _formatError(error, _err, 'UniV2 ', args.sendToken, WETH, args.receiveToken);

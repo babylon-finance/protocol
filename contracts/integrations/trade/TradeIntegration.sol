@@ -218,7 +218,7 @@ abstract contract TradeIntegration is BaseIntegration, ReentrancyGuard, ITradeIn
             receivedQuantity >= _minReceiveQuantity,
             string(
                 abi.encodePacked(
-                    'Slippage :',
+                    'Slippage: ',
                     Strings.toString(receivedQuantity),
                     ' ',
                     Strings.toString(_minReceiveQuantity)
