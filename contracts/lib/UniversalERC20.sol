@@ -84,7 +84,7 @@ library UniversalERC20 {
 
         console.log('token:', address(token));
 
-        (bool success, bytes memory data) = address(token).staticcall{gas: 5000}(abi.encodeWithSignature('decimals()'));
+        (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSignature('decimals()'));
 
         console.log('success:', success);
         return success ? abi.decode(data, (uint256)) : 18;
