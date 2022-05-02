@@ -15,6 +15,33 @@ describe('CurveGaugeIntegrationTest', function () {
   let signer2;
   let signer3;
 
+  const pools = Object.keys(addresses.curve.pools.v3).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.v3[key],
+    };
+  });
+  const cryptopools = Object.keys(addresses.curve.pools.crypto).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.crypto[key],
+    };
+  });
+
+  const factorypools = Object.keys(addresses.curve.pools.factory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.factory[key],
+    };
+  });
+
+  const cryptofactorypools = Object.keys(addresses.curve.pools.cryptofactory).map((key) => {
+    return {
+      name: key,
+      pool: addresses.curve.pools.cryptofactory[key],
+    };
+  });
+
   beforeEach(async () => {
     ({
       curvePoolIntegration,
@@ -32,9 +59,9 @@ describe('CurveGaugeIntegrationTest', function () {
       { token: addresses.tokens.DAI, name: 'DAI' },
       { token: addresses.tokens.USDC, name: 'USDC' },
       { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ]).forEach(async ({ token, name }) => {
-      pick(addresses.curve.pools).forEach(({ crvpool, name }) => {
-        it(`can enter ${name} CRV pool and stake into gauge`, async function () {
+    ].slice(0, 1)).forEach(async ({ token, name }) => {
+      pick(pools.slice(0, 7)).forEach(({ crvpool, name }) => {
+        it.only(`can enter ${name} CRV pool and stake into gauge`, async function () {
           await depositAndStakeStrategy(crvpool, token);
         });
       });
