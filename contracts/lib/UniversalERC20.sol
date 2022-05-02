@@ -6,6 +6,8 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
+import 'hardhat/console.sol';
+
 library UniversalERC20 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -80,8 +82,11 @@ library UniversalERC20 {
             return 18;
         }
 
+        console.log('token:', address(token));
+
         (bool success, bytes memory data) = address(token).staticcall{gas: 5000}(abi.encodeWithSignature('decimals()'));
 
+        console.log('success:', success);
         return success ? abi.decode(data, (uint256)) : 18;
     }
 
