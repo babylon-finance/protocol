@@ -243,9 +243,14 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(_tokenIn, USDC).preciseDiv(exchangeRate);
         }
 
-        // Curve lp
-        if (tokenInType == 5) {
-            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+        // Curve lp or gauge
+        if (tokenInType == 5 || tokenInType == 17) {
+            address crvPool;
+            if (tokenInType == 5) {
+                crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);
+            } else {
+                crvPool = curveMetaRegistry.gaugeToPool(_tokenIn);
+            }
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool);
                 return
@@ -253,9 +258,14 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
         }
 
-        if (tokenOutType == 5) {
+        if (tokenOutType == 5 || tokenOutType == 17) {
             // Token out is a curve lp
-            address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            address crvPool;
+            if (tokenOutType == 5) {
+                crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenOut);
+            } else {
+                crvPool = curveMetaRegistry.gaugeToPool(_tokenOut);
+            }
             if (crvPool != address(0)) {
                 address denominator = _cleanCurvePoolDenominator(crvPool);
                 return

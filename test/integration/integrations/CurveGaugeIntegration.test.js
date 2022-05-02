@@ -54,15 +54,23 @@ describe('CurveGaugeIntegrationTest', function () {
   });
 
   describe('Curve Gauge Multigarden multiasset', function () {
-    pick([
-      { token: addresses.tokens.WETH, name: 'WETH' },
-      { token: addresses.tokens.DAI, name: 'DAI' },
-      { token: addresses.tokens.USDC, name: 'USDC' },
-      { token: addresses.tokens.WBTC, name: 'WBTC' },
-    ].slice(0, 1)).forEach(async ({ token, name }) => {
-      pick(pools.slice(0, 7)).forEach(({ crvpool, name }) => {
+    pick(
+      [
+        { token: addresses.tokens.WETH, name: 'WETH' },
+        { token: addresses.tokens.DAI, name: 'DAI' },
+        { token: addresses.tokens.USDC, name: 'USDC' },
+        { token: addresses.tokens.WBTC, name: 'WBTC' },
+      ].slice(0, 1),
+    ).forEach(async ({ token, name }) => {
+      pick(pools.slice(0, 5)).forEach(({ pool, name }) => {
         it.only(`can enter ${name} CRV pool and stake into gauge`, async function () {
-          await depositAndStakeStrategy(crvpool, token);
+          await depositAndStakeStrategy(pool, token);
+        });
+        it(`can enter ${name} CRV pool and stake into gauge`, async function () {
+          await depositAndStakeStrategy(cryptopools, token);
+        });
+        it(`can enter ${name} CRV pool and stake into gauge`, async function () {
+          await depositAndStakeStrategy(factorypools.concat(cryptofactorypools), token);
         });
       });
     });

@@ -175,18 +175,20 @@ contract CurveGaugeIntegration is PassiveIntegration {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         uint256 totalAmount = 0;
         uint256 extraRewardsLength = 8; // max of 8 tokens in curve
-        for (uint256 i = 0; i < extraRewardsLength; i++) {
-            address rewardToken = gauge.rewarded_tokens(i);
-            uint256 claimable = gauge.claimable_reward_write(_strategy, rewardToken);
-            if (claimable > 0) {
-                claimable = claimable.sub(gauge.claimed_reward(_strategy, rewardToken));
+        try gauge.last_claim() returns (uint256) {
+            for (uint256 i = 0; i < extraRewardsLength; i++) {
+                address rewardToken = gauge.rewarded_tokens(i);
+                uint256 claimable = gauge.claimable_reward_write(_strategy, rewardToken);
                 if (claimable > 0) {
-                    try oracle.getPrice(rewardToken, WETH) returns (uint256 priceExtraReward) {
-                        totalAmount = totalAmount.add(priceExtraReward.preciseMul(claimable));
-                    } catch {}
+                    claimable = claimable.sub(gauge.claimed_reward(_strategy, rewardToken));
+                    if (claimable > 0) {
+                        try oracle.getPrice(rewardToken, WETH) returns (uint256 priceExtraReward) {
+                            totalAmount = totalAmount.add(priceExtraReward.preciseMul(claimable));
+                        } catch {}
+                    }
                 }
             }
-        }
+        } catch {}
         return (WETH, totalAmount);
     }
 }

@@ -13,6 +13,8 @@ interface IGauge {
 
     function balanceOf(address _addr) external view returns (uint256);
 
+    function last_claim() external view returns (uint256);
+
     function claimed_reward(address _addr, address _token) external view returns (uint256);
 
     function claimable_reward(address _addr, address _token) external view returns (uint256);

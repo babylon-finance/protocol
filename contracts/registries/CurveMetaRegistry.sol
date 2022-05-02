@@ -51,6 +51,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     // Mapping of pool to registryId
     mapping(address => uint8) public poolToRegistry;
+    mapping(address => address) public override gaugeToPool;
 
     // 0 means doesnt exist
     // 1 means first party normal
@@ -313,7 +314,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      *
      * @return address                Address of the gauge
      */
-    function getGauge(address _pool) external view override returns (address) {
+    function getGauge(address _pool) public view override returns (address) {
         uint256 registryKind = poolToRegistry[_pool];
         address registryToUse = address(curveRegistry);
         if (registryKind == 2) {
@@ -430,6 +431,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         for (uint256 i = 0; i < _registry.pool_count(); i++) {
             address pool = _registry.pool_list(i);
             poolToRegistry[pool] = _index;
+            // Adds gauge
+            gaugeToPool[pool] = getGauge(pool);
             // Adds lptoken to pool for cryptofactory pools
             if (_index == 4) {
                 cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
