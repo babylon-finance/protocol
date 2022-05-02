@@ -277,20 +277,6 @@ contract TokenIdentifier is ITokenIdentifier {
             tokenOutType = CONVEX_TOKEN;
         }
 
-        // Curve Gauge Tokens
-        if (curveMetaRegistry.gaugeToPool(_tokenIn) != address(0)) {
-            tokenInType = CURVE_GAUGE_TOKEN;
-        }
-
-        if (curveMetaRegistry.gaugeToPool(_tokenOut) != address(0)) {
-            tokenOutType = CURVE_GAUGE_TOKEN;
-        }
-
-        // Early exit
-        if (tokenInType > 0 && tokenOutType > 0) {
-            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
-        }
-
         // Early exit
         if (tokenInType > 0 && tokenOutType > 0) {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
@@ -309,6 +295,20 @@ contract TokenIdentifier is ITokenIdentifier {
             if (crvPool != address(0)) {
                 tokenOutType = CURVE_LP_TOKEN;
             }
+        }
+
+        // Curve Gauge Tokens
+        if (curveMetaRegistry.gaugeToPool(_tokenIn) != address(0)) {
+            tokenInType = CURVE_GAUGE_TOKEN;
+        }
+
+        if (curveMetaRegistry.gaugeToPool(_tokenOut) != address(0)) {
+            tokenOutType = CURVE_GAUGE_TOKEN;
+        }
+
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
 
         // Check sushi pairs (univ2)

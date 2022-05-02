@@ -54,7 +54,7 @@ contract CurveGaugeIntegration is PassiveIntegration {
     }
 
     function _getResultAsset(address _asset) internal view override returns (address) {
-        return curveMetaRegistry.getGauge(_asset));
+        return curveMetaRegistry.getGauge(_asset);
     }
 
     /**

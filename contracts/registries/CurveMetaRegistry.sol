@@ -262,7 +262,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Returns the virtual price of an lp token from curve
      * @param _lpToken                Lp token Address
      *
-     * @return uint256                Whether the pool is a meta pool or not
+     * @return uint256                Price of the lp token
      */
     function getVirtualPriceFromLpToken(address _lpToken) external view override returns (uint256) {
         address pool = getPoolFromLpToken(_lpToken);
@@ -436,12 +436,12 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         for (uint256 i = 0; i < _registry.pool_count(); i++) {
             address pool = _registry.pool_list(i);
             poolToRegistry[pool] = _index;
-            // Adds gauge
-            gaugeToPool[pool] = getGauge(pool);
             // Adds lptoken to pool for cryptofactory pools
             if (_index == 4) {
                 cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
             }
+            // Adds gauge
+            gaugeToPool[getGauge(pool)] = pool;
         }
     }
 }
