@@ -49,12 +49,12 @@ contract CurveGaugeIntegration is PassiveIntegration {
         return curveMetaRegistry.getGauge(_asset);
     }
 
-    function _getInvestmentAsset(address _asset) internal pure override returns (address) {
-        return _asset;
+    function _getInvestmentAsset(address _asset) internal view override returns (address) {
+        return curveMetaRegistry.getLpToken(_asset);
     }
 
-    function _getResultAsset(address _asset) internal view virtual override returns (address) {
-        return curveMetaRegistry.getGauge(_asset);
+    function _getResultAsset(address _asset) internal view override returns (address) {
+        return curveMetaRegistry.getGauge(_asset));
     }
 
     /**
@@ -159,8 +159,11 @@ contract CurveGaugeIntegration is PassiveIntegration {
         if (_passiveOp == 1) {
             // Claim rewards
             address gauge = curveMetaRegistry.getGauge(_asset);
-            bytes memory methodData = abi.encodeWithSignature('claim_rewards(address,address)', _strategy, _strategy);
-            return (gauge, 0, methodData);
+            try IGauge(gauge).last_claim() returns (uint256) {
+              // only do it for v3 gauges
+              bytes memory methodData = abi.encodeWithSignature('claim_rewards(address,address)', _strategy, _strategy);
+              return (gauge, 0, methodData);
+            } catch {}
         }
         return (address(0), 0, bytes(''));
     }
