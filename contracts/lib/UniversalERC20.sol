@@ -80,7 +80,7 @@ library UniversalERC20 {
             return 18;
         }
 
-        (bool success, bytes memory data) = address(token).staticcall{gas: 5000}(abi.encodeWithSignature('decimals()'));
+        (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSignature('decimals()'));
 
         return success ? abi.decode(data, (uint256)) : 18;
     }
