@@ -47,6 +47,7 @@ async function setUpFixture(
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
+  const curveGaugeIntegration = await getContract('CurveGauge');
   const stakewiseIntegration = await getContract('StakewiseIntegration');
   const oneInchPoolIntegration = await getContract('OneInchPoolIntegration');
   const compoundLendIntegration = await getContract('CompoundLendIntegration');
@@ -302,6 +303,7 @@ async function setUpFixture(
     yearnVaultIntegration,
     sushiswapPoolIntegration,
     curvePoolIntegration,
+    curveGaugeIntegration,
     convexStakeIntegration,
     oneInchPoolIntegration,
     compoundLendIntegration,

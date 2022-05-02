@@ -122,7 +122,7 @@ contract GardenViewer {
             totalSupplyValuationAndSeed[3] = 0;
         }
 
-        uint256[3] memory profits = _getGardenProfitSharing(_garden);
+        profits = _getGardenProfitSharing(_garden);
         return (
             ERC20(_garden).name(),
             ERC20(_garden).symbol(),

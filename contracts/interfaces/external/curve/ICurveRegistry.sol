@@ -27,6 +27,8 @@ interface ICurveRegistry {
 
     function pool_list(uint256 i) external view returns (address);
 
+    function get_gauges(address _pool) external view returns (address[10] memory, int128[10] memory);
+
     function get_pool_name(address _pool) external view returns (string memory);
 
     function get_A(address _pool) external view returns (uint256);

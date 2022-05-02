@@ -308,6 +308,33 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     }
 
     /**
+     * Returns the gauge for a given pool address
+     * @param _pool                   Pool Address
+     *
+     * @return address                Address of the gauge
+     */
+    function getGauge(address _pool) external view override returns (address) {
+        uint256 registryKind = poolToRegistry[_pool];
+        address registryToUse = address(curveRegistry);
+        if (registryKind == 2) {
+            registryToUse = address(factoryRegistry);
+        }
+        if (registryKind == 3) {
+            registryToUse = address(cryptoRegistry);
+        }
+        if (registryKind == 4) {
+            registryToUse = address(cryptoRegistryF);
+        }
+        (address[10] memory addresses, int128[10] memory types) = ICurveRegistry(registryToUse).get_gauges(_pool);
+        for (uint i = 0; i < 10; i++) {
+          if (types[i] == 0 || types[i] == 5) {
+              return addresses[i];
+          }
+        }
+        return address(0);
+    }
+
+    /**
      * Finds a pool given those tokens and the index _i
      * @param _fromToken              Token 1
      * @param _toToken                Token 2
