@@ -3,7 +3,6 @@
 pragma solidity ^0.7.6;
 
 interface IGauge {
-
     function claim_rewards(address _add, address _receiver) external;
 
     function deposit(address _add, uint256 _amount) external;
@@ -19,6 +18,4 @@ interface IGauge {
     function claimable_reward(address _addr, address _token) external view returns (uint256);
 
     function claimable_reward_write(address _addr, address _token) external view returns (uint256);
-
-
 }

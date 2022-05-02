@@ -42,7 +42,10 @@ contract CurveGaugeIntegration is PassiveIntegration {
 
     /* ============ Internal Functions ============ */
 
-    function _getSpender(address _asset, uint8 /* _op */) internal view override returns (address) {
+    function _getSpender(
+        address _asset,
+        uint8 /* _op */
+    ) internal view override returns (address) {
         return curveMetaRegistry.getGauge(_asset);
     }
 
@@ -178,11 +181,9 @@ contract CurveGaugeIntegration is PassiveIntegration {
             if (claimable > 0) {
                 claimable = claimable.sub(gauge.claimed_reward(_strategy, rewardToken));
                 if (claimable > 0) {
-                  try oracle.getPrice(rewardToken, WETH) returns (
-                      uint256 priceExtraReward
-                  ) {
-                      totalAmount = totalAmount.add(priceExtraReward.preciseMul(claimable));
-                  } catch {}
+                    try oracle.getPrice(rewardToken, WETH) returns (uint256 priceExtraReward) {
+                        totalAmount = totalAmount.add(priceExtraReward.preciseMul(claimable));
+                    } catch {}
                 }
             }
         }

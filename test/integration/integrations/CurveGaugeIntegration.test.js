@@ -15,7 +15,6 @@ describe('CurveGaugeIntegrationTest', function () {
   let signer2;
   let signer3;
 
-
   beforeEach(async () => {
     ({
       curvePoolIntegration,
