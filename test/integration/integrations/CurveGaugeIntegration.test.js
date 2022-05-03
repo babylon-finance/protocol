@@ -60,14 +60,12 @@ describe('CurveGaugeIntegrationTest', function () {
   });
 
   describe('Curve Gauge Multigarden multiasset', function () {
-    pick(
-      [
-        { token: addresses.tokens.WETH, name: 'WETH' },
-        { token: addresses.tokens.DAI, name: 'DAI' },
-        { token: addresses.tokens.USDC, name: 'USDC' },
-        { token: addresses.tokens.WBTC, name: 'WBTC' },
-      ].slice(0, 1),
-    ).forEach(async ({ token, name }) => {
+    pick([
+      { token: addresses.tokens.WETH, name: 'WETH' },
+      { token: addresses.tokens.DAI, name: 'DAI' },
+      { token: addresses.tokens.USDC, name: 'USDC' },
+      { token: addresses.tokens.WBTC, name: 'WBTC' },
+    ]).forEach(async ({ token, name }) => {
       pick(pools).forEach(({ pool, name }) => {
         it(`can enter ${name} CRV pool and stake into gauge`, async function () {
           await depositAndStakeStrategy(pool, token);

@@ -1,7 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { setupTests } = require('fixtures/GardenFixture');
-const { createGarden } = require('fixtures/GardenHelper');
 const {
   DEFAULT_STRATEGY_PARAMS,
   createStrategy,
@@ -13,7 +12,6 @@ const { getERC20, eth, pick } = require('utils/test-helpers');
 
 describe('CurvePoolIntegrationTest', function () {
   let curvePoolIntegration;
-  let paladinStakeIntegration;
   let signer1;
   let signer2;
   let signer3;
