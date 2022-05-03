@@ -44,6 +44,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
+
 /**
  * @title PriceOracle
  * @author Babylon Finance Protocol
@@ -363,14 +364,14 @@ contract PriceOracle is Ownable, IPriceOracle {
             }
         }
 
-        // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        // Direct UNI3
+        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }
 
-        // Direct UNI3
-        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
+        // Direct Curve
+        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }

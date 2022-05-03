@@ -64,6 +64,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     constructor(IBabController _controller) {
         require(address(_controller) != address(0), 'Controller is not valid');
+
         controller = _controller;
         curveRegistry = ICurveRegistry(curveAddressProvider.get_registry());
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));

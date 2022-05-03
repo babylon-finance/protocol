@@ -32,6 +32,7 @@ import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
 
+ 
 /**
  * @title Strategy
  * @author Babylon Finance
