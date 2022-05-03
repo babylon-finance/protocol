@@ -661,6 +661,34 @@ contract PriceOracle is Ownable, IPriceOracle {
         return 0;
     }
 
+    function _getCurveDYUnderlying(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        (bool success, bytes memory data) =
+            _curvePool.staticcall(abi.encodeWithSelector(ICurvePoolV3DY.get_dy_underlying.selector, i, j, decimals));
+        if (success && data.length > 0) {
+            return abi.decode(data, (uint256));
+        } else {
+            (success, data) = _curvePool.staticcall(
+                abi.encodeWithSelector(ICurvePoolV3.get_dy_underlying.selector, int128(i), int128(j), decimals)
+            );
+            if (success && data.length > 0) {
+                return abi.decode(data, (uint256));
+            } else {
+                (success, data) = _curvePool.staticcall(
+                    abi.encodeWithSelector(ICurvePoolV3.get_dy.selector, int128(i), int128(j), decimals)
+                );
+                if (success && data.length > 0) {
+                    return abi.decode(data, (uint256));
+                }
+            }
+        }
+        return 0;
+    }
+
     /**
      * Calculates the value of a univ2 lp token or sushi in denominator asset
      * @param _pool                      Address of the univ2 style lp token
@@ -762,26 +790,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         return priceinReserveToken0.add(priceinReserveToken1);
     }
 
-    function _getCurveDYUnderlying(
-        address _curvePool,
-        uint256 i,
-        uint256 j,
-        uint256 decimals
-    ) private view returns (uint256) {
-        try ICurvePoolV3DY(_curvePool).get_dy_underlying(i, j, decimals) returns (uint256 price) {
-            return price;
-        } catch {
-            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
-                return price2;
-            } catch {
-                try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
-                    return price3;
-                } catch {
-                    revert('get dy underlying failed');
-                }
-            }
-        }
-    }
 
     function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
         address curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
@@ -794,8 +802,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
         }
         if (curvePool != address(0)) {
-            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
-            return price;
+            return _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
         }
         return 0;
     }
