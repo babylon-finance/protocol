@@ -88,7 +88,7 @@ contract CurveGaugeIntegration is PassiveIntegration {
     {
         address gauge = curveMetaRegistry.getGauge(_asset);
         require(gauge != address(0), 'Curve gauge does not exist');
-        // Encode method data for Garden to invoke
+        // Encode method data for Strategy to invoke
         bytes memory methodData = abi.encodeWithSignature('deposit(uint256,address)', _maxAmountIn, _strategy);
         return (gauge, 0, methodData);
     }
