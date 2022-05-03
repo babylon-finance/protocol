@@ -44,6 +44,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 
+
 /**
  * @title PriceOracle
  * @author Babylon Finance Protocol
@@ -646,15 +647,16 @@ contract PriceOracle is Ownable, IPriceOracle {
         uint256 j,
         uint256 decimals
     ) private view returns (uint256) {
-        try ICurvePoolV3DY(_curvePool).get_dy(i, j, decimals) returns (uint256 price) {
-            return price;
-        } catch {
-            try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price2) {
-                return price2;
-            } catch {
-                revert('get dy failed');
+        (bool success, bytes memory data) = _curvePool.staticcall(abi.encodeWithSelector(ICurvePoolV3DY.get_dy.selector, i, j, decimals));
+        if (success && data.length > 0) {
+            return abi.decode(data, (uint256));
+        } else {
+            (success, data) = _curvePool.staticcall(abi.encodeWithSelector(ICurvePoolV3.get_dy.selector, int128(i), int128(j), decimals));
+            if (success && data.length > 0) {
+                return abi.decode(data, (uint256));
             }
         }
+        return 0;
     }
 
     /**
