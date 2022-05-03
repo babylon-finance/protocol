@@ -64,6 +64,7 @@ skipIfFast('RewardsDistributor', function () {
   let daiGarden;
   let usdcGarden;
   let heartTestGarden;
+  let heartGarden;
   let usdc;
   let dai;
   let weth;
@@ -237,6 +238,7 @@ skipIfFast('RewardsDistributor', function () {
       daiGarden,
       usdcGarden,
       heartTestGarden,
+      heartGarden,
       usdc,
       babController,
       bablToken,
@@ -1277,6 +1279,104 @@ skipIfFast('RewardsDistributor', function () {
           const profitValue = value.mul(profitWeight).mul(rewardsRatio).mul(profit).div(eth()).div(eth()).div(eth());
           const rewards = await long1.strategyRewards();
           expect(rewards).to.be.closeTo(principalValue.add(profitValue), rewards.div(50));
+        });
+      });
+    });
+    [{ token: addresses.tokens.BABL, name: 'Heart' }].forEach(({ token, name }) => {
+      pick([
+        {
+          benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+          action: 'a bad strategy',
+          profitLevel: 0,
+        },
+        {
+          benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+          action: 'a breakeven strategy',
+          profitLevel: 1,
+        },
+        { benchmark: [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)], action: 'non penalized', profitLevel: 2 },
+        {
+          benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+          action: 'a cool strategy',
+          profitLevel: 3,
+        },
+        {
+          benchmark: [eth(0.8), eth(1.03), eth(0), eth(0.5), eth(1.2)],
+          action: 'a really big cool strategy',
+          profitLevel: 4,
+        },
+      ]).forEach(({ benchmark, action, profitLevel }) => {
+        it(`should apply 150% boost to ${name} garden strategies independent of being ${action}`, async function () {
+          // Set the heart garden
+          await heart.connect(owner).setHeartGardenAddress(heartGarden.address, { gasPrice: 0 });
+          const strategistShare = eth(0.1);
+          const stewardsShare = eth(0.1);
+          const lpShare = eth(0.8);
+          const creatorBonus = eth(0.1);
+          const profitWeight = eth(0.95);
+          const principalWeight = eth(0.05);
+          const heartRewardsFactor = eth(1.5); // 150% boost
+
+          await rewardsDistributor
+            .connect(owner)
+            .setBABLMiningParameters([
+              strategistShare,
+              stewardsShare,
+              lpShare,
+              creatorBonus,
+              profitWeight,
+              principalWeight,
+              benchmark[0],
+              benchmark[1],
+              benchmark[2],
+              benchmark[3],
+              benchmark[4],
+            ]);
+          const block = await ethers.provider.getBlock();
+          const now = block.timestamp;
+
+          await transferFunds(token);
+
+          await depositFunds(token, heartGarden);
+          const [long1] = await createStrategies([{ garden: heartGarden, integration: uniswapV3TradeIntegration }]);
+
+          const amount = STRATEGY_EXECUTE_MAP[token];
+
+          await executeStrategy(long1, amount);
+
+          if (profitLevel === 0) {
+            // Very bad strategy
+            await substractFakeProfits(long1, eth(50)); // We substract profits
+          } else if (profitLevel === 3) {
+            // Cool strategy
+            await injectFakeProfits(long1, eth(100)); // We inject profits
+          } else if (profitLevel === 4) {
+            // Very Cool strategy
+            await injectFakeProfits(long1, eth(1000)); // We inject profits
+          }
+
+          await finalizeStrategyAfter30Days(long1);
+
+          const [, value] = await getStrategyRewards(long1, now, 1, 1, [eth()], principalWeight, profitWeight);
+          const [rewardsRatio, profit] = await getRewardsRatio(long1);
+          const principalValue = value.mul(principalWeight).div(eth());
+          const profitValueOriginal = value
+            .mul(profitWeight)
+            .mul(rewardsRatio)
+            .mul(profit)
+            .div(eth())
+            .div(eth())
+            .div(eth());
+          const profitValueBoosted = value
+            .mul(profitWeight)
+            .mul(heartRewardsFactor)
+            .mul(profit)
+            .div(eth())
+            .div(eth())
+            .div(eth());
+          const rewards = await long1.strategyRewards();
+          expect(rewards).to.be.closeTo(principalValue.add(profitValueBoosted), rewards.div(50));
+          expect(profitValueBoosted).gt(profitValueOriginal);
         });
       });
     });

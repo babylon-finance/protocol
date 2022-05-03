@@ -139,32 +139,6 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
     }
 
     /**
-     * PRIVILEGE FUNCTION to update Garden Strategy Rewards
-     * To be used by Governance or Emergency only.
-     *
-     * @param _strategy   Address of the strategy to patch
-     * @param _newTotalAmount  The new BABL rewards
-     */
-    function updateStrategyRewards(
-        address _strategy,
-        uint256 _newTotalAmount,
-        uint256 _newCapitalReturned
-    ) external override {
-        controller.onlyGovernanceOrEmergency();
-        _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
-        uint256 oldRewards = IStrategy(_strategy).strategyRewards();
-        if (address(this) == address(IHeart(controller.heart()).heartGarden()) && oldRewards < _newTotalAmount) {
-            // Send difference if Heart Garden Strategy got less rewards
-            rewardsDistributor.sendBABLToContributor(address(this), _newTotalAmount.sub(oldRewards));
-        }
-        // update profit returns
-        int256 diff = int256(_newCapitalReturned).sub(int256(IStrategy(_strategy).capitalReturned()));
-        absoluteReturns = absoluteReturns.add(diff);
-        // update BABL Mining strategy rewards
-        IStrategy(_strategy).updateStrategyRewards(_newTotalAmount, _newCapitalReturned);
-    }
-
-    /**
      * @notice
      *   Pays gas costs back to the keeper from executing transactions
      *   including the past debt
