@@ -140,7 +140,6 @@ library SafeDecimalMath {
         address _to,
         uint256 _amount
     ) internal view returns (uint256) {
-
         uint256 fromDecimals = _isETH(_from) ? 18 : IERC20(_from).universalDecimals();
         uint256 toDecimals = _isETH(_to) ? 18 : IERC20(_to).universalDecimals();
 
