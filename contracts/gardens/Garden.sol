@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -8,11 +9,11 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+
 import {LowGasSafeMath} from '../lib/LowGasSafeMath.sol';
 import {SafeDecimalMath} from '../lib/SafeDecimalMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
-
 import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
@@ -787,13 +788,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 
         _burn(_to, _amountIn);
-        _safeSendReserveAsset(_to, amountOut.sub(_fee));
         if (_fee > 0) {
             // If fee > 0 pay Accountant
             IERC20(reserveAsset).safeTransfer(msg.sender, _fee);
         }
         _updateContributorWithdrawalInfo(_to, amountOut, prevBalance, balanceOf(_to), _amountIn);
         contributors[_to].nonce++;
+
+        _safeSendReserveAsset(_to, amountOut.sub(_fee));
 
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }

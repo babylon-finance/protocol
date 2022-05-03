@@ -80,12 +80,12 @@ library UniversalERC20 {
             return 18;
         }
 
-        (bool success, bytes memory data) = address(token).staticcall{gas: 5000}(abi.encodeWithSignature('decimals()'));
+        (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSignature('decimals()'));
 
         return success ? abi.decode(data, (uint256)) : 18;
     }
 
     function isETH(IERC20 token) internal pure returns (bool) {
-        return address(token) == address(ZERO_ADDRESS) || address(token) == address(ZERO_ADDRESS);
+        return address(token) == address(ZERO_ADDRESS) || address(token) == address(ETH_ADDRESS);
     }
 }
