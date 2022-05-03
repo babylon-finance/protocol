@@ -326,7 +326,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         if (registryKind == 4) {
             registryToUse = address(cryptoRegistryF);
         }
-        if (registryKind == 1  || registryKind == 3) {
+        if (registryKind == 1 || registryKind == 3) {
             (address[10] memory addresses, int128[10] memory types) = ICurveRegistry(registryToUse).get_gauges(_pool);
             for (uint256 i = 0; i < 10; i++) {
                 if (types[i] == 0 || types[i] == 5) {

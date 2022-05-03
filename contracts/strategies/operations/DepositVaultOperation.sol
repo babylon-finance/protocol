@@ -94,10 +94,13 @@ contract DepositVaultOperation is Operation {
                 IStrategy(msg.sender).trade(_asset, _capital, vaultAsset);
             }
         }
+        uint256 minAmount = _getPrice(_asset, _getResultAsset(_integration, yieldVault));
+        minAmount = minAmount.preciseMul(_capital);
+        minAmount = minAmount.preciseMul(1e18 - SLIPPAGE_ALLOWED);
         IPassiveIntegration(_integration).enterInvestment(
             msg.sender,
             yieldVault,
-            1, // TODO: change from priceOracle
+            minAmount,
             vaultAsset,
             IERC20(vaultAsset).universalBalanceOf(msg.sender)
         );

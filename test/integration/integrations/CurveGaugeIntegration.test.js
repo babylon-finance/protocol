@@ -15,32 +15,38 @@ describe('CurveGaugeIntegrationTest', function () {
   let signer2;
   let signer3;
 
-  const pools = Object.keys(addresses.curve.pools.v3).map((key) => {
-    return {
-      name: key,
-      pool: addresses.curve.pools.v3[key],
-    };
-  });
-  const cryptopools = Object.keys(addresses.curve.pools.crypto).map((key) => {
-    return {
-      name: key,
-      pool: addresses.curve.pools.crypto[key],
-    };
-  });
-
-  const factorypools = Object.keys(addresses.curve.pools.factory).map((key) => {
-    return {
-      name: key,
-      pool: addresses.curve.pools.factory[key],
-    };
-  });
-
-  const cryptofactorypools = Object.keys(addresses.curve.pools.cryptofactory).map((key) => {
-    return {
-      name: key,
-      pool: addresses.curve.pools.cryptofactory[key],
-    };
-  });
+  const pools = Object.keys(addresses.curve.pools.v3)
+    .map((key) => {
+      return {
+        name: key,
+        pool: addresses.curve.pools.v3[key],
+      };
+    })
+    .filter((p) => addresses.curve.pools.gaugeBlacklist.indexOf(p.pool) === -1);
+  const cryptopools = Object.keys(addresses.curve.pools.crypto)
+    .map((key) => {
+      return {
+        name: key,
+        pool: addresses.curve.pools.crypto[key],
+      };
+    })
+    .filter((p) => addresses.curve.pools.gaugeBlacklist.indexOf(p.pool) === -1);
+  const factorypools = Object.keys(addresses.curve.pools.factory)
+    .map((key) => {
+      return {
+        name: key,
+        pool: addresses.curve.pools.factory[key],
+      };
+    })
+    .filter((p) => addresses.curve.pools.gaugeBlacklist.indexOf(p.pool) === -1);
+  const cryptofactorypools = Object.keys(addresses.curve.pools.cryptofactory)
+    .map((key) => {
+      return {
+        name: key,
+        pool: addresses.curve.pools.cryptofactory[key],
+      };
+    })
+    .filter((p) => addresses.curve.pools.gaugeBlacklist.indexOf(p.pool) === -1);
 
   beforeEach(async () => {
     ({
@@ -62,15 +68,20 @@ describe('CurveGaugeIntegrationTest', function () {
         { token: addresses.tokens.WBTC, name: 'WBTC' },
       ].slice(0, 1),
     ).forEach(async ({ token, name }) => {
-      pick(pools.slice(0, 5)).forEach(({ pool, name }) => {
-        it.only(`can enter ${name} CRV pool and stake into gauge`, async function () {
+      pick(pools).forEach(({ pool, name }) => {
+        it(`can enter ${name} CRV pool and stake into gauge`, async function () {
           await depositAndStakeStrategy(pool, token);
         });
+      });
+      pick(cryptopools).forEach(({ pool, name }) => {
         it(`can enter ${name} CRV pool and stake into gauge`, async function () {
-          await depositAndStakeStrategy(cryptopools, token);
+          await depositAndStakeStrategy(pool, token);
         });
+      });
+
+      pick(factorypools.concat(cryptofactorypools)).forEach(({ pool, name }) => {
         it(`can enter ${name} CRV pool and stake into gauge`, async function () {
-          await depositAndStakeStrategy(factorypools.concat(cryptofactorypools), token);
+          await depositAndStakeStrategy(pool, token);
         });
       });
     });

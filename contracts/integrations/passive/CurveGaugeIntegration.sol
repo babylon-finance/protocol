@@ -160,9 +160,10 @@ contract CurveGaugeIntegration is PassiveIntegration {
             // Claim rewards
             address gauge = curveMetaRegistry.getGauge(_asset);
             try IGauge(gauge).last_claim() returns (uint256) {
-              // only do it for v3 gauges
-              bytes memory methodData = abi.encodeWithSignature('claim_rewards(address,address)', _strategy, _strategy);
-              return (gauge, 0, methodData);
+                // only do it for v3 gauges
+                bytes memory methodData =
+                    abi.encodeWithSignature('claim_rewards(address,address)', _strategy, _strategy);
+                return (gauge, 0, methodData);
             } catch {}
         }
         return (address(0), 0, bytes(''));
