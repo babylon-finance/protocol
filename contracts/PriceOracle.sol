@@ -790,7 +790,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         return priceinReserveToken0.add(priceinReserveToken1);
     }
 
-
     function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
         address curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
         if (_tokenIn == WETH && curvePool == address(0)) {
