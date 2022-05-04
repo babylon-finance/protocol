@@ -117,8 +117,6 @@ describe('CurveGaugeIntegrationTest', function () {
 
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
-    // TODO: Fails, but should not. Rewards should accumulate
-    // expect(await strategycontract.getnav()).to.be.gt(nav);
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });

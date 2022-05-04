@@ -19,6 +19,7 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
+
 /**
  * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance
@@ -130,8 +131,10 @@ contract DepositVaultOperation is Operation {
             uint8
         )
     {
-        address yieldVault = BytesLib.decodeOpDataAddress(_data);
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+
+        address yieldVault = BytesLib.decodeOpDataAddress(_data);
+        IGarden garden = _garden;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
             IERC20(_getResultAsset(_integration, yieldVault)).universalBalanceOf(msg.sender).preciseMul(_percentage);
@@ -158,8 +161,7 @@ contract DepositVaultOperation is Operation {
                     if (rewardToken != address(0)) {
                         amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
                         if (amount > MIN_TRADE_AMOUNT) {
-                            address rasset = _garden.reserveAsset();
-                            IStrategy(msg.sender).trade(rewardToken, amount, rasset);
+                            IStrategy(msg.sender).trade(rewardToken, amount, garden.reserveAsset());
                         }
                     }
                 } catch {}

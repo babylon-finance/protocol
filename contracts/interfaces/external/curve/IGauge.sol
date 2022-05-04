@@ -9,7 +9,9 @@ interface IGauge {
 
     function withdraw(uint256 _value) external;
 
-    function rewarded_tokens(uint256 _id) external view returns (address);
+    function withdraw(uint256 _value, bool _claim_rewards) external;
+
+    function reward_tokens(uint256 _id) external view returns (address);
 
     function balanceOf(address _addr) external view returns (uint256);
 
@@ -18,6 +20,4 @@ interface IGauge {
     function claimed_reward(address _addr, address _token) external view returns (uint256);
 
     function claimable_reward(address _addr, address _token) external view returns (uint256);
-
-    function claimable_reward_write(address _addr, address _token) external view returns (uint256);
 }

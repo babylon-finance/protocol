@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
@@ -11,6 +12,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IGauge} from '../../interfaces/external/curve/IGauge.sol';
 import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
+
 
 /**
  * @title CurveGaugeIntegration
@@ -125,9 +127,16 @@ contract CurveGaugeIntegration is PassiveIntegration {
         address gauge = curveMetaRegistry.getGauge(_asset);
         require(gauge != address(0), 'Curve gauge does not exist');
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
-        // Go through the reward pool instead of the booster
-        return (gauge, 0, methodData);
+        // Check if the gauge is LiquidityGaugeV3
+        try IGauge(gauge).last_claim() returns (uint256) {
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,bool)', _investmentTokensIn, true);
+            return (gauge, 0, methodData);
+        }
+        catch {
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
+            return (gauge, 0, methodData);
+        }
+
     }
 
     /**
@@ -156,16 +165,6 @@ contract CurveGaugeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        if (_passiveOp == 1) {
-            // Claim rewards
-            address gauge = curveMetaRegistry.getGauge(_asset);
-            try IGauge(gauge).last_claim() returns (uint256) {
-                // only do it for v3 gauges
-                bytes memory methodData =
-                    abi.encodeWithSignature('claim_rewards(address,address)', _strategy, _strategy);
-                return (gauge, 0, methodData);
-            } catch {}
-        }
         return (address(0), 0, bytes(''));
     }
 
@@ -176,23 +175,8 @@ contract CurveGaugeIntegration is PassiveIntegration {
         returns (address token, uint256 balance)
     {
         IGauge gauge = IGauge(curveMetaRegistry.getGauge(_asset));
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = 0;
-        uint256 extraRewardsLength = 8; // max of 8 tokens in curve
-        try gauge.last_claim() returns (uint256) {
-            for (uint256 i = 0; i < extraRewardsLength; i++) {
-                address rewardToken = gauge.rewarded_tokens(i);
-                uint256 claimable = gauge.claimable_reward_write(_strategy, rewardToken);
-                if (claimable > 0) {
-                    claimable = claimable.sub(gauge.claimed_reward(_strategy, rewardToken));
-                    if (claimable > 0) {
-                        try oracle.getPrice(rewardToken, WETH) returns (uint256 priceExtraReward) {
-                            totalAmount = totalAmount.add(priceExtraReward.preciseMul(claimable));
-                        } catch {}
-                    }
-                }
-            }
-        } catch {}
-        return (WETH, totalAmount);
+        // Will fai for LiquidityGaugeV1, but work for LiquidityGaugeV2/V3
+        address token = gauge.reward_tokens(0);
+        return (token, token != address(0) ? IERC20(token).balanceOf(_strategy) : 0);
     }
 }
