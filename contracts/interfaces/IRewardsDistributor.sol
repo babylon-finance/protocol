@@ -54,7 +54,7 @@ interface IRewardsDistributor {
         uint256 _lpShare
     ) external;
 
-    function migrateAddressToCheckpoints(address[] memory _garden, bool _toMigrate) external;
+    function migrateAddressToCheckpoints(address _garden, bool _toMigrate) external;
 
     function setBABLMiningParameters(uint256[11] memory _newMiningParams) external;
 

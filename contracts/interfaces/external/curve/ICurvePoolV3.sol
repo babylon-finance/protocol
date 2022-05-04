@@ -34,4 +34,6 @@ interface ICurvePoolV3 {
     function curve() external view returns (address out);
 
     function pool() external view returns (address out);
+
+    function initial_A_time() external view returns (uint256 time);
 }

@@ -565,16 +565,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _handleWeth(_isDeposit, _wethAmount);
     }
 
-    /** PRIVILEGE FUNCTION
-     * Update strategy rewards by governance through garden
-     * @param _newTotalRewards   New total rewards
-     */
-    function updateStrategyRewards(uint256 _newTotalRewards, uint256 _newCapitalReturned) external override {
-        _require(msg.sender == address(garden), Errors.STRATEGY_GARDEN_MISMATCH);
-        strategyRewards = _newTotalRewards;
-        capitalReturned = _newCapitalReturned;
-    }
-
     /* ============ External Getter Functions ============ */
 
     /**
