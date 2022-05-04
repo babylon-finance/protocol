@@ -642,10 +642,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (i == j) return 0;
 
         uint256 amountIn = 10**(IERC20(_tokenIn).universalDecimals());
-        uint256 price = underlying ? _getCurveDYUnderlying(_curvePool, i, j, amountIn) : _getCurveDY(_curvePool, i, j, amountIn);
+        uint256 price =
+            underlying ? _getCurveDYUnderlying(_curvePool, i, j, amountIn) : _getCurveDY(_curvePool, i, j, amountIn);
         price = price.mul(10**(18 - (IERC20(_tokenOut).universalDecimals())));
         // Price only pegged assets
-        return _isPegged(price) ? price: 0;
+        return _isPegged(price) ? price : 0;
     }
 
     function _getCurveDY(
@@ -709,7 +710,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         ERC20 lpToken = ERC20(_pool);
         uint256 result = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            address asset = IERC20(poolTokens[i]).isETH() ?  WETH : poolTokens[i];
+            address asset = IERC20(poolTokens[i]).isETH() ? WETH : poolTokens[i];
             uint256 price = getPrice(_denominator, asset);
             uint256 balance = IERC20(poolTokens[i]).universalBalanceOf(_pool);
             // Special case for weth in some pools
