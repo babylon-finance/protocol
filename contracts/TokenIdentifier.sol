@@ -281,11 +281,6 @@ contract TokenIdentifier is ITokenIdentifier {
             return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
 
-        // Early exit
-        if (tokenInType > 0 && tokenOutType > 0) {
-            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
-        }
-
         if (tokenInType == 0) {
             // Curve LP Token
             address crvPool = curveMetaRegistry.getPoolFromLpToken(_tokenIn);

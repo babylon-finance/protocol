@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
@@ -43,6 +44,7 @@ import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {AddressArrayUtils} from './lib/AddressArrayUtils.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
+import {UniversalERC20} from './lib/UniversalERC20.sol';
 
 /**
  * @title PriceOracle
@@ -56,6 +58,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
     using ControllerLib for IBabController;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constants ============ */
 
@@ -350,27 +353,35 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         // palstkaave (Curve cannot find otherwise weth-palstk)
         if (_tokenIn == palStkAAVE) {
-            uint256 tokenInPrice = _getPriceThroughCurve(curvePalStkAave, palStkAAVE, AAVE);
+            uint256 tokenInPrice = _getCurvePriceAtPool(curvePalStkAave, palStkAAVE, AAVE);
             if (tokenInPrice != 0) {
                 return tokenInPrice.preciseMul(_getBestPriceUniV3(AAVE, _tokenOut));
             }
         }
 
         if (_tokenOut == palStkAAVE) {
-            uint256 tokenOutPrice = _getPriceThroughCurve(curvePalStkAave, AAVE, palStkAAVE);
+            uint256 tokenOutPrice = _getCurvePriceAtPool(curvePalStkAave, AAVE, palStkAAVE);
             if (tokenOutPrice != 0) {
                 return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
             }
         }
 
-        // Direct curve pair
-        price = _checkPairThroughCurve(_tokenIn, _tokenOut);
+        // Direct UNI3
+        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
         if (price != 0) {
+            // if we are pricing pegged assets than Curve probably has a better
+            // price
+            if (_isPegged(price)) {
+                uint256 curvePrice = _getCurvePrice(_tokenIn, _tokenOut);
+                if (curvePrice != 0) {
+                    return curvePrice;
+                }
+            }
             return price;
         }
 
-        // Direct UNI3
-        price = _getBestPriceUniV3(_tokenIn, _tokenOut);
+        // Direct Curve
+        price = _getCurvePrice(_tokenIn, _tokenOut);
         if (price != 0) {
             return price;
         }
@@ -379,11 +390,11 @@ contract PriceOracle is Ownable, IPriceOracle {
         for (uint256 i = 0; i < hopTokensList.length; i++) {
             address reserve = hopTokensList[i];
             if (_tokenIn != reserve && _tokenOut != reserve) {
-                uint256 tokenInPrice = _checkPairThroughCurve(_tokenIn, reserve);
+                uint256 tokenInPrice = _getCurvePrice(_tokenIn, reserve);
                 if (tokenInPrice != 0) {
                     return tokenInPrice.preciseMul(_getBestPriceUniV3(reserve, _tokenOut));
                 }
-                uint256 tokenOutPrice = _checkPairThroughCurve(reserve, _tokenOut);
+                uint256 tokenOutPrice = _getCurvePrice(reserve, _tokenOut);
                 if (tokenOutPrice != 0) {
                     return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, reserve));
                 }
@@ -618,26 +629,24 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
     }
 
-    function _getPriceThroughCurve(
+    function _isPegged(uint256 price) private view returns (bool) {
+        return price < uint256(1e18).add(CURVE_SLIPPAGE) && price > uint256(1e18).sub(CURVE_SLIPPAGE);
+    }
+
+    function _getCurvePriceAtPool(
         address _curvePool,
         address _tokenIn,
         address _tokenOut
     ) private view returns (uint256) {
         (uint256 i, uint256 j, bool underlying) = curveMetaRegistry.getCoinIndices(_curvePool, _tokenIn, _tokenOut);
-        uint256 price = 0;
-        uint256 decimalsIn = 10**(_tokenIn == ETH_ADD_CURVE ? 18 : ERC20(_tokenIn).decimals());
         if (i == j) return 0;
-        if (underlying) {
-            price = _getCurveDYUnderlying(_curvePool, i, j, decimalsIn);
-        } else {
-            price = _getCurveDY(_curvePool, i, j, decimalsIn);
-        }
-        price = price.mul(10**(18 - (_tokenOut == ETH_ADD_CURVE ? 18 : ERC20(_tokenOut).decimals())));
-        uint256 delta = price.preciseMul(CURVE_SLIPPAGE);
-        if (price < uint256(1e18).add(delta) && price > uint256(1e18).sub(delta)) {
-            return price;
-        }
-        return 0;
+
+        uint256 amountIn = 10**(IERC20(_tokenIn).universalDecimals());
+        uint256 price =
+            underlying ? _getCurveDYUnderlying(_curvePool, i, j, amountIn) : _getCurveDY(_curvePool, i, j, amountIn);
+        price = price.mul(10**(18 - (IERC20(_tokenOut).universalDecimals())));
+        // Price only pegged assets
+        return _isPegged(price) ? price : 0;
     }
 
     function _getCurveDY(
@@ -646,15 +655,47 @@ contract PriceOracle is Ownable, IPriceOracle {
         uint256 j,
         uint256 decimals
     ) private view returns (uint256) {
-        try ICurvePoolV3DY(_curvePool).get_dy(i, j, decimals) returns (uint256 price) {
-            return price;
-        } catch {
-            try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price2) {
-                return price2;
-            } catch {
-                revert('get dy failed');
+        (bool success, bytes memory data) =
+            _curvePool.staticcall(abi.encodeWithSelector(ICurvePoolV3DY.get_dy.selector, i, j, decimals));
+        if (success && data.length > 0) {
+            return abi.decode(data, (uint256));
+        } else {
+            (success, data) = _curvePool.staticcall(
+                abi.encodeWithSelector(ICurvePoolV3.get_dy.selector, int128(i), int128(j), decimals)
+            );
+            if (success && data.length > 0) {
+                return abi.decode(data, (uint256));
             }
         }
+        return 0;
+    }
+
+    function _getCurveDYUnderlying(
+        address _curvePool,
+        uint256 i,
+        uint256 j,
+        uint256 decimals
+    ) private view returns (uint256) {
+        (bool success, bytes memory data) =
+            _curvePool.staticcall(abi.encodeWithSelector(ICurvePoolV3DY.get_dy_underlying.selector, i, j, decimals));
+        if (success && data.length > 0) {
+            return abi.decode(data, (uint256));
+        } else {
+            (success, data) = _curvePool.staticcall(
+                abi.encodeWithSelector(ICurvePoolV3.get_dy_underlying.selector, int128(i), int128(j), decimals)
+            );
+            if (success && data.length > 0) {
+                return abi.decode(data, (uint256));
+            } else {
+                (success, data) = _curvePool.staticcall(
+                    abi.encodeWithSelector(ICurvePoolV3.get_dy.selector, int128(i), int128(j), decimals)
+                );
+                if (success && data.length > 0) {
+                    return abi.decode(data, (uint256));
+                }
+            }
+        }
+        return 0;
     }
 
     /**
@@ -669,9 +710,9 @@ contract PriceOracle is Ownable, IPriceOracle {
         ERC20 lpToken = ERC20(_pool);
         uint256 result = 0;
         for (uint256 i = 0; i < poolTokens.length; i++) {
-            address asset = _isETH(poolTokens[i]) ? WETH : poolTokens[i];
+            address asset = IERC20(poolTokens[i]).isETH() ? WETH : poolTokens[i];
             uint256 price = getPrice(_denominator, asset);
-            uint256 balance = !_isETH(poolTokens[i]) ? ERC20(poolTokens[i]).balanceOf(_pool) : _pool.balance;
+            uint256 balance = IERC20(poolTokens[i]).universalBalanceOf(_pool);
             // Special case for weth in some pools
             if (poolTokens[i] == WETH && balance == 0) {
                 balance = _pool.balance;
@@ -758,28 +799,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         return priceinReserveToken0.add(priceinReserveToken1);
     }
 
-    function _getCurveDYUnderlying(
-        address _curvePool,
-        uint256 i,
-        uint256 j,
-        uint256 decimals
-    ) private view returns (uint256) {
-        try ICurvePoolV3DY(_curvePool).get_dy_underlying(i, j, decimals) returns (uint256 price) {
-            return price;
-        } catch {
-            try ICurvePoolV3(_curvePool).get_dy_underlying(int128(i), int128(j), decimals) returns (uint256 price2) {
-                return price2;
-            } catch {
-                try ICurvePoolV3(_curvePool).get_dy(int128(i), int128(j), decimals) returns (uint256 price3) {
-                    return price3;
-                } catch {
-                    revert('get dy underlying failed');
-                }
-            }
-        }
-    }
-
-    function _checkPairThroughCurve(address _tokenIn, address _tokenOut) private view returns (uint256) {
+    function _getCurvePrice(address _tokenIn, address _tokenOut) private view returns (uint256) {
         address curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
         if (_tokenIn == WETH && curvePool == address(0)) {
             _tokenIn = ETH_ADD_CURVE;
@@ -790,8 +810,7 @@ contract PriceOracle is Ownable, IPriceOracle {
             curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
         }
         if (curvePool != address(0)) {
-            uint256 price = _getPriceThroughCurve(curvePool, _tokenIn, _tokenOut);
-            return price;
+            return _getCurvePriceAtPool(curvePool, _tokenIn, _tokenOut);
         }
         return 0;
     }
@@ -805,9 +824,5 @@ contract PriceOracle is Ownable, IPriceOracle {
             hopTokens[list[i]] = true;
             hopTokensList.push(list[i]);
         }
-    }
-
-    function _isETH(address _address) internal pure returns (bool) {
-        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
     }
 }
