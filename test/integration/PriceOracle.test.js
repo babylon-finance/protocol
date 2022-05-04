@@ -270,7 +270,7 @@ describe('PriceOracle', function () {
 
   describe('Price Oracle', function () {
     pick(tokens).forEach(({ name, tokenIn, tokenOut, value }) => {
-      it.only(`should get the price of ${name}`, async function () {
+      it(`should get the price of ${name}`, async function () {
         const price = await priceOracle.connect(owner).getPrice(tokenIn, tokenOut);
         expect(price).to.be.closeTo(value, value.div(50));
       });
