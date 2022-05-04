@@ -19,7 +19,6 @@ import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 
 import {Operation} from './Operation.sol';
 
-
 /**
  * @title DepositVaultOperation/Stake Operation
  * @author Babylon Finance

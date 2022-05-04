@@ -13,7 +13,6 @@ import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IGauge} from '../../interfaces/external/curve/IGauge.sol';
 import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
 
-
 /**
  * @title CurveGaugeIntegration
  * @author Babylon Finance Protocol
@@ -131,12 +130,10 @@ contract CurveGaugeIntegration is PassiveIntegration {
         try IGauge(gauge).last_claim() returns (uint256) {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,bool)', _investmentTokensIn, true);
             return (gauge, 0, methodData);
-        }
-        catch {
+        } catch {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
             return (gauge, 0, methodData);
         }
-
     }
 
     /**
