@@ -1070,13 +1070,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         lastPricePerShareTS = block.timestamp;
     }
 
-    // Assign extra creators
-    function _assignExtraCreator(uint8 _index, address _newCreator) private {
-        _require(!_isCreator(_newCreator), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        _require(extraCreators[_index] == address(0), Errors.NEW_CREATOR_MUST_NOT_EXIST);
-        extraCreators[_index] = _newCreator;
-    }
-
     function _getLastDepositAt(address _to) private view returns (uint256) {
         return hardlockStartsAt > contributors[_to].lastDepositAt ? hardlockStartsAt : contributors[_to].lastDepositAt;
     }
