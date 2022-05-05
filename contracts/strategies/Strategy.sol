@@ -1067,4 +1067,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV30 is Strategy {}
+contract StrategyV31 is Strategy {}
