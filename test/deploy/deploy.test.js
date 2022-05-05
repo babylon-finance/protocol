@@ -10,25 +10,8 @@ const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
 
 const STUCK = [
-  // '0x69ef15D3a4910EDc47145f6A88Ae60548F5AbC2C',
-  // '0xcd9498b4160568DeEAb0fE3A0De739EbF152CB48',
-  // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED
-  // '0x702c284Cd32F842bE450f5e5C9DE48f14303F1C8', // Long TOKE. Reason: Error: execution reverted: BAB#098
-  // '0x5fF64AB324806aBDb8902Ff690B90a078D36CCe1', // Long wbtc, borrow DAI, long CDT. Reason: Error: execution reverted: Master swapper could not swap
-  // '0x81b1C6A04599b910e33b1AB549DE4a19E5701838', // Lend wbtc, borrow dai, yield yearn dai. Reason: Error: execution reverted: Curve Swap failed midway
-  // '0xc38E5828c1c84F4687f2080c0C8d2e4a89695A11', // Long eth, borrow dai, steth crv convex. Reason: Error: execution reverted: The garden did not receive the investment tokens
-  // '0x3be1008317F3aAC19Bf7a0b370465fbEF884F4ED', // ✅ Not Enough Capital or other keeper logic. ICELong
-  // '0x6F854a988577Ce994926a8979881E6a18E6a70dF', // ✅ Not Enough Capital or other keeper logic. lend wbtc, borrow dai, long LDO. Reason: Error: execution reverted: Curve Swap failed midway
-  // '0x19C54aDcfAB5a3608540130418580176d325c1F9', // ✅ Eth 3x. Reason: Error: execution reverted: Address: low-level call with value failed -> No liquidity
-  // '0x628c3134915D3d8c5073Ed8F618BCE1631b82416', // ETH + AXS
-  // '0xfd6B47DE3E02A6f3264EE5d274010b9f9CfB1BC5', // IB Curve
-  // '0xc24827322127Ae48e8893EE3041C668a94fBcDA8'  // IB Forever
-  // '0xE064ad71dc506130A4C1C85Fb137606BaaCDe9c0', // Long BED Red Pill
-  // '0xfd6b47de3e02a6f3264ee5d274010b9f9cfb1bc5', // Iron Bank Curve Pool
-  // '0x69B9a89083E2324079922e01557cAfb87cd90B09',
-  // '0x22de22A50b00333159C54BFc1b9C0507e4759487',
-  // '0x6b9398A256E78616C4C8DceE52B8AA0F0518E268',
-  '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // sETH
+  // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
+  '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
