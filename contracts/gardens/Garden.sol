@@ -1034,14 +1034,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     /**
      * @notice                  Updates the contributor data upon deposit
      * @param _contributor      Contributor to update
-     * @param _amountIn         Amount deposited in reserve asset
      * @param _previousBalance  Previous balance of the contributor
+     * @param _amountIn         Amount deposited in reserve asset
      * @param _sharesToMint     Amount of garden shares to mint
      */
     function _updateContributorDepositInfo(
         address _contributor,
-        uint256 _amountIn,
         uint256 _previousBalance,
+        uint256 _amountIn,
         uint256 _sharesToMint
     ) private {
         IGarden.Contributor storage contributor = contributors[_contributor];
