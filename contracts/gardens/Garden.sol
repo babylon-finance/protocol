@@ -714,7 +714,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @return claimedAt          Timestamp of the last claim
      * @return claimedBABL        Total amount of claimed BABL
      * @return claimedRewards     Total amount of claimed rewards
-     * @return withdrawnSince     Timestamp of last withdrawal
+     * @return withdrawnSince     Total amount of withdrawals
      * @return totalDeposits      Total amount of deposits
      * @return nonce              Contributor nonce
      * @return lockedBalance      Locked balance of the contributor
