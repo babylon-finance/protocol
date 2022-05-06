@@ -14,7 +14,6 @@ import {CompoundLendIntegration} from './CompoundLendIntegration.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 
-
 /**
  * @title FuseLendIntegration
  * @author Babylon Finance

@@ -39,7 +39,7 @@ import {VTableBeacon} from '../proxy/VTableBeacon.sol';
 import {TimeLockedToken} from '../token/TimeLockedToken.sol';
 
 /**
- * @title BaseGarden
+ * @title Garden
  *
  * User facing features of Garden plus BeaconProxy
  */
@@ -155,7 +155,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     uint256 private pid;
 
     // Min contribution in the garden
-    uint256 public override minContribution; //wei
+    uint256 public override minContribution; // In reserve asset
     uint256 private minGardenTokenSupply; // DEPRECATED
 
     // Strategies variables
@@ -205,6 +205,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     // EIP-1271 signer
     address private signer;
+
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
 
@@ -270,8 +271,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         address _to,
         address _referrer
     ) external payable override nonReentrant {
-        // calculate pricePerShare
-        // if there are no strategies then NAV === liquidReserve
         _internalDeposit(_amountIn, _minAmountOut, _to, msg.sender, _getPricePerShare(), minContribution, _referrer);
     }
 
@@ -345,8 +344,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /**
      * @notice
-     *   Withdraws the reserve asset relative to the token participation in the garden
-     *   and sends it back to the sender.
+     *   Exchanges a contributor gardens shares for at least minimum amount in reserve asset.
      * @dev
      *   ATTENTION. Do not call withPenalty unless certain. If penalty is set,
      *   it will be applied regardless of the garden state.
@@ -365,10 +363,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         bool _withPenalty,
         address _unwindStrategy
     ) external override nonReentrant {
-        // Get valuation of the Garden with the quote asset as the reserve asset. Returns value in precise units (10e18)
-        // Reverts if price is not found
-
         _require(msg.sender == _to, Errors.ONLY_CONTRIBUTOR);
+
         _withdrawInternal(
             _amountIn,
             _minAmountOut,
@@ -451,8 +447,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * User can claim the rewards from the strategies that his principal
-     * was invested in.
+     * @notice
+     *   Claims a contributor rewards in BABL and reserve asset.
+     * @param _finalizedStrategies  Finalized strategies to process
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
         uint256[] memory rewards = new uint256[](8);
@@ -461,8 +458,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * User can claim the rewards from the strategies that his principal
-     * was invested in and stake BABL into Heart Garden
+     * @notice
+     *   User can claim the rewards from the strategies that his principal was
+     *   invested in and stake BABL into Heart Garden
+     * @param _minAmountOut         Minimum hBABL as part of the Heart garden BABL staking
+     * @param _finalizedStrategies  Finalized strategies to process
      */
     function claimAndStakeReturns(uint256 _minAmountOut, address[] calldata _finalizedStrategies)
         external
@@ -478,18 +478,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], true); // true = stake babl rewards, false = no stake
         _approveBABL(address(heartGarden), rewards[5]);
         heartGarden.deposit(rewards[5], _minAmountOut, msg.sender, address(0));
+
         emit StakeBABLRewards(msg.sender, rewards[5]);
     }
 
     /**
      * @notice
-     *   This method allows users
-     *   to claim their rewards either profits or BABL.
+     *   Claims a contributor rewards in BABL and reserve asset.
      * @dev
      *   Should be called instead of the `claimRewards at RD` to save gas due to
-     *   getRewards caculated off-chain.
-     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
-     *
+     *   getRewards caculated off-chain. The Keeper fee is paid out of user's
+     *   reserveAsset and it is calculated off-chain.
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
      * @param _nonce           Current nonce to prevent replay attacks.
@@ -524,13 +523,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /**
      * @notice
-     *   This method allows users
-     *   to stake their BABL rewards and claim their profit rewards.
+     *   This method allows users to stake their BABL rewards and claim their
+     *   profit rewards.
      * @dev
-     *   Should be called instead of the `claimAndStakeReturns` to save gas due to
-     *   getRewards caculated off-chain.
-     *   The Keeper fee is paid out of user's reserveAsset and it is calculated off-chain.
-     *
+     *   Should be called instead of the `claimAndStakeReturns` to save gas due
+     *   to getRewards caculated off-chain. The Keeper fee is paid out of user's
+     *   reserveAsset and it is calculated off-chain.
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
      * @param _minAmountOut    Minimum hBABL as part of the Heart Garden BABL staking
@@ -607,13 +605,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /**
      * @notice
-     *   Deposits the _amountIn in reserve asset into the garden. Guarantee to
-     *   receive at least _minAmountOut.
+     *   Stakes _amountIn of BABL into the Heart garden.
+     * @dev
+     *   Staking is in practical terms is depositing BABL into Heart garden.
      * @param _amountIn               Amount of the reserve asset that is received from contributor.
      * @param _profits                Amount of the reserve asset that is received from contributor.
      * @param _minAmountOut           Min amount of Garden shares to receive by contributor.
      * @param _nonce                  Current nonce to prevent replay attacks.
-     * @param _nonceHeart             Current nonce to prevent replay attacks.
+     * @param _nonceHeart             Current nonce of the Heart garden to prevent replay attacks.
      * @param _maxFee                 Max fee user is willing to pay keeper. Fee is
      *                                substracted from the withdrawn amount. Fee is
      *                                expressed in reserve asset.
@@ -659,10 +658,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * @notice
-     *   Allows Garden contributors to claim an NFT.
+     * Allows a contributor to claim an NFT.
      */
     function claimNFT() external override {
+        // minContribution is in reserve asset while balance of contributor in
+        // garden shares which can lead to undesired results if reserve assets
+        // decimals are not 18
         _require(balanceOf(msg.sender) > minContribution, Errors.ONLY_CONTRIBUTOR);
         IGarden.Contributor storage contributor = contributors[msg.sender];
         _require(
@@ -704,6 +705,20 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         return finalizedStrategies;
     }
 
+    /**
+     * @notice
+     *   Gets the contributor data
+     * @param  _contributor       The contributor address
+     * @return lastDepositAt      Timestamp of the last deposit
+     * @return initialDepositAt   Timestamp of the initial deposit
+     * @return claimedAt          Timestamp of the last claim
+     * @return claimedBABL        Total amount of claimed BABL
+     * @return claimedRewards     Total amount of claimed rewards
+     * @return withdrawnSince     Timestamp of last withdrawal
+     * @return totalDeposits      Total amount of deposits
+     * @return nonce              Contributor nonce
+     * @return lockedBalance      Locked balance of the contributor
+     */
     function getContributor(address _contributor)
         external
         view
@@ -736,15 +751,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     /* ============ Internal Functions ============ */
 
+    /**
+     * Converts garden shares to amount in reserve asset accounting for decimal difference
+     */
     function _sharesToReserve(uint256 _shares, uint256 _pricePerShare) internal view returns (uint256) {
-        // in case of USDC that would with 6 decimals
         return _shares.preciseMul(_pricePerShare).preciseMul(10**ERC20Upgradeable(reserveAsset).decimals());
     }
 
+    /**
+     * Converts amount in reserve asset to garden shares accounting for decimal difference
+     */
     function _reserveToShares(uint256 _reserve, uint256 _pricePerShare) internal view returns (uint256) {
         return _reserve.preciseDiv(10**ERC20Upgradeable(reserveAsset).decimals()).preciseDiv(_pricePerShare);
     }
 
+    /**
+     * @notice
+     *   Exchanges a contributor gardens shares for at least minimum amount in reserve asset.
+     * @dev
+     *   See withdraw and withdrawBySig for params and comments.
+     */
     function _withdrawInternal(
         uint256 _amountIn,
         uint256 _minAmountOut,
@@ -800,6 +826,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         emit GardenWithdrawal(_to, _to, amountOut, _amountIn, block.timestamp);
     }
 
+    /**
+     * Returns price per share of a garden.
+     */
     function _getPricePerShare() internal view returns (uint256) {
         if (strategies.length == 0) {
             return
@@ -814,6 +843,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         }
     }
 
+    /**
+     * @notice
+     *   Deposits the _amountIn in reserve asset into the garden. Gurantee to
+     *   recieve at least _minAmountOut.
+     * @param _amountIn         Amount of the reserve asset that is received from contributor
+     * @param _minAmountOut     Min amount of garden shares to receive by the contributor
+     * @param _to               Address to mint shares to
+     * @param _from             Address providing incoming funds
+     * @param _pricePerShare    Price per share of the garden calculated off-chain by Keeper
+     * @param _minContribution  Minimum contribution to be made during the deposit nominated in reserve asset
+     * @param _referrer         The user that referred the deposit
+     */
     function _internalDeposit(
         uint256 _amountIn,
         uint256 _minAmountOut,
@@ -872,6 +913,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
+     * @notice  Sends BABL and reserve asset rewards to a contributor
      * @param _contributor     Contributor address to send rewards to
      * @param _babl            BABL rewards from mining program.
      * @param _profits         Profit rewards in reserve asset.
@@ -883,15 +925,18 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 _profits,
         bool _stake
     ) internal {
-        _onlyUnpaused();
         IGarden.Contributor storage contributor = contributors[_contributor];
+
+        _onlyUnpaused();
         _require(contributor.nonce > 0, Errors.ONLY_CONTRIBUTOR); // have been user garden
         _require(_babl > 0 || _profits > 0, Errors.NO_REWARDS_TO_CLAIM);
         _require(reserveAssetRewardsSetAside >= _profits, Errors.RECEIVE_MIN_AMOUNT);
+        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
+
         // Avoid replay attack between claimRewardsBySig and claimRewards or even between 2 of each
         contributor.nonce++;
-        _require(block.timestamp > contributor.claimedAt, Errors.ALREADY_CLAIMED);
         contributor.claimedAt = block.timestamp; // Checkpoint of this claim
+
         if (_profits > 0) {
             contributor.claimedRewards = contributor.claimedRewards.add(_profits); // Rewards claimed properly
             reserveAssetRewardsSetAside = reserveAssetRewardsSetAside.sub(_profits);
@@ -908,14 +953,26 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * Gets liquid reserve available for to Garden.
+     * @notice
+     *   Returns available liquidity where
+     *   liquidity = balance - (reserveAssetRewardsSetAside + keeperDebt)
+     * @return  Amount of liquidity available in reserve asset
      */
     function _liquidReserve() private view returns (uint256) {
         uint256 reserve = IERC20(reserveAsset).balanceOf(address(this)).sub(reserveAssetRewardsSetAside);
         return reserve > keeperDebt ? reserve.sub(keeperDebt) : 0;
     }
 
-    // Disable garden token transfers. Allow minting and burning.
+    /**
+     * @notice
+     *   Updates contributor data upon token transfers. Garden token transfers
+     *   are not enabled for all gardens.
+     * @dev
+     *   Locked balance of the contributor can't be transfered.
+     * @param _from           Address of the contributor sending tokens
+     * @param _to             Address of the contributor receiving tokens
+     * @param _amount         Amount to send
+     */
     function _beforeTokenTransfer(
         address _from,
         address _to,
@@ -938,6 +995,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         }
     }
 
+    /**
+     * @notice
+     *   Sends the amount of reserve asset to the addressee
+     * @dev
+     *   Watch out of reentrancy attacks on `sendValue`
+     * @param _to             Address to send ERC20/ETH to
+     * @param _amount         Amount to send
+     */
     function _safeSendReserveAsset(address payable _to, uint256 _amount) private {
         if (reserveAsset == WETH) {
             // Check that the withdrawal is possible
@@ -954,21 +1019,30 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * Approves BABL staking amount for claim and stake rewards
-     * Only used to approve Heart Garden to stake
+     * @notice
+     *   Approves spending of BABL token to an address
+     * @dev
+     *   Approves BABL staking amount for claim and stake rewards
+     *   Only used to approve Heart Garden to stake
+     * @param _to             Address to approve to
+     * @param _amount         Amount of allowance
      */
-    function _approveBABL(address _garden, uint256 _amount) internal {
-        IERC20(BABL).safeApprove(address(_garden), _amount);
+    function _approveBABL(address _to, uint256 _amount) internal {
+        IERC20(BABL).safeApprove(_to, _amount);
     }
 
     /**
-     * Updates the contributor info in the array
+     * @notice                  Updates the contributor data upon deposit
+     * @param _contributor      Contributor to update
+     * @param _amountIn         Amount deposited in reserve asset
+     * @param _previousBalance  Previous balance of the contributor
+     * @param _sharesToMint     Amount of garden shares to mint
      */
     function _updateContributorDepositInfo(
         address _contributor,
-        uint256 _previousBalance,
         uint256 _amountIn,
-        uint256 _sharesIn
+        uint256 _previousBalance,
+        uint256 _sharesToMint
     ) private {
         IGarden.Contributor storage contributor = contributors[_contributor];
         // If new contributor, create one, increment count, and set the current TS
@@ -984,20 +1058,25 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             address(this),
             _contributor,
             _previousBalance,
-            _sharesIn,
+            _sharesToMint,
             true // true = deposit , false = withdraw
         );
     }
 
     /**
-     * Updates the contributor info in the array
+     * @notice                  Updates the contributor data upon withdrawal
+     * @param _contributor      Contributor to update
+     * @param _amountOut        Amount withdrawn in reserve asset
+     * @param _previousBalance  Previous balance of the contributor
+     * @param _balance          New balance
+     * @param _amountToBurn     Amount of garden shares to burn
      */
     function _updateContributorWithdrawalInfo(
         address _contributor,
         uint256 _amountOut,
         uint256 _previousBalance,
         uint256 _balance,
-        uint256 _tokensToBurn
+        uint256 _amountToBurn
     ) private {
         IGarden.Contributor storage contributor = contributors[_contributor];
         // If withdrawn everything
@@ -1015,12 +1094,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             address(this),
             _contributor,
             _previousBalance,
-            _tokensToBurn,
+            _amountToBurn,
             false // true = deposit , false = withdraw
         );
     }
 
-    // Checks if an address is a creator
+    /**
+     * @notice          Checks if an address is a creator
+     * @param _creator  Creator address
+     * @return          True if creator
+     */
     function _isCreator(address _creator) private view returns (bool) {
         return
             _creator != address(0) &&
@@ -1032,21 +1115,21 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-      @notice
-        Validates that pricePerShare is within acceptable range; if not reverts
-      @dev
-        Allowed slippage between deposits and withdrawals in terms of the garden price per share is:
-
-        slippage = lastPricePerShare % (pricePerShareDelta + timePast * pricePerShareDecayRate);
-
-        For example, if lastPricePerShare is 1e18 and slippage is 10% then deposits with pricePerShare between
-        9e17 and 11e17 allowed immediately. After one year (100% change in time) and with a decay rate 1x;
-        deposits between 5e17 and 2e18 are possible. Different gardens should have different settings for
-        slippage and decay rate due to various volatility of the strategies. For example, stable gardens
-        would have low slippage and decay rate while some moonshot gardens may have both of them
-        as high as 100% and 10x.
-      @param _pricePerShare  Price of the graden share to validate against historical data
-    */
+     * @notice
+     *   Validates that pricePerShare is within acceptable range; if not reverts
+     * @dev
+     *   Allowed slippage between deposits and withdrawals in terms of the garden price per share is:
+     *
+     *     slippage = lastPricePerShare % (pricePerShareDelta + timePast * pricePerShareDecayRate);
+     *
+     *   For example, if lastPricePerShare is 1e18 and slippage is 10% then deposits with pricePerShare between
+     *   9e17 and 11e17 allowed immediately. After one year (100% change in time) and with a decay rate 1x;
+     *   deposits between 5e17 and 2e18 are possible. Different gardens should have different settings for
+     *   slippage and decay rate due to various volatility of the strategies. For example, stable gardens
+     *   would have low slippage and decay rate while some moonshot gardens may have both of them
+     *   as high as 100% and 10x.
+     * @param _pricePerShare  Price of the graden share to validate against historical data
+     */
     function _checkLastPricePerShare(uint256 _pricePerShare) private {
         uint256 slippage = pricePerShareDelta > 0 ? pricePerShareDelta : 25e16;
         uint256 decay = pricePerShareDecayRate > 0 ? pricePerShareDecayRate : 1e18;
@@ -1070,6 +1153,11 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         lastPricePerShareTS = block.timestamp;
     }
 
+    /**
+     * @notice     Returns last timestamp of the last contributor deposit
+     * @param _to  Contributor address
+     * @return     Timestamp of the last contributor desposit
+     */
     function _getLastDepositAt(address _to) private view returns (uint256) {
         return hardlockStartsAt > contributors[_to].lastDepositAt ? hardlockStartsAt : contributors[_to].lastDepositAt;
     }
