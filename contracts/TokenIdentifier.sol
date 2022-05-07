@@ -61,6 +61,7 @@ contract TokenIdentifier is ITokenIdentifier {
     uint8 private constant PICKLE_JAR_TOKEN_V3 = 14;
     uint8 private constant PICKLE_JAR_GAUGE_TOKEN = 15;
     uint8 private constant CONVEX_TOKEN = 16;
+    uint8 private constant CURVE_GAUGE_TOKEN = 17;
 
     /* ============ State Variables ============ */
 
@@ -294,6 +295,20 @@ contract TokenIdentifier is ITokenIdentifier {
             if (crvPool != address(0)) {
                 tokenOutType = CURVE_LP_TOKEN;
             }
+        }
+
+        // Curve Gauge Tokens
+        if (curveMetaRegistry.gaugeToPool(_tokenIn) != address(0)) {
+            tokenInType = CURVE_GAUGE_TOKEN;
+        }
+
+        if (curveMetaRegistry.gaugeToPool(_tokenOut) != address(0)) {
+            tokenOutType = CURVE_GAUGE_TOKEN;
+        }
+
+        // Early exit
+        if (tokenInType > 0 && tokenOutType > 0) {
+            return (tokenInType, tokenOutType, finalAssetIn, finalAssetOut);
         }
 
         // Check sushi pairs (univ2)

@@ -3,29 +3,30 @@
 pragma solidity 0.7.6;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
 import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
-import {IBasicRewards} from '../../interfaces/external/convex/IBasicRewards.sol';
-import {IConvexRegistry} from '../../interfaces/IConvexRegistry.sol';
+import {IGauge} from '../../interfaces/external/curve/IGauge.sol';
+import {ICurveMetaRegistry} from '../../interfaces/ICurveMetaRegistry.sol';
 
 /**
- * @title ConvexStakeIntegration
+ * @title CurveGaugeIntegration
  * @author Babylon Finance Protocol
  *
- * Convex Stake Integration
+ * Curve Gauge Integration
  */
-contract ConvexStakeIntegration is PassiveIntegration {
+contract CurveGaugeIntegration is PassiveIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
 
     /* ============ State variables ============ */
 
-    IConvexRegistry public immutable convexRegistry;
+    ICurveMetaRegistry public immutable curveMetaRegistry;
 
     /* ============ Constructor ============ */
 
@@ -34,28 +35,27 @@ contract ConvexStakeIntegration is PassiveIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller, IConvexRegistry _convexRegistry)
-        PassiveIntegration('convex_v2', _controller)
+    constructor(IBabController _controller, ICurveMetaRegistry _curveMetaRegistry)
+        PassiveIntegration('curve_gauge', _controller)
     {
-        convexRegistry = _convexRegistry;
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /* ============ Internal Functions ============ */
 
-    function _getSpender(address _asset, uint8 _op) internal view override returns (address) {
-        if (_op == 0) {
-            return address(convexRegistry.booster());
-        }
-        // Reward pool
-        return convexRegistry.getRewardPool(_asset);
+    function _getSpender(
+        address _asset,
+        uint8 /* _op */
+    ) internal view override returns (address) {
+        return curveMetaRegistry.getGauge(_asset);
     }
 
-    function _getInvestmentAsset(address _asset) internal view override returns (address lptoken) {
-        return convexRegistry.getConvexInputToken(_asset);
+    function _getInvestmentAsset(address _asset) internal view override returns (address) {
+        return curveMetaRegistry.getLpToken(_asset);
     }
 
-    function _getResultAsset(address _investment) internal view virtual override returns (address) {
-        return convexRegistry.getRewardPool(_investment);
+    function _getResultAsset(address _asset) internal view override returns (address) {
+        return curveMetaRegistry.getGauge(_asset);
     }
 
     /**
@@ -72,7 +72,7 @@ contract ConvexStakeIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address, /* _strategy */
+        address _strategy,
         address _asset,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
@@ -87,11 +87,11 @@ contract ConvexStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        (bool found, uint256 pid) = convexRegistry.getPid(_asset);
-        require(found, 'Convex pool does not exist');
-        // Encode method data for Garden to invoke
-        bytes memory methodData = abi.encodeWithSignature('deposit(uint256,uint256,bool)', pid, _maxAmountIn, true);
-        return (address(convexRegistry.booster()), 0, methodData);
+        address gauge = curveMetaRegistry.getGauge(_asset);
+        require(gauge != address(0), 'Curve gauge does not exist');
+        // Encode method data for Strategy to invoke
+        bytes memory methodData = abi.encodeWithSignature('deposit(uint256,address)', _maxAmountIn, _strategy);
+        return (gauge, 0, methodData);
     }
 
     /**
@@ -123,10 +123,46 @@ contract ConvexStakeIntegration is PassiveIntegration {
             bytes memory
         )
     {
+        address gauge = curveMetaRegistry.getGauge(_asset);
+        require(gauge != address(0), 'Curve gauge does not exist');
         // Withdraw all and claim
-        bytes memory methodData = abi.encodeWithSignature('withdrawAndUnwrap(uint256,bool)', _investmentTokensIn, true);
-        // Go through the reward pool instead of the booster
-        return (convexRegistry.getRewardPool(_asset), 0, methodData);
+        // Check if the gauge is LiquidityGaugeV3
+        try IGauge(gauge).last_claim() returns (uint256) {
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256,bool)', _investmentTokensIn, true);
+            return (gauge, 0, methodData);
+        } catch {
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _investmentTokensIn);
+            return (gauge, 0, methodData);
+        }
+    }
+
+    /**
+     * Return post action calldata
+     *
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address _strategy,
+        address _asset,
+        uint256, /* _amount */
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
     }
 
     function _getRewards(address _strategy, address _asset)
@@ -135,24 +171,9 @@ contract ConvexStakeIntegration is PassiveIntegration {
         override
         returns (address token, uint256 balance)
     {
-        IBasicRewards rewards = IBasicRewards(convexRegistry.getRewardPool(_asset));
-        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
-        uint256 totalAmount = rewards.earned(_strategy).mul(2); // * 2 accounts roughly for CVX
-        // add extra rewards and convert to reward token
-        uint256 extraRewardsLength = rewards.extraRewardsLength();
-        if (extraRewardsLength > 0) {
-            for (uint256 i = 0; i < extraRewardsLength; i++) {
-                IBasicRewards extraRewards = IBasicRewards(rewards.extraRewards(i));
-                uint256 extraAmount = extraRewards.earned(_strategy);
-                if (extraAmount > 0) {
-                    try oracle.getPrice(rewards.extraRewards(i), extraRewards.rewardToken()) returns (
-                        uint256 priceExtraReward
-                    ) {
-                        totalAmount = totalAmount.add(priceExtraReward.preciseMul(extraAmount));
-                    } catch {}
-                }
-            }
-        }
-        return (rewards.rewardToken(), totalAmount);
+        IGauge gauge = IGauge(curveMetaRegistry.getGauge(_asset));
+        // Will fai for LiquidityGaugeV1, but work for LiquidityGaugeV2/V3
+        address token = gauge.reward_tokens(0);
+        return (token, token != address(0) ? IERC20(token).balanceOf(_strategy) : 0);
     }
 }
