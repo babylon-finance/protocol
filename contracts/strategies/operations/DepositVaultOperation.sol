@@ -160,7 +160,7 @@ contract DepositVaultOperation is Operation {
                     if (rewardToken != address(0)) {
                         amount = IERC20(rewardToken).universalBalanceOf(msg.sender);
                         if (amount > MIN_TRADE_AMOUNT) {
-                            IStrategy(msg.sender).trade(rewardToken, amount, garden.reserveAsset());
+                            IStrategy(msg.sender).trade(rewardToken, amount, garden.reserveAsset(), 70e15);
                         }
                     }
                 } catch {}
