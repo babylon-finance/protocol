@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -723,7 +722,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             // _getOpDecodedData guarantee backward compatibility with OpData
             bytes memory data = _getOpDecodedData(i);
             address integration = _getIntegration(opIntegrations[i]);
-            bytes32 hash = keccak256(abi.encodePacked(opType, data, integration));
+            bytes32 hash = keccak256(abi.encodePacked(opType, BytesLib.slice(data, 0, 32), integration));
             // for borrow and lend operations we only need to count NAV once
             if (opType == LEND_OP || opType == BORROW_OP) {
                 // check if NAV has been counted already
@@ -1069,4 +1068,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV30 is Strategy {}
+contract StrategyV31 is Strategy {}

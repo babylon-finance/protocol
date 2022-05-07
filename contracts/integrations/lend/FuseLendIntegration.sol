@@ -51,6 +51,15 @@ contract FuseLendIntegration is CompoundLendIntegration {
     }
 
     function _getRewardsAccrued(address _strategy) internal view override returns (uint256) {
+        // The code is using collateral as a divisor but because Fuse was hacked
+        // there only 8k DAI in the strategy so BABL rewards are so high because
+        // the divisor is super low. I suggest we return zero as rewards from
+        // Fuse because people would not get them anyway until Fuse is fixed.
+        // And if Fuse is fixed then rewards will be fixed as well.
+
+        // TODO: Fix this once Fuse is fixed.
+        return 0;
+
         address[] memory distributors = IComptroller(comptroller).getRewardsDistributors();
         uint256 totalRewards;
         if (distributors.length > 0) {
@@ -59,7 +68,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
             for (uint256 i = 0; i < markets.length; i++) {
                 uint256 balanceCToken = IERC20(markets[i]).balanceOf(_strategy);
                 uint256 rewardPerBlock;
-                uint256 divisor;
+                uint256 underlyingAssetAmount;
                 // If there is balance, strategy supplied
                 if (balanceCToken > 0) {
                     (
@@ -71,7 +80,7 @@ contract FuseLendIntegration is CompoundLendIntegration {
                     ) = ICToken(markets[i]).getAccountSnapshot(_strategy);
                     balanceCToken = cTokenBalance.preciseMul(exchangeRateMantissa);
                     rewardPerBlock = IRewardsDistributor(distributors[0]).compSupplySpeeds(markets[i]);
-                    divisor = ICToken(markets[i]).getCash();
+                    underlyingAssetAmount = ICToken(markets[i]).getCash();
                 } else {
                     // Check if borrow enabled
                     if (ICToken(markets[i]).borrowRatePerBlock() > 0) {
@@ -79,13 +88,13 @@ contract FuseLendIntegration is CompoundLendIntegration {
                         // If there is borrow balance, strategy borrowed from this market
                         if (balanceCToken > 0) {
                             rewardPerBlock = IRewardsDistributor(distributors[0]).compBorrowSpeeds(markets[i]);
-                            divisor = ICToken(markets[i]).totalBorrows();
+                            underlyingAssetAmount = ICToken(markets[i]).totalBorrows();
                         }
                     }
                 }
-                if (balanceCToken > 0 && rewardPerBlock > 0 && divisor > 0) {
+                if (balanceCToken > 0 && rewardPerBlock > 0 && underlyingAssetAmount > 0) {
                     totalRewards = totalRewards.add(
-                        rewardPerBlock.preciseMul(balanceCToken.preciseDiv(divisor)).mul(nblocks)
+                        rewardPerBlock.preciseMul(balanceCToken.preciseDiv(underlyingAssetAmount)).mul(nblocks)
                     );
                 }
             }
