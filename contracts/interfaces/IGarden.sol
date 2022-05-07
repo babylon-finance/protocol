@@ -71,6 +71,8 @@ interface IAdminGarden {
 
     function verifyGarden(uint256 _verifiedCategory) external;
 
+    function updateRewardsToSetAside(uint256 _difference, bool _addOrSubstract) external;
+
     function resetHardlock(uint256 _hardlockStartsAt) external;
 }
 
