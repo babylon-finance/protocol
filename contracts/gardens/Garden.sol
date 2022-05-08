@@ -209,6 +209,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
 
+    // Variable that controls whether this garden has custom integrations enabled
+    bool public override customIntegrationsEnabled;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
