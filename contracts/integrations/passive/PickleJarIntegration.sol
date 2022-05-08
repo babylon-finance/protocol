@@ -133,7 +133,7 @@ contract PickleJarIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getExitInvestmentCalldata(
-        address _strategy,
+        address, /* _strategy */
         address _asset,
         uint256 _investmentTokensIn,
         address, /* _tokenOut */
@@ -213,7 +213,8 @@ contract PickleJarIntegration is PassiveIntegration {
     /**
      * Return post action calldata
      *
-     * hparam  _asset                    Address of the asset to deposit
+     * @param  _strategy                 Address of the strategy
+     * @param  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
      * hparam  _passiveOp                Type of op
      *
@@ -225,7 +226,7 @@ contract PickleJarIntegration is PassiveIntegration {
         address _strategy,
         address _asset,
         uint256, /* _amount */
-        uint256 _passiveOp
+        uint256 /* _passiveOp */
     )
         internal
         view
