@@ -68,6 +68,7 @@ async function setUpFixture(
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
+  const customOperation = await getContract('CustomOperation');
 
   const dai = await getERC20(addresses.tokens.DAI);
   const usdc = await getERC20(addresses.tokens.USDC);
@@ -341,6 +342,7 @@ async function setUpFixture(
     depositVaultOperation,
     lendOperation,
     borrowOperation,
+    customOperation,
 
     gardenValuer,
     priceOracle,
