@@ -34,9 +34,7 @@ contract CustomIntegrationSample is CustomIntegration {
      *
      * @param _controller                   Address of the controller
      */
-    constructor(IBabController _controller)
-        CustomIntegration('**test_sample_change_me**', _controller)
-    {
+    constructor(IBabController _controller) CustomIntegration('**test_sample_change_me**', _controller) {
         require(address(_controller) != address(0), 'invalid address');
     }
 
@@ -45,23 +43,22 @@ contract CustomIntegrationSample is CustomIntegration {
     function getInputTokensAndWeights(
         bytes calldata /* _data */
     ) external view override returns (address[] memory, uint256[] memory) {
-      /*
+        /*
       *
       FILL THIS
       */
-      return (new address[](1), new uint[](1));
+        return (new address[](1), new uint256[](1));
     }
 
-    function getOutputTokensAndMinAmountOut(bytes calldata /* _data */, uint256 /* _liquidity */)
-        external
-        view
-        override
-        returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
-      /*
+    function getOutputTokensAndMinAmountOut(
+        bytes calldata, /* _data */
+        uint256 /* _liquidity */
+    ) external view override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
+        /*
       *
       FILL THIS
       */
-      return (new address[](1), new uint[](1));
+        return (new address[](1), new uint256[](1));
     }
 
     function getAmountResultToken(
@@ -69,11 +66,11 @@ contract CustomIntegrationSample is CustomIntegration {
         address _tokenAddress,
         uint256 _maxAmountsIn
     ) external view override returns (uint256) {
-      /*
+        /*
       *
       FILL THIS
       */
-      return 0;
+        return 0;
     }
 
     /* =============== Internal Functions ============== */
@@ -107,11 +104,11 @@ contract CustomIntegrationSample is CustomIntegration {
             bytes memory
         )
     {
-      /*
+        /*
       *
       FILL THIS
       */
-      return (address(0), 0, bytes(''));
+        return (address(0), 0, bytes(''));
     }
 
     /**
@@ -141,47 +138,69 @@ contract CustomIntegrationSample is CustomIntegration {
             address,
             uint256,
             bytes memory
-        ) {
-          /*
+        )
+    {
+        /*
           *
           FILL THIS
           */
-          return (address(0), 0, bytes(''));
-        }
+        return (address(0), 0, bytes(''));
+    }
 
-
+    /**
+     * Whether or not the data provided is valid
+     *
+     * @param  _data                     Data provided
+     * @return bool                      True if the data is correct
+     */
     function _isValid(bytes memory _data) internal view override returns (bool) {
-      /*
+        /*
       *
       FILL THIS
       */
-      return true;
+        return true;
     }
 
+    /**
+     * Which address needs to be approved (IERC-20) for the input tokens.
+     *
+     * @param  _data                     Data provided
+     * @return address                   Address to approve the tokens to
+     */
     function _getSpender(
         bytes calldata, /* _data */
         uint8 /* _opType */
     ) internal view override returns (address) {
-      /*
+        /*
       *
       FILL THIS
       */
-      return address(0);
+        return address(0);
     }
 
+    /**
+     * The address of the IERC-20 token obtained after entering this operation
+     *
+     * @param  _token                     Address provided as param
+     * @return address                    Address of the resulting lp token
+     */
     function _getResultToken(address _token) internal view override returns (address) {
-      /*
+        /*
       *
       FILL THIS
       */
-      return _token;
+        return _token;
     }
 
+    /**
+     * The list of addresses of the IERC-20 tokens mined as rewards during the strategy
+     *
+     * @param  _data                      Address provided as param
+     * @return address[]                  List of reward token addresses
+     */
     function _getRewardTokens(
         address /* _data */
     ) internal view override returns (address[] memory) {
         return new address[](1);
     }
-
-
 }

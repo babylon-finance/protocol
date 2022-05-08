@@ -80,10 +80,12 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         CustomInfo memory customInfo = _createCustomInfo(_strategy, _data, _resultTokensOut);
         _validatePreJoinCustomData(customInfo);
         // Approve spending of the tokens
-        for (uint256 i = 0; i < _tokensIn.length; i++) {
-            // No need to approve ETH
-            if (_tokensIn[i] != address(0) && _tokensIn[i] != ETH_ADD_CURVE && _maxAmountsIn[i] > 0) {
-                customInfo.strategy.invokeApprove(_getSpender(_data, 0), _tokensIn[i], _maxAmountsIn[i]);
+        if (_getSpender(_data, 0) != address(0)) {
+            for (uint256 i = 0; i < _tokensIn.length; i++) {
+                // No need to approve ETH
+                if (_tokensIn[i] != address(0) && _tokensIn[i] != ETH_ADD_CURVE && _maxAmountsIn[i] > 0) {
+                    customInfo.strategy.invokeApprove(_getSpender(_data, 0), _tokensIn[i], _maxAmountsIn[i]);
+                }
             }
         }
         (address target, uint256 callValue, bytes memory methodData) =
