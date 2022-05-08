@@ -7,6 +7,8 @@ interface IFactoryRegistry {
 
     function get_lp_token(address _pool) external view returns (address);
 
+    function get_gauge(address _pool) external view returns (address);
+
     function find_pool_for_coins(
         address _from,
         address _to,

@@ -139,9 +139,10 @@ contract PickleFarmIntegration is PassiveIntegration {
     /**
      * Return post action calldata
      *
-     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _strategy                 Address of the strategy
+     * @param  _asset                    Address of the asset to deposit
      * hparam  _amount                   Amount of the token to deposit
-     * hparam  _passiveOp                Type of op
+     * @param  _passiveOp                Type of op
      *
      * @return address                   Target contract address
      * @return uint256                   Call value

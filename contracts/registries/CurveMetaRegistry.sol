@@ -51,6 +51,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
 
     // Mapping of pool to registryId
     mapping(address => uint8) public poolToRegistry;
+    mapping(address => address) public override gaugeToPool;
 
     // 0 means doesnt exist
     // 1 means first party normal
@@ -262,7 +263,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
      * Returns the virtual price of an lp token from curve
      * @param _lpToken                Lp token Address
      *
-     * @return uint256                Whether the pool is a meta pool or not
+     * @return uint256                Price of the lp token
      */
     function getVirtualPriceFromLpToken(address _lpToken) external view override returns (uint256) {
         address pool = getPoolFromLpToken(_lpToken);
@@ -306,6 +307,38 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         // No underlying
         return (address(0), 0);
+    }
+
+    /**
+     * Returns the gauge for a given pool address
+     * @param _pool                   Pool Address
+     *
+     * @return address                Address of the gauge
+     */
+    function getGauge(address _pool) public view override returns (address) {
+        uint256 registryKind = poolToRegistry[_pool];
+        address registryToUse = address(curveRegistry);
+        if (registryKind == 2) {
+            registryToUse = address(factoryRegistry);
+        }
+        if (registryKind == 3) {
+            registryToUse = address(cryptoRegistry);
+        }
+        if (registryKind == 4) {
+            registryToUse = address(cryptoRegistryF);
+        }
+        if (registryKind == 1 || registryKind == 3) {
+            (address[10] memory addresses, int128[10] memory types) = ICurveRegistry(registryToUse).get_gauges(_pool);
+            for (uint256 i = 0; i < 10; i++) {
+                if (types[i] == 0 || types[i] == 5) {
+                    return addresses[i];
+                }
+            }
+        }
+        if (registryKind == 2 || registryKind == 4) {
+            return IFactoryRegistry(registryToUse).get_gauge(_pool);
+        }
+        return address(0);
     }
 
     /**
@@ -408,6 +441,8 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             if (_index == 4) {
                 cryptoFactoryLpTokenToPools[ICurvePoolV3(pool).token()] = pool;
             }
+            // Adds gauge
+            gaugeToPool[getGauge(pool)] = pool;
         }
     }
 }

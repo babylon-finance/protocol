@@ -19,6 +19,10 @@ interface ICurveMetaRegistry {
 
     function isPool(address _poolAddress) external view returns (bool);
 
+    function gaugeToPool(address _gaugeAddress) external view returns (address);
+
+    function getGauge(address _pool) external view returns (address);
+
     function getCoinAddresses(address _pool, bool _getUnderlying) external view returns (address[8] memory);
 
     function getNCoins(address _pool) external view returns (uint256);

@@ -184,15 +184,17 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             // BUG: Does not respect _investmentTokenIn/percentage
             _investmentTokenIn = IERC20(_investmentAddress).balanceOf(_strategy);
         }
-
-        // Approve spending of the investment token
-        investmentInfo.strategy.invokeApprove(
-            _getSpender(_investmentAddress, 1),
-            _investmentAddress,
-            _investmentTokenIn
-        );
+        if (_getResultAsset(_investmentAddress) != _getSpender(_investmentAddress, 1)) {
+            // Approve spending of the investment token
+            investmentInfo.strategy.invokeApprove(
+                _getSpender(_investmentAddress, 1),
+                _investmentAddress,
+                _investmentTokenIn
+            );
+        }
         (address targetInvestment, uint256 callValue, bytes memory methodData) =
             _getExitInvestmentCalldata(_strategy, _investmentAddress, _investmentTokenIn, _tokenOut, _minAmountOut);
+
         investmentInfo.strategy.invokeFromIntegration(targetInvestment, callValue, methodData);
 
         // Post actions
