@@ -164,7 +164,8 @@ contract CustomIntegrationSample is CustomIntegration {
     /**
      * Which address needs to be approved (IERC-20) for the input tokens.
      *
-     * @param  _data                     Data provided
+     * hparam  _data                     Data provided
+     * hparam  _opType                   O for enter, 1 for exit
      * @return address                   Address to approve the tokens to
      */
     function _getSpender(
@@ -195,7 +196,7 @@ contract CustomIntegrationSample is CustomIntegration {
     /**
      * The list of addresses of the IERC-20 tokens mined as rewards during the strategy
      *
-     * @param  _data                      Address provided as param
+     * hparam  _data                      Address provided as param
      * @return address[]                  List of reward token addresses
      */
     function _getRewardTokens(
