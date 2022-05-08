@@ -43,6 +43,15 @@ async function createStrategyWithVaultOperation(garden, signer, params, integrat
 
   return await ethers.getContractAt('Strategy', lastStrategyAddr);
 }
+async function createStrategyWithCustomOperation(garden, signer, params, integration, data) {
+  const passedCustomParams = [[5], [integration]];
+  const encoded = encodeData(data || [ADDRESS_ZERO, 0]);
+  await garden.connect(signer).addStrategy(...STRAT_NAME_PARAMS, params, ...passedCustomParams, encoded);
+  const strategies = await garden.getStrategies();
+  const lastStrategyAddr = strategies[strategies.length - 1];
+
+  return await ethers.getContractAt('Strategy', lastStrategyAddr);
+}
 
 async function createStrategyWithLendOperation(garden, signer, params, integration, data) {
   const passedLendParams = [[3], [integration]];
@@ -331,6 +340,9 @@ async function createStrategy(kind, state, signers, integrations, garden, params
     case 'lend':
       strategy = await createStrategyWithLendOperation(garden, signers[0], params, integrations, specificParams);
       break;
+    case 'custom':
+      strategy = await createStrategyWithCustomOperation(garden, signers[0], params, integrations, specificParams);
+      break;
     case 'borrow':
       strategy = await createStrategyWithLendAndBorrowOperation(
         garden,
@@ -349,7 +361,7 @@ async function createStrategy(kind, state, signers, integrations, garden, params
         specificParams,
       );
       break;
-    case 'custom':
+    case 'complex':
       strategy = await createStrategyWithManyOperations(
         garden,
         signers[0],

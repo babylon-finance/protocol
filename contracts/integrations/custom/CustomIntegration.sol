@@ -161,10 +161,10 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
 
     function getInputTokensAndWeights(
         bytes calldata /* _data */
-    ) public view virtual override returns (address[] memory, uint256[] memory);
+    ) external view virtual override returns (address[] memory, uint256[] memory);
 
     function getOutputTokensAndMinAmountOut(bytes calldata _data, uint256 _liquidity)
-        public
+        external
         view
         virtual
         override

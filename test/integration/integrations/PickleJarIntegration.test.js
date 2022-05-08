@@ -95,7 +95,7 @@ describe('PickleJarIntegration', function () {
     }
 
     if (farm) {
-      strategyKind = 'custom';
+      strategyKind = 'complex';
       integrations = [...integrations, pickleFarmIntegration.address];
       params = [...params, jarAddress, 0];
       ops = [...ops, 2];
