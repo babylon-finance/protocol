@@ -401,21 +401,23 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(block.timestamp < executedAt.add(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
         // An unwind should not allow users to remove all capital from a strategy
         _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
+        uint256 priorBalance = IERC20(garden.reserveAsset()).balanceOf(address(this));
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
-        capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+        uint256 deltaBalance = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(priorBalance);
+        _require(
+            deltaBalance <= _amountToUnwind.preciseMul(102e16) && deltaBalance >= _amountToUnwind.preciseMul(98e16),
+            Errors.INVALID_CAPITAL_TO_UNWIND
+        ); // 2% above margin
+        capitalAllocated = capitalAllocated.sub(deltaBalance);
         // expected return update
-        expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
-        _updateProtocolPrincipal(_amountToUnwind, false);
+        expectedReturn = _updateExpectedReturn(capitalAllocated, deltaBalance, false);
+        _updateProtocolPrincipal(deltaBalance, false);
         // Send the amount back to the garden for the immediate withdrawal
-        // TODO: Transfer the precise value; not entire balance
-        IERC20(garden.reserveAsset()).safeTransfer(
-            address(garden),
-            IERC20(garden.reserveAsset()).balanceOf(address(this))
-        );
+        IERC20(garden.reserveAsset()).safeTransfer(address(garden), deltaBalance);
         updatedAt = block.timestamp;
 
-        emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
+        emit StrategyReduced(address(garden), deltaBalance, block.timestamp);
     }
 
     /**
