@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers, deployments } = require('hardhat');
 const { deploy } = deployments;
-const { STRATEGY_EXECUTE_MAP, GARDENS, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
+const { STRATEGY_EXECUTE_MAP, GARDEN_PARAMS, getGardenParams,GARDENS, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
@@ -9,40 +9,38 @@ const addresses = require('lib/addresses');
 const { getERC20, pick, increaseTime } = require('utils/test-helpers');
 
 describe('CustomIntegration', function () {
-  let priceOracle;
+  let babController;
   let yearnVaultRegistry;
-  let controller;
+  let priceOracle;
   let signer1;
   let signer2;
   let signer3;
 
   beforeEach(async () => {
-    ({ signer1, signer2, signer3, priceOracle, yearnVaultRegistry, controller } = await setupTests()());
+    ({ signer1, signer2, signer3, priceOracle, yearnVaultRegistry, babController } = await setupTests()());
   });
 
   describe('testing custom yearn example', function () {
-    pick(GARDENS).forEach(({ token, name, fee }) => {
-      pick([
-        { asset: addresses.tokens.USDT, symbol: 'USDT' },
-        { asset: addresses.tokens.WETH, symbol: 'WETH' },
-        { asset: addresses.tokens.DAI, symbol: 'DAI' },
-        { asset: addresses.tokens.USDC, symbol: 'USDC' },
-        { asset: addresses.tokens.WBTC, symbol: 'WBTC' },
-      ]).forEach(({ asset, symbol }) => {
+    pick(GARDENS)
+      .slice(0, 1)
+      .forEach(({ token, name, fee }) => {
         it(`uses test custom integration in a ${name} garden`, async function () {
           await transferFunds(token);
-          const garden = await createGarden({ reserveAsset: token });
+          // Enable custom integrations
+          const params = getGardenParams({ customIntegrationsEnabled: 1 });
+          const garden = await createGarden({ reserveAsset: token, params });
+          expect(await garden.customIntegrationsEnabled()).to.equal(true);
           const gardenReserveAsset = await getERC20(token);
           await depositFunds(token, garden);
 
-          const deployment = await deploy('CustomIntegrationTemplate', {
+          const deployment = await deploy('CustomIntegrationYearn', {
             from: signer1.address,
-            args: [controller.address, yearnVaultRegistry.address],
+            args: [babController.address, yearnVaultRegistry.address],
           });
 
           // USDT vault
           const param = '0x7Da96a3891Add058AdA2E826306D812C638D87a7';
-          const integrations = [deployment.address];
+          const integrations = deployment.address;
           const integrationParams = [param, 0];
           const strategyKind = 'custom';
           const ops = [5];
@@ -86,6 +84,5 @@ describe('CustomIntegration', function () {
           );
         });
       });
-    });
   });
 });
