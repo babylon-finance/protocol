@@ -123,7 +123,6 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         _validatePreExitCustomData(customInfo);
         // Approve spending of the result token
         customInfo.strategy.invokeApprove(_getSpender(_data, 1), customInfo.resultToken, _resultTokensIn);
-
         (address target, uint256 callValue, bytes memory methodData) =
             _getExitCalldata(_strategy, _data, _resultTokensIn, _tokensOut, _minAmountsOut);
         customInfo.strategy.invokeFromIntegration(target, callValue, methodData);
@@ -191,6 +190,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         address add = BytesLib.decodeOpDataAddress(_data);
         CustomInfo memory customInfo;
         customInfo.resultToken = _getResultToken(add);
+        customInfo.data = _data;
         customInfo.strategy = IStrategy(_strategy);
         customInfo.garden = IGarden(customInfo.strategy.garden());
         customInfo.resultTokensInStrategy = IERC20(customInfo.resultToken).balanceOf(_strategy);
@@ -292,7 +292,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
      */
     function _getExitCalldata(
         address, /* _strategy */
-        bytes memory, /* _data */
+        bytes calldata, /* _data */
         uint256, /* _resultTokensIn */
         address[] calldata, /* _tokensOut */
         uint256[] calldata /* _minAmountsOut */

@@ -140,7 +140,7 @@ contract CustomIntegrationYearn is CustomIntegration {
         uint256[] calldata /* _minAmountsOut */
     )
         internal
-        pure
+        view
         override
         returns (
             address,
