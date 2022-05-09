@@ -445,6 +445,7 @@ describe('Heart', function () {
 
   async function pumpAmount(amountInFees) {
     const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
+    const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
     await heart
       .connect(keeper)
       .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
@@ -456,7 +457,7 @@ describe('Heart', function () {
     const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
     const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
     const fuseBalanceDAIBeforePump = await cDAI.getCash();
-    await heart.connect(signer1).pump();
+    await heart.connect(signer1).pump(wethPerBabl);
     const statsAfterPump = await heart.getTotalStats();
     // Check the total fees is 3 WETH
     expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
@@ -528,6 +529,7 @@ describe('Heart', function () {
   describe('pump', async function () {
     async function pumpAmount(amountInFees) {
       const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
+      const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
       await heart
         .connect(keeper)
         .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
@@ -539,7 +541,7 @@ describe('Heart', function () {
       const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
       const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
       const fuseBalanceDAIBeforePump = await cDAI.getCash();
-      await heart.connect(signer1).pump();
+      await heart.connect(signer1).pump(wethPerBabl);
       const statsAfterPump = await heart.getTotalStats();
       // Check the total fees is 3 WETH
       expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
@@ -590,11 +592,13 @@ describe('Heart', function () {
       );
     }
     it('will revert if garden address has not been set', async function () {
-      await expect(heart.connect(signer1).pump()).to.be.reverted;
+      const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
+      await expect(heart.connect(signer1).pump(wethPerBabl)).to.be.reverted;
     });
 
     it('will revert if garden votes have not been set', async function () {
-      await expect(heart.connect(signer1).pump()).to.be.reverted;
+      const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
+      await expect(heart.connect(signer1).pump(wethPerBabl)).to.be.reverted;
     });
 
     it('will pump correctly with 3 WETH', async function () {
