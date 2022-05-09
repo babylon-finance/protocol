@@ -1,21 +1,22 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
-
+const { ethers, deployments } = require('hardhat');
+const { deploy } = deployments;
 const { STRATEGY_EXECUTE_MAP, GARDENS, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { getERC20, eth, pick, increaseTime } = require('utils/test-helpers');
+const { getERC20, pick, increaseTime } = require('utils/test-helpers');
 
 describe('CustomIntegration', function () {
   let priceOracle;
+  let controller;
   let signer1;
   let signer2;
   let signer3;
 
   beforeEach(async () => {
-    ({ signer1, signer2, signer3, priceOracle } = await setupTests()());
+    ({ signer1, signer2, signer3, priceOracle, controller } = await setupTests()());
   });
 
   describe('exchange', function () {
@@ -33,14 +34,13 @@ describe('CustomIntegration', function () {
           const gardenReserveAsset = await getERC20(token);
           await depositFunds(token, garden);
 
-          const deployment = await deploy('CustomIntegrationTest1', {
-            from: signer.address,
-            args,
+          const deployment = await deploy('CustomIntegrationTemplate', {
+            from: signer1.address,
+            args: [controller.address],
           });
 
-          const integration = '0x';
           const param = '0x';
-          const integrations = [];
+          const integrations = [deployment.address];
           const integrationParams = [param, 0];
           const strategyKind = 'custom';
           const ops = [5];
@@ -60,8 +60,8 @@ describe('CustomIntegration', function () {
           const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
           await executeStrategy(strategyContract, { amount });
 
-          const integrationInstance = await ethers.getContractAt('ICustomIntegration', integration);
-          const resultToken = await ethers.getContractAt('IERC20', await integration.getResultToken(param));
+          const integrationInstance = await ethers.getContractAt('ICustomIntegration', deployment.address);
+          const resultToken = await ethers.getContractAt('IERC20', await integrationInstance.getResultToken(param));
           // Check NAV
           const nav = await strategyContract.getNAV();
           expect(nav).to.be.closeTo(amount, amount.div(30));

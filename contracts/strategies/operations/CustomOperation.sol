@@ -79,13 +79,11 @@ contract CustomOperation is Operation {
             ICustomIntegration(_integration).getInputTokensAndWeights(_data);
         // Get the tokens needed to enter the operation
         uint256[] memory maxAmountsIn = _tradeInputTokens(_asset, _capital, _garden, _inputWeights, _inputTokens);
-        uint256 resultTokensOut = 100;
-        // TODO: require(_getPrice(address(resultToken), _garden.reserveAsset()) >= _capital.preciseMul(95e16));
-
+        uint256 priceResultToken = _getPriceOrCustom(_integration, _data, _garden.reserveAsset());
         ICustomIntegration(_integration).enter(
             msg.sender,
             _data,
-            resultTokensOut.sub(resultTokensOut.preciseMul(SLIPPAGE_ALLOWED)),
+            1,
             _inputTokens,
             maxAmountsIn
         );
@@ -168,10 +166,7 @@ contract CustomOperation is Operation {
             return (0, true);
         }
         IERC20 resultToken = IERC20(_getResultTokenFromBytes(_integration, _data));
-        uint256 price = _getPrice(address(resultToken), _garden.reserveAsset());
-        if (price == 0) {
-            // TODO: get another way of getting the price from the integration
-        }
+        uint256 price = _getPriceOrCustom(_integration, _data, _garden.reserveAsset());
         require(price != 0, 'Could not price result token');
         uint256 NAV =
             SafeDecimalMath.normalizeAmountTokens(
@@ -282,5 +277,17 @@ contract CustomOperation is Operation {
                 }
             }
         } catch {}
+    }
+
+    function _getPriceOrCustom(
+        address _integration,
+        bytes calldata _data,
+        address _tokenOut
+    ) internal view returns (uint256) {
+        uint256 price = _getPrice(_getResultTokenFromBytes(_integration, _data), _tokenOut);
+        if (price == 0) {
+            price = ICustomIntegration(_integration).getPriceResultToken(_data, _tokenOut);
+        }
+        return price;
     }
 }

@@ -15,9 +15,9 @@ import {ControllerLib} from '../../lib/ControllerLib.sol';
  * @title CustomIntegrationSample
  * @author Babylon Finance Protocol
  *
- * Sample integration
+ * Custom integration template
  */
-contract CustomIntegrationSample is CustomIntegration {
+contract CustomIntegrationTemplate is CustomIntegration {
     using LowGasSafeMath for uint256;
     using PreciseUnitMath for uint256;
     using BytesLib for uint256;
@@ -38,42 +38,53 @@ contract CustomIntegrationSample is CustomIntegration {
         require(address(_controller) != address(0), 'invalid address');
     }
 
-    /* ============ External Functions ============ */
-
-    function getInputTokensAndWeights(
-        bytes calldata /* _data */
-    ) external view override returns (address[] memory, uint256[] memory) {
-        /*
-      *
-      FILL THIS
-      */
-        return (new address[](1), new uint256[](1));
-    }
-
-    function getOutputTokensAndMinAmountOut(
-        bytes calldata, /* _data */
-        uint256 /* _liquidity */
-    ) external view override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
-        /*
-      *
-      FILL THIS
-      */
-        return (new address[](1), new uint256[](1));
-    }
-
-    function getAmountResultToken(
-        bytes calldata _data,
-        address _tokenAddress,
-        uint256 _maxAmountsIn
-    ) external view override returns (uint256) {
-        /*
-      *
-      FILL THIS
-      */
-        return 0;
-    }
-
     /* =============== Internal Functions ============== */
+
+    /**
+     * Whether or not the data provided is valid
+     *
+     * @param  _data                     Data provided
+     * @return bool                      True if the data is correct
+     */
+    function _isValid(bytes memory _data) internal view override returns (bool) {
+        /*
+      *
+      FILL THIS
+      */
+        return true;
+    }
+
+    /**
+     * Which address needs to be approved (IERC-20) for the input tokens.
+     *
+     * hparam  _data                     Data provided
+     * hparam  _opType                   O for enter, 1 for exit
+     * @return address                   Address to approve the tokens to
+     */
+    function _getSpender(
+        bytes calldata, /* _data */
+        uint8 /* _opType */
+    ) internal view override returns (address) {
+        /*
+      *
+      FILL THIS
+      */
+        return address(0);
+    }
+
+    /**
+     * The address of the IERC-20 token obtained after entering this operation
+     *
+     * @param  _token                     Address provided as param
+     * @return address                    Address of the resulting lp token
+     */
+    function _getResultToken(address _token) internal view override returns (address) {
+        /*
+      *
+      FILL THIS
+      */
+        return _token;
+    }
 
     /**
      * Return enter custom calldata
@@ -126,7 +137,7 @@ contract CustomIntegrationSample is CustomIntegration {
      */
     function _getExitCalldata(
         address, /* _strategy */
-        bytes memory, /* _data */
+        bytes calldata, /* _data */
         uint256, /* _resultTokensIn */
         address[] calldata, /* _tokensOut */
         uint256[] calldata /* _minAmountsOut */
@@ -148,60 +159,73 @@ contract CustomIntegrationSample is CustomIntegration {
     }
 
     /**
-     * Whether or not the data provided is valid
-     *
-     * @param  _data                     Data provided
-     * @return bool                      True if the data is correct
-     */
-    function _isValid(bytes memory _data) internal view override returns (bool) {
-        /*
-      *
-      FILL THIS
-      */
-        return true;
-    }
-
-    /**
-     * Which address needs to be approved (IERC-20) for the input tokens.
-     *
-     * hparam  _data                     Data provided
-     * hparam  _opType                   O for enter, 1 for exit
-     * @return address                   Address to approve the tokens to
-     */
-    function _getSpender(
-        bytes calldata, /* _data */
-        uint8 /* _opType */
-    ) internal view override returns (address) {
-        /*
-      *
-      FILL THIS
-      */
-        return address(0);
-    }
-
-    /**
-     * The address of the IERC-20 token obtained after entering this operation
-     *
-     * @param  _token                     Address provided as param
-     * @return address                    Address of the resulting lp token
-     */
-    function _getResultToken(address _token) internal view override returns (address) {
-        /*
-      *
-      FILL THIS
-      */
-        return _token;
-    }
-
-    /**
      * The list of addresses of the IERC-20 tokens mined as rewards during the strategy
      *
      * hparam  _data                      Address provided as param
-     * @return address[]                  List of reward token addresses
+     * @return address[] memory           List of reward token addresses
      */
     function _getRewardTokens(
         address /* _data */
     ) internal view override returns (address[] memory) {
         return new address[](1);
+    }
+
+    /* ============ External Functions ============ */
+
+    /**
+     * The tokens to be purchased by the strategy on enter according to the weights.
+     * Weights must add up to 1e18 (100%)
+     *
+     * hparam  _data                      Address provided as param
+     * @return _inputTokens               List of input tokens to buy
+     * @return _inputWeights              List of weights for the tokens to buy
+     */
+    function getInputTokensAndWeights(
+        bytes calldata /* _data */
+    ) external view override returns (address[] memory _inputTokens, uint256[] memory _inputWeights) {
+        /*
+      *
+      FILL THIS
+      */
+        return (new address[](1), new uint256[](1));
+    }
+
+    /**
+     * The tokens to be received on exit.
+     *
+     * hparam  _data                      Bytes data
+     * hparam  _liquidity                 Number with the amount of result tokens to exit
+     * @return exitTokens                 List of output tokens to receive on exit
+     * @return _minAmountsOut             List of min amounts for the output tokens to receive
+     */
+    function getOutputTokensAndMinAmountOut(
+        bytes calldata, /* _data */
+        uint256 /* _liquidity */
+    ) external view override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
+        /*
+      *
+      FILL THIS
+      */
+        return (new address[](1), new uint256[](1));
+    }
+
+    /**
+     * The price of the result token based on the asset received on enter
+     *
+     * hparam  _data                      Bytes data
+     * hparam  _tokenDenominator          Token we receive the capital in
+     * @return uint256                    Amount of result tokens to receive
+     */
+    function getPriceResultToken(bytes calldata _data, address _tokenDenominator)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        /*
+      *
+      FILL THIS
+      */
+        return 0;
     }
 }

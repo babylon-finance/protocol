@@ -353,7 +353,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         pricePerShareDecayRate = _pricePerShareDecayRate;
         pricePerShareDelta = _pricePerShareDelta;
         canMintNftAfter = _canMintNftAfter;
-        customIntegrationsEnabled = _customIntegrationsEnabled > 0;
+        // Do not let it switch it from false to true
+        customIntegrationsEnabled = customIntegrationsEnabled ? _customIntegrationsEnabled > 0 : false;
     }
 
     // Checks if an address is a creator
