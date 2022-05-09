@@ -49,10 +49,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function _isValid(
         bytes memory /* _data */
     ) internal pure override returns (bool) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return true;
     }
 
@@ -67,10 +64,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         bytes calldata, /* _data */
         uint8 /* _opType */
     ) internal pure override returns (address) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return address(0);
     }
 
@@ -81,10 +75,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
      * @return address                    Address of the resulting lp token
      */
     function _getResultToken(address _token) internal pure override returns (address) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return _token;
     }
 
@@ -117,10 +108,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
             bytes memory
         )
     {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return (address(0), 0, bytes(''));
     }
 
@@ -153,10 +141,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
             bytes memory
         )
     {
-        /*
-          *
-          FILL THIS
-          */
+        /** FILL THIS */
         return (address(0), 0, bytes(''));
     }
 
@@ -185,10 +170,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function getInputTokensAndWeights(
         bytes calldata /* _data */
     ) external pure override returns (address[] memory _inputTokens, uint256[] memory _inputWeights) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return (new address[](1), new uint256[](1));
     }
 
@@ -204,10 +186,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         bytes calldata, /* _data */
         uint256 /* _liquidity */
     ) external pure override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return (new address[](1), new uint256[](1));
     }
 
@@ -222,10 +201,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         bytes calldata, /* _data */
         address /* _tokenDenominator */
     ) external pure override returns (uint256) {
-        /*
-      *
-      FILL THIS
-      */
+        /** FILL THIS */
         return 0;
     }
 }

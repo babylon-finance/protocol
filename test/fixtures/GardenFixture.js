@@ -24,6 +24,7 @@ async function setUpFixture(
   const priceOracle = await getContract('PriceOracle');
   const curveMetaRegistry = await getContract('CurveMetaRegistry');
   const convexRegistry = await getContract('ConvexRegistry');
+  const yearnVaultRegistry = await getContract('YearnVaultRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -323,6 +324,7 @@ async function setUpFixture(
     lidoIntegration,
     stakewiseIntegration,
     convexRegistry,
+    yearnVaultRegistry,
     timelockController,
     babGovernor,
     masterSwapper,
