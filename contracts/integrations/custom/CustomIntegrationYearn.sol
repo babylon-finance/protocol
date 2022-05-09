@@ -66,7 +66,7 @@ contract CustomIntegrationYearn is CustomIntegration {
     function _getSpender(
         bytes calldata _data,
         uint8 /* _opType */
-    ) internal view override returns (address) {
+    ) internal pure override returns (address) {
         // Vault is passed as a param
         return BytesLib.decodeOpDataAddress(_data);
     }
@@ -77,7 +77,7 @@ contract CustomIntegrationYearn is CustomIntegration {
      * @param  _param                     Address provided as param
      * @return address                    Address of the resulting lp token
      */
-    function _getResultToken(address _param) internal view override returns (address) {
+    function _getResultToken(address _param) internal pure override returns (address) {
         // The result token after investing in the vault is the vault itself
         return _param;
     }
@@ -140,7 +140,7 @@ contract CustomIntegrationYearn is CustomIntegration {
         uint256[] calldata /* _minAmountsOut */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -162,7 +162,7 @@ contract CustomIntegrationYearn is CustomIntegration {
      */
     function _getRewardTokens(
         address /* _data */
-    ) internal view override returns (address[] memory) {
+    ) internal pure override returns (address[] memory) {
         // No extra rewards. All get consolidated to the vault input token on exit
         return new address[](1);
     }
@@ -227,6 +227,6 @@ contract CustomIntegrationYearn is CustomIntegration {
         // We get the price of the input token in the vault token
         // Not needed in this case because Bbaylon already knows how to get the price of a vault token.
         // Implemented to showcase how it would be done.
-        return _getPrice(IYearnVault(vault).token(), vault);
+        return _getPrice(IYearnVault(vault).token(), _tokenAddress);
     }
 }

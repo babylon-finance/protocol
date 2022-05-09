@@ -83,7 +83,7 @@ contract CustomOperation is Operation {
         ICustomIntegration(_integration).enter(
             msg.sender,
             _data,
-            1,
+            1, // TODO: fix
             _inputTokens,
             maxAmountsIn
         );
@@ -289,5 +289,9 @@ contract CustomOperation is Operation {
             price = ICustomIntegration(_integration).getPriceResultToken(_data, _tokenOut);
         }
         return price;
+    }
+
+    function _getMinAmountOut(uint256 _capital, uint256 _priceInverse) internal view returns (uint256) {
+        return _capital.preciseDiv(_priceInverse).preciseMul(95e16);
     }
 }

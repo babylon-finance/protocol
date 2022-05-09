@@ -43,10 +43,12 @@ contract CustomIntegrationTemplate is CustomIntegration {
     /**
      * Whether or not the data provided is valid
      *
-     * @param  _data                     Data provided
+     * hparam  _data                     Data provided
      * @return bool                      True if the data is correct
      */
-    function _isValid(bytes memory _data) internal view override returns (bool) {
+    function _isValid(
+        bytes memory /* _data */
+    ) internal pure override returns (bool) {
         /*
       *
       FILL THIS
@@ -64,7 +66,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function _getSpender(
         bytes calldata, /* _data */
         uint8 /* _opType */
-    ) internal view override returns (address) {
+    ) internal pure override returns (address) {
         /*
       *
       FILL THIS
@@ -78,7 +80,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
      * @param  _token                     Address provided as param
      * @return address                    Address of the resulting lp token
      */
-    function _getResultToken(address _token) internal view override returns (address) {
+    function _getResultToken(address _token) internal pure override returns (address) {
         /*
       *
       FILL THIS
@@ -107,7 +109,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         uint256[] calldata /* _maxAmountsIn */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -143,7 +145,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         uint256[] calldata /* _minAmountsOut */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -166,7 +168,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
      */
     function _getRewardTokens(
         address /* _data */
-    ) internal view override returns (address[] memory) {
+    ) internal pure override returns (address[] memory) {
         return new address[](1);
     }
 
@@ -182,7 +184,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
      */
     function getInputTokensAndWeights(
         bytes calldata /* _data */
-    ) external view override returns (address[] memory _inputTokens, uint256[] memory _inputWeights) {
+    ) external pure override returns (address[] memory _inputTokens, uint256[] memory _inputWeights) {
         /*
       *
       FILL THIS
@@ -201,7 +203,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function getOutputTokensAndMinAmountOut(
         bytes calldata, /* _data */
         uint256 /* _liquidity */
-    ) external view override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
+    ) external pure override returns (address[] memory exitTokens, uint256[] memory _minAmountsOut) {
         /*
       *
       FILL THIS
@@ -216,12 +218,10 @@ contract CustomIntegrationTemplate is CustomIntegration {
      * hparam  _tokenDenominator          Token we receive the capital in
      * @return uint256                    Amount of result tokens to receive
      */
-    function getPriceResultToken(bytes calldata _data, address _tokenDenominator)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getPriceResultToken(
+        bytes calldata, /* _data */
+        address /* _tokenDenominator */
+    ) external pure override returns (uint256) {
         /*
       *
       FILL THIS

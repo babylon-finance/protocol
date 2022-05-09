@@ -10,16 +10,17 @@ const { getERC20, pick, increaseTime } = require('utils/test-helpers');
 
 describe('CustomIntegration', function () {
   let priceOracle;
+  let yearnVaultRegistry;
   let controller;
   let signer1;
   let signer2;
   let signer3;
 
   beforeEach(async () => {
-    ({ signer1, signer2, signer3, priceOracle, controller } = await setupTests()());
+    ({ signer1, signer2, signer3, priceOracle, yearnVaultRegistry, controller } = await setupTests()());
   });
 
-  describe('exchange', function () {
+  describe('testing custom yearn example', function () {
     pick(GARDENS).forEach(({ token, name, fee }) => {
       pick([
         { asset: addresses.tokens.USDT, symbol: 'USDT' },
@@ -36,10 +37,11 @@ describe('CustomIntegration', function () {
 
           const deployment = await deploy('CustomIntegrationTemplate', {
             from: signer1.address,
-            args: [controller.address],
+            args: [controller.address, yearnVaultRegistry.address],
           });
 
-          const param = '0x';
+          // USDT vault
+          const param = '0x7Da96a3891Add058AdA2E826306D812C638D87a7';
           const integrations = [deployment.address];
           const integrationParams = [param, 0];
           const strategyKind = 'custom';
