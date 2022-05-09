@@ -26,8 +26,7 @@ describe('CustomIntegration', function () {
         await transferFunds(token);
         await fund([signer1.address], { tokens: [token] });
         // Enable custom integrations
-        const params = getGardenParams({ customIntegrationsEnabled: 1 });
-        const garden = await createGarden({ reserveAsset: token, params });
+        const garden = await createGarden({ reserveAsset: token, customIntegrationsEnabled: true });
         expect(await garden.customIntegrationsEnabled()).to.equal(true);
         const gardenReserveAsset = await getERC20(token);
         await depositFunds(token, garden);
