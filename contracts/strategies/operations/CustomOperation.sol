@@ -185,11 +185,11 @@ contract CustomOperation is Operation {
                 if (rewards[i] != address(0) && IERC20(rewards[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                     price = _getPrice(_garden.reserveAsset(), rewards[i]);
                     if (price > 0) {
-                        NAV += SafeDecimalMath.normalizeAmountTokens(
+                        NAV = NAV.add(SafeDecimalMath.normalizeAmountTokens(
                             rewards[i],
                             _garden.reserveAsset(),
                             IERC20(rewards[i]).balanceOf(msg.sender)
-                        );
+                        ));
                     }
                 }
             }
