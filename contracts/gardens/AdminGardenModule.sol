@@ -282,6 +282,19 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         IVoteToken(_token).delegate(_delegatee);
     }
 
+    /**
+     * PRIVILEGE FUNCTION to update rewards to set aside
+     * To be used by Governance or Team multisig only.
+     * @param _difference       Amount difference in reserve asset
+     * @param _addOrSubstract   Whether the difference might be added or substracted
+     */
+    function updateRewardsToSetAside(uint256 _difference, bool _addOrSubstract) external override {
+        controller.onlyGovernanceOrEmergency();
+        reserveAssetRewardsSetAside = _addOrSubstract
+            ? reserveAssetRewardsSetAside.add(_difference)
+            : reserveAssetRewardsSetAside.sub(_difference);
+    }
+
     /* ============ External Getter Functions ============ */
 
     /* ============ Internal Functions ============ */
