@@ -3,13 +3,17 @@
 pragma solidity 0.7.6;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
+import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
-import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
 import {IPoolIntegration} from '../../interfaces/IPoolIntegration.sol';
-import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
+
 import {Operation} from './Operation.sol';
 
 /**
@@ -23,6 +27,7 @@ contract AddLiquidityOperation is Operation {
     using PreciseUnitMath for uint256;
     using SafeDecimalMath for uint256;
     using BytesLib for bytes;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constructor ============ */
 
@@ -149,7 +154,7 @@ contract AddLiquidityOperation is Operation {
         address reserveAsset = WETH;
         for (uint256 i = 0; i < poolTokens.length; i++) {
             if (poolTokens[i] != reserveAsset) {
-                if (_isETH(poolTokens[i]) && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
+                if (IERC20(poolTokens[i]).isETH() && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     poolTokens[i] = WETH;
                 }
@@ -229,17 +234,17 @@ contract AddLiquidityOperation is Operation {
         address _poolToken
     ) private returns (uint256) {
         uint256 normalizedAssetAmount = _capital.preciseMul(_poolWeight);
-        uint256 price = _getPrice(_asset, _isETH(_poolToken) ? WETH : _poolToken);
+        uint256 price = _getPrice(_asset, IERC20(_poolToken).isETH() ? WETH : _poolToken);
         uint256 normalizedTokenAmount =
             SafeDecimalMath.normalizeAmountTokens(_asset, _poolToken, normalizedAssetAmount.preciseMul(price));
-        if (_poolToken != _asset && !_isETH(_poolToken)) {
+        if (_poolToken != _asset && !IERC20(_poolToken).isETH()) {
             IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, _poolToken);
             normalizedTokenAmount = normalizedTokenAmount <= IERC20(_poolToken).balanceOf(msg.sender)
                 ? normalizedTokenAmount
                 : IERC20(_poolToken).balanceOf(msg.sender);
             return normalizedTokenAmount;
         }
-        if (_isETH(_poolToken)) {
+        if (IERC20(_poolToken).isETH()) {
             if (_asset != WETH) {
                 IStrategy(msg.sender).trade(_asset, normalizedAssetAmount, WETH); // normalized amount in original asset decimals
             }

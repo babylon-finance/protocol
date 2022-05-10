@@ -144,8 +144,4 @@ abstract contract Operation is IOperation {
             oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
 
-    // Returns whether the address is ETH or not
-    function _isETH(address _address) internal pure returns (bool) {
-        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
-    }
 }
