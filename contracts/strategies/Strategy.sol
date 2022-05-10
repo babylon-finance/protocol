@@ -405,10 +405,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Exits and enters the strategy
         _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
         uint256 deltaBalance = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(priorBalance);
+        // Real unwinded amount deltaBalance must be always >= amountToUnwind
+        // We can unwind a bigger amount however we set a cap of 25% above expected amount
         _require(
-            deltaBalance <= _amountToUnwind.preciseMul(102e16) && deltaBalance >= _amountToUnwind.preciseMul(98e16),
+            deltaBalance <= _amountToUnwind.preciseMul(125e16) && deltaBalance >= _amountToUnwind,
             Errors.INVALID_CAPITAL_TO_UNWIND
-        ); // 2% above margin
+        );
         capitalAllocated = capitalAllocated.sub(deltaBalance);
         // expected return update
         expectedReturn = _updateExpectedReturn(capitalAllocated, deltaBalance, false);
