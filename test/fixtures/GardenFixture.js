@@ -24,6 +24,7 @@ async function setUpFixture(
   const priceOracle = await getContract('PriceOracle');
   const curveMetaRegistry = await getContract('CurveMetaRegistry');
   const convexRegistry = await getContract('ConvexRegistry');
+  const yearnVaultRegistry = await getContract('YearnVaultRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -69,6 +70,7 @@ async function setUpFixture(
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
+  const customOperation = await getContract('CustomOperation');
 
   const dai = await getERC20(addresses.tokens.DAI);
   const usdc = await getERC20(addresses.tokens.USDC);
@@ -322,6 +324,7 @@ async function setUpFixture(
     lidoIntegration,
     stakewiseIntegration,
     convexRegistry,
+    yearnVaultRegistry,
     timelockController,
     babGovernor,
     masterSwapper,
@@ -343,6 +346,7 @@ async function setUpFixture(
     depositVaultOperation,
     lendOperation,
     borrowOperation,
+    customOperation,
 
     gardenValuer,
     priceOracle,

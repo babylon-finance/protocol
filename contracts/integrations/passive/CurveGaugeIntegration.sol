@@ -136,35 +136,6 @@ contract CurveGaugeIntegration is PassiveIntegration {
         }
     }
 
-    /**
-     * Return post action calldata
-     *
-     * hparam  _asset                    Address of the asset to deposit
-     * hparam  _amount                   Amount of the token to deposit
-     * hparam  _passiveOp                Type of op
-     *
-     * @return address                   Target contract address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
-     */
-    function _getPostActionCallData(
-        address _strategy,
-        address _asset,
-        uint256, /* _amount */
-        uint256 _passiveOp
-    )
-        internal
-        view
-        override
-        returns (
-            address,
-            uint256,
-            bytes memory
-        )
-    {
-        return (address(0), 0, bytes(''));
-    }
-
     function _getRewards(address _strategy, address _asset)
         internal
         view

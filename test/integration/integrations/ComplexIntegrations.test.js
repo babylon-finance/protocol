@@ -68,7 +68,7 @@ describe('ComplexIntegrationsTest', function () {
       const leverage = 7;
 
       const strategyContract = await createStrategy(
-        'custom',
+        'complex',
         'vote',
         [signer1, signer2, signer3],
         [
@@ -122,7 +122,7 @@ describe('ComplexIntegrationsTest', function () {
       await depositFunds(dai.address, garden);
 
       const strategyContract = await createStrategy(
-        'custom',
+        'complex',
         'vote',
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address, masterSwapper.address],
@@ -144,7 +144,7 @@ describe('ComplexIntegrationsTest', function () {
 
       await depositFunds(dai.address, garden);
       const strategyContract = await createStrategy(
-        'custom',
+        'complex',
         'vote',
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address, masterSwapper.address],
@@ -167,7 +167,7 @@ describe('ComplexIntegrationsTest', function () {
 
       await depositFunds(dai.address, garden);
       const strategyContract = await createStrategy(
-        'custom',
+        'complex',
         'vote',
         [signer1, signer2, signer3],
         [aaveLendIntegration.address, aaveBorrowIntegration.address, masterSwapper.address],
@@ -190,7 +190,7 @@ describe('ComplexIntegrationsTest', function () {
 
       await depositFunds(dai.address, garden);
       const strategyContract = await createStrategy(
-        'custom',
+        'complex',
         'vote',
         [signer1, signer2, signer3],
         [compoundLendIntegration.address, compoundBorrowIntegration.address, masterSwapper.address],

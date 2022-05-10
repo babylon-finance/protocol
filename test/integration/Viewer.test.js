@@ -57,17 +57,32 @@ describe('Viewer', function () {
       expect(paramsCreation[9]).to.equal(0); // Keeper fees
       expect(paramsCreation[10]).to.equal(eth()); // Price per share decay rate
       expect(paramsCreation[11]).to.equal(eth()); // Price per share delta
+      expect(paramsCreation[12]).to.equal(0); // Verified
+      expect(paramsCreation[13]).to.equal(1); // Can mint nft
+      expect(paramsCreation[14]).to.equal(0); // Custom integrations enabled
 
-      const status = gardenDetails[8];
-      expect(status[0]).to.be.gt(0); // Principal
-      expect(status[1]).to.equal(0); // Reserve rewards set aside
-      expect(status[2]).to.equal(0); // Absolute returns
-      expect(status[3]).to.be.gt(0); // Initialized at
-      expect(status[4]).to.equal(1); // Total Contributors
-      expect(status[5]).to.be.gt(0); // Stake
-      expect(status[6]).to.be.gt(0); // Valuation
-      expect(status[7]).to.be.gt(0); // totalSupply
-      expect(status[8]).to.equal(0); // Seed
+      const [
+        principal,
+        rewards,
+        absoluteReturns,
+        initializedAt,
+        totalContirbutors,
+        totalStake,
+        valuation,
+        totalSupply,
+        seed,
+        liquidity,
+      ] = gardenDetails[8];
+      expect(principal).to.be.gt(0); // Principal
+      expect(rewards).to.equal(0); // Reserve rewards set aside
+      expect(absoluteReturns).to.equal(0); // Absolute returns
+      expect(initializedAt).to.be.gt(0); // Initialized at
+      expect(totalContirbutors).to.equal(1); // Total Contributors
+      expect(totalStake).to.be.gt(0); // Stake
+      expect(valuation).to.be.gt(0); // Valuation
+      expect(totalSupply).to.be.gt(0); // totalSupply
+      expect(seed).to.equal(0); // Seed
+      expect(liquidity).to.equal(eth()); // Liquidity
     });
 
     it('calls get garden permissions', async function () {

@@ -150,9 +150,11 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _gardenParams[8],
             _gardenParams[9],
             _gardenParams[10],
+            0, // stack overflow otherwise
             0 // stack overflow otherwise
         );
         canMintNftAfter = _gardenParams[11];
+        customIntegrationsEnabled = _gardenParams[12] > 0;
     }
 
     /* ============ External Functions ============ */
@@ -251,7 +253,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * Can only be called by the creator
      * @param _newParams  New params
      */
-    function updateGardenParams(uint256[12] memory _newParams) external override {
+    function updateGardenParams(uint256[13] memory _newParams) external override {
         _onlyCreator(msg.sender);
         _updateGardenParams(
             _newParams[0], // uint256 _maxDepositLimit
@@ -265,7 +267,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             _newParams[8], // uint256 _minVoters
             _newParams[9], // uint256 _pricePerShareDecayRate
             _newParams[10], // uint256 _pricePerShareDelta
-            _newParams[11] //  uint256 _canMintNftAfter
+            _newParams[11], //  uint256 _canMintNftAfter
+            _newParams[12] //  bool _customIntegrationsEnabled
         );
     }
 
@@ -316,6 +319,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
      * @param _pricePerShareDecayRate      Decay rate of price per share
      * @param _pricePerShareDelta          Base slippage for price per share
      * @param _canMintNftAfter             Can mint nft after secs
+     * @param _customIntegrationsEnabled   Can use custom integrations in this garden
      */
     function _updateGardenParams(
         uint256 _maxDepositLimit,
@@ -329,7 +333,8 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         uint256 _minVoters,
         uint256 _pricePerShareDecayRate,
         uint256 _pricePerShareDelta,
-        uint256 _canMintNftAfter
+        uint256 _canMintNftAfter,
+        uint256 _customIntegrationsEnabled
     ) private {
         _require(
             _minLiquidityAsset >= controller.minLiquidityPerReserve(reserveAsset) && _minLiquidityAsset > 0,
@@ -361,6 +366,10 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         pricePerShareDecayRate = _pricePerShareDecayRate;
         pricePerShareDelta = _pricePerShareDelta;
         canMintNftAfter = _canMintNftAfter;
+        // Do not let it switch it to false if it's verified and not set
+        customIntegrationsEnabled = (customIntegrationsEnabled || verifiedCategory == 0)
+            ? _customIntegrationsEnabled > 0
+            : false;
     }
 
     // Checks if an address is a creator

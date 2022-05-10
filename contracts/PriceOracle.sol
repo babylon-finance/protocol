@@ -641,7 +641,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
     }
 
-    function _isPegged(uint256 price) private view returns (bool) {
+    function _isPegged(uint256 price) private pure returns (bool) {
         return price < uint256(1e18).add(CURVE_SLIPPAGE) && price > uint256(1e18).sub(CURVE_SLIPPAGE);
     }
 

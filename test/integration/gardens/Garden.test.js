@@ -2036,6 +2036,7 @@ describe('Garden', function () {
           1,
           eth(),
           0,
+          0,
         ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
@@ -2124,6 +2125,7 @@ describe('Garden', function () {
           1,
           eth(),
           0,
+          0,
         ]);
 
       await usdc.connect(signer3).approve(garden.address, amountIn.mul(2), {
@@ -2208,6 +2210,7 @@ describe('Garden', function () {
           from(10),
           from(11),
           from(0),
+          from(0),
         ]);
 
       expect(await garden.maxDepositLimit()).to.eq(eth());
@@ -2221,6 +2224,76 @@ describe('Garden', function () {
       expect(await garden.minVoters()).to.eq(9);
       expect(await garden.pricePerShareDecayRate()).to.eq(10);
       expect(await garden.pricePerShareDelta()).to.eq(11);
+    });
+
+    it('can update custom integrations only if not verified', async function () {
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.USDC] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
+      expect(await garden.customIntegrationsEnabled()).to.eq(false);
+      expect(await garden.verifiedCategory()).to.eq(0);
+
+      // Testing a garden that is not verified and without custom integrations
+      await garden
+        .connect(signer1)
+        .updateGardenParams([
+          eth(1),
+          eth(2),
+          from(3),
+          eth(4),
+          ONE_DAY_IN_SECONDS * 5,
+          eth(0.06),
+          ONE_DAY_IN_SECONDS * 7,
+          ONE_DAY_IN_SECONDS * 8,
+          from(9),
+          from(10),
+          from(11),
+          from(0),
+          from(1),
+        ]);
+      expect(await garden.customIntegrationsEnabled()).to.eq(true);
+      await garden.connect(owner).verifyGarden(1);
+
+      // A garden that is verified should be able to set it to false
+      await garden
+        .connect(signer1)
+        .updateGardenParams([
+          eth(1),
+          eth(2),
+          from(3),
+          eth(4),
+          ONE_DAY_IN_SECONDS * 5,
+          eth(0.06),
+          ONE_DAY_IN_SECONDS * 7,
+          ONE_DAY_IN_SECONDS * 8,
+          from(9),
+          from(10),
+          from(11),
+          from(0),
+          from(0),
+        ]);
+
+      expect(await garden.customIntegrationsEnabled()).to.eq(false);
+
+      // A garden that is verified should not be able to set it back to true
+      await garden
+        .connect(signer1)
+        .updateGardenParams([
+          eth(1),
+          eth(2),
+          from(3),
+          eth(4),
+          ONE_DAY_IN_SECONDS * 5,
+          eth(0.06),
+          ONE_DAY_IN_SECONDS * 7,
+          ONE_DAY_IN_SECONDS * 8,
+          from(9),
+          from(10),
+          from(11),
+          from(0),
+          from(1),
+        ]);
+      expect(await garden.customIntegrationsEnabled()).to.eq(false);
     });
   });
 

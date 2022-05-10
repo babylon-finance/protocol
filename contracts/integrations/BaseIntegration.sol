@@ -6,6 +6,7 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -84,5 +85,10 @@ abstract contract BaseIntegration is IBaseIntegration {
         IStrategy strategy = IStrategy(_strategy);
         (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
         return block.timestamp.sub(executedAt);
+    }
+
+    function _getPrice(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        return oracle.getPrice(_tokenIn, _tokenOut);
     }
 }

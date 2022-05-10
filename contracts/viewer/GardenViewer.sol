@@ -32,7 +32,7 @@ import {IGardenViewer} from '../interfaces/IViewer.sol';
  *
  * Class that holds common view functions to retrieve garden information effectively
  */
-contract GardenViewer {
+contract GardenViewer is IGardenViewer {
     using SafeMath for uint256;
     using PreciseUnitMath for uint256;
     using Math for int256;
@@ -56,7 +56,7 @@ contract GardenViewer {
      * @param _garden            Address of the garden to fetch
      * @return                   Garden principal
      */
-    function getGardenPrincipal(address _garden) public view returns (uint256) {
+    function getGardenPrincipal(address _garden) public view override returns (uint256) {
         IGarden garden = IGarden(_garden);
         IERC20 reserveAsset = IERC20(garden.reserveAsset());
         uint256 principal = reserveAsset.balanceOf(address(garden)).sub(garden.reserveAssetRewardsSetAside());
@@ -91,6 +91,7 @@ contract GardenViewer {
     function getGardenDetails(address _garden)
         external
         view
+        override
         returns (
             string memory name,
             string memory symbol,
@@ -99,7 +100,7 @@ contract GardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[13] memory params,
+            uint256[15] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         )
@@ -150,12 +151,14 @@ contract GardenViewer {
                 garden.totalKeeperFees().add(garden.keeperDebt()),
                 garden.pricePerShareDecayRate(),
                 garden.pricePerShareDelta(),
-                garden.verifiedCategory()
+                garden.verifiedCategory(),
+                garden.canMintNftAfter(),
+                garden.customIntegrationsEnabled() ? 1 : 0
             ],
             [
                 principal,
                 garden.reserveAssetRewardsSetAside(),
-                uint256(garden.absoluteReturns()),
+                uint256(garden.absoluteReturns() > 0 ? garden.absoluteReturns() : 0),
                 garden.gardenInitializedAt(),
                 garden.totalContributors(),
                 garden.totalStake(),
@@ -173,6 +176,7 @@ contract GardenViewer {
     function getGardenPermissions(address _garden, address _user)
         public
         view
+        override
         returns (
             bool,
             bool,
@@ -191,6 +195,7 @@ contract GardenViewer {
     function getGardensUser(address _user, uint256 _offset)
         external
         view
+        override
         returns (
             address[] memory,
             bool[] memory,
@@ -225,7 +230,7 @@ contract GardenViewer {
         return (userGardens, hasUserDeposited, info);
     }
 
-    function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view returns (uint256) {
+    function getGardenUserAvgPricePerShare(IGarden _garden, address _user) public view override returns (uint256) {
         (, , , , , , uint256 totalDeposits, , ) = _garden.getContributor(_user);
 
         // Avg price per user share = deposits / garden tokens
@@ -241,7 +246,7 @@ contract GardenViewer {
      * @param _members All members of a garden
      * @return uint256 Total number of tokens that can vote
      */
-    function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256) {
+    function getPotentialVotes(address _garden, address[] calldata _members) external view override returns (uint256) {
         IGarden garden = IGarden(_garden);
         if (garden.publicStewards()) {
             return IERC20(_garden).totalSupply();
@@ -285,6 +290,7 @@ contract GardenViewer {
     function getContributionAndRewards(IGarden _garden, address _user)
         external
         view
+        override
         returns (
             uint256[10] memory,
             uint256[] memory,
@@ -302,14 +308,19 @@ contract GardenViewer {
         );
     }
 
-    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset) external view returns (uint256, uint256) {
+    function getPriceAndLiquidity(address _tokenIn, address _reserveAsset)
+        external
+        view
+        override
+        returns (uint256, uint256)
+    {
         return (
             IPriceOracle(controller.priceOracle()).getPrice(_tokenIn, _reserveAsset),
             _getUniswapHighestLiquidity(_tokenIn, _reserveAsset)
         );
     }
 
-    function getAllProphets(address _address) external view returns (uint256[] memory) {
+    function getAllProphets(address _address) external view override returns (uint256[] memory) {
         IERC721Enumerable prophets = IERC721Enumerable(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
         uint256 prophetsNumber = prophets.balanceOf(_address);
         uint256[] memory prophetIds = new uint256[](prophetsNumber);
