@@ -229,7 +229,7 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
     });
 
-    it('NAV has NOT changed for gardens after deploy', async () => {
+    it.only('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))

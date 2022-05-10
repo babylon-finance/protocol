@@ -143,5 +143,4 @@ abstract contract Operation is IOperation {
         return
             oracle.getPriceNAV(_assetOne == address(0) ? WETH : _assetOne, _assetTwo == address(0) ? WETH : _assetTwo);
     }
-
 }
