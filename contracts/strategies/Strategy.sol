@@ -408,7 +408,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         // Real unwinded amount deltaBalance must be always >= amountToUnwind
         // We can unwind a bigger amount however we set a cap of 25% above expected amount
         _require(
-            deltaBalance <= _amountToUnwind.preciseMul(125e16) && deltaBalance >= _amountToUnwind,
+            deltaBalance <=
+                _amountToUnwind.add(
+                    _amountToUnwind.preciseMul(
+                        maxTradeSlippagePercentage != 0 ? maxTradeSlippagePercentage : DEFAULT_TRADE_SLIPPAGE
+                    )
+                ) &&
+                deltaBalance >= _amountToUnwind,
             Errors.INVALID_CAPITAL_TO_UNWIND
         );
         capitalAllocated = capitalAllocated.sub(deltaBalance);
