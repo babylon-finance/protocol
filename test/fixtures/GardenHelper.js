@@ -45,7 +45,7 @@ async function createGarden({
   params,
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
-  customIntegrationsEnabled = false
+  customIntegrationsEnabled = false,
 } = {}) {
   const [deployer, keeper, , signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
