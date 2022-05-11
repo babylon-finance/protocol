@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
+const { GAS_LIMIT, ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
 const { impersonateAddress } = require('lib/rpc');
 const addresses = require('lib/addresses');
 const { getAssetWhale } = require('lib/whale');
@@ -164,7 +164,7 @@ async function executeStrategy(
     prices = [],
     trades = [],
     gasPrice = 0,
-    gasLimit = 30000000,
+    gasLimit = GAS_LIMIT,
   } = {},
 ) {
   const garden = await strategy.garden();
@@ -211,7 +211,7 @@ async function finalizeStrategy(
     /* Strategy default minReserveOut */
     minReserveOut = 0,
     gasPrice = 0,
-    gasLimit = 9500000,
+    gasLimit = GAS_LIMIT,
   } = {},
 ) {
   const signers = await ethers.getSigners();

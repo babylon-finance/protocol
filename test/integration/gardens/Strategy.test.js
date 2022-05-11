@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const { GAS_LIMIT, ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP, STRATEGY_PARAMS_MAP } = require('lib/constants.js');
 const chaiAsPromised = require('chai-as-promised');
 const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
@@ -236,7 +237,7 @@ describe('Strategy', function () {
         .connect(keeper)
         .callStatic.executeStrategy(eth(), 0, [], [], {
           gasPrice: 0,
-          gasLimit: 9999999,
+          gasLimit = GAS_LIMIT,
         });
 
       console.log('prices:', prices);
@@ -247,7 +248,7 @@ describe('Strategy', function () {
         .connect(keeper)
         .executeStrategy(eth(), 0, prices, trades, {
           gasPrice: 0,
-          gasLimit: 9999999,
+          gasLimit = GAS_LIMIT,
         });
 
       const [active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();

@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const { GAS_LIMIT } = require('lib/constants.js');
 const { ethers } = require('hardhat');
 
 const addresses = require('lib/addresses');
@@ -1750,7 +1751,7 @@ describe('Garden', function () {
             [balancerIntegration.address],
             [addresses.balancer.pools.wethdai],
             {
-              gasLimit: 9500000,
+              gasLimit: GAS_LIMIT,
               gasPrice: 0,
             },
           ),
