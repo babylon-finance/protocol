@@ -52,14 +52,14 @@ interface IHeart {
 
     // Non-view
 
-    function pump(uint256 _bablPrice) external;
+    function pump(uint256 _bablMinAmountOut) external;
 
     function voteProposal(uint256 _proposalId, bool _isApprove) external;
 
     function resolveGardenVotesAndPump(
         address[] memory _gardens,
         uint256[] memory _weights,
-        uint256 _bablPrice
+        uint256 _bablMinAmountOut
     ) external;
 
     function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) external;
