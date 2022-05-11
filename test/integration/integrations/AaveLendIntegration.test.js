@@ -57,7 +57,7 @@ describe('AaveLendIntegrationTest', function () {
       );
     });
 
-    it.only('can supply and redeem tokens from Aave', async function () {
+    it('can supply and redeem tokens from Aave', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',

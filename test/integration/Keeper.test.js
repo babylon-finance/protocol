@@ -56,7 +56,7 @@ describe('Keeper', function () {
       expect(await garden.totalKeeperFees()).to.equal(fee);
 
       await increaseTime(ONE_DAY_IN_SECONDS);
-      await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], fee, {
+      await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[addresses.tokens.WETH], fee, [], [], {
         gasPrice: 0,
       });
 
@@ -83,7 +83,7 @@ describe('Keeper', function () {
     {
       func: async (garden, strategy, keeper, fee, token) => {
         await increaseTime(ONE_DAY_IN_SECONDS);
-        await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[token], fee, {
+        await strategy.connect(keeper).executeStrategy(STRATEGY_EXECUTE_MAP[token], fee, [], [], {
           gasPrice: 0,
         });
       },

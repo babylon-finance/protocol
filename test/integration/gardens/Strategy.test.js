@@ -307,8 +307,8 @@ describe('Strategy', function () {
         garden1,
       );
 
-      await executeStrategy(strategyContract, { amount: eth(), fee: 42 });
-      await executeStrategy(strategyContract, { amount: eth(), fee: 42 });
+      await executeStrategy(strategyContract, 0, [], [], { amount: eth(), fee: 42 });
+      await executeStrategy(strategyContract, 0, [], [], { amount: eth(), fee: 42 });
 
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
