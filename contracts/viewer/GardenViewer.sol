@@ -222,7 +222,8 @@ contract GardenViewer is IGardenViewer {
                     garden.verifiedCategory(),
                     garden.totalContributors(),
                     garden.reserveAsset(),
-                    garden.totalSupply().mul(garden.lastPricePerShare()).div(1e18)
+                    garden.totalSupply().mul(garden.lastPricePerShare()).div(1e18),
+                    garden.customIntegrationsEnabled()
                 );
                 resultIndex = resultIndex + 1;
             }

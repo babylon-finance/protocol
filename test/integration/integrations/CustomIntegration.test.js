@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers, deployments } = require('hardhat');
 const { deploy } = deployments;
-const { getGardenParams, GARDENS, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { GARDENS, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden, transferFunds, depositFunds } = require('fixtures/GardenHelper');

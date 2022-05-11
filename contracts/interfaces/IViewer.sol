@@ -42,6 +42,7 @@ interface IGardenViewer {
         uint256 totalContributors;
         address reserveAsset;
         uint256 netAssetValue;
+        bool customIntegrationsEnabled;
     }
 
     function getGardenPrincipal(address _garden) external view returns (uint256);
