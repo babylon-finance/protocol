@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getERC20, increaseBlock, increaseTime, proposalState, eth, from } = require('utils/test-helpers');
+
 const { getVoters, getProposal, selfDelegation, claimTokens } = require('utils/gov-helpers');
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
@@ -48,6 +49,50 @@ describe('Heart', function () {
   let feeDistributionWeights;
   let babController;
   let gardenValuer;
+
+  async function consolidateFeesToWeth(heartContract, index) {
+    let consolidatedAmount = eth(0);
+    // Buyback index === 1
+    const percentage = await heartContract.feeDistributionWeights(index);
+    const reserveAssets = await babController.getReserveAssets();
+    for (const reserveAsset of reserveAssets) {
+      const reserveAssetContract = await getERC20(reserveAsset);
+      const balance = await reserveAssetContract.balanceOf(heartContract.address);
+      const decimals = await reserveAssetContract.decimals();
+      // Trade if it's above a min amount (otherwise wait until next pump)
+      if (
+        reserveAsset !== BABL.address &&
+        reserveAsset !== WETH.address &&
+        balance.gt(await heartContract.minAmounts(reserveAsset))
+      ) {
+        const pricePurchasingAsset = await priceOracle.getPrice(reserveAsset, WETH.address);
+        const wethToGet = balance
+          .mul(pricePurchasingAsset)
+          .mul(eth())
+          .mul((10 ** (18 - decimals)).toString())
+          .div(eth())
+          .div(eth());
+        consolidatedAmount = consolidatedAmount.add(wethToGet);
+      }
+      if (reserveAsset === WETH.address) {
+        consolidatedAmount = consolidatedAmount.add(balance);
+      }
+    }
+    return consolidatedAmount.mul(percentage).div(eth());
+  }
+
+  async function getBablMinAmountOut(heartContract) {
+    const bablPrice = await priceOracle.getPrice(BABL.address, WETH.address);
+    const slippage = eth(0.02);
+    const buybackIndex = 1;
+    const wethConsolidatedFromFeesForBuyback = await consolidateFeesToWeth(heartContract, buybackIndex);
+    let bablMinAmountOut = wethConsolidatedFromFeesForBuyback.mul(eth()).div(bablPrice);
+    // reduce slippage
+    console.log('bablMinAmountOut before slippage', bablMinAmountOut.toString());
+    bablMinAmountOut = bablMinAmountOut.sub(bablMinAmountOut.mul(slippage).div(eth()));
+    console.log('bablMinAmountOut after slippage', bablMinAmountOut.toString());
+    return bablMinAmountOut;
+  }
 
   beforeEach(async () => {
     ({
@@ -445,7 +490,7 @@ describe('Heart', function () {
 
   async function pumpAmount(amountInFees) {
     const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
-    const minAmountOut = eth();
+    const bablMinAmountOut = await getBablMinAmountOut(heart);
     await heart
       .connect(keeper)
       .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
@@ -457,7 +502,7 @@ describe('Heart', function () {
     const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
     const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
     const fuseBalanceDAIBeforePump = await cDAI.getCash();
-    await heart.connect(signer1).pump(minAmountOut);
+    await heart.connect(signer1).pump(bablMinAmountOut);
     const statsAfterPump = await heart.getTotalStats();
     // Check the total fees is 3 WETH
     expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
@@ -529,7 +574,7 @@ describe('Heart', function () {
   describe.only('pump', async function () {
     async function pumpAmount(amountInFees) {
       const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
-      const bablMinAmountOut = eth();
+      const bablMinAmountOut = await getBablMinAmountOut(heart);
       await heart
         .connect(keeper)
         .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
