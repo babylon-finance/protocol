@@ -288,8 +288,14 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // becnhmark[4] value: Used to set a boost (if any) for cool strategies (segment 3)
     // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
+    uint256 private immutable BABL_CAP;
 
     /* ============ Constructor ============ */
+
+    constructor(uint256 _bablCap) {
+        _require(_bablCap >= 2_000e18, Errors.AMOUNT_TOO_LOW);
+        BABL_CAP = _bablCap;
+    }
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public initializer {
         OwnableUpgradeable.__Ownable_init();
@@ -982,6 +988,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
+        _require(bablToSend <= BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
         SafeERC20.safeTransfer(babltoken, _to, bablToSend);
         return bablToSend;
     }
@@ -1903,4 +1910,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV16 is RewardsDistributor {}
+contract RewardsDistributorV16 is RewardsDistributor {
+    constructor(uint256 _bablCap) RewardsDistributor(_bablCap) {}
+}
