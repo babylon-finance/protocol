@@ -122,47 +122,10 @@ describe('Strategy', function () {
     });
   });
 
-  describe('getStrategyDetails', async function () {
-    it('should return the expected strategy properties', async function () {
-      const [
-        address,
-        strategist,
-        operationsCount,
-        stake,
-        totalPositiveVotes,
-        totalNegativeVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        strategyNft,
-        enteredAt,
-      ] = await strategyDataset.getStrategyDetails();
-
-      expect(address).to.equal(strategyDataset.address);
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(eth('0.1'));
-
-      expect(totalPositiveVotes).to.equal(0);
-      expect(totalNegativeVotes).to.equal(0);
-
-      expect(operationsCount).to.equal(1);
-      expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
-      expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
-      expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
-      expect(expectedReturn).to.equal(eth('0.05'));
-      expect(maxCapitalRequested).to.equal(eth('10'));
-      expect(strategyNft).to.equal(await babController.strategyNFT());
-      expect(enteredAt.isZero()).to.equal(false);
-    });
-  });
-
   describe('getStrategyState', async function () {
     it('should return the expected strategy state', async function () {
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
 
-      expect(address).to.equal(strategyDataset.address);
       expect(active).to.equal(false);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
@@ -185,15 +148,15 @@ describe('Strategy', function () {
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
 
-      const [address, , , , totalPositveVotes, totalNegativeVotes] = await strategyCandidate.getStrategyDetails();
+      const totalPositveVotes = await strategyCandidate.totalPositiveVotes();
+      const totalNegativeVotes = await strategyCandidate.totalNegativeVotes();
 
       // The stake is counted as votes of the strategists
       expect(totalPositveVotes).to.equal(eth().mul(5));
       expect(totalNegativeVotes).to.equal(0);
 
-      const [, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
-      expect(address).to.equal(strategyCandidate.address);
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
@@ -310,9 +273,8 @@ describe('Strategy', function () {
       await executeStrategy(strategyContract, 0, [], [], { amount: eth(), fee: 42 });
       await executeStrategy(strategyContract, 0, [], [], { amount: eth(), fee: 42 });
 
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
-      expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
@@ -395,11 +357,11 @@ describe('Strategy', function () {
 
       await executeStrategy(strategyContract);
 
-      const [, , , , executedAt] = await strategyContract.getStrategyState();
+      const [, , , executedAt] = await strategyContract.getStrategyState();
 
       await executeStrategy(strategyContract);
 
-      const [, , , , newExecutedAt] = await strategyContract.getStrategyState();
+      const [, , , newExecutedAt] = await strategyContract.getStrategyState();
 
       // doesn't update executedAt
       expect(executedAt).to.be.equal(newExecutedAt);
@@ -417,7 +379,7 @@ describe('Strategy', function () {
       increaseTime(ONE_DAY_IN_SECONDS * 2);
 
       await expect(
-        strategyContract.connect(keeper).executeStrategy(eth(), eth().mul(100), {
+        strategyContract.connect(keeper).executeStrategy(eth(), eth().mul(100), [], [], {
           gasPrice: 0,
         }),
       ).to.be.revertedWith('BAB#019');
@@ -515,9 +477,8 @@ describe('Strategy', function () {
       });
 
       await finalizeStrategy(strategyContract);
-      const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
+      const [active, dataSet, finalized, executedAt, exitedAt] = await strategyContract.getStrategyState();
 
-      expect(address).to.equal(strategyContract.address);
       expect(active).to.equal(false);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(true);
