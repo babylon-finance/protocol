@@ -54,7 +54,7 @@ const {
 
 const { setupTests } = require('fixtures/GardenFixture');
 
-describe.only('Garden', function () {
+describe('Garden', function () {
   let babController;
   let rewardsDistributor;
   let heart;
@@ -2356,7 +2356,5 @@ describe.only('Garden', function () {
 
       expect((await weth.balanceOf(garden.address)).sub(balance)).to.eq(eth(10));
     });
-
   });
-
 });

@@ -74,10 +74,10 @@ contract CurveTradeIntegration is TradeIntegration {
             _getPoolAndTokens(_sendToken, _receiveToken);
         require(curvePool != address(0), 'No curve pool');
         if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && realReceiveToken == WETH) {
-          realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+            realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         }
         if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && realSendToken == WETH) {
-          realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+            realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         }
         (uint256 i, uint256 j, bool underlying) =
             curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
@@ -143,9 +143,9 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Unwrap WETH to ETH
-        (address curvePool, address _realSendToken,) = _getPoolAndTokens(_sendToken, _receiveToken);
+        (address curvePool, address _realSendToken, ) = _getPoolAndTokens(_sendToken, _receiveToken);
         if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && _realSendToken == WETH) {
-          _realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+            _realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         }
         if (_realSendToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
@@ -180,9 +180,10 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Wrap ETH to WETH
-        (address _curvePool, address _realSendToken , address _realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
+        (address _curvePool, address _realSendToken, address _realReceiveToken) =
+            _getPoolAndTokens(_sendToken, _receiveToken);
         if (_curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && _realReceiveToken == WETH) {
-          _realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+            _realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         }
         if (_realReceiveToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('deposit()');
@@ -218,7 +219,7 @@ contract CurveTradeIntegration is TradeIntegration {
             curvePool = curveMetaRegistry.findPoolForCoins(_sendToken, ETH_ADD_CURVE, 0);
         }
         if (curvePool == 0x828b154032950C8ff7CF8085D841723Db2696056) {
-          curvePool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+            curvePool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
         }
         return (curvePool, _sendToken, _receiveToken);
     }
