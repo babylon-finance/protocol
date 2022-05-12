@@ -911,7 +911,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         }
         // Consolidate to reserve asset if needed
         if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-            console.log('consolidate');
             _trade(
                 assetFinalized,
                 capitalPending,
@@ -920,9 +919,8 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 0,
                 TradeIteratorLib.none()
             );
-            console.log('consolidate');
         }
-        console.log('exit');
+        console.log('exit strategy');
     }
 
     /**

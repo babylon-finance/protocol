@@ -782,7 +782,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             IStrategy(_unwindStrategy).unwindStrategy(amountOut.add(amountOut.preciseMul(5e16)), _strategyNAV);
         }
 
-        _require(amountOut >= _minAmountOut && _amountIn > 0, Errors.RECEIVE_MIN_AMOUNT);
+        _require(amountOut >= _minAmountOut, Errors.RECEIVE_MIN_AMOUNT);
 
         _require(_liquidReserve() >= amountOut, Errors.MIN_LIQUIDITY);
 

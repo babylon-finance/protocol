@@ -95,7 +95,9 @@ describe('GardenValuer', function () {
 
     it('accounts for the keeper debt', async function () {
       const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
-      const strategy = await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.USDT, 0] });
+      const strategy = await getStrategy({ garden, state: 'vote', specificParams: [addresses.tokens.USDC, 0] });
+
+      const pricePerGardenTokenBefore = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.DAI);
 
       await executeStrategy(strategy, { fee: eth(2000), amount: eth(12000), time: ONE_DAY_IN_SECONDS });
 
@@ -103,7 +105,7 @@ describe('GardenValuer', function () {
       const totalSupply = await garden.totalSupply();
 
       expect(await garden.keeperDebt()).to.equal(eth(2000));
-      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth(12000), eth(100));
+      expect(pricePerGardenToken.mul(totalSupply).div(eth())).to.closeTo(eth(12000), eth(200));
     });
 
     it('gets correct value for the garden 0 price asset', async function () {

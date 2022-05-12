@@ -17,7 +17,6 @@ const {
 const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
-const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
@@ -237,7 +236,7 @@ describe('Strategy', function () {
         .connect(keeper)
         .callStatic.executeStrategy(eth(), 0, [], [], {
           gasPrice: 0,
-          gasLimit = GAS_LIMIT,
+          gasLimit: GAS_LIMIT,
         });
 
       console.log('prices:', prices);
@@ -248,7 +247,7 @@ describe('Strategy', function () {
         .connect(keeper)
         .executeStrategy(eth(), 0, prices, trades, {
           gasPrice: 0,
-          gasLimit = GAS_LIMIT,
+          gasLimit: GAS_LIMIT,
         });
 
       const [active, dataSet, finalized, executedAt, exitedAt] = await strategy.getStrategyState();
