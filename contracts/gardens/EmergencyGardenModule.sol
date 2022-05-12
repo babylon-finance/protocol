@@ -71,6 +71,7 @@ contract EmergencyGardenModule is BaseGardenModule, IEmergencyGarden {
     /* ============ Modifiers ============ */
 
     function wrap() external override {
+        controller.onlyGovernanceOrEmergency();
         IWETH(WETH).deposit{value: address(this).balance}();
     }
 
