@@ -2341,9 +2341,6 @@ describe('Garden', function () {
 
   describe('EmergencyModule', async function () {
     it('can wrap ETH', async function () {
-      const amountIn = eth(1000);
-      const minAmountOut = eth(1000);
-
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
