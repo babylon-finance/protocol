@@ -11,7 +11,8 @@ const { getContracts, deployFixture } = require('lib/deploy');
 
 const STUCK = [
   // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
-  '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
+  // '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
+  '0xb8392344ddad3d71d3dc503c7a3a19aa70d05cca' // stETH
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -229,7 +230,7 @@ describe('deploy', function () {
       ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
     });
 
-    it.only('NAV has NOT changed for gardens after deploy', async () => {
+    it('NAV has NOT changed for gardens after deploy', async () => {
       for (const garden of gardens) {
         const gardenContract = await ethers.getContractAt('IGarden', garden);
         const gardenNAV = (await valuer.calculateGardenValuation(garden, addresses.tokens.DAI))
@@ -254,7 +255,7 @@ describe('deploy', function () {
       }
     });
 
-    it.only('gets right NAV strategies', async () => {
+    it('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
@@ -317,7 +318,7 @@ describe('deploy', function () {
       expect(getRewardsStrategistBABL2[6]).to.eq(getRewardsStrategistBABL1[6]).to.eq(0);
     });
 
-    it('can finalize stuck strategies', async () => {
+    it.only('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
     });
   });
