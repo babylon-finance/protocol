@@ -73,6 +73,9 @@ contract CurveTradeIntegration is TradeIntegration {
         (address curvePool, address realSendToken, address realReceiveToken) =
             _getPoolAndTokens(_sendToken, _receiveToken);
         require(curvePool != address(0), 'No curve pool');
+        if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && realReceiveToken == WETH) {
+          realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+        }
         (uint256 i, uint256 j, bool underlying) =
             curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
         // Palstakeaave. TODO: Add others
@@ -204,6 +207,9 @@ contract CurveTradeIntegration is TradeIntegration {
         if (_receiveToken == WETH && curvePool == address(0)) {
             _receiveToken = ETH_ADD_CURVE;
             curvePool = curveMetaRegistry.findPoolForCoins(_sendToken, ETH_ADD_CURVE, 0);
+        }
+        if (curvePool == 0x828b154032950C8ff7CF8085D841723Db2696056) {
+          curvePool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
         }
         return (curvePool, _sendToken, _receiveToken);
     }
