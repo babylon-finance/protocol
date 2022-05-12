@@ -208,7 +208,6 @@ contract PriceOracle is Ownable, IPriceOracle {
             return getPrice(WETH, _tokenOut).preciseMul(98e16);
         }
         if (_tokenOut == 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) {
-            uint256 shares = 1e18;
             return getPrice(_tokenIn, WETH).preciseDiv(98e16);
         }
 

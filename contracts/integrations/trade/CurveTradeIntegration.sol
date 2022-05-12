@@ -76,6 +76,9 @@ contract CurveTradeIntegration is TradeIntegration {
         if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && realReceiveToken == WETH) {
           realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         }
+        if (curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && realSendToken == WETH) {
+          realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+        }
         (uint256 i, uint256 j, bool underlying) =
             curveMetaRegistry.getCoinIndices(curvePool, realSendToken, realReceiveToken);
         // Palstakeaave. TODO: Add others
@@ -140,7 +143,7 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Unwrap WETH to ETH
-        (, address _realSendToken, ) = _getPoolAndTokens(_sendToken, _receiveToken);
+        (address _curvePool, address _realSendToken, address _realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
         if (_realSendToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', _sendQuantity);
             return (WETH, 0, methodData);
@@ -174,7 +177,13 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Wrap ETH to WETH
-        (, , address _realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
+        (address _curvePool, address _realSendToken , address _realReceiveToken) = _getPoolAndTokens(_sendToken, _receiveToken);
+        if (_curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && _realReceiveToken == WETH) {
+          _realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+        }
+        if (_curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && _realSendToken == WETH) {
+          _realSendToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+        }
         if (_realReceiveToken == ETH_ADD_CURVE) {
             bytes memory methodData = abi.encodeWithSignature('deposit()');
             return (WETH, _sendQuantity, methodData);
