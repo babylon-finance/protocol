@@ -19,6 +19,7 @@ module.exports = async ({
   const gardenName = 'Garden';
   const adminGardenModuleName = 'AdminGardenModule';
   const strategyGardenModuleName = 'StrategyGardenModule';
+  const emergencyGardenModuleName = 'EmergencyGardenModule';
   const beaconName = 'GardenBeacon';
   const vTableBeaconName = 'GardenVTableBeacon';
 
@@ -54,6 +55,13 @@ module.exports = async ({
   });
 
   const strategyGardenModule = await deploy(strategyGardenModuleName, {
+    from: deployer,
+    args: [],
+    log: true,
+    ...(await getGasPrice()),
+  });
+
+  const emergencyGardenModule = await deploy(emergencyGardenModuleName, {
     from: deployer,
     args: [],
     log: true,
@@ -105,6 +113,18 @@ module.exports = async ({
       adminGardenModuleContract.interface.getSighash(func),
     );
     await vTableBeaconContract.updateVTable([[adminGardenModule.address, sigs]]);
+  }
+
+  if (emergencyGardenModule.newlyDeployed) {
+    const emergencyGardenModuleContract = await ethers.getContractAt(
+      emergencyGardenModuleName,
+      emergencyGardenModule.address,
+      signer,
+    );
+    const sigs = Object.keys(emergencyGardenModuleContract.interface.functions).map((func) =>
+      emergencyGardenModuleContract.interface.getSighash(func),
+    );
+    await vTableBeaconContract.updateVTable([[emergencyGardenModule.address, sigs]]);
   }
 
   if (network.live && garden.newlyDeployed) {

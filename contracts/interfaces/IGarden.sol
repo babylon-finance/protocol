@@ -8,9 +8,16 @@ import {IERC1271} from '../interfaces/IERC1271.sol';
 import {IBabController} from './IBabController.sol';
 
 /**
+ * @title IEmergencyGarden
+ */
+interface IEmergencyGarden {
+    /* ============ Write ============ */
+
+    function wrap() external;
+}
+
+/**
  * @title IStrategyGarden
- *
- * Interface for functions of the garden
  */
 interface IStrategyGarden {
     /* ============ Write ============ */
@@ -39,8 +46,6 @@ interface IStrategyGarden {
 
 /**
  * @title IAdminGarden
- *
- * Interface for amdin functions of the Garden
  */
 interface IAdminGarden {
     /* ============ Write ============ */
@@ -78,8 +83,6 @@ interface IAdminGarden {
 
 /**
  * @title IGarden
- *
- * Interface for operating with a Garden.
  */
 interface ICoreGarden {
     /* ============ Constructor ============ */
@@ -262,7 +265,7 @@ interface IERC20Metadata {
     function name() external view returns (string memory);
 }
 
-interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IERC20, IERC20Metadata, IERC1271 {
+interface IGarden is ICoreGarden, IAdminGarden, IStrategyGarden, IEmergencyGarden, IERC20, IERC20Metadata, IERC1271 {
     struct Contributor {
         uint256 lastDepositAt;
         uint256 initialDepositAt;

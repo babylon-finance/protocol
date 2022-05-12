@@ -202,7 +202,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
 
-
         // Checks stETH && wstETH (Lido tokens)
         if (_tokenIn == 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) {
             return getPrice(WETH, _tokenOut).preciseMul(98e16);

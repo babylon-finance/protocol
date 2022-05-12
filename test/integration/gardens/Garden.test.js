@@ -2338,4 +2338,20 @@ describe('Garden', function () {
       });
     });
   });
+
+  describe('EmergencyModule', async function () {
+    it('can wrap ETH', async function () {
+      await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
+
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+
+      await fund([garden.address], { tokens: [addresses.tokens.ETH], amounts: [eth(10)] });
+
+      const balance = await weth.balanceOf(garden.address);
+
+      await garden.wrap();
+
+      expect((await weth.balanceOf(garden.address)).sub(balance)).to.eq(eth(10));
+    });
+  });
 });
