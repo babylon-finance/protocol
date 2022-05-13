@@ -288,7 +288,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
                 rewardsDistributor.sendBABLToContributor(address(this), _newTotalBABLAmount.sub(oldRewards));
             } else {
                 // Send back the difference if Heart Garden Strategy got more rewards previously
-                IERC20 BABL = IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74);
+                IERC20 BABL = IERC20(address(rewardsDistributor.babltoken()));
                 BABL.safeTransfer(address(rewardsDistributor), oldRewards.sub(_newTotalBABLAmount));
             }
         }

@@ -76,6 +76,7 @@ describe('Garden', function () {
   let gardenNFT;
   let gardenValuer;
   let viewer;
+  let bablToken;
 
   let usdc;
   let weth;
@@ -101,6 +102,7 @@ describe('Garden', function () {
       uniswapV3TradeIntegration,
       gardenValuer,
       viewer,
+      bablToken,
 
       dai,
       usdc,
@@ -2312,6 +2314,80 @@ describe('Garden', function () {
 
       const garden = await createGarden({ reserveAsset: addresses.tokens.USDC });
       await expect(garden.connect(signer1).verifyGarden(1)).to.be.reverted;
+    });
+  });
+  describe('update strategy rewards', async function () {
+    it('governance can update strategy rewards', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+      // It is executed
+      await executeStrategy(strategyContract, eth(), 42);
+      await finalizeStrategy(strategyContract, 42);
+      const rewards = await strategyContract.strategyRewards();
+      const capitalReturned = await strategyContract.capitalReturned();
+      const rewardsSetAside = await garden1.reserveAssetRewardsSetAside();
+      const bablBalanceBefore = await bablToken.balanceOf(heartGarden.address);
+      await garden1.connect(gov).updateStrategyRewards(strategyContract.address, eth(), eth(), eth());
+      expect(await strategyContract.strategyRewards())
+        .to.eq(eth())
+        .to.not.eq(rewards);
+      expect(await strategyContract.capitalReturned())
+        .to.eq(eth())
+        .to.not.eq(capitalReturned);
+      expect(await garden1.reserveAssetRewardsSetAside())
+        .to.eq(eth())
+        .to.not.eq(rewardsSetAside);
+      expect(await bablToken.balanceOf(heartGarden.address)).to.eq(bablBalanceBefore);
+    });
+    it('governance can update strategy rewards in the heart garden', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        heartGarden,
+      );
+      // It is executed
+      await executeStrategy(strategyContract, eth(), 42);
+      await finalizeStrategy(strategyContract, 42);
+      const rewards = await strategyContract.strategyRewards();
+      const capitalReturned = await strategyContract.capitalReturned();
+      const rewardsSetAside = await heartGarden.reserveAssetRewardsSetAside();
+      const bablBalanceBefore = await bablToken.balanceOf(heartGarden.address);
+      await heartGarden
+        .connect(gov)
+        .updateStrategyRewards(strategyContract.address, rewards.mul(2), capitalReturned, rewardsSetAside);
+      const bablBalanceAfter = await bablToken.balanceOf(heartGarden.address);
+      expect(await strategyContract.strategyRewards()).to.eq(rewards.mul(2));
+      expect(await strategyContract.capitalReturned()).to.eq(capitalReturned);
+      expect(await heartGarden.reserveAssetRewardsSetAside()).to.eq(rewardsSetAside);
+      expect(bablBalanceAfter).to.eq(bablBalanceBefore.mul(2));
+      await heartGarden
+        .connect(gov)
+        .updateStrategyRewards(strategyContract.address, rewards, capitalReturned, rewardsSetAside);
+      expect(await bablToken.balanceOf(heartGarden.address)).to.eq(bablBalanceBefore);
+    });
+    it('anyone can NOT update strategy rewards', async function () {
+      const strategyContract = await createStrategy(
+        'buy',
+        'vote',
+        [signer1, signer2, signer3],
+        uniswapV3TradeIntegration.address,
+        garden1,
+      );
+      await executeStrategy(strategyContract, eth(), 42);
+      await finalizeStrategy(strategyContract, 42);
+      const rewards = await strategyContract.strategyRewards();
+      const capitalReturned = await strategyContract.capitalReturned();
+      const rewardsSetAside = await garden1.reserveAssetRewardsSetAside();
+      await expect(
+        garden1.connect(signer1).updateStrategyRewards(strategyContract.address, eth(), eth(), eth()),
+      ).to.be.revertedWith('Only governance or emergency can call this');
     });
   });
 
