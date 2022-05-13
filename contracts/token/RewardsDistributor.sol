@@ -124,6 +124,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant ENTERED = 2;
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+    uint256 private immutable BABL_CAP;
 
     /* ============ State Variables ============ */
 
@@ -288,12 +289,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // becnhmark[4] value: Used to set a boost (if any) for cool strategies (segment 3)
     // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
-    uint256 private immutable BABL_CAP;
 
     /* ============ Constructor ============ */
 
     constructor(uint256 _bablCap) {
-        _require(_bablCap >= 2_000e18, Errors.AMOUNT_TOO_LOW);
+        _require(_bablCap >= 5_000e18, Errors.AMOUNT_TOO_LOW);
         BABL_CAP = _bablCap;
     }
 
