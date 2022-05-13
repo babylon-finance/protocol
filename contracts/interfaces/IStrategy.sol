@@ -92,6 +92,8 @@ interface IStrategy {
 
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
 
+    function updateStrategyRewards(uint256 _newTotalBABLRewards, uint256 _newCapitalReturned) external;
+
     function getStrategyDetails()
         external
         view

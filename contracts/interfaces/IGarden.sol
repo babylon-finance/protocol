@@ -42,6 +42,13 @@ interface IStrategyGarden {
     ) external;
 
     function payKeeper(address payable _keeper, uint256 _fee) external;
+
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalBABLAmount,
+        uint256 _newCapitalReturned,
+        uint256 _newRewardsToSetAside
+    ) external;
 }
 
 /**
@@ -75,8 +82,6 @@ interface IAdminGarden {
     function updateGardenParams(uint256[13] memory _newParams) external;
 
     function verifyGarden(uint256 _verifiedCategory) external;
-
-    function updateRewardsToSetAside(uint256 _difference, bool _addOrSubstract) external;
 
     function resetHardlock(uint256 _hardlockStartsAt) external;
 }
