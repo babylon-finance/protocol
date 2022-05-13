@@ -571,7 +571,7 @@ describe('Heart', function () {
     });
   });
 
-  describe.only('pump', async function () {
+  describe('pump', async function () {
     async function pumpAmount(amountInFees) {
       const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
       const bablMinAmountOut = await getBablMinAmountOut(heart);
