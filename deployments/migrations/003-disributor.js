@@ -1,3 +1,4 @@
+const { eth } = require('lib/helpers');
 module.exports = async ({
   network,
   getTenderlyContracts,
@@ -18,7 +19,7 @@ module.exports = async ({
   const rewardsDistributor = await upgradesDeployer.deployAdminProxy(
     'RewardsDistributor',
     'RewardsDistributorProxy',
-    { from: deployer, log: true, ...(await getGasPrice()) },
+    { from: deployer, args: [eth(100000)], log: true, ...(await getGasPrice()) },
     {
       initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
     },

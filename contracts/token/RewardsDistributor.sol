@@ -124,6 +124,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant ENTERED = 2;
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
+    uint256 private immutable BABL_CAP;
 
     /* ============ State Variables ============ */
 
@@ -290,6 +291,11 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256[5] private benchmark;
 
     /* ============ Constructor ============ */
+
+    constructor(uint256 _bablCap) {
+        _require(_bablCap >= 5_000e18, Errors.AMOUNT_TOO_LOW);
+        BABL_CAP = _bablCap;
+    }
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public initializer {
         OwnableUpgradeable.__Ownable_init();
@@ -982,6 +988,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
+        _require(bablToSend <= BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
         SafeERC20.safeTransfer(babltoken, _to, bablToSend);
         return bablToSend;
     }
@@ -1903,4 +1910,6 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV16 is RewardsDistributor {}
+contract RewardsDistributorV16 is RewardsDistributor {
+    constructor(uint256 _bablCap) RewardsDistributor(_bablCap) {}
+}
