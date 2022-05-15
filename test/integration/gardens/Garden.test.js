@@ -2345,6 +2345,30 @@ describe('Garden', function () {
       expect(await bablToken.balanceOf(heartGarden.address)).to.eq(bablBalanceBefore);
     });
     it('governance can update strategy rewards in the heart garden', async function () {
+      const strategistShare = eth(0.1);
+      const stewardsShare = eth(0.1);
+      const lpShare = eth(0.8);
+      const creatorBonus = eth(0.1);
+      const profitWeight = eth(0.65);
+      const principalWeight = eth(0.35);
+      const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+      const maxBablCap = eth(100000);
+      await rewardsDistributor
+        .connect(owner)
+        .setBABLMiningParameters([
+          strategistShare,
+          stewardsShare,
+          lpShare,
+          creatorBonus,
+          profitWeight,
+          principalWeight,
+          benchmark[0],
+          benchmark[1],
+          benchmark[2],
+          benchmark[3],
+          benchmark[4],
+          maxBablCap,
+        ]);
       const strategyContract = await createStrategy(
         'buy',
         'vote',
@@ -2354,7 +2378,9 @@ describe('Garden', function () {
       );
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
+      console.log('test::check 1');
       await finalizeStrategy(strategyContract, 42);
+      console.log('test::check 2');
       const rewards = await strategyContract.strategyRewards();
       const capitalReturned = await strategyContract.capitalReturned();
       const rewardsSetAside = await heartGarden.reserveAssetRewardsSetAside();
@@ -2424,9 +2450,9 @@ describe('Garden', function () {
       await fund([garden.address], { tokens: [addresses.tokens.ETH], amounts: [eth(10)] });
 
       const balance = await weth.balanceOf(garden.address);
-
-      await garden.wrap();
-
+      console.log('test:: check 1');
+      await garden.connect(gov).wrap();
+      console.log('test:: check 2');
       expect((await weth.balanceOf(garden.address)).sub(balance)).to.eq(eth(10));
     });
   });
