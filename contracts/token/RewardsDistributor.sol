@@ -124,7 +124,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     uint256 private constant ENTERED = 2;
     // NFT Prophets
     IProphets private constant PROPHETS_NFT = IProphets(0x26231A65EF80706307BbE71F032dc1e5Bf28ce43);
-    uint256 private immutable BABL_CAP;
+    uint256 private constant DEFAULT_BABL_CAP = 15_000e18;
 
     /* ============ State Variables ============ */
 
@@ -289,13 +289,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     // becnhmark[4] value: Used to set a boost (if any) for cool strategies (segment 3)
     // becnhmark[4] = Segment 3 Boost default 1e18 (e.g. 2e18 represents 2 = 200% = rewards boost x2)
     uint256[5] private benchmark;
+    uint256 private maxBablCap;
 
     /* ============ Constructor ============ */
-
-    constructor(uint256 _bablCap) {
-        _require(_bablCap >= 5_000e18, Errors.AMOUNT_TOO_LOW);
-        BABL_CAP = _bablCap;
-    }
 
     function initialize(TimeLockedToken _bablToken, IBabController _controller) public initializer {
         OwnableUpgradeable.__Ownable_init();
@@ -403,7 +399,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * Change default BABL shares % by the governance
      * @param _newMiningParams      Array of new mining params to be set by government
      */
-    function setBABLMiningParameters(uint256[11] memory _newMiningParams) external override {
+    function setBABLMiningParameters(uint256[12] memory _newMiningParams) external override {
         // _newMiningParams[0]: _strategistShare
         // _newMiningParams[1]: _stewardsShare
         // _newMiningParams[2]: _lpShare
@@ -415,6 +411,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         // _newMiningParams[8]: _benchmark[2] penalty to be applied to very bad strategies in benchmark segment 1
         // _newMiningParams[9]: _benchmark[3] penalty to be applied to not cool strategies in benchmark segment 2
         // _newMiningParams[10]: _benchmark[4] boost/bonus to be applied to cool strategies in benchmark segment 3
+        // _newMiningParams[11]: _bablCap Max BABL Cap
         _onlyGovernanceOrEmergency();
         _require(
             _newMiningParams[0].add(_newMiningParams[1]).add(_newMiningParams[2]) == 1e18 &&
@@ -437,6 +434,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         benchmark[2] = _newMiningParams[8]; // penalty for segment 1
         benchmark[3] = _newMiningParams[9]; // penalty/boost for segment 2
         benchmark[4] = _newMiningParams[10]; // boost for segment 3
+        maxBablCap = _newMiningParams[11]; // Max BABL Cap
     }
 
     /* ========== View functions ========== */
@@ -988,7 +986,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         _onlyUnpaused();
         uint256 bablBal = babltoken.balanceOf(address(this));
         uint256 bablToSend = _babl > bablBal ? bablBal : _babl;
-        _require(bablToSend <= BABL_CAP, Errors.MAX_BABL_CAP_REACHED);
+        _require(bablToSend <= (maxBablCap != 0 ? maxBablCap : DEFAULT_BABL_CAP), Errors.MAX_BABL_CAP_REACHED);
         SafeERC20.safeTransfer(babltoken, _to, bablToSend);
         return bablToSend;
     }
@@ -1910,6 +1908,4 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     }
 }
 
-contract RewardsDistributorV16 is RewardsDistributor {
-    constructor(uint256 _bablCap) RewardsDistributor(_bablCap) {}
-}
+contract RewardsDistributorV17 is RewardsDistributor {}
