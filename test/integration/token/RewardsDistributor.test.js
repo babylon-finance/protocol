@@ -50,7 +50,7 @@ async function getStrategyState(strategy) {
   return { address, active, dataSet, finalized, executedAt, exitedAt, updatedAt };
 }
 
-skipIfFast('RewardsDistributor', function () {
+describe('RewardsDistributor', function () {
   let owner;
   let signer1;
   let signer2;
@@ -260,6 +260,30 @@ skipIfFast('RewardsDistributor', function () {
     await bablToken.connect(owner).enableTokensTransfers();
     // Set the heart garden
     await heart.connect(owner).setHeartGardenAddress(heartTestGarden.address, { gasPrice: 0 });
+    const strategistShare = eth(0.1);
+    const stewardsShare = eth(0.1);
+    const lpShare = eth(0.8);
+    const creatorBonus = eth(0.1);
+    const profitWeight = eth(0.65);
+    const principalWeight = eth(0.35);
+    const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+    const maxBablCap = eth(100000);
+    await rewardsDistributor
+      .connect(owner)
+      .setBABLMiningParameters([
+        strategistShare,
+        stewardsShare,
+        lpShare,
+        creatorBonus,
+        profitWeight,
+        principalWeight,
+        benchmark[0],
+        benchmark[1],
+        benchmark[2],
+        benchmark[3],
+        benchmark[4],
+        maxBablCap,
+      ]);
   });
 
   describe('Strategy BABL Mining Rewards Calculation', async function () {
@@ -1105,6 +1129,7 @@ skipIfFast('RewardsDistributor', function () {
       const profitWeight = eth(0.95);
       const principalWeight = eth(0.05);
       const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+      const maxBablCap = eth(100000);
       await rewardsDistributor
         .connect(owner)
         .setBABLMiningParameters([
@@ -1119,6 +1144,7 @@ skipIfFast('RewardsDistributor', function () {
           benchmark[2],
           benchmark[3],
           benchmark[4],
+          maxBablCap,
         ]);
       const [long1] = await createStrategies([{ garden: garden1 }]);
       const checkBenchmark = await rewardsDistributor.checkMining(1, long1.address);
@@ -1136,6 +1162,7 @@ skipIfFast('RewardsDistributor', function () {
       const profitWeight = eth(0.95);
       const principalWeight = eth(0.05);
       const benchmark = [eth(0.8), eth(1.03), eth(1), eth(1), eth(1)];
+      const maxBablCap = eth(100000);
       await expect(
         rewardsDistributor
           .connect(signer1)
@@ -1151,6 +1178,7 @@ skipIfFast('RewardsDistributor', function () {
             benchmark[2],
             benchmark[3],
             benchmark[4],
+            maxBablCap,
           ]),
       ).to.be.revertedWith('BAB#107');
     });
@@ -1176,6 +1204,7 @@ skipIfFast('RewardsDistributor', function () {
         const creatorBonus = eth(0.1);
         const profitWeight = eth(0.65);
         const principalWeight = eth(0.35);
+        const maxBablCap = eth(100000);
         await expect(
           rewardsDistributor
             .connect(owner)
@@ -1191,6 +1220,7 @@ skipIfFast('RewardsDistributor', function () {
               benchmark[2],
               benchmark[3],
               benchmark[4],
+              maxBablCap,
             ]),
         ).to.be.revertedWith('BAB#101');
       });
@@ -1231,7 +1261,7 @@ skipIfFast('RewardsDistributor', function () {
           const creatorBonus = eth(0.1);
           const profitWeight = eth(0.95);
           const principalWeight = eth(0.05);
-
+          const maxBablCap = eth(100000);
           await rewardsDistributor
             .connect(owner)
             .setBABLMiningParameters([
@@ -1246,6 +1276,7 @@ skipIfFast('RewardsDistributor', function () {
               benchmark[2],
               benchmark[3],
               benchmark[4],
+              maxBablCap,
             ]);
           const block = await ethers.provider.getBlock();
           const now = block.timestamp;
@@ -1316,7 +1347,7 @@ skipIfFast('RewardsDistributor', function () {
           const profitWeight = eth(0.95);
           const principalWeight = eth(0.05);
           const heartRewardsFactor = eth(1.5); // 150% boost
-
+          const maxBablCap = eth(100000);
           await rewardsDistributor
             .connect(owner)
             .setBABLMiningParameters([
@@ -1331,6 +1362,7 @@ skipIfFast('RewardsDistributor', function () {
               benchmark[2],
               benchmark[3],
               benchmark[4],
+              maxBablCap,
             ]);
           const block = await ethers.provider.getBlock();
           const now = block.timestamp;
@@ -3917,7 +3949,7 @@ skipIfFast('RewardsDistributor', function () {
       expect(signer1BABL).to.be.closeTo(totalSigner1BABLLong1.add(totalSigner1BABLLong2), signer1BABL.div(50)); // 2%
     });
 
-    it('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
+    it.skip('should claim and update balances of Signer1 either Garden tokens or BABL rewards as contributor of 5 strategies (4 with positive profits) of 2 different Gardens with different timings along 3 Years', async function () {
       const signer1BABLBalanceBefore = await bablToken.balanceOf(signer1.address);
       const [long1, long2, long3, long4, long5] = await createStrategies([
         { garden: garden1 },

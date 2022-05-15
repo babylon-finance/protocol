@@ -56,7 +56,7 @@ interface IRewardsDistributor {
 
     function migrateAddressToCheckpoints(address _garden, bool _toMigrate) external;
 
-    function setBABLMiningParameters(uint256[11] memory _newMiningParams) external;
+    function setBABLMiningParameters(uint256[12] memory _newMiningParams) external;
 
     function updateProtocolPrincipal(uint256 _capital, bool _addOrSubstract) external;
 

@@ -19,7 +19,7 @@ module.exports = async ({
   const rewardsDistributor = await upgradesDeployer.deployAdminProxy(
     'RewardsDistributor',
     'RewardsDistributorProxy',
-    { from: deployer, args: [eth(100000)], log: true, ...(await getGasPrice()) },
+    { from: deployer, args: [], log: true, ...(await getGasPrice()) },
     {
       initializer: { method: 'initialize', args: [bablToken.address, controller.address] },
     },
