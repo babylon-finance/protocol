@@ -2378,9 +2378,7 @@ describe('Garden', function () {
       );
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
-      console.log('test::check 1');
       await finalizeStrategy(strategyContract, 42);
-      console.log('test::check 2');
       const rewards = await strategyContract.strategyRewards();
       const capitalReturned = await strategyContract.capitalReturned();
       const rewardsSetAside = await heartGarden.reserveAssetRewardsSetAside();
@@ -2450,9 +2448,7 @@ describe('Garden', function () {
       await fund([garden.address], { tokens: [addresses.tokens.ETH], amounts: [eth(10)] });
 
       const balance = await weth.balanceOf(garden.address);
-      console.log('test:: check 1');
       await garden.connect(gov).wrap();
-      console.log('test:: check 2');
       expect((await weth.balanceOf(garden.address)).sub(balance)).to.eq(eth(10));
     });
   });
