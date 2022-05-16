@@ -405,7 +405,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
     }
 
     /**
-     * Return pre action calldata
+     * Return post action calldata
      *
      * hparam  _strategy                 Address of the strategy
      * hparam  _asset                    Address param
