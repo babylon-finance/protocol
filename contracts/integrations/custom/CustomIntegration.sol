@@ -34,6 +34,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         IGarden garden; // Garden address
         IStrategy strategy; // Strategy address
         bytes data; // OpData 64 bytes each OpData
+        address addressParam; // Address param
         address resultToken; // LP address
         uint256 resultTokensInTransaction; // Result tokens affected by this transaction
         uint256 resultTokensInStrategy; // Result tokens strategy balance
@@ -79,6 +80,20 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
     ) external override nonReentrant onlySystemContract {
         CustomInfo memory customInfo = _createCustomInfo(_strategy, _data, _resultTokensOut);
         _validatePreJoinCustomData(customInfo);
+
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_strategy, customInfo.addressParam, _resultTokensOut, 1);
+        if (targetAddressP != address(0)) {
+            // Approve spending of the pre action token
+            (address approvalAsset, address spenderPre) = _preActionNeedsApproval(customInfo.addressParam, 0);
+            if (approvalAsset != address(0)) {
+                customInfo.strategy.invokeApprove(spenderPre, approvalAsset, 2 ^ (256 - 1));
+            }
+            // Invoke protocol specific call
+            customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         // Approve spending of the tokens
         if (_getSpender(_data, 0) != address(0)) {
             for (uint256 i = 0; i < _tokensIn.length; i++) {
@@ -94,6 +109,25 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         customInfo.resultTokensInTransaction = IERC20(customInfo.resultToken)
             .balanceOf(address(customInfo.strategy))
             .sub(customInfo.resultTokensInStrategy);
+
+        // Post actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _strategy,
+            customInfo.addressParam,
+            customInfo.resultTokensInTransaction,
+            0
+        );
+
+        if (targetAddressP != address(0)) {
+            // Approve spending of the post action token
+            (address approvalAsset, address spenderPost) = _postActionNeedsApproval(customInfo.addressParam, 0);
+            if (approvalAsset != address(0)) {
+                customInfo.strategy.invokeApprove(spenderPost, approvalAsset, 2 ^ (256 - 1));
+            }
+            // Invoke protocol specific call
+            customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         _validatePostJoinCustomData(customInfo);
         emit CustomEntered(
             address(customInfo.strategy),
@@ -121,11 +155,44 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
     ) external override nonReentrant onlySystemContract {
         CustomInfo memory customInfo = _createCustomInfo(_strategy, _data, _resultTokensIn);
         _validatePreExitCustomData(customInfo);
+
+        // Pre actions
+        (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
+            _getPreActionCallData(_strategy, customInfo.addressParam, _resultTokensIn, 1);
+        if (targetAddressP != address(0)) {
+            // Approve spending of the pre action token
+            (address approvalAsset, address spenderPre) = _preActionNeedsApproval(customInfo.addressParam, 1);
+            if (approvalAsset != address(0)) {
+                customInfo.strategy.invokeApprove(spenderPre, approvalAsset, 2 ^ (256 - 1));
+            }
+            // Invoke protocol specific call
+            customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         // Approve spending of the result token
         customInfo.strategy.invokeApprove(_getSpender(_data, 1), customInfo.resultToken, _resultTokensIn);
         (address target, uint256 callValue, bytes memory methodData) =
             _getExitCalldata(_strategy, _data, _resultTokensIn, _tokensOut, _minAmountsOut);
         customInfo.strategy.invokeFromIntegration(target, callValue, methodData);
+
+        // Post actions
+        (targetAddressP, callValueP, methodDataP) = _getPostActionCallData(
+            _strategy,
+            customInfo.addressParam,
+            _resultTokensIn,
+            1
+        );
+
+        if (targetAddressP != address(0)) {
+            // Approve spending of the post action token
+            (address approvalAsset, address spenderPost) = _postActionNeedsApproval(customInfo.addressParam, 1);
+            if (approvalAsset != address(0)) {
+                customInfo.strategy.invokeApprove(spenderPost, approvalAsset, 2 ^ (256 - 1));
+            }
+            // Invoke protocol specific call
+            customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
+        }
+
         _validatePostExitCustomData(customInfo);
 
         emit CustomExited(
@@ -190,6 +257,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
         address add = BytesLib.decodeOpDataAddress(_data);
         CustomInfo memory customInfo;
         customInfo.resultToken = _getResultToken(add);
+        customInfo.addressParam = add;
         customInfo.data = _data;
         customInfo.strategy = IStrategy(_strategy);
         customInfo.garden = IGarden(customInfo.strategy.garden());
@@ -306,6 +374,66 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
             bytes memory
         );
 
+    /**
+     * Return pre action calldata
+     *
+     * hparam _strategy                  Address of the strategy
+     * hparam  _asset                    Address param
+     * hparam  _amount                   Amount
+     * hparam  _customOp                 Type of Custom op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _strategy */
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _customOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Return pre action calldata
+     *
+     * hparam  _strategy                 Address of the strategy
+     * hparam  _asset                    Address param
+     * hparam  _amount                   Amount
+     * hparam  _customOp                 Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address, /* _strategy */
+        address, /* _asset */
+        uint256, /* _amount */
+        uint256 /* _customOp */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
     function _isValid(bytes memory _data) internal view virtual returns (bool);
 
     function _getSpender(
@@ -315,6 +443,20 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
 
     function _getResultToken(address _token) internal view virtual returns (address) {
         return _token;
+    }
+
+    function _preActionNeedsApproval(
+        address, /* _asset */
+        uint8 /* _customOp */
+    ) internal view virtual returns (address, address) {
+        return (address(0), address(0));
+    }
+
+    function _postActionNeedsApproval(
+        address, /* _asset */
+        uint8 /* _customOp */
+    ) internal view virtual returns (address, address) {
+        return (address(0), address(0));
     }
 
     function _getRewardTokens(
