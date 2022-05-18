@@ -83,12 +83,12 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
 
         // Pre actions
         (address targetAddressP, uint256 callValueP, bytes memory methodDataP) =
-            _getPreActionCallData(_strategy, customInfo.addressParam, _resultTokensOut, 1);
+            _getPreActionCallData(_strategy, customInfo.addressParam, _resultTokensOut, 0);
         if (targetAddressP != address(0)) {
             // Approve spending of the pre action token
             (address approvalAsset, address spenderPre) = _preActionNeedsApproval(customInfo.addressParam, 0);
             if (approvalAsset != address(0)) {
-                customInfo.strategy.invokeApprove(spenderPre, approvalAsset, 2 ^ (256 - 1));
+                customInfo.strategy.invokeApprove(spenderPre, approvalAsset, 2 ** (256 - 1));
             }
             // Invoke protocol specific call
             customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);
@@ -122,7 +122,7 @@ abstract contract CustomIntegration is BaseIntegration, ReentrancyGuard, ICustom
             // Approve spending of the post action token
             (address approvalAsset, address spenderPost) = _postActionNeedsApproval(customInfo.addressParam, 0);
             if (approvalAsset != address(0)) {
-                customInfo.strategy.invokeApprove(spenderPost, approvalAsset, 2 ^ (256 - 1));
+                customInfo.strategy.invokeApprove(spenderPost, approvalAsset, 2 ** (256 - 1));
             }
             // Invoke protocol specific call
             customInfo.strategy.invokeFromIntegration(targetAddressP, callValueP, methodDataP);

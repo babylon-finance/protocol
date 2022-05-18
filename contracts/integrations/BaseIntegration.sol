@@ -91,4 +91,17 @@ abstract contract BaseIntegration is IBaseIntegration {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_tokenIn, _tokenOut);
     }
+
+    function _getTradeCallData(address _strategy, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _minAmountOut) internal view returns (address, uint, bytes memory) {
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'trade(address,address,uint256,address,uint256)',
+                _strategy,
+                _tokenIn,
+                _amountIn,
+                _tokenOut,
+                _minAmountOut
+            );
+        return (controller.masterSwapper(), 0, methodData);
+    }
 }

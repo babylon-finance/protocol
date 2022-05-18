@@ -85,10 +85,11 @@ contract CustomOperation is Operation {
         // Get the tokens needed to enter the operation
         uint256[] memory maxAmountsIn = _tradeInputTokens(_asset, _capital, _garden, _inputWeights, _inputTokens);
         uint256 priceResultToken = _getPriceOrCustom(_integration, _data, _garden.reserveAsset());
+        priceResultToken = priceResultToken.preciseMul(_capital);
         ICustomIntegration(_integration).enter(
             msg.sender,
             _data,
-            1, // TODO: fix
+            priceResultToken,
             _inputTokens,
             maxAmountsIn
         );
@@ -298,7 +299,7 @@ contract CustomOperation is Operation {
         return price;
     }
 
-    function _getMinAmountOut(uint256 _capital, uint256 _priceInverse) internal view returns (uint256) {
+    function _getMinAmountOut(uint256 _capital, uint256 _priceInverse) internal pure returns (uint256) {
         return _capital.preciseDiv(_priceInverse).preciseMul(95e16);
     }
 }

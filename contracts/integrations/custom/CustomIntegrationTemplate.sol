@@ -224,7 +224,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         uint256 /* _customOp */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -254,7 +254,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
         uint256 /* _customOp */
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -277,7 +277,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function _preActionNeedsApproval(
         address, /* _asset */
         uint8 /* _customOp */
-    ) internal view override returns (address, address) {
+    ) internal pure override returns (address, address) {
         return (address(0), address(0));
     }
 
@@ -293,7 +293,7 @@ contract CustomIntegrationTemplate is CustomIntegration {
     function _postActionNeedsApproval(
         address, /* _asset */
         uint8 /* _customOp */
-    ) internal view override returns (address, address) {
+    ) internal pure override returns (address, address) {
         return (address(0), address(0));
     }
 }
