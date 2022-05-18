@@ -111,7 +111,7 @@ contract CustomOperation is Operation {
         uint8, /* _assetStatus */
         uint256 _percentage,
         bytes calldata _data,
-        IGarden, /* _garden */
+        IGarden _garden,
         address _integration
     )
         external
@@ -130,19 +130,19 @@ contract CustomOperation is Operation {
             ICustomIntegration(_integration).getOutputTokensAndMinAmountOut(_data, amountExit);
         ICustomIntegration(_integration).exit(msg.sender, _data, amountExit, exitTokens, _minAmountsOut);
         // Exit result tokens to a consolidated asset
-        address reserveAsset = WETH;
-        for (uint256 i = 0; i < exitTokens.length; i++) {
-            if (exitTokens[i] != reserveAsset) {
+        address exitAsset = exitTokens[0];
+        for (uint256 i = 1; i < exitTokens.length; i++) {
+            if (exitTokens[i] != exitAsset) {
                 if (IERC20(exitTokens[i]).isETH() && address(msg.sender).balance > MIN_TRADE_AMOUNT) {
                     IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
                     exitTokens[i] = WETH;
                 }
-                if (exitTokens[i] != reserveAsset) {
+                if (exitTokens[i] != exitAsset) {
                     if (IERC20(exitTokens[i]).balanceOf(msg.sender) > MIN_TRADE_AMOUNT) {
                         IStrategy(msg.sender).trade(
                             exitTokens[i],
                             IERC20(exitTokens[i]).balanceOf(msg.sender),
-                            reserveAsset
+                            exitAsset
                         );
                     }
                 }
@@ -150,9 +150,9 @@ contract CustomOperation is Operation {
         }
         // Only claim and sell rewards on final exit
         if (_percentage == HUNDRED_PERCENT) {
-            _sellRewardTokens(_integration, _data, reserveAsset);
+            _sellRewardTokens(_integration, _data, _garden.reserveAsset());
         }
-        return (reserveAsset, IERC20(reserveAsset).balanceOf(msg.sender), 0);
+        return (exitAsset, IERC20(exitAsset).balanceOf(msg.sender), 0);
     }
 
     /**
