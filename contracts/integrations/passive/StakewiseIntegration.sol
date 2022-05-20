@@ -79,9 +79,9 @@ contract StakewiseIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address /* _strategy */,
+        address, /* _strategy */
         address, /* _asset */
-        uint256 /* _investmentTokensOut */,
+        uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
         uint256 _maxAmountIn
     )
