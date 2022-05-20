@@ -209,6 +209,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         if (_tokenOut == 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) {
             return getPrice(_tokenIn, WETH).preciseDiv(98e16);
         }
+        // Checks RETH
+        if (_tokenIn == 0xae78736Cd615f374D3085123A210448E74Fc6393) {
+            return getPrice(WETH, _tokenOut);
+        }
+        if (_tokenOut == 0xae78736Cd615f374D3085123A210448E74Fc6393) {
+            return getPrice(_tokenIn, WETH);
+        }
 
         // Comp assets
         uint256 exchangeRate;
