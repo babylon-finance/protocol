@@ -68,9 +68,9 @@ contract StakewiseIntegration is PassiveIntegration {
     /**
      * Return join investment calldata which is already generated from the investment API
      *
-     * @param  _strategy                       Address of the strategy
+     * hparam  _strategy                       Address of the strategy
      * hparam  _asset                          Address of the vault
-     * @param  _investmentTokensOut            Amount of investment tokens to send
+     * hparam  _investmentTokensOut            Amount of investment tokens to send
      * hparam  _tokenIn                        Addresses of tokens to send to the investment
      * @param  _maxAmountIn                    Amounts of tokens to send to the investment
      *
