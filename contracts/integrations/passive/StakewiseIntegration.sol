@@ -2,7 +2,6 @@
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
@@ -37,6 +36,11 @@ contract StakewiseIntegration is PassiveIntegration {
     // Address of Uniswap V3 SwapRouter contract
     address private constant swapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
+    // Addres of stakewise deposit contract
+    address private constant STAKEWISE_DEPOSIT = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
+    // Address for the referrer
+    address private constant HEART_ADDRESS = 0x51e6775b7bE2eA1d20cA02cFEeB04453366e72C8;
+
     /* ============ Constructor ============ */
 
     /**
@@ -58,7 +62,7 @@ contract StakewiseIntegration is PassiveIntegration {
     function _getInvestmentAsset(
         address /* _asset */
     ) internal pure override returns (address) {
-        return WETH;
+        return address(0);
     }
 
     /**
@@ -75,9 +79,9 @@ contract StakewiseIntegration is PassiveIntegration {
      * @return bytes                           Trade calldata
      */
     function _getEnterInvestmentCalldata(
-        address _strategy,
+        address /* _strategy */,
         address, /* _asset */
-        uint256 _investmentTokensOut,
+        uint256 /* _investmentTokensOut */,
         address, /* _tokenIn */
         uint256 _maxAmountIn
     )
@@ -90,15 +94,9 @@ contract StakewiseIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        // Buy on univ3 directly
-        bytes memory path = abi.encodePacked(WETH, FEE_MEDIUM, address(sETH2));
-        ISwapRouter.ExactInputParams memory params =
-            ISwapRouter.ExactInputParams(path, _strategy, block.timestamp, _maxAmountIn, _investmentTokensOut);
-
         // Buy sETH2 on univ3
-        bytes memory methodData =
-            abi.encodeWithSignature('exactInput((bytes,address,uint256,uint256,uint256))', params);
-        return (swapRouter, 0, methodData);
+        bytes memory methodData = abi.encodeWithSignature('stakeWithReferrer(address)', HEART_ADDRESS);
+        return (STAKEWISE_DEPOSIT, _maxAmountIn, methodData);
     }
 
     /**
@@ -191,10 +189,50 @@ contract StakewiseIntegration is PassiveIntegration {
         return (swapRouter, 0, methodData);
     }
 
+    /**
+     * Return post action calldata
+     *
+     * hparam  _strategy                 Address of the asset to deposit
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPostActionCallData(
+        address _strategy,
+        address, /* _asset */
+        uint256 _amount,
+        uint256 _passiveOp
+    )
+        internal
+        view
+        override
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        if (_passiveOp == 1) {
+            bytes memory methodData = abi.encodeWithSignature('withdraw(uint256)', IERC20(WETH).balanceOf(_strategy));
+            return (WETH, 0, methodData);
+        }
+        return (address(0), 0, bytes(''));
+    }
+
     function _preActionNeedsApproval(
         address /* _asset */
     ) internal pure override returns (address) {
         return address(rETH2);
+    }
+
+    function _postActionNeedsApproval(
+        address /* _asset */
+    ) internal pure override returns (address) {
+        return address(WETH);
     }
 
     function _getRewards(

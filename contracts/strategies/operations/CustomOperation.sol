@@ -86,13 +86,7 @@ contract CustomOperation is Operation {
         uint256[] memory maxAmountsIn = _tradeInputTokens(_asset, _capital, _garden, _inputWeights, _inputTokens);
         uint256 priceResultToken = _getPriceOrCustom(_integration, _data, _garden.reserveAsset());
         priceResultToken = priceResultToken.preciseMul(_capital);
-        ICustomIntegration(_integration).enter(
-            msg.sender,
-            _data,
-            priceResultToken,
-            _inputTokens,
-            maxAmountsIn
-        );
+        ICustomIntegration(_integration).enter(msg.sender, _data, priceResultToken, _inputTokens, maxAmountsIn);
         // Check that the NAV is same to capital deposited
         return (
             _getResultTokenFromBytes(_integration, _data),
