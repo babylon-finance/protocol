@@ -33,10 +33,11 @@ interface ICustomIntegration {
 
     function getPriceResultToken(bytes calldata _data, address _tokenAddress) external view returns (uint256);
 
-    function getOutputTokensAndMinAmountOut(bytes calldata _data, uint256 _resultTokenAmount)
-        external
-        view
-        returns (address[] memory exitTokens, uint256[] memory _minAmountsOut);
+    function getOutputTokensAndMinAmountOut(
+        address _strategy,
+        bytes calldata _data,
+        uint256 _resultTokenAmount
+    ) external view returns (address[] memory exitTokens, uint256[] memory _minAmountsOut);
 
     function getRewardTokens(bytes calldata _data) external view returns (address[] memory);
 }
