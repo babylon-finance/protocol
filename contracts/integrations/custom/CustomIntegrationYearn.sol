@@ -195,17 +195,17 @@ contract CustomIntegrationYearn is CustomIntegration {
     /**
      * The tokens to be received on exit.
      *
-     * hparam  _data                      Bytes data
-     * hparam  _liquidity                 Number with the amount of result tokens to exit
+     * hparam  _strategy                  Address of the strategy
+     * @param  _data                      Bytes data
+     * @param  _liquidity                 Number with the amount of result tokens to exit
      * @return _exitTokens                List of output tokens to receive on exit
      * @return _minAmountsOut             List of min amounts for the output tokens to receive
      */
-    function getOutputTokensAndMinAmountOut(bytes calldata _data, uint256 _liquidity)
-        external
-        view
-        override
-        returns (address[] memory _exitTokens, uint256[] memory _minAmountsOut)
-    {
+    function getOutputTokensAndMinAmountOut(
+        address, /* _strategy */
+        bytes calldata _data,
+        uint256 _liquidity
+    ) external view override returns (address[] memory _exitTokens, uint256[] memory _minAmountsOut) {
         // Vault exits 100% in the vault token
         address vault = BytesLib.decodeOpDataAddress(_data);
         address[] memory outputTokens = new address[](1);

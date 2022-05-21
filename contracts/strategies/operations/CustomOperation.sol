@@ -121,7 +121,7 @@ contract CustomOperation is Operation {
         address tokenToExit = _getResultTokenFromBytes(_integration, _data);
         uint256 amountExit = IERC20(tokenToExit).balanceOf(msg.sender).preciseMul(_percentage);
         (address[] memory exitTokens, uint256[] memory _minAmountsOut) =
-            ICustomIntegration(_integration).getOutputTokensAndMinAmountOut(_data, amountExit);
+            ICustomIntegration(_integration).getOutputTokensAndMinAmountOut(msg.sender, _data, amountExit);
         ICustomIntegration(_integration).exit(msg.sender, _data, amountExit, exitTokens, _minAmountsOut);
         // Exit result tokens to a consolidated asset
         address exitAsset = exitTokens[0];
