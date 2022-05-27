@@ -129,10 +129,11 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
     }
 
     function _getResultBalance(address _strategy, address _resultAssetAddress) internal view override returns (uint256) {
-        if (_lpToken == CRV) {
-            return IERC20(CRV).balanceOf(_strategy);
+        if (_resultAssetAddress == CRV) {
+            return ERC20(CRV).balanceOf(_strategy);
         }
-        (uint128 shares, uint128 rewards) = aladdinConvexVault.userInfo(_strategy);
+        (, uint256 pid) = getPid(_resultAssetAddress);
+        (uint128 shares, uint128 rewards,) = aladdinConvexVault.userInfo(pid, _strategy);
         return uint256(shares).add(uint256(rewards));
     }
 

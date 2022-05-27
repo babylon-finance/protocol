@@ -46,7 +46,7 @@ describe('AladdinConcentratorIntegration', function () {
       }),
     );
 
-    const poolsLength = await aladdinConvexVault.poolLength();
+    const poolsLength = (await aladdinConvexVault.poolLength()).toNumber();
 
     const aladdinPools = await Promise.all(
       [...Array(poolsLength).keys()].map(async (pid) => {
@@ -64,8 +64,9 @@ describe('AladdinConcentratorIntegration', function () {
   async function createAladdinPoolInfo(pid, acv, crvLpTokens, allCrvPools) {
     // console.log('convex booster', convexBooster);
     const poolInfo = await acv.poolInfo(pid);
-
-    const foundIndex = crvLpTokens.filter((c) => !!c).findIndex((e) => e === poolInfo.lpToken);
+    const foundIndex = crvLpTokens
+      .filter((c) => !!c)
+      .findIndex((e) => e.toLowerCase() === poolInfo.lpToken.toLowerCase());
     if (foundIndex > -1) {
       return {
         name: Object.keys(allCrvPools)[foundIndex],
