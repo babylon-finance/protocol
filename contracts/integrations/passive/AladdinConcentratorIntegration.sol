@@ -16,6 +16,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title AladdinConcentratorIntegration
@@ -73,10 +74,11 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return;
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            IAladdinConvexVault.PoolInfo memory poolInfo = aladdinConvexVault.poolInfo(i);
-            cacheAladdinLpTokenToPid[poolInfo.lpToken] = i + 1;
-            aladdinPools[poolInfo.lpToken] = true;
-            aladdinList.push(poolInfo.lpToken);
+            console.log('calling', i, address(aladdinConvexVault));
+            (,,,, address lpToken,,,,,,) = aladdinConvexVault.poolInfo(i);
+            cacheAladdinLpTokenToPid[lpToken] = i + 1;
+            aladdinPools[lpToken] = true;
+            aladdinList.push(lpToken);
         }
         elementsCached = poolLength;
     }
@@ -95,8 +97,8 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return (false, 0);
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            IAladdinConvexVault.PoolInfo memory poolInfo = aladdinConvexVault.poolInfo(i);
-            if (poolInfo.lpToken == _asset) {
+            (,,,, address lpToken,,,,,,) = aladdinConvexVault.poolInfo(i);
+            if (lpToken == _asset) {
                 return (true, i);
             }
         }
@@ -109,7 +111,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         address _lpToken,
         uint8 /* _op */
     ) internal view override returns (address) {
-        if (_lpToken == 0xD533a949740bb3306d119CC777fa900bA034cd52) {
+        if (_lpToken == CRV) {
             return address(aladdinCRV);
         }
         return address(aladdinConvexVault);
@@ -124,6 +126,14 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return address(aladdinCRV);
         }
         return _lpToken;
+    }
+
+    function _getResultBalance(address _strategy, address _resultAssetAddress) internal view override returns (uint256) {
+        if (_lpToken == CRV) {
+            return IERC20(CRV).balanceOf(_strategy);
+        }
+        (uint128 shares, uint128 rewards) = aladdinConvexVault.userInfo(_strategy);
+        return uint256(shares).add(uint256(rewards));
     }
 
     /**
