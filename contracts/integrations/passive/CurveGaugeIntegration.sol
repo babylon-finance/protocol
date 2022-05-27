@@ -136,12 +136,7 @@ contract CurveGaugeIntegration is PassiveIntegration {
         }
     }
 
-    function _getRewards(address _strategy, address _asset)
-        internal
-        view
-        override
-        returns (address token, uint256 balance)
-    {
+    function _getRewards(address _strategy, address _asset) internal view override returns (address, uint256) {
         IGauge gauge = IGauge(curveMetaRegistry.getGauge(_asset));
         // Will fai for LiquidityGaugeV1, but work for LiquidityGaugeV2/V3
         address token = gauge.reward_tokens(0);

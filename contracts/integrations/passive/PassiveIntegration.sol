@@ -10,7 +10,7 @@ import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
-
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
@@ -23,6 +23,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassiveIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -242,6 +243,17 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function getResultAsset(address _investmentAddress) external view override returns (address) {
         return _getResultAsset(_investmentAddress);
+    }
+
+    /**
+     * Gets the balance of the asset you obtained after entering the investment
+     *
+     * @param _strategy                           Strategy calling
+     * @param _resultAssetAddress                 Result asset address
+     * @return uint256                            Returns the balance of the result asset
+     */
+    function getResultBalance(address _strategy, address _resultAssetAddress) external view override returns (uint256) {
+        return _getResultBalance(_strategy, _resultAssetAddress);
     }
 
     /**
@@ -498,6 +510,10 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
     function _getResultAsset(address _investment) internal view virtual returns (address) {
         return _investment;
+    }
+
+    function _getResultBalance(address _strategy, address _resultAssetAddress) internal view virtual returns (uint256) {
+        return IERC20(_resultAssetAddress).universalBalanceOf(_strategy);
     }
 
     function _getExtraAssetToApproveEnter(

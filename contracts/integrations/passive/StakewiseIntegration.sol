@@ -86,7 +86,7 @@ contract StakewiseIntegration is PassiveIntegration {
         uint256 _maxAmountIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
