@@ -16,7 +16,6 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title AladdinConcentratorIntegration
