@@ -392,12 +392,16 @@ contract PriceOracle is Ownable, IPriceOracle {
 
         if (_tokenIn == address(aCRV)) {
             uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
-            return pricePerShare.preciseMul(_getBestPriceUniV3(cvxCRV, CRV)).preciseMul(_getBestPriceUniV3(CRV, _tokenOut));
+            return
+                pricePerShare.preciseMul(_getBestPriceUniV3(cvxCRV, CRV)).preciseMul(
+                    _getBestPriceUniV3(CRV, _tokenOut)
+                );
         }
 
         if (_tokenOut == address(aCRV)) {
             uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
-            return pricePerShare.preciseMul(_getBestPriceUniV3(_tokenIn, CRV).preciseMul(_getBestPriceUniV3(CRV, cvxCRV)));
+            return
+                pricePerShare.preciseMul(_getBestPriceUniV3(_tokenIn, CRV).preciseMul(_getBestPriceUniV3(CRV, cvxCRV)));
         }
 
         // Direct UNI3

@@ -73,7 +73,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return;
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            (,,,, address lpToken,,,,,,) = aladdinConvexVault.poolInfo(i);
+            (, , , , address lpToken, , , , , , ) = aladdinConvexVault.poolInfo(i);
             cacheAladdinLpTokenToPid[lpToken] = i + 1;
             aladdinPools[lpToken] = true;
             aladdinList.push(lpToken);
@@ -95,7 +95,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return (false, 0);
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            (,,,, address lpToken,,,,,,) = aladdinConvexVault.poolInfo(i);
+            (, , , , address lpToken, , , , , , ) = aladdinConvexVault.poolInfo(i);
             if (lpToken == _asset) {
                 return (true, i);
             }
@@ -126,12 +126,17 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         return _lpToken;
     }
 
-    function _getResultBalance(address _strategy, address _resultAssetAddress) internal view override returns (uint256) {
+    function _getResultBalance(address _strategy, address _resultAssetAddress)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         if (_resultAssetAddress == address(aladdinCRV)) {
             return ERC20(address(aladdinCRV)).balanceOf(_strategy);
         }
         (, uint256 pid) = getPid(_resultAssetAddress);
-        (uint128 shares,,) = aladdinConvexVault.userInfo(pid, _strategy);
+        (uint128 shares, , ) = aladdinConvexVault.userInfo(pid, _strategy);
         return uint256(shares);
     }
 
@@ -231,15 +236,17 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         return (target, 0, methodData);
     }
 
-    function _getRewards(
-        address _strategy,
-        address _investmentAddress
-    ) internal view override returns (address, uint256) {
+    function _getRewards(address _strategy, address _investmentAddress)
+        internal
+        view
+        override
+        returns (address, uint256)
+    {
         if (_investmentAddress == CRV) {
             return (address(0), 0);
         }
         (, uint256 pid) = getPid(_investmentAddress);
-        (, uint256 rewards,) = aladdinConvexVault.userInfo(pid, _strategy);
+        (, uint256 rewards, ) = aladdinConvexVault.userInfo(pid, _strategy);
         // No need to return amount because it is included in the balance
         // This is just for exit in the convex vaults
         return (CRV, rewards);

@@ -118,9 +118,31 @@ interface IAladdinConvexVault {
         uint256 _minimumOut
     ) external returns (uint256);
 
-    function poolInfo(uint256 _pid) external view returns (uint128 totalUnderlying,uint128 totalShare,uint256 accRewardPerShare,uint256 convexPoolId, address lpToken, address crvRewards, uint256 withdrawFeePercentage, uint256 platformFeePercentage, uint256 harvestBountyPercentage, bool pauseDeposit, bool pauseWithdraw);
+    function poolInfo(uint256 _pid)
+        external
+        view
+        returns (
+            uint128 totalUnderlying,
+            uint128 totalShare,
+            uint256 accRewardPerShare,
+            uint256 convexPoolId,
+            address lpToken,
+            address crvRewards,
+            uint256 withdrawFeePercentage,
+            uint256 platformFeePercentage,
+            uint256 harvestBountyPercentage,
+            bool pauseDeposit,
+            bool pauseWithdraw
+        );
 
     function poolLength() external view returns (uint256 pools);
 
-    function userInfo(uint256 _pid, address _user) external view returns (uint128 shares, uint128 rewards, uint256 rewardPerSharePaid);
+    function userInfo(uint256 _pid, address _user)
+        external
+        view
+        returns (
+            uint128 shares,
+            uint128 rewards,
+            uint256 rewardPerSharePaid
+        );
 }

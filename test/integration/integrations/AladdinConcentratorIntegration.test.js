@@ -77,13 +77,13 @@ describe('AladdinConcentratorIntegration', function () {
   }
 
   describe('Aladdin Pool', function () {
-    // pick(GARDENS).forEach(async ({ token, name }) => {
-    //   pick(addresses.aladin.vaults).forEach((pool) => {
-    //     it(`can enter into ${pool.name} from a ${name} garden`, async function () {
-    //       await depositIntoAladdin(pool.address, token, pool);
-    //     });
-    //   });
-    // });
+    pick(GARDENS).forEach(async ({ token, name }) => {
+      pick(addresses.aladdin.pools).forEach((pool) => {
+        it(`can enter into ${pool.name} from a ${name} garden`, async function () {
+          await depositIntoAladdin(pool.lptoken, token, pool);
+        });
+      });
+    });
 
     it(`cannot enter an invalid aladdin pool`, async function () {
       await expect(tryDepositIntoAladdin(ADDRESS_ZERO, addresses.tokens.WETH)).to.be.reverted;
@@ -132,7 +132,7 @@ describe('AladdinConcentratorIntegration', function () {
     }
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
-    expect(await strategyContract.getNAV()).to.be.gte(nav);
+    expect(await strategyContract.getNAV()).to.be.gte(nav.sub(nav.div(100)));
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });
