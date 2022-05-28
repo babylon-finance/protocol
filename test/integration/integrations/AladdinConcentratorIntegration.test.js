@@ -24,7 +24,7 @@ describe('AladdinConcentratorIntegration', function () {
       signer2,
       signer3,
     } = await setupTests()());
-    logAladdinPools();
+    // logAladdinPools();
   });
 
   // Used to create addresses info. do not remove
@@ -95,7 +95,7 @@ describe('AladdinConcentratorIntegration', function () {
     const garden = await createGarden({ reserveAsset: token });
     const gardenReserveAsset = await getERC20(token);
     await depositFunds(token, garden);
-    const pool = await ethers.getContractAt('IJar', poolAddress);
+    const acrv = await getERC20('0x2b95A1Dcc3D405535f9ed33c219ab38E8d7e0884');
 
     let integrations = aladdinConcentratorIntegration.address;
     let params = [poolAddress, 0];
@@ -122,22 +122,29 @@ describe('AladdinConcentratorIntegration', function () {
 
     const amount = STRATEGY_EXECUTE_MAP[token];
     const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
+    console.log('before execute');
     await executeStrategy(strategyContract, { amount });
-
+    console.log('after execute');
     // Check NAV
     const nav = await strategyContract.getNAV();
+    console.log('after nav');
     expect(nav).to.be.closeTo(amount, amount.div(30));
-    expect(await pool.balanceOf(strategyContract.address)).to.gt(0);
+    if (poolObj.lptoken === '0xD533a949740bb3306d119CC777fa900bA034cd52') {
+      expect(await acrv.balanceOf(strategyContract.address)).to.gt(0);
+    }
     // Check reward after a week
     await increaseTime(ONE_DAY_IN_SECONDS * 7);
     expect(await strategyContract.getNAV()).to.be.gte(nav);
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });
+    console.log('after finalize');
 
     expect(await strategyContract.getNAV()).to.eq(0);
 
-    expect(await pool.balanceOf(strategyContract.address)).to.equal(0);
+    if (poolObj.lptoken === '0xD533a949740bb3306d119CC777fa900bA034cd52') {
+      expect(await acrv.balanceOf(strategyContract.address)).to.equal(0);
+    }
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(

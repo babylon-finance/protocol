@@ -86,6 +86,7 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant curvePalStkAave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15;
     IAladdinCRV private constant aCRV = IAladdinCRV(0x2b95A1Dcc3D405535f9ed33c219ab38E8d7e0884);
     address private constant cvxCRV = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -390,13 +391,13 @@ contract PriceOracle is Ownable, IPriceOracle {
         }
 
         if (_tokenIn == address(aCRV)) {
-            uint256 pricePerShare = aCRV.totalUnderlying().div(aCRV.totalSupply());
-            return pricePerShare.preciseMul(_getBestPriceUniV3(cvxCRV, _tokenOut));
+            uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
+            return pricePerShare.preciseMul(_getBestPriceUniV3(cvxCRV, CRV)).preciseMul(_getBestPriceUniV3(CRV, _tokenOut));
         }
 
         if (_tokenOut == address(aCRV)) {
-            uint256 pricePerShare = aCRV.totalUnderlying().div(aCRV.totalSupply());
-            return pricePerShare.preciseMul(_getBestPriceUniV3(_tokenIn, cvxCRV));
+            uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
+            return pricePerShare.preciseMul(_getBestPriceUniV3(_tokenIn, CRV).preciseMul(_getBestPriceUniV3(CRV, cvxCRV)));
         }
 
         // Direct UNI3

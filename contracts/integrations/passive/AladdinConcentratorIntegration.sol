@@ -74,7 +74,6 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return;
         }
         for (uint256 i = elementsCached; i < poolLength; i++) {
-            console.log('calling', i, address(aladdinConvexVault));
             (,,,, address lpToken,,,,,,) = aladdinConvexVault.poolInfo(i);
             cacheAladdinLpTokenToPid[lpToken] = i + 1;
             aladdinPools[lpToken] = true;
@@ -129,8 +128,8 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
     }
 
     function _getResultBalance(address _strategy, address _resultAssetAddress) internal view override returns (uint256) {
-        if (_resultAssetAddress == CRV) {
-            return ERC20(CRV).balanceOf(_strategy);
+        if (_resultAssetAddress == address(aladdinCRV)) {
+            return ERC20(address(aladdinCRV)).balanceOf(_strategy);
         }
         (, uint256 pid) = getPid(_resultAssetAddress);
         (uint128 shares, uint128 rewards,) = aladdinConvexVault.userInfo(pid, _strategy);
@@ -144,7 +143,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
      * @param  _asset                          Address of the vault
      * hparam  _investmentTokensOut            Amount of investment tokens to send
      * hparam  _tokenIn                        Addresses of tokens to send to the investment
-     * @param  _maxAmountIn                    Amounts of tokens to send to the investment
+     * hparam  _maxAmountIn                    Amounts of tokens to send to the investment
      *
      * @return address                         Target contract address
      * @return uint256                         Call value
@@ -155,7 +154,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         address _asset,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
-        uint256 _maxAmountIn
+        uint256 /*　_maxAmountIn */
     )
         internal
         view

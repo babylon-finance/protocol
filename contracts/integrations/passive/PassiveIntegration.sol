@@ -339,7 +339,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >=
+            _getResultBalance(address(_investmentInfo.strategy), _investmentInfo.investment) >=
                 _investmentInfo.investmentTokensInStrategy,
             'The strategy did not receive the investment tokens'
         );
@@ -352,7 +352,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
+            _getResultBalance(address(_investmentInfo.strategy), _investmentInfo.investment) <=
                 (_investmentInfo.investmentTokensInStrategy - _investmentInfo.investmentTokensInTransaction) + 100,
             'The strategy did not return the investment tokens'
         );

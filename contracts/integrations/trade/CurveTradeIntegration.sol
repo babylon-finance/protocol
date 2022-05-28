@@ -180,7 +180,7 @@ contract CurveTradeIntegration is TradeIntegration {
         )
     {
         // Wrap ETH to WETH
-        (address _curvePool, address _realSendToken, address _realReceiveToken) =
+        (address _curvePool,, address _realReceiveToken) =
             _getPoolAndTokens(_sendToken, _receiveToken);
         if (_curvePool == 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022 && _realReceiveToken == WETH) {
             _realReceiveToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
