@@ -16,6 +16,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
+import {ICleverCVXLocker} from '../../interfaces/external/aladdin/ICleverCVXLocker.sol';
 
 /**
  * @title AladdinConcentratorIntegration
@@ -31,6 +32,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
     /* ============ Constants ============ */
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52; // crv
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B; // cvx
+    ICleverCVXLocker private constant aladdinCVXLocker = ICleverCVXLocker(0x96C68D861aDa016Ed98c30C810879F9df7c64154);
 
     /* ============ State Variables ============ */
     IAladdinCRV public immutable aladdinCRV;
@@ -109,9 +111,15 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         address _lpToken,
         uint8 /* _op */
     ) internal view override returns (address) {
+        // clever
+        if (_lpToken == CVX) {
+            return address(aladdinCRV);
+        }
+        // curve concentrator
         if (_lpToken == CRV) {
             return address(aladdinCRV);
         }
+        // concentrator convex vaults
         return address(aladdinConvexVault);
     }
 
@@ -132,12 +140,42 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         override
         returns (uint256)
     {
+        // clever
+        if (_resultAssetAddress == CVX) {
+            (uint256 totalDeposited, , , , ) = aladdinCVXLocker.getUserInfo(_strategy);
+            return totalDeposited;
+        }
+        // curve concentrator
         if (_resultAssetAddress == address(aladdinCRV)) {
             return ERC20(address(aladdinCRV)).balanceOf(_strategy);
         }
+        // convex concentrator
         (, uint256 pid) = getPid(_resultAssetAddress);
         (uint128 shares, , ) = aladdinConvexVault.userInfo(pid, _strategy);
         return uint256(shares);
+    }
+
+    function _getRewards(address _strategy, address _investmentAddress)
+        internal
+        view
+        override
+        returns (address, uint256)
+    {
+        // clever
+        if (_investmentAddress == CVX) {
+            (, , , , uint256 totalReward) = aladdinCVXLocker.getUserInfo(_strategy);
+            return (CVX, totalReward);
+        }
+        // curve concentrator
+        if (_investmentAddress == CRV) {
+            return (address(0), 0);
+        }
+        // convex concentrator
+        (, uint256 pid) = getPid(_investmentAddress);
+        (, uint256 rewards, ) = aladdinConvexVault.userInfo(pid, _strategy);
+        // No need to return amount because it is included in the balance
+        // This is just for exit in the convex vaults
+        return (CRV, rewards);
     }
 
     /**
@@ -158,7 +196,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         address _asset,
         uint256, /* _investmentTokensOut */
         address, /* _tokenIn */
-        uint256 /*　_maxAmountIn */
+        uint256 _maxAmountIn
     )
         internal
         view
@@ -170,10 +208,16 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         )
     {
         (bool found, uint256 pid) = getPid(_asset);
-        require(_asset == CRV || found, 'Aladdin pool does not exist');
+        require(_asset == CRV || _asset == CVX || found, 'Aladdin pool does not exist');
+        // convex concentrator as default
         bytes memory methodData = abi.encodeWithSignature('depositAll(uint256)', pid);
         address target = address(aladdinConvexVault);
-        // aCRV is a special case
+        // Clever
+        if (_asset == CVX) {
+            target = address(aladdinCVXLocker);
+            methodData = abi.encodeWithSignature('deposit(uint256)', _maxAmountIn);
+        }
+        // aCRV is a special case. Curve concentrator
         if (_asset == CRV) {
             target = address(aladdinCRV);
             methodData = abi.encodeWithSignature('depositAllWithCRV(address)', _strategy);
@@ -212,8 +256,8 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         )
     {
         (bool found, uint256 pid) = getPid(_asset);
-        require(_asset == CRV || found, 'Aladdin pool does not exist');
-        // Withdraw all and claim
+        require(_asset == CRV || _asset == CVX || found, 'Aladdin pool does not exist');
+        // convex concentrator as default
         bytes memory methodData =
             abi.encodeWithSignature(
                 'withdrawAndClaim(uint256,uint256,uint256,uint8)',
@@ -223,6 +267,12 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
                 IAladdinConvexVault.ClaimOption.ClaimAsCRV
             );
         address target = address(aladdinConvexVault);
+        // clever
+        if (_asset == CVX) {
+            target = address(aladdinCVXLocker);
+            methodData = abi.encodeWithSignature('withdrawUnlocked()');
+        }
+        // curve concentrator
         if (_asset == CRV) {
             target = address(aladdinCRV);
             methodData = abi.encodeWithSignature(
@@ -236,19 +286,38 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         return (target, 0, methodData);
     }
 
-    function _getRewards(address _strategy, address _investmentAddress)
+    /**
+     * Return pre action calldata
+     *
+     * hparam _strategy                  Address of the strategy
+     * hparam  _asset                    Address of the asset to deposit
+     * hparam  _amount                   Amount of the token to deposit
+     * hparam  _passiveOp                Type of Passive op
+     *
+     * @return address                   Target contract address
+     * @return uint256                   Call value
+     * @return bytes                     Trade calldata
+     */
+    function _getPreActionCallData(
+        address, /* _strategy */
+        address _asset,
+        uint256 _amount,
+        uint256 _passiveOp
+    )
         internal
-        view
+        pure
         override
-        returns (address, uint256)
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
     {
-        if (_investmentAddress == CRV) {
-            return (address(0), 0);
+        // clever
+        if (_passiveOp == 1 && _asset == CVX) {
+            bytes memory methodData = abi.encodeWithSignature('unlock(uint256)', _amount);
+            return (address(aladdinCVXLocker), 0, methodData);
         }
-        (, uint256 pid) = getPid(_investmentAddress);
-        (, uint256 rewards, ) = aladdinConvexVault.userInfo(pid, _strategy);
-        // No need to return amount because it is included in the balance
-        // This is just for exit in the convex vaults
-        return (CRV, rewards);
+        return (address(0), 0, bytes(''));
     }
 }

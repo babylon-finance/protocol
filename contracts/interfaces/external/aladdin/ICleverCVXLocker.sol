@@ -3,7 +3,7 @@
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-interface ICLeverCVXLocker {
+interface ICleverCVXLocker {
     event Deposit(address indexed _account, uint256 _amount);
     event Unlock(address indexed _account, uint256 _amount);
     event Withdraw(address indexed _account, uint256 _amount);
