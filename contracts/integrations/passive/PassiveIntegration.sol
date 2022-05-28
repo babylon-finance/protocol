@@ -297,7 +297,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.investment = _getResultAsset(_investment);
-        investmentInfo.investmentTokensInStrategy = IERC20(investmentInfo.investment).balanceOf(_strategy);
+        investmentInfo.investmentTokensInStrategy = _getResultBalance(_strategy, investmentInfo.investment);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 

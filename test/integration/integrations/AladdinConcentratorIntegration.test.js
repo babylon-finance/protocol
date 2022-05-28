@@ -124,10 +124,8 @@ describe('AladdinConcentratorIntegration', function () {
     const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
     console.log('before execute');
     await executeStrategy(strategyContract, { amount });
-    console.log('after execute');
     // Check NAV
     const nav = await strategyContract.getNAV();
-    console.log('after nav');
     expect(nav).to.be.closeTo(amount, amount.div(30));
     if (poolObj.lptoken === '0xD533a949740bb3306d119CC777fa900bA034cd52') {
       expect(await acrv.balanceOf(strategyContract.address)).to.gt(0);

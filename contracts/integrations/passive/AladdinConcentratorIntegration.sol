@@ -132,8 +132,8 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             return ERC20(address(aladdinCRV)).balanceOf(_strategy);
         }
         (, uint256 pid) = getPid(_resultAssetAddress);
-        (uint128 shares, uint128 rewards,) = aladdinConvexVault.userInfo(pid, _strategy);
-        return uint256(shares).add(uint256(rewards));
+        (uint128 shares,,) = aladdinConvexVault.userInfo(pid, _strategy);
+        return uint256(shares);
     }
 
     /**
@@ -212,7 +212,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         // Withdraw all and claim
         bytes memory methodData =
             abi.encodeWithSignature(
-                'withdrawAllAndClaim(uint256,uint256,uint256,uint8)',
+                'withdrawAndClaim(uint256,uint256,uint256,uint8)',
                 pid,
                 _investmentTokensIn,
                 _minAmountOut,
@@ -222,12 +222,27 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         if (_asset == CRV) {
             target = address(aladdinCRV);
             methodData = abi.encodeWithSignature(
-                'withdrawAll(address,uint256,uint8)',
+                'withdraw(address,uint256,uint256,uint8)',
                 _strategy,
+                _investmentTokensIn,
                 _minAmountOut,
                 IAladdinCRV.WithdrawOption.WithdrawAsCRV
             );
         }
         return (target, 0, methodData);
+    }
+
+    function _getRewards(
+        address _strategy,
+        address _investmentAddress
+    ) internal view override returns (address, uint256) {
+        if (_investmentAddress == CRV) {
+            return (address(0), 0);
+        }
+        (, uint256 pid) = getPid(_investmentAddress);
+        (, uint256 rewards,) = aladdinConvexVault.userInfo(pid, _strategy);
+        // No need to return amount because it is included in the balance
+        // This is just for exit in the convex vaults
+        return (CRV, rewards);
     }
 }
