@@ -58,7 +58,7 @@ interface IGardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[15] memory params,
+            uint256[16] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         );

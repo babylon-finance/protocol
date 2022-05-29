@@ -100,7 +100,7 @@ contract GardenViewer is IGardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[15] memory params,
+            uint256[16] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         )
@@ -153,7 +153,8 @@ contract GardenViewer is IGardenViewer {
                 garden.pricePerShareDelta(),
                 garden.verifiedCategory(),
                 garden.canMintNftAfter(),
-                garden.customIntegrationsEnabled() ? 1 : 0
+                garden.customIntegrationsEnabled() ? 1 : 0,
+                garden.hardlockStartsAt()
             ],
             [
                 principal,
