@@ -232,7 +232,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      */
     function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
-            for (uint256 j = 1; j < _finalizedStrategies.length; j++) {
+            for (uint256 j = i + 1; j < _finalizedStrategies.length; j++) {
                 require(_finalizedStrategies[i] != _finalizedStrategies[j], 'Duplicate strategies');
             }
         }
@@ -1179,6 +1179,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV24 is Garden {
+contract GardenV25 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
