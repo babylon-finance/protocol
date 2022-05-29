@@ -170,6 +170,8 @@ library Errors {
     uint256 internal constant STAKE_HAS_TO_AT_LEAST_ONE = 38;
     // Duration must be in range
     uint256 internal constant DURATION_MUST_BE_IN_RANGE = 39;
+    // Duplicated strategies
+    uint256 internal constant DUPLICATED_STRATEGIES = 40;
     // Max Capital Requested
     uint256 internal constant MAX_CAPITAL_REQUESTED = 41;
     // Votes are already resolved
