@@ -229,7 +229,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     /**
      * Check if array of finalized strategies to claim rewards has duplicated strategies
      */
-    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private view {
+    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             for (uint256 j = i + 1; j < _finalizedStrategies.length; j++) {
                 _require(_finalizedStrategies[i] != _finalizedStrategies[j], Errors.DUPLICATED_STRATEGIES);

@@ -2219,40 +2219,21 @@ skipIfFast('RewardsDistributor', function () {
       await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore.add(rewardsSigner1[5]));
     });
     it('can NOT claimReturns of the same strategy twice', async function () {
-      const signerBABLBalanceBefore = await bablToken.balanceOf(signer1.address);
-      const cap = eth(5500);
       const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
       await executeStrategy(long1, eth());
       await executeStrategy(long2, eth().mul(2));
 
       await injectFakeProfits(long1, eth().mul(200));
       await finalizeStrategyAfterQuarter(long1);
-
       await finalizeStrategyAfterQuarter(long2);
-      const rewardsSigner1 = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
-        long1.address,
-        long2.address,
-      ]);
-      const rewardsSigner1_hack = await rewardsDistributor.getRewards(garden1.address, signer1.address, [
-        long1.address,
-        long1.address,
-        long2.address,
-      ]);
-      expect(rewardsSigner1[5]).to.be.gt(cap);
-      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore);
       // We claim our tokens and check that they are received properly
-      await expect(
-        garden1.connect(signer1).claimReturns([long1.address, long1.address, long2.address]),
-      ).to.be.revertedWith('BAB#040');
-      await expect(
-        garden1.connect(signer1).claimReturns([long1.address, long2.address, long1.address]),
-      ).to.be.revertedWith('BAB#040');
-      await expect(
-        garden1.connect(signer1).claimReturns([long2.address, long1.address, long1.address, long2.address]),
-      ).to.be.revertedWith('BAB#040');
-      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).not.to.be.reverted;
-
-      await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore.add(rewardsSigner1[5]));
+      [
+        [long1.address, long1.address, long2.address],
+        [long1.address, long2.address, long1.address],
+        [long1.address, long2.address],
+      ].forEach(async (strategies) => {
+        await expect(garden1.connect(signer1).claimReturns(strategies)).to.be.revertedWith('BAB#040');
+      });
     });
     it('can NOT claimRewardsBySig above cap ', async function () {
       const amountIn = eth();

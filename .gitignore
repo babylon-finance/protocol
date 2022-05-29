@@ -75,6 +75,8 @@ typings/
 # TernJS port file
 .tern-port
 
+.tenderly
+
 # dependencies
 **/mnemonic.txt
 **/package-lock.json
