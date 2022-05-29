@@ -226,6 +226,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
     }
+    /**
+     * Check if msg.sender is keeper
+     */
+    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
+      for (uint i = 0; i < _finalizedStrategies.length ; i++) {
+        for (uint j = 1; i < _finalizedStrategies.length; j++) {
+          require(_finalizedStrategies[i] == _finalizedStrategies[j], 'Duplicate strategies');
+        }
+      }
+    }
 
     /**
      * Check if is a valid _signer with a valid nonce
@@ -455,10 +465,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _finalizedStrategies  Finalized strategies to process
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
+        _onlyNonDuplicateStrategies(_finalizedStrategies);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], false);
     }
+
+
 
     /**
      * @notice
@@ -472,6 +485,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         override
         nonReentrant
     {
+        _onlyNonDuplicateStrategies(_finalizedStrategies);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         IGarden heartGarden = IGarden(address(IHeart(controller.heart()).heartGarden()));
@@ -1166,6 +1180,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV21 is Garden {
+contract GardenV23 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
