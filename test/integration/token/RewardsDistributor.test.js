@@ -2234,6 +2234,8 @@ skipIfFast('RewardsDistributor', function () {
       ].forEach(async (strategies) => {
         await expect(garden1.connect(signer1).claimReturns(strategies)).to.be.revertedWith('BAB#040');
       });
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).not.to.be.reverted;
+
     });
     it('can NOT claimRewardsBySig above cap ', async function () {
       const amountIn = eth();
