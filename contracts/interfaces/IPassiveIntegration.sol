@@ -25,6 +25,8 @@ interface IPassiveIntegration {
         uint256 _minAmountOut
     ) external;
 
+    function signalUnlock(address _strategy, bytes calldata _data) external;
+
     function getInvestmentAsset(address _investmentAddress) external view returns (address);
 
     function getResultAsset(address _investmentAddress) external view returns (address);
@@ -32,4 +34,6 @@ interface IPassiveIntegration {
     function getResultBalance(address _strategy, address _resultAssetAddress) external view returns (uint256);
 
     function getRewards(address _strategy, address _investmentAddress) external view returns (address, uint256);
+
+    function needsUnlockSignal(address _strategy, bytes calldata _data) external view returns (bool);
 }

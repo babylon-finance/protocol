@@ -87,6 +87,12 @@ abstract contract BaseIntegration is IBaseIntegration {
         return block.timestamp.sub(executedAt);
     }
 
+    function _getRemainingDurationStrategy(address _strategy) internal view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
+        return strategy.duration().sub(block.timestamp.sub(executedAt));
+    }
+
     function _getPrice(address _tokenIn, address _tokenOut) internal view returns (uint256) {
         IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
         return oracle.getPrice(_tokenIn, _tokenOut);

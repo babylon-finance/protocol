@@ -12,11 +12,13 @@ import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IPickleJarRegistry} from '../../interfaces/IPickleJarRegistry.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {PreciseUnitMath} from '../../lib/PreciseUnitMath.sol';
+import {BytesLib} from '../../lib/BytesLib.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
 import {ICleverCVXLocker} from '../../interfaces/external/aladdin/ICleverCVXLocker.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title AladdinConcentratorIntegration
@@ -113,7 +115,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
     ) internal view override returns (address) {
         // clever
         if (_lpToken == CVX) {
-            return address(aladdinCRV);
+            return address(aladdinCVXLocker);
         }
         // curve concentrator
         if (_lpToken == CRV) {
@@ -143,6 +145,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         // clever
         if (_resultAssetAddress == CVX) {
             (uint256 totalDeposited, , , , ) = aladdinCVXLocker.getUserInfo(_strategy);
+            console.log('clever result balance', totalDeposited);
             return totalDeposited;
         }
         // curve concentrator
@@ -287,25 +290,18 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
     }
 
     /**
-     * Return pre action calldata
+     * Return unlock investment calldata to prepare for withdrawal
      *
-     * hparam _strategy                  Address of the strategy
-     * hparam  _asset                    Address of the asset to deposit
-     * hparam  _amount                   Amount of the token to deposit
-     * hparam  _passiveOp                Type of Passive op
+     * hparam  _strategy                       Address of the strategy
+     * hparam  _data                           Data
      *
-     * @return address                   Target contract address
-     * @return uint256                   Call value
-     * @return bytes                     Trade calldata
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
      */
-    function _getPreActionCallData(
-        address, /* _strategy */
-        address _asset,
-        uint256 _amount,
-        uint256 _passiveOp
-    )
+    function _getUnlockInvestmentCalldata(address _strategy, bytes calldata _data)
         internal
-        pure
+        view
         override
         returns (
             address,
@@ -313,11 +309,30 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
             bytes memory
         )
     {
-        // clever
-        if (_passiveOp == 1 && _asset == CVX) {
-            bytes memory methodData = abi.encodeWithSignature('unlock(uint256)', _amount);
+        address _asset = BytesLib.decodeOpDataAddress(_data);
+        if (_asset == CVX) {
+            (uint256 totalDeposited, uint256 totalPendingUnlocked, , , ) = aladdinCVXLocker.getUserInfo(_strategy);
+            bytes memory methodData =
+                abi.encodeWithSignature('unlock(uint256)', totalDeposited.sub(totalPendingUnlocked));
             return (address(aladdinCVXLocker), 0, methodData);
         }
         return (address(0), 0, bytes(''));
+    }
+
+    /**
+     * Checks if the integration needs to execute a tx to prepare the withdrawal
+     *
+     * @param _strategy                           Address of the strategy
+     * @param _data                               Data param
+     * @return bool                               True if it is needed
+     */
+    function _needsUnlockSignal(address _strategy, bytes calldata _data) internal view override returns (bool) {
+        address _asset = BytesLib.decodeOpDataAddress(_data);
+        if (_asset != CVX) {
+            return false;
+        }
+        // Only needed for clever
+        (uint256 totalDeposited, uint256 totalPendingUnlocked, , , ) = aladdinCVXLocker.getUserInfo(_strategy);
+        return totalDeposited > totalPendingUnlocked && _getRemainingDurationStrategy(_strategy) <= (17 weeks + 3 days);
     }
 }

@@ -22,6 +22,7 @@ import {IBabController} from '../interfaces/IBabController.sol';
 import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
+import {IPassiveIntegration} from '../interfaces/IPassiveIntegration.sol';
 import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
@@ -74,6 +75,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     function _onlyStrategistOrGovernor() private view {
         _require(msg.sender == strategist || msg.sender == controller.owner(), Errors.ONLY_STRATEGIST);
+    }
+
+    function _onlyStrategistOrGovernorOrKeeper() private view {
+        _require(
+            msg.sender == strategist || msg.sender == controller.owner() || controller.isValidKeeper(msg.sender),
+            Errors.ONLY_STRATEGIST
+        );
     }
 
     /**
@@ -346,6 +354,24 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
+     * Execute the actions needed to signal the unlock of a strategy (if any i.e clever)
+     * @param _fee                      The fee paid to keeper to compensate the gas cost.
+     */
+    function signalUnlock(uint256 _fee) external override nonReentrant {
+        _onlyStrategistOrGovernorOrKeeper();
+        uint256 i = opTypes.length - 1;
+        // Only for staking op
+        _require(opTypes[i] == 2, Errors.NO_SIGNAL_NEEDED);
+        bytes memory data = _getOpDecodedData(i);
+        IPassiveIntegration passiveIntegration = IPassiveIntegration(_getIntegration(opIntegrations[i]));
+        _require(passiveIntegration.needsUnlockSignal(address(this), data), Errors.NO_SIGNAL_NEEDED);
+        passiveIntegration.signalUnlock(address(this), data);
+        if (controller.isValidKeeper(msg.sender)) {
+            garden.payKeeper(msg.sender, _fee);
+        }
+    }
+
+    /**
      * Exits from an executed strategy.
      * Returns balance back to the garden and sets the capital aside for withdrawals in ETH.
      * Pays the keeper.
@@ -593,49 +619,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     }
 
     /**
-     * Get the non-state related details of a Strategy
-     *
-     */
-    function getStrategyDetails()
-        external
-        view
-        override
-        returns (
-            address,
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            address,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            address(this),
-            strategist,
-            opIntegrations.length,
-            stake,
-            totalPositiveVotes,
-            totalNegativeVotes,
-            capitalAllocated,
-            capitalReturned,
-            duration,
-            expectedReturn,
-            maxCapitalRequested,
-            IBabController(controller).strategyNFT(),
-            enteredAt,
-            getNAV()
-        );
-    }
-
-    /**
      * Get mining context details of a Strategy
      *
      */
@@ -645,37 +628,41 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         override
         returns (
             address,
-            uint256[] memory,
-            bool[] memory
+            uint256[15] memory,
+            bool[2] memory
         )
     {
-        uint256[] memory data = new uint256[](15);
-        bool[] memory boolData = new bool[](2);
-        data[0] = executedAt;
-        data[1] = exitedAt;
-        data[2] = updatedAt;
-        data[3] = enteredAt;
-        data[4] = totalPositiveVotes;
-        data[5] = totalNegativeVotes;
-        data[6] = capitalAllocated;
-        data[7] = capitalReturned;
-        data[8] = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
-        data[9] = strategyRewards;
-        boolData[0] = capitalReturned >= capitalAllocated;
-        boolData[1] = capitalReturned >= data[8];
-        data[10] = boolData[0] ? capitalReturned.sub(capitalAllocated) : 0; // no profit
-        data[11] = boolData[1] ? capitalReturned.sub(data[8]) : data[8].sub(capitalReturned);
-        data[12] = startingGardenSupply;
-        data[13] = endingGardenSupply;
+        uint256 slippage = 0;
         if (executedAt > 0 && exitedAt == 0) {
             uint256 endAt = executedAt.add(duration);
             uint256 remaining =
                 endAt > block.timestamp ? (uint256(1e18).sub(endAt.sub(block.timestamp).preciseDiv(duration))) : 1e18;
-            data[14] = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(4e17); //40%
-        } else {
-            data[14] = 0;
+            slippage = maxTradeSlippagePercentage.preciseMul(remaining).preciseMul(4e17); //40%
         }
-        return (strategist, data, boolData);
+        uint256 expectedTotalCapital = capitalAllocated.add(capitalAllocated.preciseMul(expectedReturn));
+        bool hasProfits = capitalReturned >= capitalAllocated;
+        bool metExpectations = capitalReturned >= expectedTotalCapital;
+        return (
+            strategist,
+            [
+                executedAt,
+                exitedAt,
+                updatedAt,
+                enteredAt,
+                totalPositiveVotes,
+                totalNegativeVotes,
+                capitalAllocated,
+                capitalReturned,
+                expectedTotalCapital,
+                strategyRewards,
+                hasProfits ? capitalReturned.sub(capitalAllocated) : 0,
+                metExpectations ? capitalReturned.sub(expectedTotalCapital) : expectedTotalCapital.sub(capitalReturned),
+                startingGardenSupply,
+                endingGardenSupply,
+                slippage
+            ],
+            [hasProfits, metExpectations]
+        );
     }
 
     /**

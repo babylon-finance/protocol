@@ -273,6 +273,30 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         return _getRewards(_strategy, _investmentAddress);
     }
 
+    /**
+     * Checks if the integration needs to execute a tx to prepare the withdrawal
+     *
+     * @param _strategy                           Address of the strategy
+     * @param _data                               Data param
+     * @return bool                               True if it is needed
+     */
+    function needsUnlockSignal(address _strategy, bytes calldata _data) external view override returns (bool) {
+        return _needsUnlockSignal(_strategy, _data);
+    }
+
+    /**
+     * Executes an unlock to prepare for withdrawal
+     *
+     * @param _strategy                   Address of the strategy
+     * @param _data                       Params
+     */
+    function signalUnlock(address _strategy, bytes calldata _data) external override nonReentrant onlySystemContract {
+        (address targetInvestment, uint256 callValue, bytes memory methodData) =
+            _getUnlockInvestmentCalldata(_strategy, _data);
+
+        IStrategy(_strategy).invokeFromIntegration(targetInvestment, callValue, methodData);
+    }
+
     /* ============ Internal Functions ============ */
 
     /**
@@ -476,6 +500,32 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             bytes memory
         );
 
+    /**
+     * Return unlock investment calldata to prepare for withdrawal
+     *
+     * hparam  _strategy                       Address of the strategy
+     * hparam  _data                           Data
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getUnlockInvestmentCalldata(
+        address, /*_strategy */
+        bytes calldata /* _data */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
     function _getInvestmentAsset(
         address //_investmentAddress
     ) internal view virtual returns (address);
@@ -514,6 +564,20 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
     function _getResultBalance(address _strategy, address _resultAssetAddress) internal view virtual returns (uint256) {
         return IERC20(_resultAssetAddress).universalBalanceOf(_strategy);
+    }
+
+    /**
+     * Checks if the integration needs to execute a tx to prepare the withdrawal
+     *
+     * hparam _strategy                           Address of the strategy
+     * hparam _data                               Data param
+     * @return bool                               True if it is needed
+     */
+    function _needsUnlockSignal(
+        address, /* _strategy */
+        bytes calldata /* _data */
+    ) internal view virtual returns (bool) {
+        return false;
     }
 
     function _getExtraAssetToApproveEnter(
