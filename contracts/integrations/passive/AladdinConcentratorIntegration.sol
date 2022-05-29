@@ -19,7 +19,6 @@ import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
 import {ICleverCVXLocker} from '../../interfaces/external/aladdin/ICleverCVXLocker.sol';
 
-
 /**
  * @title AladdinConcentratorIntegration
  * @author Babylon Finance Protocol
