@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -228,12 +227,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 
     /**
-     * Check if msg.sender is keeper
+     * Check if array of finalized strategies to claim rewards has duplicated strategies
      */
-    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
+    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private view {
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             for (uint256 j = i + 1; j < _finalizedStrategies.length; j++) {
-                require(_finalizedStrategies[i] != _finalizedStrategies[j], 'Duplicate strategies');
+                _require(_finalizedStrategies[i] != _finalizedStrategies[j], Errors.DUPLICATED_STRATEGIES);
             }
         }
     }
