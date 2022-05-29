@@ -358,10 +358,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _fee                      The fee paid to keeper to compensate the gas cost.
      */
     function signalUnlock(uint256 _fee) external override nonReentrant {
+        _onlyUnpaused();
         _onlyStrategistOrGovernorOrKeeper();
         uint256 i = opTypes.length - 1;
         // Only for staking op
-        _require(opTypes[i] == 2, Errors.NO_SIGNAL_NEEDED);
+        _require(executedAt > 0 && !finalized && opTypes[i] == 2, Errors.NO_SIGNAL_NEEDED);
         bytes memory data = _getOpDecodedData(i);
         IPassiveIntegration passiveIntegration = IPassiveIntegration(_getIntegration(opIntegrations[i]));
         _require(passiveIntegration.needsUnlockSignal(address(this), data), Errors.NO_SIGNAL_NEEDED);

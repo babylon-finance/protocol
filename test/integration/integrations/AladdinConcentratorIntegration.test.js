@@ -6,6 +6,7 @@ const {
   executeStrategy,
   finalizeStrategy,
   signalUnlockStrategy,
+  strategyParamsToArray,
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
@@ -81,7 +82,7 @@ describe('AladdinConcentratorIntegration', function () {
   // }
 
   describe('Aladdin Pool', function () {
-    pick(GARDENS.slice(0, 1)).forEach(async ({ token, name }) => {
+    pick(GARDENS).forEach(async ({ token, name }) => {
       pick(addresses.aladdin.pools).forEach((pool) => {
         it(`can enter into ${pool.name} from a ${name} garden`, async function () {
           await depositIntoAladdin(pool.lptoken, token, pool);
@@ -114,7 +115,7 @@ describe('AladdinConcentratorIntegration', function () {
       ops = [1, 2];
     }
 
-    const strategyParams = STRATEGY_PARAMS_MAP[token];
+    const strategyParams = strategyParamsToArray(STRATEGY_PARAMS_MAP[token]);
     strategyParams.strategyDuration = ONE_DAY_IN_SECONDS * (7 * 17 + 3);
 
     const strategyContract = await createStrategy(
@@ -130,7 +131,7 @@ describe('AladdinConcentratorIntegration', function () {
 
     const amount = STRATEGY_EXECUTE_MAP[token];
     const balanceBeforeExecuting = await gardenReserveAsset.balanceOf(garden.address);
-    console.log('before execute');
+
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
@@ -147,11 +148,12 @@ describe('AladdinConcentratorIntegration', function () {
     if (poolObj.lptoken === '0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B') {
       await signalUnlockStrategy(strategyContract);
       await increaseTime(ONE_DAY_IN_SECONDS * 17 * 7);
+      const cvxLocker = await ethers.getContractAt('ICleverCVXLocker', '0x96C68D861aDa016Ed98c30C810879F9df7c64154');
+      await cvxLocker.connect(signer1).harvest(strategyContract.address, 1);
     }
 
     const balanceBeforeExiting = await gardenReserveAsset.balanceOf(garden.address);
     await finalizeStrategy(strategyContract, { gasLimit: 99900000 });
-    console.log('after finalize');
 
     expect(await strategyContract.getNAV()).to.eq(0);
 
@@ -162,7 +164,7 @@ describe('AladdinConcentratorIntegration', function () {
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
       balanceBeforeExecuting,
-      balanceBeforeExecuting.div(30),
+      balanceBeforeExecuting.div(10),
     );
   }
 

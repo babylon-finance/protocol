@@ -18,7 +18,7 @@ import {PassiveIntegration} from './PassiveIntegration.sol';
 import {IAladdinCRV} from '../../interfaces/external/aladdin/IAladdinCRV.sol';
 import {IAladdinConvexVault} from '../../interfaces/external/aladdin/IAladdinConvexVault.sol';
 import {ICleverCVXLocker} from '../../interfaces/external/aladdin/ICleverCVXLocker.sol';
-import 'hardhat/console.sol';
+
 
 /**
  * @title AladdinConcentratorIntegration
@@ -145,7 +145,6 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
         // clever
         if (_resultAssetAddress == CVX) {
             (uint256 totalDeposited, , , , ) = aladdinCVXLocker.getUserInfo(_strategy);
-            console.log('clever result balance', totalDeposited);
             return totalDeposited;
         }
         // curve concentrator
