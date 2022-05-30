@@ -122,42 +122,6 @@ describe('Strategy', function () {
     });
   });
 
-  describe('getStrategyDetails', async function () {
-    it('should return the expected strategy properties', async function () {
-      const [
-        address,
-        strategist,
-        operationsCount,
-        stake,
-        totalPositiveVotes,
-        totalNegativeVotes,
-        capitalAllocated,
-        capitalReturned,
-        duration,
-        expectedReturn,
-        maxCapitalRequested,
-        strategyNft,
-        enteredAt,
-      ] = await strategyDataset.getStrategyDetails();
-
-      expect(address).to.equal(strategyDataset.address);
-      expect(strategist).to.equal(signer1.address);
-      expect(stake).to.equal(eth('0.1'));
-
-      expect(totalPositiveVotes).to.equal(0);
-      expect(totalNegativeVotes).to.equal(0);
-
-      expect(operationsCount).to.equal(1);
-      expect(capitalAllocated).to.equal(ethers.BigNumber.from(0));
-      expect(capitalReturned).to.equal(ethers.BigNumber.from(0));
-      expect(duration).to.equal(ethers.BigNumber.from(ONE_DAY_IN_SECONDS * 30));
-      expect(expectedReturn).to.equal(eth('0.05'));
-      expect(maxCapitalRequested).to.equal(eth('10'));
-      expect(strategyNft).to.equal(await babController.strategyNFT());
-      expect(enteredAt.isZero()).to.equal(false);
-    });
-  });
-
   describe('getStrategyState', async function () {
     it('should return the expected strategy state', async function () {
       const [address, active, dataSet, finalized, executedAt, exitedAt] = await strategyDataset.getStrategyState();
@@ -185,15 +149,14 @@ describe('Strategy', function () {
       expect(await strategyCandidate.getUserVotes(signer1.getAddress())).to.equal(signer1Balance);
       expect(await strategyCandidate.getUserVotes(signer2.getAddress())).to.equal(signer2Balance);
 
-      const [address, , , , totalPositveVotes, totalNegativeVotes] = await strategyCandidate.getStrategyDetails();
-
+      const totalPositiveVotes = await strategyCandidate.totalPositiveVotes();
+      const totalNegativeVotes = await strategyCandidate.totalNegativeVotes();
       // The stake is counted as votes of the strategists
-      expect(totalPositveVotes).to.equal(eth().mul(5));
+      expect(totalPositiveVotes).to.equal(eth().mul(5));
       expect(totalNegativeVotes).to.equal(0);
 
       const [, active, dataSet, finalized, executedAt, exitedAt] = await strategyCandidate.getStrategyState();
 
-      expect(address).to.equal(strategyCandidate.address);
       expect(active).to.equal(true);
       expect(dataSet).to.equal(true);
       expect(finalized).to.equal(false);
