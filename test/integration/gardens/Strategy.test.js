@@ -13,7 +13,7 @@ const {
   deposit,
   DEFAULT_STRATEGY_PARAMS,
 } = require('fixtures/StrategyHelper.js');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20, from, eth } = require('utils/test-helpers');
 
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants.js');
@@ -24,7 +24,6 @@ const { getStrategy } = require('fixtures/StrategyHelper');
 describe('Strategy', function () {
   let strategyDataset;
   let strategyCandidate;
-  let babController;
   let owner;
   let keeper;
   let signer1;
@@ -35,13 +34,11 @@ describe('Strategy', function () {
   let strategy11;
   let strategy21;
   let wethToken;
-  let treasury;
   let heart;
   let aaveLendIntegration;
   let uniswapV3TradeIntegration;
   let uniswapPoolIntegration;
   let balancerIntegration;
-  let oneInchPoolIntegration;
   let yearnVaultIntegration;
   let masterSwapper;
   let weth;
@@ -65,11 +62,9 @@ describe('Strategy', function () {
     ({
       owner,
       keeper,
-      babController,
       signer1,
       garden1,
       garden2,
-      treasury,
       heart,
       strategy11,
       strategy21,
@@ -79,7 +74,6 @@ describe('Strategy', function () {
       uniswapV3TradeIntegration,
       uniswapPoolIntegration,
       balancerIntegration,
-      oneInchPoolIntegration,
       yearnVaultIntegration,
       masterSwapper,
       weth,
@@ -656,75 +650,6 @@ describe('Strategy', function () {
         calculatedSetAsideLong5.add(calculatedSetAsideLong4.add(calculatedSetAsideLong3)),
         reserveAssetRewardsSetAsideLong5.div(100),
       );
-    });
-
-    it('should correctly receive the performance fee (in WETH) by the treasury in profit strategies', async function () {
-      const [long1, long2, long3, long4, long5] = await createStrategies([
-        { garden: garden1 },
-        { garden: garden1 },
-        { garden: garden2 },
-        { garden: garden2 },
-        { garden: garden2 },
-      ]);
-
-      await executeStrategy(long1, eth());
-      await executeStrategy(long2, eth());
-      await executeStrategy(long3, eth());
-      await executeStrategy(long4, eth());
-      await executeStrategy(long5, eth());
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-
-      const treasuryBalance0 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance0.toString()).to.be.equal('25000000000000000');
-
-      await injectFakeProfits(long1, eth(200));
-      await finalizeStrategy(long1);
-
-      const treasuryBalance1 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance1).to.be.closeTo(from('27488436671748554'), treasuryBalance1.div(20));
-
-      await finalizeStrategy(long2);
-      const treasuryBalance2 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance2).to.be.closeTo(from('27488436671748554'), treasuryBalance2.div(20));
-
-      await injectFakeProfits(long3, eth(200));
-      await finalizeStrategy(long3);
-      const treasuryBalance3 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance3).to.be.closeTo(from('31130940706102534'), treasuryBalance3.div(20));
-
-      await injectFakeProfits(long4, eth(200));
-      await finalizeStrategy(long4);
-      const treasuryBalance4 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance4).to.be.closeTo(from('34274913096817798'), treasuryBalance4.div(20));
-
-      await injectFakeProfits(long5, eth(222));
-      await finalizeStrategy(long5);
-      const treasuryBalance5 = await wethToken.balanceOf(heart.address);
-      expect(treasuryBalance5).to.be.closeTo(from('37725670567317321'), treasuryBalance5.div(20));
-    });
-
-    it('capital returned should equals profits; param 1 + param 2 + protocol performance fee 5%', async function () {
-      const [long1] = await createStrategies([{ garden: garden1 }]);
-
-      await executeStrategy(long1, eth());
-
-      increaseTime(ONE_DAY_IN_SECONDS * 30);
-
-      const treasuryBalance0 = await wethToken.balanceOf(heart.address);
-
-      await injectFakeProfits(long1, eth().mul(200));
-
-      await finalizeStrategy(long1);
-
-      const treasuryBalance1 = await wethToken.balanceOf(heart.address);
-      const feeLong1 = treasuryBalance1 - treasuryBalance0;
-      const reserveAssetRewardsSetAsideLong1 = await garden1.reserveAssetRewardsSetAside();
-      const capitalReturnedLong1 = await long1.capitalReturned();
-      const valueLong1 = reserveAssetRewardsSetAsideLong1.add(feeLong1);
-
-      // TODO: Calculate and test reserveAssetRewardsSetAside, heart fee, profits
-      // expect(capitalReturnedLong1).to.be.closeTo(valueLong1, 10);
     });
   });
 });
