@@ -37,11 +37,7 @@ interface ICurveMetaRegistry {
 
     function getUnderlyingAndRate(address _pool, uint256 _i) external view returns (address, uint256);
 
-    function findPoolForCoins(
-        address _fromToken,
-        address _toToken,
-        uint256 _i
-    ) external view returns (address);
+    function findBestPoolForCoins(address _fromToken, address _toToken) external view returns (address);
 
     function getCoinIndices(
         address _pool,
