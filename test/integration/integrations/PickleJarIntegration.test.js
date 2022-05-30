@@ -118,7 +118,7 @@ describe('PickleJarIntegration', function () {
     const gauge = await ethers.getContractAt('IGauge', gaugeAdd);
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.closeTo(amount, amount.div(20));
+    expect(nav).to.be.closeTo(amount, amount.div(15));
     if (!farm) {
       expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
     } else {
