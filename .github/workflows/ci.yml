@@ -7,7 +7,7 @@ jobs:
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v2
@@ -47,7 +47,7 @@ jobs:
   test-integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v2
@@ -87,7 +87,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v2
