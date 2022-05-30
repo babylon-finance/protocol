@@ -92,7 +92,7 @@ abstract contract BaseIntegration is IBaseIntegration {
         (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
         uint256 runningFor = block.timestamp.sub(executedAt);
         if (runningFor > strategy.duration()) {
-          return 0;
+            return 0;
         }
         return strategy.duration().sub(runningFor);
     }
