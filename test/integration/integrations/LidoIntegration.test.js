@@ -5,16 +5,15 @@ const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
-const { getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
+const { getERC20, skipIfFast, pick } = require('utils/test-helpers');
 
-describe('LidoIntegrationTest', function () {
+skipIfFast('LidoIntegrationTest', function () {
   let lidoIntegration;
-  let babController;
   let stETH;
   let wstETH;
 
   beforeEach(async () => {
-    ({ babController, lidoIntegration } = await setupTests()());
+    ({ lidoIntegration } = await setupTests()());
     stETH = await ethers.getContractAt('IStETH', addresses.lido.steth);
     wstETH = await ethers.getContractAt('IWstETH', addresses.lido.wsteth);
   });

@@ -17,7 +17,7 @@ const {
   eth,
 } = require('utils/test-helpers');
 
-describe('Treasury', function () {
+skipIfFast('Treasury', function () {
   let signer1;
   let treasury;
   let weth;
@@ -30,7 +30,7 @@ describe('Treasury', function () {
     await fund([treasury.address]);
   });
 
-  skipIfFast('sendTreasuryFunds', async function () {
+  describe('sendTreasuryFunds', async function () {
     pick([
       { token: addresses.tokens.WETH, name: 'WETH', amount: eth() },
       { token: addresses.tokens.DAI, name: 'DAI', amount: eth(2000) },

@@ -1,27 +1,26 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
+const { GARDENS } = require('lib/constants.js');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
-const { getERC20, eth, pick } = require('utils/test-helpers');
+const { getERC20, pick } = require('utils/test-helpers');
 
 describe('HeartTradeIntegration', function () {
   let masterSwapper;
   let babController;
   let heart;
-  let priceOracle;
   let owner;
   let signer1;
   let signer2;
   let signer3;
 
   beforeEach(async () => {
-    ({ masterSwapper, babController, heart, owner, signer1, signer2, signer3, priceOracle } = await setupTests()());
+    ({ masterSwapper, babController, heart, owner, signer1, signer2, signer3 } = await setupTests()());
     await fund([signer1.address, signer2.address, signer3.address]);
     await babController.connect(owner).updateProtocolWantedAsset(addresses.tokens.BABL, true);
     await heart.connect(owner).updateAssetToPurchase(addresses.tokens.FRAX);

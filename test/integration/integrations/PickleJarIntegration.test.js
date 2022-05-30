@@ -4,7 +4,7 @@ const { createStrategy, getStrategy, executeStrategy, finalizeStrategy } = requi
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, getERC20, pick, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20, pick, skipIfFast } = require('utils/test-helpers');
 const { GARDENS, STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('PickleJarIntegration', function () {

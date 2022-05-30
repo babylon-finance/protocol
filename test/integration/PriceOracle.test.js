@@ -1,7 +1,6 @@
 const { expect } = require('chai');
-
 const addresses = require('lib/addresses');
-const { from, parse, eth } = require('lib/helpers');
+const { from, parse } = require('lib/helpers');
 const { pick } = require('utils/test-helpers');
 const { setupTests } = require('fixtures/GardenFixture');
 

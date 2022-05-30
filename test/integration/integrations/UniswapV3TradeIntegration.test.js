@@ -7,9 +7,9 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { normalizeDecimals, getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
+const { getERC20, eth, pick, skipIfFast } = require('utils/test-helpers');
 
-describe('UniswapV3TradeIntegration', function () {
+skipIfFast('UniswapV3TradeIntegration', function () {
   let uniswapV3TradeIntegration;
   let priceOracle;
   let owner;
