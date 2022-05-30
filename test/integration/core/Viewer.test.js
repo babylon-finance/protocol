@@ -7,7 +7,7 @@ const { increaseTime, skipIfFast } = require('utils/test-helpers');
 
 const { createGarden } = require('fixtures/GardenHelper');
 const { getStrategy } = require('fixtures/StrategyHelper');
-const { ONE_DAY_IN_SECONDS } = require('../../lib/constants');
+const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 skipIfFast('Viewer', function () {
   let garden1;

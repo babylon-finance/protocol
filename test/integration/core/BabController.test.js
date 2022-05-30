@@ -1,12 +1,11 @@
 const { expect } = require('chai');
-
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
-const { impersonateAddress, setCode } = require('lib/rpc');
-const { createStrategy, executeStrategy, finalizeStrategy, getStrategy } = require('fixtures/StrategyHelper');
+const { ADDRESS_ZERO } = require('lib/constants');
+// const { impersonateAddress } = require('lib/rpc');
+const { createStrategy, executeStrategy, getStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { eth } = require('utils/test-helpers');
 const { ethers } = require('hardhat');
 const { fund } = require('lib/whale');
 
@@ -14,17 +13,13 @@ describe('BabController', function () {
   let aaveBorrowIntegration;
   let aaveLendIntegration;
   let babController;
-  let treasury;
   let bablToken;
   let garden1;
   let garden2;
-  let garden3;
   let signer1;
   let signer2;
   let signer3;
-  let uniswapV3TradeIntegration;
   let rewardsDistributor;
-  let strategy11;
   let owner;
   let MULTISIG;
   let dai;
@@ -42,12 +37,8 @@ describe('BabController', function () {
       signer3,
       aaveLendIntegration,
       aaveBorrowIntegration,
-      treasury,
       garden1,
       garden2,
-      garden3,
-      strategy11,
-      uniswapV3TradeIntegration,
       rewardsDistributor,
     } = await setupTests()());
     const signers = await ethers.getSigners();
@@ -149,7 +140,6 @@ describe('BabController', function () {
       await expect(babController.connect(signer1).setSomePause([rewardsDistributor.address], false)).to.be.revertedWith(
         'Not enough privileges',
       );
-      const newBablToken = await impersonateAddress('0xf4dc48d260c93ad6a96c5ce563e70ca578987c74');
       await babController.connect(owner).setSomePause([rewardsDistributor.address], false);
     });
 
