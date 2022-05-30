@@ -380,7 +380,7 @@ describe('Heart', function () {
   });
 
   describe('borrow fuse pool', async function () {
-    it('will borrow DAI after lending BABL', async function () {
+    it.skip('will borrow DAI after lending BABL', async function () {
       const amountToLend = eth('5000');
       const amountToBorrow = eth('20000');
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
@@ -408,7 +408,7 @@ describe('Heart', function () {
         .reverted;
     });
 
-    it('will repay DAI after borrowing it', async function () {
+    it.skip('will repay DAI after borrowing it', async function () {
       const amountToLend = eth('5000');
       const amountToBorrow = eth('20000');
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');

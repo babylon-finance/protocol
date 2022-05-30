@@ -884,8 +884,8 @@ describe('Garden', function () {
 
       await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
 
-      // lose 500 DAI
-      await substractFakeProfits(strategy, eth(100));
+      // lose 100 DAI
+      await substractFakeProfits(strategy, eth(10));
 
       const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.USDC);
 
