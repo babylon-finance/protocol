@@ -253,6 +253,15 @@ async function setUpFixture(
   // Set the heart garden
   await heart.connect(owner).setHeartGardenAddress(heartGarden.address, { gasPrice: 0 });
 
+  // Grants community access
+  for (let i = 0; i < gardens.length; i += 1) {
+    await ishtarGate
+      .connect(signer1)
+      .grantGardenAccessBatch(gardens[i], [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
+        gasPrice: 0,
+      });
+  }
+
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
