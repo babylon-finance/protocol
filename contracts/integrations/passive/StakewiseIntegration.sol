@@ -86,7 +86,7 @@ contract StakewiseIntegration is PassiveIntegration {
         uint256 _maxAmountIn
     )
         internal
-        view
+        pure
         override
         returns (
             address,
@@ -204,7 +204,7 @@ contract StakewiseIntegration is PassiveIntegration {
     function _getPostActionCallData(
         address _strategy,
         address, /* _asset */
-        uint256 _amount,
+        uint256, /* _amount */
         uint256 _passiveOp
     )
         internal

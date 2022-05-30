@@ -6,7 +6,7 @@ const addresses = require('lib/addresses');
 const { GARDENS, ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
 const { pick, getERC20, eth, increaseTime } = require('utils/test-helpers');
 
-describe('FuseBorrowIntegrationTest', function () {
+describe.skip('FuseBorrowIntegrationTest', function () {
   let fuseBorrowIntegration;
   let fuseLendIntegration;
   let owner;

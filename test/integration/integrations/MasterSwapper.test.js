@@ -1,8 +1,8 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
-const { getERC20, getContract, parse, from, eth, pick } = require('utils/test-helpers');
+const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { getERC20, eth, pick } = require('utils/test-helpers');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');

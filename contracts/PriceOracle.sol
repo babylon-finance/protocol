@@ -34,6 +34,7 @@ import {IUniVaultStorage} from './interfaces/external/uniswap-v3/IUniVaultStorag
 import {INFTPositionManager} from './interfaces/external/uniswap-v3/INFTPositionManager.sol';
 import {ISnxSynth} from './interfaces/external/synthetix/ISnxSynth.sol';
 import {ISnxProxy} from './interfaces/external/synthetix/ISnxProxy.sol';
+import {IAladdinCRV} from './interfaces/external/aladdin/IAladdinCRV.sol';
 import {IYearnRegistry} from './interfaces/external/yearn/IYearnRegistry.sol';
 import {IYearnVault} from './interfaces/external/yearn/IYearnVault.sol';
 import {IStETH} from './interfaces/external/lido/IStETH.sol';
@@ -83,6 +84,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
     address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
     address private constant curvePalStkAave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15;
+    IAladdinCRV private constant aCRV = IAladdinCRV(0x2b95A1Dcc3D405535f9ed33c219ab38E8d7e0884);
+    address private constant cvxCRV = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 
     // the desired seconds agos array passed to the observe method
     uint32 private constant SECONDS_GRANULARITY = 30;
@@ -376,6 +380,20 @@ contract PriceOracle is Ownable, IPriceOracle {
             if (tokenOutPrice != 0) {
                 return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
             }
+        }
+
+        if (_tokenIn == address(aCRV)) {
+            uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
+            return
+                pricePerShare.preciseMul(_getBestPriceUniV3(cvxCRV, CRV)).preciseMul(
+                    _getBestPriceUniV3(CRV, _tokenOut)
+                );
+        }
+
+        if (_tokenOut == address(aCRV)) {
+            uint256 pricePerShare = aCRV.totalUnderlying().preciseDiv(aCRV.totalSupply());
+            return
+                pricePerShare.preciseMul(_getBestPriceUniV3(_tokenIn, CRV).preciseMul(_getBestPriceUniV3(CRV, cvxCRV)));
         }
 
         // Direct UNI3

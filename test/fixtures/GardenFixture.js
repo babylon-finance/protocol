@@ -36,15 +36,11 @@ async function setUpFixture(
   const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const balancerIntegration = await getContract('BalancerIntegration');
   const pickleJarIntegration = await getContract('PickleJarIntegration');
   const pickleFarmIntegration = await getContract('PickleFarmIntegration');
   const gammaIntegration = await getContract('GammaIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
-  const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
-  const harvestV3VaultIntegration = await getContract('HarvestPoolV3Integration');
-  const harvestV3StakeIntegration = await getContract('HarvestV3StakeIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
@@ -63,6 +59,7 @@ async function setUpFixture(
   const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
   const heartTradeIntegration = await getContract('HeartTradeIntegration');
   const paladinTradeIntegration = await getContract('PaladinTradeIntegration');
+  const aladdinConcentratorIntegration = await getContract('AladdinConcentratorIntegration');
   const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
@@ -264,6 +261,7 @@ async function setUpFixture(
         gasPrice: 0,
       });
   }
+
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
@@ -298,9 +296,7 @@ async function setUpFixture(
     gammaIntegration,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
-    balancerIntegration,
     uniswapPoolIntegration,
-    harvestVaultIntegration,
     pickleFarmIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
@@ -316,8 +312,7 @@ async function setUpFixture(
     aaveLendIntegration,
     aaveBorrowIntegration,
     heartTradeIntegration,
-    harvestV3VaultIntegration,
-    harvestV3StakeIntegration,
+    aladdinConcentratorIntegration,
     paladinTradeIntegration,
     fuseLendIntegration,
     fuseBorrowIntegration,

@@ -75,7 +75,7 @@ describe('FuseLendIntegrationTest', function () {
       expect(await WETH.balanceOf(strategyContract.address)).to.eq(0);
     });
 
-    it('can supply and redeem ETH from Fuse', async function () {
+    it.skip('can supply and redeem ETH from Fuse', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',
@@ -97,7 +97,7 @@ describe('FuseLendIntegrationTest', function () {
       expect(await strategyContract.capitalReturned()).to.be.closeTo(eth(1), eth(0.01));
     });
 
-    it('can supply and get NAV including rewards', async function () {
+    it.skip('can supply and get NAV including rewards', async function () {
       const strategyContract = await createStrategy(
         'lend',
         'vote',

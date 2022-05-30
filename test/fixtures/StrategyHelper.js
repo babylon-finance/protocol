@@ -192,6 +192,19 @@ async function executeStrategy(
   );
 }
 
+async function signalUnlockStrategy(strategy, { fee = 0, gasPrice = 0, gasLimit = 9500000 } = {}) {
+  const signers = await ethers.getSigners();
+  return (
+    strategy
+      // use keeper
+      .connect(signers[1])
+      .signalUnlock(fee, {
+        gasPrice,
+        gasLimit,
+      })
+  );
+}
+
 async function executeStrategyImmediate(strategy) {
   await executeStrategy(strategy, { time: 0 });
 }
@@ -466,6 +479,7 @@ module.exports = {
   finalizeStrategyAfter30Days,
   finalizeStrategyAfter3Quarters,
   finalizeStrategyAfter2Years,
+  signalUnlockStrategy,
   injectFakeProfits,
   substractFakeProfits,
   deposit,

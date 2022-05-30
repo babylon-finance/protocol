@@ -5,21 +5,11 @@ const {
   executeStrategy,
   finalizeStrategy,
   DEFAULT_STRATEGY_PARAMS,
-  GARDENS,
 } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const {
-  pick,
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-} = require('utils/test-helpers');
-const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { increaseTime, getERC20, eth } = require('utils/test-helpers');
+const { ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('AaveLendIntegrationTest', function () {
   let aaveLendIntegration;
@@ -28,20 +18,11 @@ describe('AaveLendIntegrationTest', function () {
   let signer1;
   let signer2;
   let signer3;
-  let babController;
   let USDC;
   let WETH;
 
   beforeEach(async () => {
-    ({
-      garden1,
-      babController,
-      aaveBorrowIntegration,
-      aaveLendIntegration,
-      signer1,
-      signer2,
-      signer3,
-    } = await setupTests()());
+    ({ garden1, aaveBorrowIntegration, aaveLendIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await getERC20(addresses.tokens.USDC);
     WETH = await getERC20(addresses.tokens.WETH);
   });

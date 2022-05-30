@@ -5,9 +5,9 @@ const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
 const { STRATEGY_EXECUTE_MAP, GARDENS, ADDRESS_ZERO } = require('lib/constants');
-const { getERC20, eth, pick, increaseTime } = require('utils/test-helpers');
+const { getERC20, eth, pick, increaseTime, skipIfFast } = require('utils/test-helpers');
 
-describe('StakewiseIntegrationTest', function () {
+skipIfFast('StakewiseIntegrationTest', function () {
   let stakewiseIntegration;
   let sETH2;
   let rETH2;

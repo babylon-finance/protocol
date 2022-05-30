@@ -4,11 +4,10 @@ const { createStrategy, getStrategy, executeStrategy, finalizeStrategy } = requi
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, getERC20, pick, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20, pick, eth, skipIfFast } = require('utils/test-helpers');
 const { STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
-// TODO: bump block number
-describe.skip('GammaIntegrationTest', function () {
+skipIfFast('GammaIntegrationTest', function () {
   let gammaIntegration;
   let signer1;
   let signer2;
