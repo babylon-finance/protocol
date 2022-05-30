@@ -382,7 +382,7 @@ describe('Heart', function () {
   describe('borrow fuse pool', async function () {
     it('will borrow DAI after lending BABL', async function () {
       const amountToLend = eth('5000');
-      const amountToBorrow = eth('50000');
+      const amountToBorrow = eth('20000');
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });
@@ -410,7 +410,7 @@ describe('Heart', function () {
 
     it('will repay DAI after borrowing it', async function () {
       const amountToLend = eth('5000');
-      const amountToBorrow = eth('50000');
+      const amountToBorrow = eth('20000');
       const whaleSigner = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
       await BABL.connect(whaleSigner).transfer(heart.address, amountToLend, { gasPrice: 0 });
       await heart.connect(owner).lendFusePool(addresses.tokens.BABL, amountToLend, { gasPrice: 0 });

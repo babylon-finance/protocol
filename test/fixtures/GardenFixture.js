@@ -36,15 +36,11 @@ async function setUpFixture(
   const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const balancerIntegration = await getContract('BalancerIntegration');
   const pickleJarIntegration = await getContract('PickleJarIntegration');
   const pickleFarmIntegration = await getContract('PickleFarmIntegration');
   const gammaIntegration = await getContract('GammaIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
-  const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
-  const harvestV3VaultIntegration = await getContract('HarvestPoolV3Integration');
-  const harvestV3StakeIntegration = await getContract('HarvestV3StakeIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
@@ -121,9 +117,6 @@ async function setUpFixture(
   });
 
   // Gives signer1 creator permissions
-  await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
-  await mardukGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
-  await mardukGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
     .createGarden(
@@ -257,14 +250,6 @@ async function setUpFixture(
   // Set the heart garden
   await heart.connect(owner).setHeartGardenAddress(heartGarden.address, { gasPrice: 0 });
 
-  // Grants community access
-  for (let i = 0; i < gardens.length; i += 1) {
-    await ishtarGate
-      .connect(signer1)
-      .grantGardenAccessBatch(gardens[i], [signer1.address, signer2.address, signer3.address], [3, 3, 3], {
-        gasPrice: 0,
-      });
-  }
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
@@ -299,9 +284,7 @@ async function setUpFixture(
     gammaIntegration,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
-    balancerIntegration,
     uniswapPoolIntegration,
-    harvestVaultIntegration,
     pickleFarmIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
@@ -317,8 +300,6 @@ async function setUpFixture(
     aaveLendIntegration,
     aaveBorrowIntegration,
     heartTradeIntegration,
-    harvestV3VaultIntegration,
-    harvestV3StakeIntegration,
     aladdinConcentratorIntegration,
     paladinTradeIntegration,
     fuseLendIntegration,

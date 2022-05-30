@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const { GARDEN_PARAMS, ADDRESS_ZERO, WETH_STRATEGY_PARAMS } = require('lib/constants');
-const { from, eth, parse } = require('lib/helpers');
+const { eth } = require('lib/helpers');
 const { increaseTime, skipIfFast } = require('utils/test-helpers');
 
 const { createGarden } = require('fixtures/GardenHelper');
@@ -16,20 +16,9 @@ skipIfFast('Viewer', function () {
   let signer3;
   let uniswapV3TradeIntegration;
   let viewer;
-  let owner;
-  let babController;
 
   beforeEach(async () => {
-    ({
-      uniswapV3TradeIntegration,
-      signer1,
-      signer2,
-      signer3,
-      viewer,
-      garden1,
-      owner,
-      babController,
-    } = await setupTests()());
+    ({ uniswapV3TradeIntegration, signer1, signer2, signer3, viewer, garden1 } = await setupTests()());
   });
 
   describe('can call getter methods', async function () {
