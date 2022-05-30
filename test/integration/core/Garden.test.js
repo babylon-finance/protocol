@@ -861,8 +861,7 @@ describe('Garden', function () {
       expect((await usdc.balanceOf(signer3.address)).sub(beforeWithdrawal)).to.be.gte(minAmountOut);
     });
 
-    // TODO: fix
-    it.skip('can withdraw with a penalty from a strategy in losses', async function () {
+    it('can withdraw with a penalty from a strategy in losses', async function () {
       let amountIn = from(1000 * 1e6);
       let minAmountOut = eth(1000);
 
@@ -977,31 +976,6 @@ describe('Garden', function () {
       });
 
       expect((await ethers.provider.getBalance(signer3.address)).sub(beforeWithdrawal)).to.be.eq(minAmountOut);
-    });
-
-    it('can withdraw with a penalty from a strategy with losses', async function () {
-      const garden = await createGarden();
-
-      const strategy = await getStrategy({ garden: garden, signers: [signer1] });
-      await vote(strategy, [signer1, signer2, signer3]);
-
-      await executeStrategy(strategy, { amount: eth().sub(eth().mul(PROTOCOL_FEE).div(eth())) });
-
-      // lose 1000 DAI
-      await substractFakeProfits(strategy, eth(1000));
-
-      const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.WETH);
-
-      const beforeWithdrawal = await ethers.provider.getBalance(signer1.address);
-
-      const minAmountOut = eth(0.5).mul(975).div(1000).mul(pricePerShare).div(eth());
-
-      await garden
-        .connect(signer1)
-        .withdraw(eth(0.5), minAmountOut, signer1.getAddress(), true, strategy.address, { gasPrice: 0 });
-
-      // receive less due to penalty and strategy loss
-      expect((await ethers.provider.getBalance(signer1.address)).sub(beforeWithdrawal)).to.gte(minAmountOut);
     });
 
     it('can withdraw funds with a penalty', async function () {

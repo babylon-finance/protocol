@@ -83,10 +83,20 @@ describe('AladdinConcentratorIntegration', function () {
 
   describe('Aladdin Pool', function () {
     pick(GARDENS).forEach(async ({ token, name }) => {
-      pick(addresses.aladdin.pools).forEach((pool) => {
-        it(`can enter into ${pool.name} from a ${name} garden`, async function () {
+      pick(addresses.aladdin.pools.slice(2)).forEach((pool) => {
+        it(`can enter into convex ${pool.name} from a ${name} garden`, async function () {
           await depositIntoAladdin(pool.lptoken, token, pool);
         });
+      });
+
+      it(`can enter into clever from a ${name} garden`, async function () {
+        const pool = addresses.aladdin.pools[0];
+        await depositIntoAladdin(pool.lptoken, token, pool);
+      });
+
+      it(`can enter into crv concentrator from a ${name} garden`, async function () {
+        const pool = addresses.aladdin.pools[1];
+        await depositIntoAladdin(pool.lptoken, token, pool);
       });
     });
 
