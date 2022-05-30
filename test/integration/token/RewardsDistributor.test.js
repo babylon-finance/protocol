@@ -2218,6 +2218,24 @@ skipIfFast('RewardsDistributor', function () {
       await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).to.be.not.reverted;
       await expect(await bablToken.balanceOf(signer1.address)).to.be.eq(signerBABLBalanceBefore.add(rewardsSigner1[5]));
     });
+    it('can NOT claimReturns of the same strategy twice', async function () {
+      const [long1, long2] = await createStrategies([{ garden: garden1 }, { garden: garden1 }]);
+      await executeStrategy(long1, eth());
+      await executeStrategy(long2, eth().mul(2));
+
+      await injectFakeProfits(long1, eth().mul(200));
+      await finalizeStrategyAfterQuarter(long1);
+      await finalizeStrategyAfterQuarter(long2);
+      // We claim our tokens and check that they are received properly
+      [
+        [long1.address, long1.address, long2.address],
+        [long1.address, long2.address, long1.address],
+        [long1.address, long2.address, long2.address],
+      ].forEach(async (strategies) => {
+        await expect(garden1.connect(signer1).claimReturns(strategies)).to.be.revertedWith('BAB#040');
+      });
+      await expect(garden1.connect(signer1).claimReturns([long1.address, long2.address])).not.to.be.reverted;
+    });
     it('can NOT claimRewardsBySig above cap ', async function () {
       const amountIn = eth();
       const minAmountOut = eth('0.9');
