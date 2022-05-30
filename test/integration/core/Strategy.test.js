@@ -34,11 +34,9 @@ describe('Strategy', function () {
   let strategy11;
   let strategy21;
   let wethToken;
-  let heart;
   let aaveLendIntegration;
   let uniswapV3TradeIntegration;
   let uniswapPoolIntegration;
-  let balancerIntegration;
   let yearnVaultIntegration;
   let masterSwapper;
   let weth;
@@ -65,7 +63,6 @@ describe('Strategy', function () {
       signer1,
       garden1,
       garden2,
-      heart,
       strategy11,
       strategy21,
       signer2,
@@ -73,7 +70,6 @@ describe('Strategy', function () {
       aaveLendIntegration,
       uniswapV3TradeIntegration,
       uniswapPoolIntegration,
-      balancerIntegration,
       yearnVaultIntegration,
       masterSwapper,
       weth,
@@ -379,23 +375,6 @@ describe('Strategy', function () {
       const nav = await strategyContract.getNAV();
       expect(await strategyContract.capitalAllocated()).to.equal(eth());
       expect(nav).to.be.closeTo(eth().mul(1), eth().div(50));
-    });
-
-    it.skip('should get the NAV value of a BalancerPool strategy', async function () {
-      const strategyContract = await createStrategy(
-        'lp',
-        'active',
-        [signer1, signer2, signer3],
-        balancerIntegration.address,
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [addresses.balancer.pools.wethdai, 0],
-      );
-
-      const nav = await strategyContract.getNAV();
-      expect(await strategyContract.capitalAllocated()).to.equal(eth());
-      // So much slipage at Balancer 😭
-      expect(nav).to.be.closeTo(eth().mul(1), eth().div(30));
     });
 
     it('should get the NAV value of a UniswapPool strategy', async function () {

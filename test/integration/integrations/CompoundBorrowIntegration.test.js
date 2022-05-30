@@ -1,29 +1,14 @@
 const { expect } = require('chai');
-const {
-  createStrategy,
-  executeStrategy,
-  finalizeStrategy,
-  DEFAULT_STRATEGY_PARAMS,
-} = require('fixtures/StrategyHelper');
+const { createStrategy, executeStrategy, finalizeStrategy } = require('fixtures/StrategyHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 const { GARDENS, ADDRESS_ZERO, STRATEGY_EXECUTE_MAP } = require('lib/constants');
-const {
-  pick,
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-} = require('utils/test-helpers');
+const { pick, getERC20 } = require('utils/test-helpers');
 
 describe('CompoundBorrowIntegrationTest', function () {
   let compoundBorrowIntegration;
   let compoundLendIntegration;
-  let garden1;
   let signer1;
   let signer2;
   let signer3;
@@ -91,112 +76,11 @@ describe('CompoundBorrowIntegrationTest', function () {
   }
 
   beforeEach(async () => {
-    ({ garden1, compoundLendIntegration, compoundBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
+    ({ compoundLendIntegration, compoundBorrowIntegration, signer1, signer2, signer3 } = await setupTests()());
     USDC = await getERC20(addresses.tokens.USDC);
     DAI = await getERC20(addresses.tokens.DAI);
     WETH = await getERC20(addresses.tokens.WETH);
     WBTC = await getERC20(addresses.tokens.WBTC);
-  });
-
-  describe('Compound Borrow', function () {
-    it('can supply DAI and borrow USDC in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [compoundLendIntegration.address, compoundBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, 0, USDC.address, 0],
-      );
-
-      await executeStrategy(strategyContract);
-
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(eth('1931'));
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, USDC.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-
-      await finalizeStrategy(strategyContract);
-
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply USDC and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [compoundLendIntegration.address, compoundBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [USDC.address, 0, DAI.address, 0],
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, USDC.address);
-      expect(collateral).to.be.gt(2000 * 10 ** 6);
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await USDC.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply WETH and borrow DAI in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [compoundLendIntegration.address, compoundBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [ADDRESS_ZERO, 0, DAI.address, 0], // eth, dai
-      );
-
-      await executeStrategy(strategyContract);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await DAI.balanceOf(strategyContract.address)).to.be.gt(0);
-      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, ADDRESS_ZERO);
-      expect(collateral).to.be.closeTo(eth('1'), eth('1').div(100));
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, DAI.address)).to.be.gt(
-        eth('578'),
-      );
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
-
-    it('can supply DAI and borrow ETH in a WETH Garden', async function () {
-      const strategyContract = await createStrategy(
-        'borrow',
-        'vote',
-        [signer1, signer2, signer3],
-        [compoundLendIntegration.address, compoundBorrowIntegration.address],
-        garden1,
-        DEFAULT_STRATEGY_PARAMS,
-        [DAI.address, 0, ADDRESS_ZERO, 0],
-      );
-      await executeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      const collateral = await compoundBorrowIntegration.getCollateralBalance(strategyContract.address, DAI.address);
-      expect(collateral).to.be.gt(eth('1930'));
-      expect(await strategyContract.getNAV()).to.be.closeTo(eth(), eth().div(50));
-      expect(await compoundBorrowIntegration.getBorrowBalance(strategyContract.address, ADDRESS_ZERO)).to.be.gt(0);
-      const beforeExitingWeth = await WETH.balanceOf(garden1.address);
-      await finalizeStrategy(strategyContract);
-      expect(await DAI.balanceOf(strategyContract.address)).to.equal(0);
-      expect(await WETH.balanceOf(garden1.address)).to.gt(beforeExitingWeth);
-    });
   });
 
   describe('Compound Borrow Multigarden multiasset', function () {

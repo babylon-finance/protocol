@@ -68,7 +68,6 @@ describe('Garden', function () {
   let signer3;
   let garden1;
   let mardukGate;
-  let balancerIntegration;
   let uniswapV3TradeIntegration;
   let daiGarden;
   let usdcGarden;
@@ -98,7 +97,6 @@ describe('Garden', function () {
       garden1,
       heartGarden,
       mardukGate,
-      balancerIntegration,
       uniswapV3TradeIntegration,
       gardenValuer,
       viewer,
@@ -887,7 +885,7 @@ describe('Garden', function () {
       await executeStrategy(strategy, { amount: amountIn.sub(amountIn.mul(PROTOCOL_FEE).div(eth())) });
 
       // lose 500 DAI
-      await substractFakeProfits(strategy, eth(500));
+      await substractFakeProfits(strategy, eth(100));
 
       const pricePerShare = await gardenValuer.calculateGardenValuation(garden.address, addresses.tokens.USDC);
 
@@ -1748,9 +1746,9 @@ describe('Garden', function () {
             'name',
             'STRT',
             strategyParamsToArray(WETH_STRATEGY_PARAMS),
-            [1],
-            [balancerIntegration.address],
-            [addresses.balancer.pools.wethdai],
+            [0],
+            [uniswapV3TradeIntegration.address],
+            [addresses.tokens.DAI],
             {
               gasLimit: 9500000,
               gasPrice: 0,
@@ -1765,7 +1763,7 @@ describe('Garden', function () {
       });
       const AbiCoder = ethers.utils.AbiCoder;
       const abiCoder = new AbiCoder();
-      const encodedData = abiCoder.encode(['address', 'uint256'], [addresses.balancer.pools.wethdai, 0]);
+      const encodedData = abiCoder.encode(['address', 'uint256'], [addresses.tokens.DAI, 0]);
 
       await expect(
         garden1
@@ -1774,8 +1772,8 @@ describe('Garden', function () {
             'name',
             'STRT',
             strategyParamsToArray(WETH_STRATEGY_PARAMS),
-            [1],
-            [balancerIntegration.address],
+            [0],
+            [uniswapV3TradeIntegration.address],
             encodedData,
           ),
       ).to.not.be.reverted;
@@ -1789,10 +1787,10 @@ describe('Garden', function () {
       params[1] = eth(0);
       let ABI = ['function babylonFinanceStrategyOpData(address data, uint256 metadata)']; // 64 bytes
       let iface = new ethers.utils.Interface(ABI);
-      let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [addresses.balancer.pools.wethdai, 0]);
+      let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [addresses.tokens.DAI, 0]);
 
       await expect(
-        garden1.connect(signer3).addStrategy('name', 'STRT', params, [1], [balancerIntegration.address], encodedData),
+        garden1.connect(signer3).addStrategy('name', 'STRT', params, [0], [uniswapV3TradeIntegration.address], encodedData),
       ).to.be.reverted;
     });
   });
