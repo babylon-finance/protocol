@@ -202,14 +202,6 @@ contract PriceOracle is Ownable, IPriceOracle {
         (uint8 tokenInType, uint8 tokenOutType, address _finalAssetIn, address _finalAssetOut) =
             tokenIdentifier.identifyTokens(_tokenIn, _tokenOut);
 
-        // Checks stETH && wstETH (Lido tokens)
-        if (_tokenIn == 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) {
-            return getPrice(WETH, _tokenOut).preciseMul(98e16);
-        }
-        if (_tokenOut == 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84) {
-            return getPrice(_tokenIn, WETH).preciseDiv(98e16);
-        }
-
         // Comp assets
         uint256 exchangeRate;
         if (tokenInType == 1) {
@@ -820,14 +812,14 @@ contract PriceOracle is Ownable, IPriceOracle {
     }
 
     function _getCurvePrice(address _tokenIn, address _tokenOut) private view returns (uint256) {
-        address curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, _tokenOut, 0);
+        address curvePool = curveMetaRegistry.findBestPoolForCoins(_tokenIn, _tokenOut);
         if (_tokenIn == WETH && curvePool == address(0)) {
             _tokenIn = ETH_ADD_CURVE;
-            curvePool = curveMetaRegistry.findPoolForCoins(ETH_ADD_CURVE, _tokenOut, 0);
+            curvePool = curveMetaRegistry.findBestPoolForCoins(ETH_ADD_CURVE, _tokenOut);
         }
         if (_tokenOut == WETH && curvePool == address(0)) {
             _tokenOut = ETH_ADD_CURVE;
-            curvePool = curveMetaRegistry.findPoolForCoins(_tokenIn, ETH_ADD_CURVE, 0);
+            curvePool = curveMetaRegistry.findBestPoolForCoins(_tokenIn, ETH_ADD_CURVE);
         }
         if (curvePool != address(0)) {
             return _getCurvePriceAtPool(curvePool, _tokenIn, _tokenOut);
