@@ -117,6 +117,9 @@ async function setUpFixture(
   });
 
   // Gives signer1 creator permissions
+  await ishtarGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(owner.address, true, { gasPrice: 0 });
+  await mardukGate.connect(owner).setCreatorPermissions(signer1.address, true, { gasPrice: 0 });
   await babController
     .connect(signer1)
     .createGarden(
