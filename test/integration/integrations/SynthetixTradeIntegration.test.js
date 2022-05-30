@@ -1,24 +1,15 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const {
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-  pick,
-} = require('utils/test-helpers');
+const { increaseTime, getERC20, eth, pick, skipIfFast } = require('utils/test-helpers');
 
-const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants.js');
+const { STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { fund } = require('lib/whale');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getStrategy, executeStrategy } = require('fixtures/StrategyHelper');
 const { createGarden } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
 
-describe('SynthetixTradeIntegration', function () {
+skipIfFast('SynthetixTradeIntegration', function () {
   let synthetixTradeIntegration;
   let priceOracle;
   let owner;

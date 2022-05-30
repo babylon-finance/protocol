@@ -4,9 +4,9 @@ const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
 const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
-const { getERC20, eth, pick } = require('utils/test-helpers');
+const { getERC20, eth, pick, skipIfFast } = require('utils/test-helpers');
 
-describe('PaladinTradeIntegrationTest', function () {
+skipIfFast('PaladinTradeIntegrationTest', function () {
   let masterSwapper;
   let palStkAAVE;
 

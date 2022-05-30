@@ -1,11 +1,8 @@
 const { expect } = require('chai');
 
 const addresses = require('lib/addresses');
-const { GARDEN_PARAMS_STABLE, GARDEN_PARAMS, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
-const { impersonateAddress } = require('lib/rpc');
-const { createStrategy, executeStrategy, finalizeStrategy, getStrategy } = require('fixtures/StrategyHelper');
-const { createGarden } = require('fixtures/GardenHelper');
-const { increaseTime, normalizeDecimals, getERC20, getContract, parse, from, eth } = require('utils/test-helpers');
+const { ADDRESS_ZERO } = require('lib/constants');
+const { eth } = require('utils/test-helpers');
 const { ethers } = require('hardhat');
 
 describe('BabController', function () {
@@ -21,8 +18,8 @@ describe('BabController', function () {
     controller = await controllerFactory.deploy();
     await controller.connect(owner).initialize();
 
-    const erc20Fatory = await ethers.getContractFactory('ERC20Mock');
-    erc20 = await erc20Fatory.deploy('Babylon Finance', 'BABL', owner.address, eth(1e6));
+    const erc20Factory = await ethers.getContractFactory('ERC20Mock');
+    erc20 = await erc20Factory.deploy('Babylon Finance', 'BABL', owner.address, eth(1e6));
   });
 
   describe('keepers', function () {

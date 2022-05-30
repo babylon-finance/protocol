@@ -105,7 +105,7 @@ contract DepositVaultOperation is Operation {
             IERC20(vaultAsset).universalBalanceOf(msg.sender)
         );
         vaultAsset = _getResultAsset(_integration, yieldVault);
-        return (vaultAsset, IERC20(vaultAsset).universalBalanceOf(msg.sender), 0); // liquid
+        return (vaultAsset, _getInvestmentBalance(_integration, vaultAsset), 0); // liquid
     }
 
     /**
@@ -136,7 +136,7 @@ contract DepositVaultOperation is Operation {
         IGarden garden = _garden;
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(yieldVault);
         uint256 amountVault =
-            IERC20(_getResultAsset(_integration, yieldVault)).universalBalanceOf(msg.sender).preciseMul(_percentage);
+            _getInvestmentBalance(_integration, _getResultAsset(_integration, yieldVault)).preciseMul(_percentage);
         if (amountVault > 0) {
             uint256 minAmount =
                 amountVault.sub(amountVault.preciseMul(SLIPPAGE_ALLOWED)).preciseDiv(
@@ -203,7 +203,7 @@ contract DepositVaultOperation is Operation {
         IGarden _garden
     ) internal view returns (uint256) {
         address resultAsset = _getResultAsset(_integration, _vault);
-        uint256 balance = IERC20(resultAsset).universalBalanceOf(msg.sender);
+        uint256 balance = _getInvestmentBalance(_integration, resultAsset);
         // Get price through oracle
         uint256 price = _getPrice(resultAsset, _garden.reserveAsset());
         uint256 NAV =
@@ -211,8 +211,10 @@ contract DepositVaultOperation is Operation {
         // Get remaining investment asset
         address vaultAsset = IPassiveIntegration(_integration).getInvestmentAsset(_vault);
         balance = IERC20(vaultAsset).universalBalanceOf(msg.sender);
-        price = _getPrice(vaultAsset, _garden.reserveAsset());
         if (balance > 0) {
+            if (vaultAsset != resultAsset) {
+                price = _getPrice(vaultAsset, _garden.reserveAsset());
+            }
             NAV = NAV.add(
                 SafeDecimalMath.normalizeAmountTokens(vaultAsset, _garden.reserveAsset(), balance.preciseMul(price))
             );
@@ -251,6 +253,16 @@ contract DepositVaultOperation is Operation {
             return 0;
         } catch {
             return 0;
+        }
+    }
+
+    function _getInvestmentBalance(address _integration, address _resultAsset) internal view returns (uint256) {
+        try IPassiveIntegration(_integration).getResultBalance(msg.sender, _resultAsset) returns (
+            uint256 _resultBalance
+        ) {
+            return _resultBalance;
+        } catch {
+            return IERC20(_resultAsset).universalBalanceOf(msg.sender);
         }
     }
 }

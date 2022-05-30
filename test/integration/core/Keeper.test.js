@@ -3,16 +3,7 @@ const { ethers } = require('hardhat');
 const addresses = require('lib/addresses');
 const { ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
 const { fund } = require('lib/whale');
-const {
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-  pick,
-} = require('utils/test-helpers');
+const { increaseTime, getERC20, from, eth, pick } = require('utils/test-helpers');
 const { createGarden } = require('fixtures/GardenHelper');
 
 const { getStrategy } = require('fixtures/StrategyHelper');

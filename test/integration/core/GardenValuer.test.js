@@ -1,17 +1,14 @@
 const { expect } = require('chai');
-
 const { fund } = require('lib/whale');
-const { from, eth, parse } = require('lib/helpers');
-const { impersonateAddress, setCode } = require('lib/rpc');
+const { eth } = require('lib/helpers');
+const { setCode } = require('lib/rpc');
 const addresses = require('lib/addresses');
-const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS, STRATEGY_EXECUTE_MAP } = require('lib/constants.js');
+const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants.js');
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden } = require('fixtures/GardenHelper');
-const { getStrategy, createStrategy, finalizeStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
+const { getStrategy, createStrategy, executeStrategy } = require('fixtures/StrategyHelper.js');
 
 describe('GardenValuer', function () {
-  let dai;
-  let weth;
   let priceOracle;
   let babController;
   let tokenIdentifier;
@@ -24,8 +21,6 @@ describe('GardenValuer', function () {
 
   beforeEach(async () => {
     ({
-      dai,
-      weth,
       priceOracle,
       babController,
       gardenValuer,

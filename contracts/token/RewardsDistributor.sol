@@ -503,9 +503,9 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             if (rewards != 0) {
                 return rewards;
             }
-            // str[0]: capitalAllocated, str[1]: capitalReturned
             uint256[] memory str = new uint256[](2);
-            (, , , , , , str[0], str[1], , , , , , ) = strategy.getStrategyDetails();
+            str[0] = strategy.capitalAllocated();
+            str[1] = strategy.capitalReturned();
             // If the calculation was not done earlier we go for it
             (uint256 numQuarters, uint256 startingQuarter) = _getRewardsWindow(ts[0], ts[1]);
             uint256 percentage = 1e18;
@@ -705,7 +705,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256[] memory rewards = new uint256[](8);
         if (IStrategy(_strategy).isStrategyActive()) {
             address garden = address(IStrategy(_strategy).garden());
-            (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+            (address strategist, uint256[15] memory strategyDetails, bool[2] memory profitData) =
                 _estimateStrategyRewards(_strategy);
             // Get the contributor share % within the strategy window out of the total garden and users
             uint256 contributorShare = _getSafeUserSharePerStrategy(garden, _contributor, strategyDetails);
@@ -736,7 +736,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _contributor,
         address _strategy
     ) external view returns (uint256) {
-        (, uint256[] memory strategyDetails, ) = IStrategy(_strategy).getStrategyRewardsContext();
+        (, uint256[15] memory strategyDetails, ) = IStrategy(_strategy).getStrategyRewardsContext();
         // strategyDetails[0] = executedAt
         // strategyDetails[1] = exitedAt
         // strategyDetails[13] = endingGardenSupply
@@ -750,7 +750,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      */
     function estimateStrategyRewards(address _strategy) external view override returns (uint256) {
         if (IStrategy(_strategy).isStrategyActive()) {
-            (, uint256[] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
+            (, uint256[15] memory strategyDetails, ) = _estimateStrategyRewards(_strategy);
             return strategyDetails[9];
         } else {
             return 0;
@@ -1090,8 +1090,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _strategist,
         address _contributor,
         uint256 _contributorShare,
-        uint256[] memory _strategyDetails,
-        bool[] memory _profitData
+        uint256[15] memory _strategyDetails,
+        bool[2] memory _profitData
     ) internal view returns (uint256[] memory) {
         uint256[] memory rewards = new uint256[](8);
         // Get strategist BABL rewards in case the contributor is also the strategist of the strategy
@@ -1173,7 +1173,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getSafeUserSharePerStrategy(
         address _garden,
         address _contributor,
-        uint256[] memory _strData
+        uint256[15] memory _strData
     ) internal view returns (uint256) {
         // _strData[0] = executedAt
         // _strData[1] = exitedAt
@@ -1287,7 +1287,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _contributor,
         uint256[] memory _rewards,
-        uint256[] memory _strategyDetails
+        uint256[15] memory _strategyDetails
     ) internal view returns (uint256[] memory) {
         // _prophetBonus[0]: NFT id
         // _prophetBonus[1]: BABL loot
@@ -1353,7 +1353,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _claimedAt            User last claim timestamp
 
      * @return Array of size 8 with the following distribution:
-     * rewards[0]: Strategist BABL 
+     * rewards[0]: Strategist BABL
      * rewards[1]: Strategist Profit
      * rewards[2]: Steward BABL
      * rewards[3]: Steward Profit
@@ -1369,7 +1369,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         uint256 _claimedAt
     ) private view returns (uint256[] memory) {
         uint256[] memory rewards = new uint256[](8);
-        (address strategist, uint256[] memory strategyDetails, bool[] memory profitData) =
+        (address strategist, uint256[15] memory strategyDetails, bool[2] memory profitData) =
             IStrategy(_strategy).getStrategyRewardsContext();
 
         // strategyDetails array mapping:
@@ -1422,8 +1422,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
     function _getStrategyStewardBabl(
         address _strategy,
         address _contributor,
-        uint256[] memory _strategyDetails,
-        bool[] memory _profitData
+        uint256[15] memory _strategyDetails,
+        bool[2] memory _profitData
     ) private view returns (uint256) {
         // Assumptions:
         // It executes in all cases as non profited strategies can also give BABL rewards to those who voted against
@@ -1484,8 +1484,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         address _garden,
         address _strategy,
         address _contributor,
-        uint256[] memory _strategyDetails,
-        bool[] memory _profitData
+        uint256[15] memory _strategyDetails,
+        bool[2] memory _profitData
     ) private view returns (uint256 stewardBabl) {
         // Assumptions:
         // Assumption that the strategy got profits. Should not execute otherwise.
@@ -1520,7 +1520,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _strategyDetails          Strategy details data
      * @param _profitData               Strategy details data
      */
-    function _getStrategyStrategistBabl(uint256[] memory _strategyDetails, bool[] memory _profitData)
+    function _getStrategyStrategistBabl(uint256[15] memory _strategyDetails, bool[2] memory _profitData)
         private
         view
         returns (uint256)
@@ -1533,10 +1533,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
             uint256 bablCap = babl.mul(2); // Cap x2
             // Strategist get a bonus based on the profits with a max cap of x2
             babl = babl.preciseMul(_strategyDetails[7].preciseDiv(_strategyDetails[6]));
-            if (babl > bablCap) {
-                babl = bablCap;
-            }
-            return babl;
+            return babl > bablCap ? bablCap : babl;
         } else if (_profitData[0] && !_profitData[1]) {
             // under expectations
             // The more the results are close to the expected the less penalization it might have
@@ -1567,10 +1564,7 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
      * @param _contributorShare     Contributor share in the period
      */
     function _getStrategyLPBabl(uint256 _strategyRewards, uint256 _contributorShare) private view returns (uint256) {
-        uint256 babl;
-        // All params must have 18 decimals precision
-        babl = _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorShare);
-        return babl;
+        return _strategyRewards.multiplyDecimal(lpsBABLPercentage).preciseMul(_contributorShare);
     }
 
     /**
@@ -1669,8 +1663,8 @@ contract RewardsDistributor is OwnableUpgradeable, IRewardsDistributor {
         view
         returns (
             address strategist,
-            uint256[] memory strategyDetails,
-            bool[] memory profitData
+            uint256[15] memory strategyDetails,
+            bool[2] memory profitData
         )
     {
         // strategyDetails array mapping:
