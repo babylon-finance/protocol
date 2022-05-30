@@ -1790,7 +1790,9 @@ describe('Garden', function () {
       let encodedData = iface.encodeFunctionData('babylonFinanceStrategyOpData', [addresses.tokens.DAI, 0]);
 
       await expect(
-        garden1.connect(signer3).addStrategy('name', 'STRT', params, [0], [uniswapV3TradeIntegration.address], encodedData),
+        garden1
+          .connect(signer3)
+          .addStrategy('name', 'STRT', params, [0], [uniswapV3TradeIntegration.address], encodedData),
       ).to.be.reverted;
     });
   });
