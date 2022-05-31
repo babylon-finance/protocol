@@ -29,10 +29,9 @@ describe('CurveMetaRegistry', function () {
   describe('findPoolForCoins', async function () {
     it('aave pool', async function () {
       expect(
-        await curveMetaRegistry.findPoolForCoins(
+        await curveMetaRegistry.findBestPoolForCoins(
           '0x6b175474e89094c44da98b954eedeac495271d0f',
           '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-          0,
         ),
       ).to.eq('0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7');
     });
