@@ -110,7 +110,7 @@ describe('CurveGaugeIntegrationTest', function () {
     await executeStrategy(strategyContract, { amount });
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.closeTo(amount, amount.div(25));
+    expect(nav).to.be.gte(amount.sub(amount.div(10)));
 
     expect(await crvLpToken.balanceOf(strategyContract.address)).to.equal(0);
     expect(await gauge.balanceOf(strategyContract.address)).to.be.gt(0);
@@ -125,9 +125,8 @@ describe('CurveGaugeIntegrationTest', function () {
     expect(await gauge.balanceOf(strategyContract.address)).to.equal(0);
 
     expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(balanceBeforeExiting);
-    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.closeTo(
-      balanceBeforeExecuting,
-      balanceBeforeExecuting.div(35),
+    expect(await gardenReserveAsset.balanceOf(garden.address)).to.be.gte(
+      balanceBeforeExecuting.sub(balanceBeforeExecuting.div(10)),
     );
   }
 

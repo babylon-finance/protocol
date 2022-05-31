@@ -72,7 +72,7 @@ To run integartion tests
 yarn test:integration
 ```
 
-To run fast integartion tests (recommended)
+To run fast integration tests (recommended)
 
 ```bash
 yarn test:integration:fast

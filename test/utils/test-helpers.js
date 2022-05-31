@@ -67,7 +67,7 @@ function eth(value = 1) {
 }
 
 function normalizeDecimals(tokenDecimals, tokenDecimalsTarget, quantity) {
-  if (tokenDecimals == tokenDecimalsTarget) {
+  if (tokenDecimals === tokenDecimalsTarget) {
     return quantity;
   }
   if (tokenDecimalsTarget > tokenDecimals) {
@@ -81,20 +81,19 @@ function enums(...options) {
 }
 
 function pick(arr) {
-  let FAST = process.env.FAST;
-  return !!FAST ? arr.slice(0, 1) : arr;
+  const FAST = !!process.env.FAST;
+  return FAST ? arr.slice(0, 1) : arr;
 }
 
-function skipIfFast() {
-  let FAST = process.env.FAST;
-  return !!FAST ? describe.skip : describe;
+function skipIfFast(params, cb) {
+  const FAST = !!process.env.FAST;
+  return FAST ? describe.skip(params, cb) : describe(params, cb);
 }
 
 module.exports = {
   pick,
   skipIfFast,
   getERC20,
-  increaseTime,
   increaseTime,
   increaseBlock,
   getTimestamp,
