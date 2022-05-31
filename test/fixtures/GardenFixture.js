@@ -59,6 +59,7 @@ async function setUpFixture(
   const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
   const heartTradeIntegration = await getContract('HeartTradeIntegration');
   const paladinTradeIntegration = await getContract('PaladinTradeIntegration');
+  const ribbonIntegration = await getContract('RibbonIntegration');
   const aladdinConcentratorIntegration = await getContract('AladdinConcentratorIntegration');
   const masterSwapper = await getContract('MasterSwapper');
 
@@ -318,6 +319,7 @@ async function setUpFixture(
     fuseBorrowIntegration,
     lidoIntegration,
     stakewiseIntegration,
+    ribbonIntegration,
     convexRegistry,
     yearnVaultRegistry,
     timelockController,
