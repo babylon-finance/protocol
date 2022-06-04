@@ -6,6 +6,7 @@ import {SignedSafeMath} from '@openzeppelin/contracts/math/SignedSafeMath.sol';
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
@@ -84,5 +85,47 @@ abstract contract BaseIntegration is IBaseIntegration {
         IStrategy strategy = IStrategy(_strategy);
         (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
         return block.timestamp.sub(executedAt);
+    }
+
+    function _getRemainingDurationStrategy(address _strategy) internal view returns (uint256) {
+        IStrategy strategy = IStrategy(_strategy);
+        (, , , , uint256 executedAt, , ) = strategy.getStrategyState();
+        uint256 runningFor = block.timestamp.sub(executedAt);
+        if (runningFor > strategy.duration()) {
+            return 0;
+        }
+        return strategy.duration().sub(runningFor);
+    }
+
+    function _getPrice(address _tokenIn, address _tokenOut) internal view returns (uint256) {
+        IPriceOracle oracle = IPriceOracle(IBabController(controller).priceOracle());
+        return oracle.getPrice(_tokenIn, _tokenOut);
+    }
+
+    function _getTradeCallData(
+        address _strategy,
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        uint256 _minAmountOut
+    )
+        internal
+        view
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        bytes memory methodData =
+            abi.encodeWithSignature(
+                'trade(address,address,uint256,address,uint256)',
+                _strategy,
+                _tokenIn,
+                _amountIn,
+                _tokenOut,
+                _minAmountOut
+            );
+        return (controller.masterSwapper(), 0, methodData);
     }
 }

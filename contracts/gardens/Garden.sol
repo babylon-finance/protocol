@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IERC721} from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -209,6 +208,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that controls whether the NFT can be minted after x amount of time
     uint256 public override canMintNftAfter;
 
+    // Variable that controls whether this garden has custom integrations enabled
+    bool public override customIntegrationsEnabled;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -222,6 +224,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function _onlyKeeperAndFee(uint256 _fee, uint256 _maxFee) private view {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
         _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+    }
+
+    /**
+     * Check if array of finalized strategies to claim rewards has duplicated strategies
+     */
+    function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
+        for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
+            for (uint256 j = i + 1; j < _finalizedStrategies.length; j++) {
+                _require(_finalizedStrategies[i] != _finalizedStrategies[j], Errors.DUPLICATED_STRATEGIES);
+            }
+        }
     }
 
     /**
@@ -452,6 +465,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _finalizedStrategies  Finalized strategies to process
      */
     function claimReturns(address[] calldata _finalizedStrategies) external override nonReentrant {
+        _onlyNonDuplicateStrategies(_finalizedStrategies);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         _sendRewardsInternal(msg.sender, rewards[5], rewards[6], false);
@@ -469,6 +483,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         override
         nonReentrant
     {
+        _onlyNonDuplicateStrategies(_finalizedStrategies);
         uint256[] memory rewards = new uint256[](8);
         rewards = rewardsDistributor.getRewards(address(this), msg.sender, _finalizedStrategies);
         IGarden heartGarden = IGarden(address(IHeart(controller.heart()).heartGarden()));
@@ -1163,6 +1178,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV20 is Garden {
+contract GardenV25 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }

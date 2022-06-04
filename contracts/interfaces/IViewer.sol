@@ -42,6 +42,7 @@ interface IGardenViewer {
         uint256 totalContributors;
         address reserveAsset;
         uint256 netAssetValue;
+        bool customIntegrationsEnabled;
     }
 
     function getGardenPrincipal(address _garden) external view returns (uint256);
@@ -57,7 +58,7 @@ interface IGardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[13] memory params,
+            uint256[15] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         );
@@ -83,8 +84,6 @@ interface IGardenViewer {
     function getGardenUserAvgPricePerShare(IGarden _garden, address _user) external view returns (uint256);
 
     function getPotentialVotes(address _garden, address[] calldata _members) external view returns (uint256);
-
-    function getContributor(IGarden _garden, address _user) external view returns (uint256[10] memory);
 
     function getContributionAndRewards(IGarden _garden, address _user)
         external

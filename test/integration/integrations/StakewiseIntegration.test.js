@@ -4,10 +4,10 @@ const { impersonateAddress } = require('lib/rpc');
 const { createGarden, transferFunds } = require('fixtures/GardenHelper');
 const { setupTests } = require('fixtures/GardenFixture');
 const addresses = require('lib/addresses');
-const { STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
-const { getERC20, eth, pick, increaseTime } = require('utils/test-helpers');
+const { STRATEGY_EXECUTE_MAP, GARDENS, ADDRESS_ZERO } = require('lib/constants');
+const { getERC20, eth, pick, increaseTime, skipIfFast } = require('utils/test-helpers');
 
-describe('StakewiseIntegrationTest', function () {
+skipIfFast('StakewiseIntegrationTest', function () {
   let stakewiseIntegration;
   let sETH2;
   let rETH2;
@@ -44,7 +44,7 @@ describe('StakewiseIntegrationTest', function () {
   describe('Stakewise Staking', function () {
     describe('getInvestmentAsset', function () {
       it('get investment asset', async function () {
-        expect(await stakewiseIntegration.getInvestmentAsset(sETH2.address)).to.equal(addresses.tokens.WETH);
+        expect(await stakewiseIntegration.getInvestmentAsset(sETH2.address)).to.equal(ADDRESS_ZERO);
       });
     });
 
@@ -66,15 +66,14 @@ describe('StakewiseIntegrationTest', function () {
           expect(await rETH2.balanceOf(strategyContract.address)).to.equal(0);
           const reserveContract = await getERC20(token);
           const amount = STRATEGY_EXECUTE_MAP[token];
+
           await executeStrategy(strategyContract, { amount });
-          console.log('garden reserveAsset - amount', token, amount.toString());
           await increaseTime(86400 * 20);
           expect(await strategyContract.getNAV()).to.be.closeTo(amount, amount.div(15));
           // Add rewards
           const whaleSigner = await impersonateAddress('0xa9ffb27d36901f87f1d0f20773f7072e38c5bfba');
           await rETH2.connect(whaleSigner).transfer(strategyContract.address, eth('0.1'), { gasPrice: 0 });
           const beforeBalance = await reserveContract.balanceOf(garden.address);
-          console.log('sETH2 balance', (await sETH2.balanceOf(strategyContract.address)).toString());
 
           const expectedBalance = await getExpectedBalance(token, asset, strategyContract);
           expect(await sETH2.balanceOf(strategyContract.address)).to.be.closeTo(
@@ -84,6 +83,7 @@ describe('StakewiseIntegrationTest', function () {
           expect(await rETH2.balanceOf(strategyContract.address)).to.be.closeTo(eth('0.1'), eth('0.01'));
           expect(await strategyContract.getNAV()).to.be.gt(amount);
           await finalizeStrategy(strategyContract, 0);
+
           const newBalance = await sETH2.balanceOf(strategyContract.address);
           expect(newBalance).to.be.lt(eth().div(100));
           expect(await rETH2.balanceOf(strategyContract.address)).to.be.lte(eth().div(50)); // leaves quantities below 0.02

@@ -151,8 +151,4 @@ library SafeDecimalMath {
         }
         return _amount.div(10**(fromDecimals - (toDecimals)));
     }
-
-    function _isETH(address _address) internal pure returns (bool) {
-        return _address == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE || _address == address(0);
-    }
 }

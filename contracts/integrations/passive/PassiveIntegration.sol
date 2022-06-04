@@ -10,7 +10,7 @@ import {IPassiveIntegration} from '../../interfaces/IPassiveIntegration.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
 import {IStrategy} from '../../interfaces/IStrategy.sol';
 import {IBabController} from '../../interfaces/IBabController.sol';
-
+import {UniversalERC20} from '../../lib/UniversalERC20.sol';
 import {BaseIntegration} from '../BaseIntegration.sol';
 import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 
@@ -23,6 +23,7 @@ import {LowGasSafeMath} from '../../lib/LowGasSafeMath.sol';
 abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassiveIntegration {
     using LowGasSafeMath for uint256;
     using SafeCast for uint256;
+    using UniversalERC20 for IERC20;
 
     /* ============ Struct ============ */
 
@@ -245,6 +246,17 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
     }
 
     /**
+     * Gets the balance of the asset you obtained after entering the investment
+     *
+     * @param _strategy                           Strategy calling
+     * @param _resultAssetAddress                 Result asset address
+     * @return uint256                            Returns the balance of the result asset
+     */
+    function getResultBalance(address _strategy, address _resultAssetAddress) external view override returns (uint256) {
+        return _getResultBalance(_strategy, _resultAssetAddress);
+    }
+
+    /**
      * Gets the rewards and the token that they are denominated in
      *
      * @param _strategy                           Address of the strategy
@@ -259,6 +271,30 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         returns (address, uint256)
     {
         return _getRewards(_strategy, _investmentAddress);
+    }
+
+    /**
+     * Checks if the integration needs to execute a tx to prepare the withdrawal
+     *
+     * @param _strategy                           Address of the strategy
+     * @param _data                               Data param
+     * @return bool                               True if it is needed
+     */
+    function needsUnlockSignal(address _strategy, bytes calldata _data) external view override returns (bool) {
+        return _needsUnlockSignal(_strategy, _data);
+    }
+
+    /**
+     * Executes an unlock to prepare for withdrawal
+     *
+     * @param _strategy                   Address of the strategy
+     * @param _data                       Params
+     */
+    function signalUnlock(address _strategy, bytes calldata _data) external override nonReentrant onlySystemContract {
+        (address targetInvestment, uint256 callValue, bytes memory methodData) =
+            _getUnlockInvestmentCalldata(_strategy, _data);
+
+        IStrategy(_strategy).invokeFromIntegration(targetInvestment, callValue, methodData);
     }
 
     /* ============ Internal Functions ============ */
@@ -285,7 +321,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
         investmentInfo.strategy = IStrategy(_strategy);
         investmentInfo.garden = IGarden(investmentInfo.strategy.garden());
         investmentInfo.investment = _getResultAsset(_investment);
-        investmentInfo.investmentTokensInStrategy = IERC20(investmentInfo.investment).balanceOf(_strategy);
+        investmentInfo.investmentTokensInStrategy = _getResultBalance(_strategy, investmentInfo.investment);
         investmentInfo.investmentTokensInTransaction = _investmentTokensInTransaction;
         investmentInfo.limitDepositTokenQuantity = _limitDepositToken;
 
@@ -327,7 +363,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostEnterInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) >=
+            _getResultBalance(address(_investmentInfo.strategy), _investmentInfo.investment) >=
                 _investmentInfo.investmentTokensInStrategy,
             'The strategy did not receive the investment tokens'
         );
@@ -340,7 +376,7 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
      */
     function _validatePostExitInvestmentData(InvestmentInfo memory _investmentInfo) internal view {
         require(
-            IERC20(_investmentInfo.investment).balanceOf(address(_investmentInfo.strategy)) <=
+            _getResultBalance(address(_investmentInfo.strategy), _investmentInfo.investment) <=
                 (_investmentInfo.investmentTokensInStrategy - _investmentInfo.investmentTokensInTransaction) + 100,
             'The strategy did not return the investment tokens'
         );
@@ -464,6 +500,32 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
             bytes memory
         );
 
+    /**
+     * Return unlock investment calldata to prepare for withdrawal
+     *
+     * hparam  _strategy                       Address of the strategy
+     * hparam  _data                           Data
+     *
+     * @return address                         Target contract address
+     * @return uint256                         Call value
+     * @return bytes                           Trade calldata
+     */
+    function _getUnlockInvestmentCalldata(
+        address, /*_strategy */
+        bytes calldata /* _data */
+    )
+        internal
+        view
+        virtual
+        returns (
+            address,
+            uint256,
+            bytes memory
+        )
+    {
+        return (address(0), 0, bytes(''));
+    }
+
     function _getInvestmentAsset(
         address //_investmentAddress
     ) internal view virtual returns (address);
@@ -498,6 +560,24 @@ abstract contract PassiveIntegration is BaseIntegration, ReentrancyGuard, IPassi
 
     function _getResultAsset(address _investment) internal view virtual returns (address) {
         return _investment;
+    }
+
+    function _getResultBalance(address _strategy, address _resultAssetAddress) internal view virtual returns (uint256) {
+        return IERC20(_resultAssetAddress).universalBalanceOf(_strategy);
+    }
+
+    /**
+     * Checks if the integration needs to execute a tx to prepare the withdrawal
+     *
+     * hparam _strategy                           Address of the strategy
+     * hparam _data                               Data param
+     * @return bool                               True if it is needed
+     */
+    function _needsUnlockSignal(
+        address, /* _strategy */
+        bytes calldata /* _data */
+    ) internal view virtual returns (bool) {
+        return false;
     }
 
     function _getExtraAssetToApproveEnter(

@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {IBabController} from '../interfaces/IBabController.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ICurveMetaRegistry} from '../interfaces/ICurveMetaRegistry.sol';
 import {IPriceTri} from '../interfaces/external/curve/IPriceTri.sol';
 import {ICurvePoolV3} from '../interfaces/external/curve/ICurvePoolV3.sol';
@@ -11,7 +12,6 @@ import {ICurveRegistry} from '../interfaces/external/curve/ICurveRegistry.sol';
 import {IFactoryRegistry} from '../interfaces/external/curve/IFactoryRegistry.sol';
 import {ICryptoRegistry} from '../interfaces/external/curve/ICryptoRegistry.sol';
 import {ICryptoFactoryRegistry} from '../interfaces/external/curve/ICryptoFactoryRegistry.sol';
-
 import {ControllerLib} from '../lib/ControllerLib.sol';
 
 /**
@@ -342,31 +342,32 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
     }
 
     /**
-     * Finds a pool given those tokens and the index _i
+     * Finds the pool with the most liquidity given those tokens and the index _i
      * @param _fromToken              Token 1
      * @param _toToken                Token 2
-     * @param _i                      Index of the pool to retrieve (if more than one)
      *
-     * @return address                Address of the pool
+     * @return address                Address of the pool with enough liquidity
      */
-    function findPoolForCoins(
-        address _fromToken,
-        address _toToken,
-        uint256 _i
-    ) external view override returns (address) {
-        address result = curveRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
-        if (result != address(0)) {
-            return result;
+    function findBestPoolForCoins(address _fromToken, address _toToken) external view override returns (address) {
+        (address pool, uint8 _kind) = _findPoolForCoins(_fromToken, _toToken, 0);
+        if (_kind == 0 || pool == address(0)) {
+            return address(0);
         }
-        result = factoryRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
-        if (result != address(0)) {
-            return result;
+        // If there is a pool, find the best by checking balance of fromToken
+        // We check max two more
+        uint256 maxBalance = IERC20(_fromToken).balanceOf(pool);
+        for (uint256 i = 1; i < 3; i++) {
+            address newPool = _findPoolForCoinsByKind(_fromToken, _toToken, i, _kind);
+            if (newPool == address(0)) {
+                break;
+            }
+            uint256 newBalance = IERC20(_fromToken).balanceOf(pool);
+            if (newBalance > maxBalance) {
+                maxBalance = newBalance;
+                pool = newPool;
+            }
         }
-        result = cryptoRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
-        if (result != address(0)) {
-            return result;
-        }
-        return cryptoRegistryF.find_pool_for_coins(_fromToken, _toToken, _i);
+        return pool;
     }
 
     /**
@@ -444,5 +445,59 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
             // Adds gauge
             gaugeToPool[getGauge(pool)] = pool;
         }
+    }
+
+    /**
+     * Finds a pool given those tokens and the index _i
+     * @param _fromToken              Token 1
+     * @param _toToken                Token 2
+     * @param _i                      Index of the pool to retrieve (if more than one)
+     *
+     * @return address                Address of the pool
+     */
+    function _findPoolForCoins(
+        address _fromToken,
+        address _toToken,
+        uint256 _i
+    ) private view returns (address, uint8) {
+        address result = curveRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        if (result != address(0)) {
+            return (result, 1);
+        }
+        // Check crypto registry before factory ones
+        result = cryptoRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        if (result != address(0)) {
+            return (result, 3);
+        }
+        result = factoryRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        if (result != address(0)) {
+            return (result, 2);
+        }
+        result = cryptoRegistryF.find_pool_for_coins(_fromToken, _toToken, _i);
+        if (result != address(0)) {
+            return (result, 4);
+        }
+        return (address(0), 0);
+    }
+
+    function _findPoolForCoinsByKind(
+        address _fromToken,
+        address _toToken,
+        uint256 _i,
+        uint8 _kind
+    ) private view returns (address) {
+        if (_kind == 1) {
+            return curveRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        }
+        if (_kind == 2) {
+            return factoryRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        }
+        if (_kind == 3) {
+            return cryptoRegistry.find_pool_for_coins(_fromToken, _toToken, _i);
+        }
+        if (_kind == 4) {
+            return cryptoRegistryF.find_pool_for_coins(_fromToken, _toToken, _i);
+        }
+        return address(0);
     }
 }

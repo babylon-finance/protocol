@@ -9,20 +9,11 @@ const {
   executeStrategy,
   finalizeStrategy,
 } = require('fixtures/StrategyHelper');
-const {
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-  pick,
-} = require('utils/test-helpers');
+const { normalizeDecimals, getERC20, eth, pick, skipIfFast } = require('utils/test-helpers');
 const addresses = require('lib/addresses');
 const { ADDRESS_ZERO, STRATEGY_EXECUTE_MAP, GARDENS } = require('lib/constants');
 
-describe('SushiswapPoolIntegrationTest', function () {
+skipIfFast('SushiswapPoolIntegrationTest', function () {
   let sushiswapPoolIntegration;
   let garden1;
   let signer1;

@@ -92,25 +92,9 @@ interface IStrategy {
 
     function handleWeth(bool _isDeposit, uint256 _wethAmount) external;
 
-    function getStrategyDetails()
-        external
-        view
-        returns (
-            address,
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            address,
-            uint256,
-            uint256
-        );
+    function signalUnlock(uint256 _fee) external;
+
+    function updateStrategyRewards(uint256 _newTotalBABLRewards, uint256 _newCapitalReturned) external;
 
     function getStrategyState()
         external
@@ -130,8 +114,8 @@ interface IStrategy {
         view
         returns (
             address,
-            uint256[] memory,
-            bool[] memory
+            uint256[15] memory,
+            bool[2] memory
         );
 
     function isStrategyActive() external view returns (bool);

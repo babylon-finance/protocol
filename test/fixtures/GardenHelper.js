@@ -45,12 +45,16 @@ async function createGarden({
   params,
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
+  customIntegrationsEnabled = false,
 } = {}) {
   const [deployer, keeper, , signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
   const ishtarGate = await getContract('IshtarGate');
   const babController = await getContract('BabController', 'BabControllerProxy');
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
+  if (customIntegrationsEnabled) {
+    params[12] = 1;
+  }
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await getERC20(reserveAsset);
   for (const sig of [signer1, signer2, signer3]) {

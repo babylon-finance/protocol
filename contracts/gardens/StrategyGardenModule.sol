@@ -248,6 +248,52 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         contributors[_strategist].lockedBalance = 0;
     }
 
+    /**
+     * PRIVILEGE FUNCTION to update Garden Strategy Rewards
+     * To be used by Governance or Emergency only.
+     *
+     * @param _strategy   Address of the strategy to patch
+     * @param _newTotalBABLAmount  The new BABL rewards
+     * @param _newCapitalReturned  The new capital returned
+     * @param _newRewardsToSetAside  The new rewards to set aside
+     */
+    function updateStrategyRewards(
+        address _strategy,
+        uint256 _newTotalBABLAmount,
+        uint256 _newCapitalReturned,
+        uint256 _newRewardsToSetAside
+    ) external override {
+        controller.onlyGovernanceOrEmergency();
+        _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
+        uint256 oldRewards = IStrategy(_strategy).strategyRewards();
+        address heartGarden = address(IHeart(controller.heart()).heartGarden());
+        bool bablDiff = oldRewards != _newTotalBABLAmount;
+        int256 profitDiff = int256(_newCapitalReturned).sub(int256(IStrategy(_strategy).capitalReturned()));
+        // update absolute returns
+        absoluteReturns = absoluteReturns.add(profitDiff);
+        // update rewardsToSetAside
+        // heart garden safety control (it should not setAside as it is auto-compounded)
+        reserveAssetRewardsSetAside = address(this) == heartGarden ? 0 : _newRewardsToSetAside;
+
+        if (profitDiff != 0 || bablDiff) {
+            // Update strategy rewards if needed
+            // save gas instead
+            IStrategy(_strategy).updateStrategyRewards(_newTotalBABLAmount, _newCapitalReturned);
+        }
+        if (address(this) == heartGarden && bablDiff) {
+            // Send BABL if needed to/from heart garden
+            // Only for heart garden strategies
+            if (oldRewards < _newTotalBABLAmount) {
+                // Send difference if Heart Garden Strategy got less rewards previously
+                rewardsDistributor.sendBABLToContributor(address(this), _newTotalBABLAmount.sub(oldRewards));
+            } else {
+                // Send back the difference if Heart Garden Strategy got more rewards previously
+                IERC20 BABL = IERC20(address(rewardsDistributor.babltoken()));
+                BABL.safeTransfer(address(rewardsDistributor), oldRewards.sub(_newTotalBABLAmount));
+            }
+        }
+    }
+
     /* ============ External Getter Functions ============ */
 
     /* ============ Internal Functions ============ */

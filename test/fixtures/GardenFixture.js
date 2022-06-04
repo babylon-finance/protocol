@@ -24,6 +24,7 @@ async function setUpFixture(
   const priceOracle = await getContract('PriceOracle');
   const curveMetaRegistry = await getContract('CurveMetaRegistry');
   const convexRegistry = await getContract('ConvexRegistry');
+  const yearnVaultRegistry = await getContract('YearnVaultRegistry');
   const tokenIdentifier = await getContract('TokenIdentifier');
   const treasury = await getContract('Treasury');
   const gardenValuer = await getContract('GardenValuer');
@@ -35,15 +36,11 @@ async function setUpFixture(
   const babGovernor = await getContract('BabylonGovernor');
 
   const uniswapV3TradeIntegration = await getContract('UniswapV3TradeIntegration');
-  const balancerIntegration = await getContract('BalancerIntegration');
   const pickleJarIntegration = await getContract('PickleJarIntegration');
   const pickleFarmIntegration = await getContract('PickleFarmIntegration');
   const gammaIntegration = await getContract('GammaIntegration');
   const uniswapPoolIntegration = await getContract('UniswapPoolIntegration');
   const yearnVaultIntegration = await getContract('YearnVaultIntegration');
-  const harvestVaultIntegration = await getContract('HarvestVaultIntegration');
-  const harvestV3VaultIntegration = await getContract('HarvestPoolV3Integration');
-  const harvestV3StakeIntegration = await getContract('HarvestV3StakeIntegration');
   const sushiswapPoolIntegration = await getContract('SushiswapPoolIntegration');
   const curvePoolIntegration = await getContract('CurvePoolIntegration');
   const convexStakeIntegration = await getContract('ConvexStakeIntegration');
@@ -62,6 +59,7 @@ async function setUpFixture(
   const univ2TradeIntegration = await getContract('UniswapV2TradeIntegration');
   const heartTradeIntegration = await getContract('HeartTradeIntegration');
   const paladinTradeIntegration = await getContract('PaladinTradeIntegration');
+  const aladdinConcentratorIntegration = await getContract('AladdinConcentratorIntegration');
   const masterSwapper = await getContract('MasterSwapper');
 
   const buyOperation = await getContract('BuyOperation');
@@ -69,6 +67,7 @@ async function setUpFixture(
   const depositVaultOperation = await getContract('DepositVaultOperation');
   const lendOperation = await getContract('LendOperation');
   const borrowOperation = await getContract('BorrowOperation');
+  const customOperation = await getContract('CustomOperation');
 
   const dai = await getERC20(addresses.tokens.DAI);
   const usdc = await getERC20(addresses.tokens.USDC);
@@ -262,6 +261,7 @@ async function setUpFixture(
         gasPrice: 0,
       });
   }
+
   const strategy10 = (
     await createStrategy('buy', 'dataset', [signer1, signer2, signer3], uniswapV3TradeIntegration.address, garden1)
   ).address;
@@ -296,9 +296,7 @@ async function setUpFixture(
     gammaIntegration,
     uniswapV3TradeIntegration,
     curveTradeIntegration,
-    balancerIntegration,
     uniswapPoolIntegration,
-    harvestVaultIntegration,
     pickleFarmIntegration,
     yearnVaultIntegration,
     sushiswapPoolIntegration,
@@ -314,14 +312,14 @@ async function setUpFixture(
     aaveLendIntegration,
     aaveBorrowIntegration,
     heartTradeIntegration,
-    harvestV3VaultIntegration,
-    harvestV3StakeIntegration,
+    aladdinConcentratorIntegration,
     paladinTradeIntegration,
     fuseLendIntegration,
     fuseBorrowIntegration,
     lidoIntegration,
     stakewiseIntegration,
     convexRegistry,
+    yearnVaultRegistry,
     timelockController,
     babGovernor,
     masterSwapper,
@@ -343,6 +341,7 @@ async function setUpFixture(
     depositVaultOperation,
     lendOperation,
     borrowOperation,
+    customOperation,
 
     gardenValuer,
     priceOracle,

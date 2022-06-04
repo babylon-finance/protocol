@@ -4,7 +4,7 @@ const { createStrategy, getStrategy, executeStrategy, finalizeStrategy } = requi
 const { setupTests } = require('fixtures/GardenFixture');
 const { createGarden, depositFunds, transferFunds } = require('fixtures/GardenHelper');
 const addresses = require('lib/addresses');
-const { increaseTime, getERC20, pick, eth } = require('utils/test-helpers');
+const { increaseTime, getERC20, pick, skipIfFast } = require('utils/test-helpers');
 const { GARDENS, STRATEGY_EXECUTE_MAP, ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 
 describe('PickleJarIntegration', function () {
@@ -95,7 +95,7 @@ describe('PickleJarIntegration', function () {
     }
 
     if (farm) {
-      strategyKind = 'custom';
+      strategyKind = 'complex';
       integrations = [...integrations, pickleFarmIntegration.address];
       params = [...params, jarAddress, 0];
       ops = [...ops, 2];
@@ -118,7 +118,7 @@ describe('PickleJarIntegration', function () {
     const gauge = await ethers.getContractAt('IGauge', gaugeAdd);
     // Check NAV
     const nav = await strategyContract.getNAV();
-    expect(nav).to.be.closeTo(amount, amount.div(30));
+    expect(nav).to.be.closeTo(amount, amount.div(15));
     if (!farm) {
       expect(await jar.balanceOf(strategyContract.address)).to.gt(0);
     } else {
