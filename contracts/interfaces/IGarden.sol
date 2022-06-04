@@ -179,6 +179,8 @@ interface ICoreGarden {
 
     function pricePerShareDelta() external view returns (uint256);
 
+    function userLock(address _contributor) external view returns (uint256);
+
     /* ============ Write ============ */
 
     function deposit(
@@ -264,6 +266,8 @@ interface ICoreGarden {
     ) external;
 
     function claimNFT() external;
+
+    function updateUserLock(address _contributor, uint256 _userLock) external;
 }
 
 interface IERC20Metadata {

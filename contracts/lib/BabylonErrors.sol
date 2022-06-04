@@ -358,4 +358,6 @@ library Errors {
     uint256 internal constant MINT_ERROR = 132;
     // Error no unlock signal needed
     uint256 internal constant NO_SIGNAL_NEEDED = 133;
+    // Error setting garden user lock
+    uint256 internal constant SET_GARDEN_USER_LOCK = 134;
 }
