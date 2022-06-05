@@ -12,11 +12,10 @@ module.exports = async ({
   getController,
 }) => {
   const { deploy } = deployments;
-  const { deployer, owner } = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
 
   const controller = await getController();
-  const governor = await getContract('BabylonGovernor');
 
   const heart = await upgradesDeployer.deployAdminProxy(
     'Heart',
@@ -30,7 +29,7 @@ module.exports = async ({
     {
       initializer: {
         method: 'initialize',
-        args: [[eth(0.1), eth(0.3), eth(0.25), eth(0.15), eth(0.2)]],
+        args: [[eth(0.1), eth(0.3), eth(0.25), eth(0.15), eth(0.2), eth(0.05)]],
       },
     },
   );

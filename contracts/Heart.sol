@@ -860,7 +860,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      */
     function _shield(uint256 _amount) private {
         // Convert to ETH
-        IWETH(WETH).withdraw(_amount);
+        WETH.withdraw(_amount);
         emit ShieldAmountIncreased(block.timestamp, _amount);
     }
 
