@@ -572,6 +572,7 @@ describe('Heart', function () {
         fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth())),
         fuseBalanceDAIBeforePump.add(amountLentToFuse.mul(daiPerWeth).div(eth()).div(100)),
       );
+      // TODO: Add shield
       // Checks weekly rewards
       expect(await heart.bablRewardLeft()).to.equal(eth(4700));
       expect(await BABL.balanceOf(heartGarden.address)).to.be.equal(

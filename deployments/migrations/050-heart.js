@@ -29,7 +29,7 @@ module.exports = async ({
     {
       initializer: {
         method: 'initialize',
-        args: [[eth(0.1), eth(0.3), eth(0.25), eth(0.15), eth(0.2), eth(0.05)]],
+        args: [[eth(0.1), eth(0.3), eth(0.2), eth(0.15), eth(0.2), eth(0.05)]],
       },
     },
   );
