@@ -305,7 +305,7 @@ describe('Heart', function () {
   });
 
   describe('bond asset by sig', async function () {
-    it('can bond asset by sig', async function () {
+    it('can bond asset by sig for a year', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);
 
@@ -314,7 +314,7 @@ describe('Heart', function () {
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
       const amountToBond = eth(1000);
       const priceInBABL = eth(0.1);
-      const amountIn = amountToBond.mul(priceInBABL).mul(eth(1.05)).div(eth()).div(eth());
+      const amountIn = amountToBond.mul(priceInBABL).mul(eth(1.07)).div(eth()).div(eth());
       const minAmountOut = amountIn;
       const nonce = 0;
       const maxFee = from(0);
@@ -394,7 +394,7 @@ describe('Heart', function () {
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       await expect(
-        heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, 365 * 86400, { gasPrice: 0 }),
+        heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, 183 * 86400, { gasPrice: 0 }),
       ).to.be.reverted;
     });
 
@@ -407,6 +407,27 @@ describe('Heart', function () {
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
       const price = await priceOracle.getPrice(cDAI.address, addresses.tokens.BABL);
       const minAmountOut = amount.mul(price).mul(eth(1.05)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
+
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      // User approves the heart
+      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      // Bond the asset
+      await heart
+        .connect(signer3)
+        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 183, { gasPrice: 0 });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
+    });
+
+    it('user can bond an appropriate amount for a year and receive the extra 2%', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, eth('0.05'), { gasPrice: 0 });
+      const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
+      const amount = eth(20000);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
+      // Add fuse assets to token identifier
+      await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      const price = await priceOracle.getPrice(cDAI.address, addresses.tokens.BABL);
+      const minAmountOut = amount.mul(price).mul(eth(1.07)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
 
       await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
       // User approves the heart
