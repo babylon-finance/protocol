@@ -509,7 +509,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _userLock
     ) external override {
         _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors. SET_GARDEN_USER_LOCK);
+        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
         // Total value adding the premium and the lock premium
         uint256 bondValueInBABL =
             _bondToBABL(
@@ -557,7 +557,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _onlyKeeper();
         _require(_feeAndLock[0] <= _maxFee, Errors.FEE_TOO_HIGH);
         _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        _require(_feeAndLock[1] >= MIN_HEART_LOCK_VALUE && _feeAndLock[1] <= MAX_HEART_LOCK_VALUE, Errors. SET_GARDEN_USER_LOCK);
+        _require(
+            _feeAndLock[1] >= MIN_HEART_LOCK_VALUE && _feeAndLock[1] <= MAX_HEART_LOCK_VALUE,
+            Errors.SET_GARDEN_USER_LOCK
+        );
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
@@ -701,10 +704,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 lock = heartGarden.userLock(_contributor);
         uint256 balance = heartGarden.balanceOf(_contributor);
         if (lock == 0) {
-          return balance.div(8);
+            return balance.div(8);
         }
         if (lock >= MAX_HEART_LOCK_VALUE) {
-          return balance;
+            return balance;
         }
         uint256 ratio = lock.preciseDiv(MAX_HEART_LOCK_VALUE);
         return balance.preciseMul(ratio);
@@ -722,13 +725,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         // Check time premium
         if (_userLock >= 365 days && _userLock < 730 days) {
-          bondPremium = bondPremium.add(2e16); //2%
+            bondPremium = bondPremium.add(2e16); //2%
         }
         if (_userLock >= 730 days && _userLock < MAX_HEART_LOCK_VALUE) {
-          bondPremium = bondPremium.add(45e15); //4.5%
+            bondPremium = bondPremium.add(45e15); //4.5%
         }
         if (_userLock >= MAX_HEART_LOCK_VALUE) {
-          bondPremium = bondPremium.add(1e17); //10%
+            bondPremium = bondPremium.add(1e17); //10%
         }
 
         return

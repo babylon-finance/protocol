@@ -30,13 +30,7 @@ const {
   substractFakeProfits,
 } = require('fixtures/StrategyHelper');
 
-const {
-  createGarden,
-  getDepositSig,
-  getWithdrawSig,
-  transferFunds,
-  depositFunds,
-} = require('fixtures/GardenHelper');
+const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 

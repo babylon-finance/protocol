@@ -701,10 +701,17 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
         // Only the heart or the user can update the lock
-        _require(balanceOf(_contributor) >= minContribution && (msg.sender == controller.heart() || msg.sender == _contributor), Errors.ONLY_CONTRIBUTOR);
+        _require(
+            balanceOf(_contributor) >= minContribution &&
+                (msg.sender == controller.heart() || msg.sender == _contributor),
+            Errors.ONLY_CONTRIBUTOR
+        );
         // Can only increase the lock if lock expired
-        _require(_userLock > userLock[msg.sender] ||
-          block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor), Errors.SET_GARDEN_USER_LOCK);
+        _require(
+            _userLock > userLock[msg.sender] ||
+                block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
+            Errors.SET_GARDEN_USER_LOCK
+        );
         userLock[msg.sender] = _userLock;
     }
 
