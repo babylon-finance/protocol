@@ -42,6 +42,8 @@ interface IHeart {
 
     function getTotalStats() external view returns (uint256[7] memory);
 
+    function getHeartVotingPower(address _contributor) external view returns (uint256);
+
     function votedGardens(uint256 _index) external view returns (address);
 
     function gardenWeights(uint256 _index) external view returns (uint256);
@@ -52,11 +54,15 @@ interface IHeart {
 
     // Non-view
 
-    function pump() external;
+    function pump(uint256 _bablMinAmountOut) external;
 
     function voteProposal(uint256 _proposalId, bool _isApprove) external;
 
-    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external;
+    function resolveGardenVotesAndPump(
+        address[] memory _gardens,
+        uint256[] memory _weights,
+        uint256 _bablMinAmountOut
+    ) external;
 
     function resolveGardenVotes(address[] memory _gardens, uint256[] memory _weights) external;
 
@@ -105,7 +111,8 @@ interface IHeart {
         address _assetToBond,
         uint256 _amountToBond,
         uint256 _minAmountOut,
-        address _referrer
+        address _referrer,
+        uint256 _userLock
     ) external;
 
     function bondAssetBySig(
@@ -117,7 +124,7 @@ interface IHeart {
         uint256 _maxFee,
         uint256 _priceInBABL,
         uint256 _pricePerShare,
-        uint256 _fee,
+        uint256[2] calldata _feeAndLock,
         address _contributor,
         address _referrer,
         bytes memory _signature

@@ -698,7 +698,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @param _userLock           Amount in seconds tht the user principal will be locked since deposit
      */
     function updateUserLock(address _contributor, uint256 _userLock) external override {
-        _require(controller.isGarden(msg.sender), Errors.ONLY_ACTIVE_GARDEN);
+        _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
         // Only the heart or the user can update the lock
         _require(balanceOf(_contributor) >= minContribution && (msg.sender == controller.heart() || msg.sender == _contributor), Errors.ONLY_CONTRIBUTOR);
@@ -1203,7 +1203,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @return     Time that the principal is locked since last deposit
      */
     function _getDepositHardlock(address _to) private view returns (uint256) {
-        return userLock[_to] > 0 ? userLock : depositHardlock;
+        return userLock[_to] > 0 ? userLock[_to] : depositHardlock;
     }
 }
 

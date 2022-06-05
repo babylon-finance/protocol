@@ -40,6 +40,45 @@ describe('Heart', function () {
   let babController;
   let gardenValuer;
 
+  async function consolidateFeesToWeth(heartContract, index) {
+    let consolidatedAmount = eth(0);
+    const percentage = await heartContract.feeDistributionWeights(index);
+    const reserveAssets = await babController.getReserveAssets();
+    for (const reserveAsset of reserveAssets) {
+      const reserveAssetContract = await getERC20(reserveAsset);
+      const balance = await reserveAssetContract.balanceOf(heartContract.address);
+      const decimals = await reserveAssetContract.decimals();
+      // Trade if it's above a min amount (otherwise wait until next pump)
+      if (
+        reserveAsset !== BABL.address &&
+        reserveAsset !== WETH.address &&
+        balance.gt(await heartContract.minAmounts(reserveAsset))
+      ) {
+        const pricePurchasingAsset = await priceOracle.getPrice(reserveAsset, WETH.address);
+        const wethToGet = balance
+          .mul(pricePurchasingAsset)
+          .mul(eth())
+          .mul((10 ** (18 - decimals)).toString())
+          .div(eth())
+          .div(eth());
+        consolidatedAmount = consolidatedAmount.add(wethToGet);
+      }
+      if (reserveAsset === WETH.address) {
+        consolidatedAmount = consolidatedAmount.add(balance);
+      }
+    }
+    return consolidatedAmount.mul(percentage).div(eth());
+  }
+
+  async function getBablMinAmountOut(heartContract) {
+    const bablPrice = await priceOracle.getPrice(BABL.address, WETH.address);
+    const slippage = eth(0.02);
+    const wethConsolidatedFromFeesForBuyback = await consolidateFeesToWeth(heartContract, 1);
+    let bablMinAmountOut = wethConsolidatedFromFeesForBuyback.mul(eth()).div(bablPrice);
+    bablMinAmountOut = bablMinAmountOut.sub(bablMinAmountOut.mul(slippage).div(eth()));
+    return bablMinAmountOut;
+  }
+
   beforeEach(async () => {
     ({
       gardenValuer,
@@ -311,7 +350,7 @@ describe('Heart', function () {
           maxFee,
           priceInBABL,
           eth(),
-          fee,
+          [fee, 86400 * 365],
           signer3.address,
           ADDRESS_ZERO,
           sig,
@@ -342,8 +381,9 @@ describe('Heart', function () {
     });
 
     it('user cannot bond asset that is not added', async function () {
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
-        .reverted;
+      await expect(
+        heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, ADDRESS_ZERO, 365 * 86400, { gasPrice: 0 }),
+      ).to.be.reverted;
     });
 
     it('user cannot bond a small amount', async function () {
@@ -353,8 +393,9 @@ describe('Heart', function () {
       await cDAI.connect(signer1).approve(heart.address, 1, { gasPrice: 0 });
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
-        .reverted;
+      await expect(
+        heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, 365 * 86400, { gasPrice: 0 }),
+      ).to.be.reverted;
     });
 
     it('user can bond an appropriate amount and receive the discount', async function () {
@@ -373,7 +414,7 @@ describe('Heart', function () {
       // Bond the asset
       await heart
         .connect(signer3)
-        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, { gasPrice: 0 });
+        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 365, { gasPrice: 0 });
 
       expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
     });
@@ -454,6 +495,7 @@ describe('Heart', function () {
   describe('pump', async function () {
     async function pumpAmount(amountInFees) {
       const daiPerWeth = await priceOracle.connect(owner).getPrice(WETH.address, DAI.address);
+      const bablMinAmountOut = await getBablMinAmountOut(heart);
       await heart
         .connect(keeper)
         .resolveGardenVotes([garden1.address, garden2.address, garden3.address], [eth(0.33), eth(0.33), eth(0.33)]);
@@ -465,7 +507,7 @@ describe('Heart', function () {
       const balanceGarden2BeforePump = await WETH.balanceOf(garden2.address);
       const balanceGarden3BeforePump = await WETH.balanceOf(garden3.address);
       const fuseBalanceDAIBeforePump = await cDAI.getCash();
-      await heart.connect(signer1).pump();
+      await heart.connect(signer1).pump(bablMinAmountOut);
       const statsAfterPump = await heart.getTotalStats();
       // Check the total fees is 3 WETH
       expect(statsAfterPump[0]).to.be.closeTo(amountInFees, amountInFees.div(100));
@@ -516,11 +558,13 @@ describe('Heart', function () {
       );
     }
     it('will revert if garden address has not been set', async function () {
-      await expect(heart.connect(signer1).pump()).to.be.reverted;
+      const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
+      await expect(heart.connect(signer1).pump(wethPerBabl)).to.be.reverted;
     });
 
     it('will revert if garden votes have not been set', async function () {
-      await expect(heart.connect(signer1).pump()).to.be.reverted;
+      const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);
+      await expect(heart.connect(signer1).pump(wethPerBabl)).to.be.reverted;
     });
 
     it('will pump correctly with 3 WETH', async function () {

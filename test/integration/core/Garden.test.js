@@ -5,30 +5,17 @@ const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
 const {
   GARDENS,
-  NOW,
   PROFIT_STRATEGIST_SHARE,
   PROFIT_STEWARD_SHARE,
   PROFIT_LP_SHARE,
   ONE_DAY_IN_SECONDS,
   PROTOCOL_FEE,
-  PROFIT_PROTOCOL_FEE,
-  GARDEN_PARAMS_STABLE,
   GARDEN_PARAMS,
   ADDRESS_ZERO,
   ONE_YEAR_IN_SECONDS,
   WETH_STRATEGY_PARAMS,
 } = require('lib/constants.js');
-const {
-  pick,
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-  getTimestamp,
-} = require('utils/test-helpers');
+const { pick, increaseTime, getERC20, from, eth, getTimestamp } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
@@ -47,7 +34,6 @@ const {
   createGarden,
   getDepositSig,
   getWithdrawSig,
-  getWithdrawSigHash,
   transferFunds,
   depositFunds,
 } = require('fixtures/GardenHelper');
@@ -69,8 +55,6 @@ describe('Garden', function () {
   let garden1;
   let mardukGate;
   let uniswapV3TradeIntegration;
-  let daiGarden;
-  let usdcGarden;
   let heartGarden;
   let gardenNFT;
   let gardenValuer;
@@ -80,7 +64,7 @@ describe('Garden', function () {
   let usdc;
   let weth;
   let dai;
-  let wbtc;
+  let babl;
 
   beforeEach(async () => {
     ({
@@ -103,9 +87,9 @@ describe('Garden', function () {
       bablToken,
 
       dai,
+      babl,
       usdc,
       weth,
-      wbtc,
     } = await setupTests()());
     emergency = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
     gov = await impersonateAddress(timelockController.address);
@@ -219,7 +203,7 @@ describe('Garden', function () {
       });
       await babController.connect(owner).enableGardenTokensTransfers();
 
-      const strategy = await getStrategy({ garden: garden });
+      await getStrategy({ garden: garden });
 
       const amount = await garden.balanceOf(signer1.address);
       await expect(garden.connect(signer1).transfer(signer2.address, amount)).to.be.revertedWith('BAB#007');
@@ -771,9 +755,6 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const gardenBalance = await usdc.balanceOf(garden.address);
-      const supplyBefore = await garden.totalSupply();
-
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), ADDRESS_ZERO);
 
       amountIn = eth(1000);
@@ -1050,7 +1031,7 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
-      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      const { active } = await getStrategyState(strategyContract);
       expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
@@ -1082,7 +1063,7 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
-      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      const { active } = await getStrategyState(strategyContract);
       expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
@@ -2411,6 +2392,24 @@ describe('Garden', function () {
           user2Avg,
         );
       });
+    });
+  });
+
+  describe('updates user lock', async function () {
+    it(`can update the lock in the heart garden`, async function () {
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      await depositFunds(addresses.tokens.DAI, garden);
+      // Reverts if calling it on a normal garden
+      await expect(garden.updateUserLock(signer1.address, 86400 * 365)).to.be.reverted;
+      expect(await heartGarden.userLock(signer1.address)).to.equal(0);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365);
+      expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
+      // Can't change it to a lower amount
+      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1)).to.be.reverted;
+      // Can change it after it expired
+      ethers.provider.send('evm_increaseTime', [86400 * 365]);
+      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1)).not.to.be.reverted;
+      expect(await heartGarden.userLock(signer1.address)).to.equal(1);
     });
   });
 

@@ -67,6 +67,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     event BABLRewardSent(uint256 _timestamp, uint256 _bablSent);
     event ProposalVote(uint256 _timestamp, uint256 _proposalId, bool _isApprove);
     event UpdatedGardenWeights(uint256 _timestamp);
+    event ShieldAmountIncreased(uint256 _timestamp, uint256 _wethAmount);
 
     /* ============ Constants ============ */
 
@@ -169,8 +170,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
     // Min & max value for the heart lock
-    uint256 private constant MIN_HEART_LOCK_VALUE = 6 months;
-    uint256 private constant MAX_HEART_LOCK_VALUE = 4 years;
+    uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
     /* ============ Initializer ============ */
 
@@ -215,7 +216,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
-    function pump() public override {
+    function pump(uint256 _bablMinAmountOut) public override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
         _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
@@ -235,7 +236,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 10% for buybacks
-        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
+        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]), _bablMinAmountOut);
         // 10% to BABL-ETH pair
         _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
         // 20% to Garden Investments
@@ -282,9 +283,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         emit UpdatedGardenWeights(block.timestamp);
     }
 
-    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external override {
+    function resolveGardenVotesAndPump(
+        address[] memory _gardens,
+        uint256[] memory _weights,
+        uint256 _bablMinAmountOut
+    ) external override {
         resolveGardenVotes(_gardens, _weights);
-        pump();
+        pump(_bablMinAmountOut);
     }
 
     /**
@@ -544,31 +549,30 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _maxFee,
         uint256 _priceInBABL,
         uint256 _pricePerShare,
-        uint256 _fee,
-        uint256 _userLock,
+        uint256[2] calldata _feeAndLock,
         address _contributor,
         address _referrer,
         bytes memory _signature
     ) external override {
         _onlyKeeper();
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
+        _require(_feeAndLock[0] <= _maxFee, Errors.FEE_TOO_HIGH);
         _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors. SET_GARDEN_USER_LOCK);
+        _require(_feeAndLock[1] >= MIN_HEART_LOCK_VALUE && _feeAndLock[1] <= MAX_HEART_LOCK_VALUE, Errors. SET_GARDEN_USER_LOCK);
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
         _require(BABL.balanceOf(address(this)) >= _amountIn, Errors.AMOUNT_TOO_LOW);
 
         // verify that _amountIn is correct compare to _amountToBond
-        uint256 val = _bondToBABL(_assetToBond, _amountToBond, _priceInBABL, _userLock);
-        uint256 diff = val > _amountIn ? val.sub(_amountIn) : _amountIn.sub(val);
+        uint256 val = _bondToBABL(_assetToBond, _amountToBond, _priceInBABL, _feeAndLock[1]);
+        val = val > _amountIn ? val.sub(_amountIn) : _amountIn.sub(val);
         // allow 0.1% deviation
-        _require(diff < _amountIn.div(1000), Errors.INVALID_AMOUNT);
+        _require(val < _amountIn.div(1000), Errors.INVALID_AMOUNT);
 
         BABL.safeApprove(address(heartGarden), _amountIn);
 
         // Pay the fee to the Keeper
-        IERC20(BABL).safeTransfer(msg.sender, _fee);
+        IERC20(BABL).safeTransfer(msg.sender, _feeAndLock[0]);
 
         // grant permission to deposit
         signer = _contributor;
@@ -585,7 +589,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             _signature
         );
         // Update user lock
-        heartGarden.updateUserLock(_contributor, _userLock);
+        heartGarden.updateUserLock(_contributor, _feeAndLock[1]);
         // revoke permission to deposit
         signer = address(0);
     }
@@ -690,6 +694,22 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         return recovered == signer && recovered != address(0) ? this.isValidSignature.selector : bytes4(0);
     }
 
+    /**
+     * Returns the heart voting power of a specific user
+     */
+    function getHeartVotingPower(address _contributor) public view override returns (uint256) {
+        uint256 lock = heartGarden.userLock(_contributor);
+        uint256 balance = heartGarden.balanceOf(_contributor);
+        if (lock == 0) {
+          return balance.div(8);
+        }
+        if (lock >= MAX_HEART_LOCK_VALUE) {
+          return balance;
+        }
+        uint256 ratio = lock.preciseDiv(MAX_HEART_LOCK_VALUE);
+        return balance.preciseMul(ratio);
+    }
+
     /* ============ Internal Functions ============ */
 
     function _bondToBABL(
@@ -701,10 +721,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 bondPremium = bondAssets[_assetToBond];
 
         // Check time premium
-        if (_userLock >= 1 years && _userLock < 2 years) {
+        if (_userLock >= 365 days && _userLock < 730 days) {
           bondPremium = bondPremium.add(2e16); //2%
         }
-        if (_userLock >= 2 years && _userLock < 4 years) {
+        if (_userLock >= 730 days && _userLock < MAX_HEART_LOCK_VALUE) {
           bondPremium = bondPremium.add(45e15); //4.5%
         }
         if (_userLock >= MAX_HEART_LOCK_VALUE) {
@@ -741,9 +761,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Buys back BABL through the uniswap V3 BABL-ETH pool
      *
      */
-    function _buyback(uint256 _amount) private {
+    function _buyback(uint256 _amount, uint256 _bablMinAmountOut) private {
         // Gift 50% BABL back to garden and send 50% to the treasury
-        uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
+        // _bablMinAmountOut to avoid MEV sandwhich attacks
+        uint256 bablBought = _trade(address(WETH), address(BABL), _amount, _bablMinAmountOut, address(0)); // 50%
         IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
         IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
         totalStats[2] = totalStats[2].add(bablBought);
@@ -835,7 +856,9 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _amount             Total amount of weth to allocate to the shield
      */
     function _shield(uint256 _amount) private {
-
+        // Convert to ETH
+        IWETH(WETH).withdraw(_amount);
+        emit ShieldAmountIncreased(block.timestamp, _amount);
     }
 
     /**
