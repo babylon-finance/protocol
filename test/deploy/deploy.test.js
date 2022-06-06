@@ -195,7 +195,7 @@ describe('deploy', function () {
     });
 
     beforeEach(async () => {
-      ({ owner, gov, keeper, priceOracle, strategyNft, valuer, gardens, distributor } = await getContracts());
+      ({ owner, gov, keeper, strategyNft, valuer, gardens, distributor } = await getContracts());
     });
 
     afterEach(async () => {
