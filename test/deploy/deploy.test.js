@@ -12,7 +12,7 @@ const { getContracts, deployFixture } = require('lib/deploy');
 const STUCK = [
   // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
   // '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
-  '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237' // aladdin
+  '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237', // aladdin
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -87,7 +87,8 @@ describe('deploy', function () {
     console.log(`  Adding capital to the strategy ${name} ${strategyContract.address}`);
 
     try {
-      const capital = reserveAsset === addresses.tokens.DAI ? eth(2000) : eth(1);
+      const capital = reserveAsset === addresses.tokens.DAI ? eth(2000) : eth(200);
+      console.log('Adding 200 ETH');
       await strategyContract.connect(keeper).executeStrategy(capital, 1);
 
       const [, active, , finalized, , exitedAt] = await strategyContract.getStrategyState();
@@ -98,6 +99,7 @@ describe('deploy', function () {
     } catch (e) {
       console.log(`  failed to allocate capital to the strategy ${e}`);
     }
+    console.log('Strategy NAV', (await strategyContract.getNAV()).toString());
   }
 
   async function finalizeStrategy(strategyContract, name, reserveAsset) {
@@ -206,7 +208,7 @@ describe('deploy', function () {
       await canUnwindAllActiveStrategies();
     });
 
-    it.skip('can execute stuck proposals', async () => {
+    it.only('can execute stuck proposals', async () => {
       await executeStuckStrategies();
     });
 
@@ -214,7 +216,7 @@ describe('deploy', function () {
       await canAllocateCapitalToAllActiveStrategies();
     });
 
-    it('gets right NAV strategies', async () => {
+    it.only('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
@@ -255,7 +257,7 @@ describe('deploy', function () {
       }
     });
 
-    it.skip('gets right NAV strategies', async () => {
+    it.only('gets right NAV strategies', async () => {
       await checkNAVStrategies();
     });
 
