@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import {ITokenIdentifier} from './ITokenIdentifier.sol';
+import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
 
 /**
  * @title IPriceOracle
@@ -22,6 +23,8 @@ interface IPriceOracle {
     function updateMaxTwapDeviation(int24 _maxTwapDeviation) external;
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
+
+    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external;
 
     function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
 

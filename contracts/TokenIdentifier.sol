@@ -191,6 +191,15 @@ contract TokenIdentifier is ITokenIdentifier {
     }
 
     /**
+     * update Curve Meta Registry
+     */
+    function updateCurveMetaRegistry(ICurveMetaRegistry _newCurveMetaRegistry) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newCurveMetaRegistry) != address(0), 'Address needs to exist');
+        curveMetaRegistry = _newCurveMetaRegistry;
+    }
+
+    /**
      * Returns the types of the two tokens
      * @param _tokenIn              Address of the first token
      * @param _tokenOut             Address of the second token

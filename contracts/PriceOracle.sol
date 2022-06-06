@@ -102,7 +102,7 @@ contract PriceOracle is Ownable, IPriceOracle {
 
     ITokenIdentifier public tokenIdentifier;
     IBabController public immutable controller;
-    ICurveMetaRegistry public immutable curveMetaRegistry;
+    ICurveMetaRegistry public curveMetaRegistry;
     IConvexRegistry public immutable convexRegistry;
     IPickleJarRegistry public immutable pickleRegistry;
     mapping(address => bool) public hopTokens;
@@ -140,6 +140,12 @@ contract PriceOracle is Ownable, IPriceOracle {
     function updateReserves(address[] memory list) public override {
         controller.onlyGovernanceOrEmergency();
         _updateReserves(list);
+    }
+
+    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) public override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_curveMetaRegistry) != address(0), 'Address needs to exist');
+        curveMetaRegistry = _curveMetaRegistry;
     }
 
     /**
