@@ -90,7 +90,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         ITradeIntegration _univ2,
         ITradeIntegration _hearttrade,
         ITradeIntegration _paladinTrade
-    ) BaseIntegration('master_swapper_v3', _controller) {
+    ) BaseIntegration('master_swapper_v4', _controller) {
         curve = _curve;
         univ3 = _univ3;
         synthetix = _synthetix;
