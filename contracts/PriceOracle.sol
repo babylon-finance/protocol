@@ -98,13 +98,15 @@ contract PriceOracle is Ownable, IPriceOracle {
     int24 private constant baseThreshold = 1000;
     int24 private constant INITIAL_TWAP_DEVIATION = 1600; // locally for testing. It should be halved in main
 
+    /* ============ Immutable Variables ============ */
+    IBabController public immutable controller;
+
     /* ============ State Variables ============ */
 
     ITokenIdentifier public tokenIdentifier;
-    IBabController public immutable controller;
     ICurveMetaRegistry public curveMetaRegistry;
-    IConvexRegistry public immutable convexRegistry;
-    IPickleJarRegistry public immutable pickleRegistry;
+    IConvexRegistry public convexRegistry;
+    IPickleJarRegistry public pickleRegistry;
     mapping(address => bool) public hopTokens;
     address[] public hopTokensList;
     int24 private maxTwapDeviation;
@@ -142,10 +144,22 @@ contract PriceOracle is Ownable, IPriceOracle {
         _updateReserves(list);
     }
 
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) public override {
+    function updateCurveMetaRegistry(ICurveMetaRegistry _newCurveMetaRegistry) public override {
         controller.onlyGovernanceOrEmergency();
-        require(address(_curveMetaRegistry) != address(0), 'Address needs to exist');
-        curveMetaRegistry = _curveMetaRegistry;
+        require(address(_newCurveMetaRegistry) != address(0), 'Address needs to exist');
+        curveMetaRegistry = _newCurveMetaRegistry;
+    }
+
+    function updateConvexRegistry(IConvexRegistry _newConvexRegistry) public override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newConvexRegistry) != address(0), 'Address needs to exist');
+        convexRegistry = _newConvexRegistry;
+    }
+
+    function updatePickleRegistry(IPickleJarRegistry _newPickleRegistry) public override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newPickleRegistry) != address(0), 'Address needs to exist');
+        pickleRegistry = _newPickleRegistry;
     }
 
     /**

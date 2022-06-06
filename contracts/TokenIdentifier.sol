@@ -200,6 +200,33 @@ contract TokenIdentifier is ITokenIdentifier {
     }
 
     /**
+     * update Convex Registry
+     */
+    function updateConvexRegistry(IConvexRegistry _newConvexRegistry) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newConvexRegistry) != address(0), 'Address needs to exist');
+        convexRegistry = _newConvexRegistry;
+    }
+
+    /**
+     * update Pickle Registry
+     */
+    function updatePickleRegistry(IPickleJarRegistry _newJarRegistry) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newJarRegistry) != address(0), 'Address needs to exist');
+        jarRegistry = _newJarRegistry;
+    }
+
+    /**
+     * update Yearn Vault Registry
+     */
+    function updateYearnVaultRegistry(IYearnVaultRegistry _newYearnVaultRegistry) external override {
+        controller.onlyGovernanceOrEmergency();
+        require(address(_newYearnVaultRegistry) != address(0), 'Address needs to exist');
+        vaultRegistry = _newYearnVaultRegistry;
+    }
+
+    /**
      * Returns the types of the two tokens
      * @param _tokenIn              Address of the first token
      * @param _tokenOut             Address of the second token

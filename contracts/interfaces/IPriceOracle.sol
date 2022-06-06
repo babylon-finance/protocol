@@ -4,6 +4,8 @@ pragma solidity 0.7.6;
 
 import {ITokenIdentifier} from './ITokenIdentifier.sol';
 import {ICurveMetaRegistry} from './ICurveMetaRegistry.sol';
+import {IConvexRegistry} from './IConvexRegistry.sol';
+import {IPickleJarRegistry} from './IPickleJarRegistry.sol';
 
 /**
  * @title IPriceOracle
@@ -24,7 +26,11 @@ interface IPriceOracle {
 
     function updateTokenIdentifier(ITokenIdentifier _tokenIdentifier) external;
 
-    function updateCurveMetaRegistry(ICurveMetaRegistry _curveMetaRegistry) external;
+    function updateCurveMetaRegistry(ICurveMetaRegistry _newCurveMetaRegistry) external;
+
+    function updateConvexRegistry(IConvexRegistry _newConvexRegistry) external;
+
+    function updatePickleRegistry(IPickleJarRegistry _newPickleRegistry) external;
 
     function getCompoundExchangeRate(address _asset, address _finalAsset) external view returns (uint256);
 
