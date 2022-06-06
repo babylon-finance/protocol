@@ -13,6 +13,7 @@ import {IFactoryRegistry} from '../interfaces/external/curve/IFactoryRegistry.so
 import {ICryptoRegistry} from '../interfaces/external/curve/ICryptoRegistry.sol';
 import {ICryptoFactoryRegistry} from '../interfaces/external/curve/ICryptoFactoryRegistry.sol';
 import {ControllerLib} from '../lib/ControllerLib.sol';
+import {UniversalERC20} from '../lib/UniversalERC20.sol';
 
 /**
  * @title CurveMetaRegistry
@@ -22,6 +23,7 @@ import {ControllerLib} from '../lib/ControllerLib.sol';
  */
 contract CurveMetaRegistry is ICurveMetaRegistry {
     using ControllerLib for IBabController;
+    using UniversalERC20 for IERC20;
 
     /* ============ Constants ============ */
 
@@ -355,13 +357,13 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         }
         // If there is a pool, find the best by checking balance of fromToken
         // We check max two more
-        uint256 maxBalance = IERC20(_fromToken).balanceOf(pool);
+        uint256 maxBalance = IERC20(_fromToken).universalBalanceOf(pool);
         for (uint256 i = 1; i < 3; i++) {
             address newPool = _findPoolForCoinsByKind(_fromToken, _toToken, i, _kind);
             if (newPool == address(0)) {
                 break;
             }
-            uint256 newBalance = IERC20(_fromToken).balanceOf(pool);
+            uint256 newBalance = IERC20(_fromToken).universalBalanceOf(pool);
             if (newBalance > maxBalance) {
                 maxBalance = newBalance;
                 pool = newPool;
