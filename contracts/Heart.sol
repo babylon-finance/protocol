@@ -211,7 +211,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
-    function pump() public override {
+    function pump(uint256 _bablMinAmountOut) public override {
         _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
         _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
         _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
@@ -231,7 +231,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
         // 30% for buybacks
-        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]));
+        _buyback(wethBalance.preciseMul(feeDistributionWeights[1]), _bablMinAmountOut);
         // 25% to BABL-ETH pair
         _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
         // 15% to Garden Investments
@@ -276,9 +276,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         emit UpdatedGardenWeights(block.timestamp);
     }
 
-    function resolveGardenVotesAndPump(address[] memory _gardens, uint256[] memory _weights) external override {
+    function resolveGardenVotesAndPump(
+        address[] memory _gardens,
+        uint256[] memory _weights,
+        uint256 _bablMinAmountOut
+    ) external override {
         resolveGardenVotes(_gardens, _weights);
-        pump();
+        pump(_bablMinAmountOut);
     }
 
     /**
@@ -710,9 +714,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Buys back BABL through the uniswap V3 BABL-ETH pool
      *
      */
-    function _buyback(uint256 _amount) private {
+    function _buyback(uint256 _amount, uint256 _bablMinAmountOut) private {
         // Gift 50% BABL back to garden and send 50% to the treasury
-        uint256 bablBought = _trade(address(WETH), address(BABL), _amount); // 50%
+        // _bablMinAmountOut to avoid MEV sandwhich attacks
+        uint256 bablBought = _trade(address(WETH), address(BABL), _amount, _bablMinAmountOut, address(0)); // 50%
         IERC20(BABL).safeTransfer(address(heartGarden), bablBought.div(2));
         IERC20(BABL).safeTransfer(treasury, bablBought.div(2));
         totalStats[2] = totalStats[2].add(bablBought);
