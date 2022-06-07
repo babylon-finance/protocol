@@ -12,7 +12,7 @@ const { getContracts, deployFixture } = require('lib/deploy');
 const STUCK = [
   // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
   // '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
-  '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237' // aladdin
+  '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237', // aladdin
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];

@@ -199,8 +199,8 @@ contract CurveTradeIntegration is TradeIntegration {
         address curvePool = curveMetaRegistry.findBestPoolForCoins(_sendToken, _receiveToken);
         if (curvePool == 0x828b154032950C8ff7CF8085D841723Db2696056) {
             curvePool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-            _sendToken = _sendToken == WETH ? ETH_ADD_CURVE: _sendToken;
-            _receiveToken = _receiveToken == WETH ? ETH_ADD_CURVE: _receiveToken;
+            _sendToken = _sendToken == WETH ? ETH_ADD_CURVE : _sendToken;
+            _receiveToken = _receiveToken == WETH ? ETH_ADD_CURVE : _receiveToken;
         }
         if (_sendToken == WETH && curvePool == address(0)) {
             _sendToken = ETH_ADD_CURVE;
