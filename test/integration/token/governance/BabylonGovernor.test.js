@@ -334,7 +334,7 @@ describe('BabylonGovernor', function () {
       // Check all voters have voted
       expect(await mockGovernor.hasVoted(id, voter1.address)).to.be.equal(true);
       expect(await mockGovernor.hasVoted(id, voter3.address)).to.be.equal(true);
-      // Check voting results are the same despite the token was
+      // Check voting results are the same despite the tokens were transferred after voting
       expect(forVotes).to.eq(forVotes2);
       expect(againstVotes).to.eq(againstVotes2);
       expect(abstainVotes).to.eq(abstainVotes2);
