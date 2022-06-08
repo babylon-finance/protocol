@@ -3,13 +3,13 @@ const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
-const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
+const { getERC20, increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
-describe.skip('BabylonGovernor', function () {
+describe('BabylonGovernor', function () {
   let owner;
   let deployer;
   let signer1;
@@ -302,7 +302,43 @@ describe.skip('BabylonGovernor', function () {
       // state 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
       expect(await babGovernor.state(id)).to.eq(1);
     });
-
+    it('can cast a vote and sell tokens after without impact on voting results', async function () {
+      await increaseTime(ONE_DAY_IN_SECONDS * 365 * 4); // pass vesting
+      const [mockGovernor, mockTimelock] = await getGovernorMock(10);
+      const { id, args, voters } = await getProposal(mockGovernor, {
+        voters: [
+          { voter: voter1, support: voteType.For, reason: 'This is cool' },
+          { voter: voter3, support: voteType.For, reason: 'This is nice' },
+        ],
+      });
+      // propose
+      await mockGovernor.connect(voter1)['propose(address[],uint256[],bytes[],string)'](...args, { gasPrice: 0 });
+      await increaseBlock(1);
+      await castVotes(id, voters, mockGovernor);
+      const [, , eta, , , forVotes, againstVotes, abstainVotes, , ,] = await mockGovernor.proposals(id);
+      const voter3Balance = await bablToken.balanceOf(voter3.address);
+      // Enable BABL token transfers to remove tokens from proposer running low on babl tokens
+      await bablToken.connect(owner).enableTokensTransfers();
+      const externalUser = await impersonateAddress('0x85584b54061b15Cb790C7C0d0Ea15545731569C0');
+      // After vote, sending all its entire balance to a external user during active voting window
+      await bablToken.connect(voter3).transfer(externalUser.address, voter3Balance, { gasPrice: 0 });
+      // increase blocks to reach the voting deadline
+      await increaseBlock(5);
+      // Anyone can queue
+      await mockGovernor.connect(voter2)['queue(uint256)'](id);
+      // 0:'Pending', 1:'Active', 2:'Canceled', 3:'Defeated', 4:'Succeeded', 5:'Queued', 6:'Expired', 7:'Executed')
+      // 5: queued state
+      const state = await mockGovernor.state(id);
+      expect(state).to.eq(proposalState.Queued);
+      const [, , , , , forVotes2, againstVotes2, abstainVotes2, , ,] = await mockGovernor.proposals(id);
+      // Check all voters have voted
+      expect(await mockGovernor.hasVoted(id, voter1.address)).to.be.equal(true);
+      expect(await mockGovernor.hasVoted(id, voter3.address)).to.be.equal(true);
+      // Check voting results are the same despite the token was
+      expect(forVotes).to.eq(forVotes2);
+      expect(againstVotes).to.eq(againstVotes2);
+      expect(abstainVotes).to.eq(abstainVotes2);
+    });
     it('can NOT cast a vote before votes start', async function () {
       const [mockGovernor, mockTimelock] = await getGovernorMock(10, 10);
       const { id, args } = await getProposal(mockGovernor);
