@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 
 const { ADDRESS_ZERO, ONE_DAY_IN_SECONDS } = require('lib/constants');
 const { from, eth, parse } = require('lib/helpers');
-const { getERC20, increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
+const { increaseTime, increaseBlock, voteType, proposalState } = require('utils/test-helpers');
 
 const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
