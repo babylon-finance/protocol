@@ -9,7 +9,7 @@ const { setupTests } = require('fixtures/GardenFixture');
 const { impersonateAddress } = require('lib/rpc');
 const { ONE_YEAR_IN_SECONDS } = require('lib/constants');
 
-describe('BabylonGovernor', function () {
+describe.skip('BabylonGovernor', function () {
   let owner;
   let deployer;
   let signer1;
