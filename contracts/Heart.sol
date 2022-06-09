@@ -185,7 +185,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
     uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
-    uint256 private shieldStats = 10e18; // 10 ETH spent before deployment
+    uint256 private shieldStats;
 
     /* ============ Initializer ============ */
 
@@ -532,7 +532,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
                 _userLock
             );
         // Get asset to bond from sender
-        IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
+        IERC20(_assetToBond).safeTransferFrom(msg.sender, _assetToBond == address(DAI) ? treasury : address(this), _amountToBond);
 
         // Deposit on behalf of the user
         _require(BABL.balanceOf(address(this)) >= bondValueInBABL, Errors.AMOUNT_TOO_LOW);
@@ -543,7 +543,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         // Updates the lock
         heartGarden.updateUserLock(msg.sender, _userLock);
-        // TODO: send to treasury. Here and in bond by sig
     }
 
     /**
@@ -572,7 +571,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _onlyValidBond(_assetToBond, _amountToBond, _feeAndLock[1]);
         _require(_feeAndLock[0] <= _maxFee, Errors.FEE_TOO_HIGH);
         // Get asset to bond from contributor
-        IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
+        IERC20(_assetToBond).safeTransferFrom(_contributor, _assetToBond == address(DAI) ? treasury : address(this), _amountToBond);
         // Deposit on behalf of the user
         _require(BABL.balanceOf(address(this)) >= _amountIn, Errors.AMOUNT_TOO_LOW);
 
