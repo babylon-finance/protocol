@@ -173,6 +173,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
     uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
+    uint256 private shieldStats = 10e18; // 10 ETH spent before deployment
+
     /* ============ Initializer ============ */
 
     /**
@@ -530,6 +532,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         // Updates the lock
         heartGarden.updateUserLock(msg.sender, _userLock);
+        // TODO: send to treasury. Here and in bond by sig
     }
 
     /**
@@ -685,8 +688,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() external view override returns (uint256[7] memory) {
-        return totalStats;
+    function getTotalStats() external view override returns (uint256[] memory) {
+        uint256[] memory stats = new uint256[](totalStats.length + 1);
+        for (uint8 i = 0; i < totalStats.length; i++) {
+            stats[i] = totalStats[i];
+        }
+        stats[totalStats.length] = shieldStats;
+        return stats;
     }
 
     /**
@@ -699,6 +707,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     /**
      * Returns the heart voting power of a specific user
+     * TODO: Move to garden
      */
     function getHeartVotingPower(address _contributor) public view override returns (uint256) {
         uint256 lock = heartGarden.userLock(_contributor);
@@ -861,6 +870,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function _shield(uint256 _amount) private {
         // Convert to ETH
         WETH.withdraw(_amount);
+        shieldStats = shieldStats.add(_amount);
         emit ShieldAmountIncreased(block.timestamp, _amount);
     }
 

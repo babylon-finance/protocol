@@ -61,7 +61,7 @@ contract HeartViewer is IHeartViewer {
         override
         returns (
             address[2] memory, // address of the heart garden
-            uint256[7] memory, // total stats
+            uint256[] memory, // total stats
             uint256[] memory, // fee weights
             address[] memory, // voted gardens
             uint256[] memory, // garden weights
