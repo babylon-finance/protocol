@@ -57,6 +57,11 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
+    function _onlyValidBond(address _assetToBond, uint256 _amountToBond, uint256 _userLock) private view {
+      _require((_assetToBond == address(BABL) || bondAssets[_assetToBond] > 0) && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
+      _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
+    }
+
     /* ============ Events ============ */
 
     event FeesCollected(uint256 _timestamp, uint256 _amount);
@@ -510,8 +515,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         address _referrer,
         uint256 _userLock
     ) external override {
-        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
+        _onlyValidBond(_assetToBond, _amountToBond, _userLock);
         // Total value adding the premium and the lock premium
         uint256 bondValueInBABL =
             _bondToBABL(
@@ -558,12 +562,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         bytes memory _signature
     ) external override {
         _onlyKeeper();
+        _onlyValidBond(_assetToBond, _amountToBond, _feeAndLock[1]);
         _require(_feeAndLock[0] <= _maxFee, Errors.FEE_TOO_HIGH);
-        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        _require(
-            _feeAndLock[1] >= MIN_HEART_LOCK_VALUE && _feeAndLock[1] <= MAX_HEART_LOCK_VALUE,
-            Errors.SET_GARDEN_USER_LOCK
-        );
         // Get asset to bond from contributor
         IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
         // Deposit on behalf of the user
