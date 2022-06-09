@@ -57,9 +57,16 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
-    function _onlyValidBond(address _assetToBond, uint256 _amountToBond, uint256 _userLock) private view {
-      _require((_assetToBond == address(BABL) || bondAssets[_assetToBond] > 0) && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-      _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
+    function _onlyValidBond(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _userLock
+    ) private view {
+        _require(
+            (_assetToBond == address(BABL) || bondAssets[_assetToBond] > 0) && _amountToBond > 0,
+            Errors.AMOUNT_TOO_LOW
+        );
+        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
     }
 
     /* ============ Events ============ */
@@ -703,23 +710,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
         address recovered = ECDSA.recover(_hash, _signature);
         return recovered == signer && recovered != address(0) ? this.isValidSignature.selector : bytes4(0);
-    }
-
-    /**
-     * Returns the heart voting power of a specific user
-     * TODO: Move to garden
-     */
-    function getHeartVotingPower(address _contributor) public view override returns (uint256) {
-        uint256 lock = heartGarden.userLock(_contributor);
-        uint256 balance = heartGarden.balanceOf(_contributor);
-        if (lock == 0) {
-            return balance.div(8);
-        }
-        if (lock >= MAX_HEART_LOCK_VALUE) {
-            return balance;
-        }
-        uint256 ratio = lock.preciseDiv(MAX_HEART_LOCK_VALUE);
-        return balance.preciseMul(ratio);
     }
 
     /* ============ Internal Functions ============ */

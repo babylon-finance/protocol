@@ -214,6 +214,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that controls the user locks (only used by heart for now)
     mapping(address => uint256) public override userLock;
 
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -745,6 +747,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     function getFinalizedStrategies() external view override returns (address[] memory) {
         return finalizedStrategies;
+    }
+
+    /**
+     * Returns the heart voting power of a specific user
+     * @param _contributor      Address of the contributor
+     * @return uint256          Voting power of the contributor
+     */
+    function getVotingPower(address _contributor) public view override returns (uint256) {
+        address heartGarden = address(IHeart(controller.heart()).heartGarden());
+        uint256 balance = balanceOf(_contributor);
+        if (address(this) != heartGarden) {
+            return balance;
+        }
+        uint256 lock = userLock[_contributor];
+        if (lock == 0) {
+            return balance.div(8);
+        }
+        if (lock >= MAX_HEART_LOCK_VALUE) {
+            return balance;
+        }
+        return balance.preciseMul(lock.preciseDiv(MAX_HEART_LOCK_VALUE));
     }
 
     /**

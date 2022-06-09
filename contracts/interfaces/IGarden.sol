@@ -165,6 +165,8 @@ interface ICoreGarden {
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
+    function getVotingPower(address _contributor) external view returns (uint256);
+
     function strategyMapping(address _strategy) external view returns (bool);
 
     function keeperDebt() external view returns (uint256);
