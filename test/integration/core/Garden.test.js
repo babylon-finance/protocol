@@ -2398,12 +2398,15 @@ describe('Garden', function () {
       expect(await heartGarden.userLock(signer1.address)).to.equal(0);
       await heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365);
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
+      const balance = await heartGarden.balanceOf(signer1.address);
+      expect(await heartGarden.getVotingPower(signer1.address)).to.equal(balance.div(4));
       // Can't change it to a lower amount
       await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1)).to.be.reverted;
       // Can change it after it expired
       ethers.provider.send('evm_increaseTime', [86400 * 365]);
-      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1)).not.to.be.reverted;
-      expect(await heartGarden.userLock(signer1.address)).to.equal(1);
+      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365 * 4)).not.to.be.reverted;
+      expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 4);
+      expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(balance);
     });
   });
 
