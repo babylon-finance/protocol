@@ -146,7 +146,7 @@ describe('Heart', function () {
       expect(fees[2]).to.equal(eth(0.2));
       expect(fees[3]).to.equal(eth(0.15));
       expect(fees[4]).to.equal(eth(0.2));
-      expect(fees[4]).to.equal(eth(0.05));
+      expect(fees[5]).to.equal(eth(0.05));
       const stats = await heart.connect(owner).getTotalStats();
       expect(stats[0]).to.equal(0);
       expect(stats[1]).to.equal(0);
