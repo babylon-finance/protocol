@@ -702,7 +702,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function updateUserLock(address _contributor, uint256 _userLock) external override {
         _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
-        _require(_userLock < MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
+        _require(_userLock <= MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
         // Only the heart or the user can update the lock
         _require(
             balanceOf(_contributor) >= minContribution &&
