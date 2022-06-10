@@ -143,15 +143,18 @@ describe('Heart', function () {
       const fees = await heart.connect(owner).getFeeDistributionWeights();
       expect(fees[0]).to.equal(eth(0.1));
       expect(fees[1]).to.equal(eth(0.3));
-      expect(fees[2]).to.equal(eth(0.25));
+      expect(fees[2]).to.equal(eth(0.2));
       expect(fees[3]).to.equal(eth(0.15));
       expect(fees[4]).to.equal(eth(0.2));
+      expect(fees[4]).to.equal(eth(0.05));
       const stats = await heart.connect(owner).getTotalStats();
       expect(stats[0]).to.equal(0);
       expect(stats[1]).to.equal(0);
       expect(stats[2]).to.equal(0);
       expect(stats[3]).to.equal(0);
       expect(stats[4]).to.equal(0);
+      expect(stats[5]).to.equal(0);
+      expect(stats[6]).to.equal(0);
     });
   });
 

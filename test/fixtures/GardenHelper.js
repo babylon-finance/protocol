@@ -46,6 +46,7 @@ async function createGarden({
   publicGardenStrategistsStewards = [false, false, false],
   publicSharing = [0, 0, 0],
   customIntegrationsEnabled = false,
+  overrideHardlock,
 } = {}) {
   const [deployer, keeper, , signer1, signer2, signer3] = await ethers.getSigners();
   signer = signer || signer1;
@@ -54,6 +55,9 @@ async function createGarden({
   params = params || GARDEN_PARAMS_MAP[reserveAsset];
   if (customIntegrationsEnabled) {
     params[12] = 1;
+  }
+  if (overrideHardlock) {
+    params[2] = overrideHardlock;
   }
   const contribution = CONTRIBUTORS_MAP[reserveAsset];
   const erc20 = await getERC20(reserveAsset);

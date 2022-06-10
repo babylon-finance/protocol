@@ -1528,7 +1528,7 @@ describe('Garden', function () {
 
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
 
-      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, overrideHardlock: 86400 * 21 });
 
       await babController.connect(owner).updateGardenAffiliateRate(garden.address, eth());
 
@@ -2406,7 +2406,7 @@ describe('Garden', function () {
       ethers.provider.send('evm_increaseTime', [86400 * 365]);
       await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365 * 4)).not.to.be.reverted;
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 4);
-      expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(balance);
+      expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(balance, balance.div(100));
     });
   });
 
