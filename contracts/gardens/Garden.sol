@@ -109,6 +109,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     uint256 private constant CLAIM_BY_SIG_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
 
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
+
     /* ============ Structs ============ */
 
     /* ============ State Variables ============ */
@@ -213,8 +215,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     // Variable that controls the user locks (only used by heart for now)
     mapping(address => uint256) public override userLock;
-
-    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
     /* ============ Modifiers ============ */
 
@@ -702,6 +702,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function updateUserLock(address _contributor, uint256 _userLock) external override {
         _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
+        _require(_userLock < MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
         // Only the heart or the user can update the lock
         _require(
             balanceOf(_contributor) >= minContribution &&
