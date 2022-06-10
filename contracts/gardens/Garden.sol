@@ -1151,6 +1151,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
+            userLock[_contributor] = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);

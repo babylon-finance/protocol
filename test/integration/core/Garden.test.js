@@ -2408,6 +2408,104 @@ describe('Garden', function () {
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 4);
       expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(balance, balance.div(100));
     });
+    [
+      { name: '< min of 6 months', amount: ONE_DAY_IN_SECONDS * 183 - 1 },
+      { name: '> max of 4 years', amount: ONE_DAY_IN_SECONDS * 365 * 4 + 1 },
+    ].forEach(({ name, amount }) => {
+      it(`can NOT update the lock if out of bounds using a lock ${name}`, async function () {
+        await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, amount)).to.be.revertedWith(
+          'BAB#134',
+        );
+      });
+    });
+    it(`can leave after lock period ends and re-join a garden`, async function () {
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      await increaseTime(lockTime);
+      // Leave the garden completely
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).not.reverted;
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(signer1lock1).to.eq(signer1lock3).to.eq(0);
+      expect(signer1lock2).to.eq(lockTime);
+      // Re join the garden after leaving completely
+      await babl.connect(signer1).approve(heartGarden.address, eth(30), {
+        gasPrice: 0,
+      });
+      await heartGarden.connect(signer1).deposit(eth(30), 1, signer1.getAddress(), ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+      const signer1lock4 = await heartGarden.userLock(signer1.address);
+      await expect(signer1lock4).to.eq(0);
+    });
+    it(`can NOT withdraw before lock period ends`, async function () {
+      const [lastDepositAt, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      const block = await ethers.provider.getBlock();
+      const timeDiff = lockTime - (block.timestamp - lastDepositAt);
+      await increaseTime(timeDiff - 2); // previous block to unblock
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#003');
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(signer1lock1).to.eq(0);
+      expect(signer1lock2).to.eq(signer1lock3);
+    });
+    it(`new deposits move unlock time forward`, async function () {
+      const [lastDepositAt, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      const block = await ethers.provider.getBlock();
+      // New deposit
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await babl.connect(signer1).approve(heartGarden.address, eth(30), {
+        gasPrice: 0,
+      });
+      await heartGarden.connect(signer1).deposit(eth(30), 1, signer1.getAddress(), ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+      const [lastDepositAt2, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+
+      const timeDiff1 = lockTime - (block.timestamp - lastDepositAt);
+      const timeDiff2 = lockTime - (block.timestamp - lastDepositAt2);
+
+      await increaseTime(timeDiff1);
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#003');
+      await increaseTime(timeDiff2 - timeDiff1 - 1);
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.not.be.reverted;
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(await heartGarden.balanceOf(signer1.address)).to.eq(0);
+      expect(signer1lock1).to.eq(signer1lock3).to.eq(0);
+      expect(signer1lock2).to.eq(lockTime);
+    });
   });
 
   describe('EmergencyModule', async function () {
