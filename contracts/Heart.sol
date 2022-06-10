@@ -113,6 +113,11 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     // Value Amount for protect purchases in DAI
     uint256 private constant PROTECT_BUY_AMOUNT_DAI = 2e21;
 
+    uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
+    // Min & max value for the heart lock
+    uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
+
     /* ============ Immutables ============ */
 
     IBabController private immutable controller;
@@ -179,11 +184,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     // EIP-1271 signer
     address private signer;
-
-    uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
-    // Min & max value for the heart lock
-    uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
-    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
     uint256 private shieldStats;
 
