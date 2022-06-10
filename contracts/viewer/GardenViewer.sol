@@ -100,7 +100,7 @@ contract GardenViewer is IGardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[15] memory params,
+            uint256[16] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         )
@@ -153,7 +153,8 @@ contract GardenViewer is IGardenViewer {
                 garden.pricePerShareDelta(),
                 garden.verifiedCategory(),
                 garden.canMintNftAfter(),
-                garden.customIntegrationsEnabled() ? 1 : 0
+                garden.customIntegrationsEnabled() ? 1 : 0,
+                garden.hardlockStartsAt()
             ],
             [
                 principal,
@@ -262,7 +263,7 @@ contract GardenViewer is IGardenViewer {
         return total;
     }
 
-    function getContributor(IGarden _garden, address _user) internal view returns (uint256[10] memory) {
+    function getContributor(IGarden _garden, address _user) internal view returns (uint256[12] memory) {
         (
             uint256 lastDepositAt,
             uint256 initialDepositAt,
@@ -284,7 +285,9 @@ contract GardenViewer is IGardenViewer {
             _garden.balanceOf(_user),
             lockedBalance,
             0,
-            getGardenUserAvgPricePerShare(_garden, _user)
+            getGardenUserAvgPricePerShare(_garden, _user),
+            _garden.userLock(_user) > 0 ? _garden.userLock(_user) : _garden.depositHardlock(),
+            _garden.getVotingPower(_user)
         ];
     }
 
@@ -293,7 +296,7 @@ contract GardenViewer is IGardenViewer {
         view
         override
         returns (
-            uint256[10] memory,
+            uint256[12] memory,
             uint256[] memory,
             uint256[] memory
         )

@@ -109,6 +109,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     uint256 private constant CLAIM_BY_SIG_CAP = 5_500e18; // 5.5K BABL cap per user per bySig tx
 
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
+
     /* ============ Structs ============ */
 
     /* ============ State Variables ============ */
@@ -211,6 +213,9 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     // Variable that controls whether this garden has custom integrations enabled
     bool public override customIntegrationsEnabled;
 
+    // Variable that controls the user locks (only used by heart for now)
+    mapping(address => uint256) public override userLock;
+
     /* ============ Modifiers ============ */
 
     function _onlyUnpaused() private view {
@@ -230,6 +235,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Check if array of finalized strategies to claim rewards has duplicated strategies
      */
     function _onlyNonDuplicateStrategies(address[] calldata _finalizedStrategies) private pure {
+        _require(_finalizedStrategies.length < 20, Errors.DUPLICATED_STRATEGIES);
         for (uint256 i = 0; i < _finalizedStrategies.length; i++) {
             for (uint256 j = i + 1; j < _finalizedStrategies.length; j++) {
                 _require(_finalizedStrategies[i] != _finalizedStrategies[j], Errors.DUPLICATED_STRATEGIES);
@@ -679,13 +685,37 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // minContribution is in reserve asset while balance of contributor in
         // garden shares which can lead to undesired results if reserve assets
         // decimals are not 18
-        _require(balanceOf(msg.sender) > minContribution, Errors.ONLY_CONTRIBUTOR);
+        _require(balanceOf(msg.sender) >= minContribution, Errors.ONLY_CONTRIBUTOR);
         IGarden.Contributor storage contributor = contributors[msg.sender];
         _require(
             canMintNftAfter > 0 && block.timestamp.sub(contributor.initialDepositAt) > canMintNftAfter,
             Errors.CLAIM_GARDEN_NFT
         );
         IGardenNFT(controller.gardenNFT()).grantGardenNFT(msg.sender);
+    }
+
+    /**
+     * Update user hardlock for this garden
+     * @param _contributor        Address of the contributor
+     * @param _userLock           Amount in seconds tht the user principal will be locked since deposit
+     */
+    function updateUserLock(address _contributor, uint256 _userLock) external override {
+        _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
+        _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
+        _require(_userLock <= MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
+        // Only the heart or the user can update the lock
+        _require(
+            balanceOf(_contributor) >= minContribution &&
+                (msg.sender == controller.heart() || msg.sender == _contributor),
+            Errors.ONLY_CONTRIBUTOR
+        );
+        // Can only increase the lock if lock expired
+        _require(
+            _userLock > userLock[_contributor] ||
+                block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
+            Errors.SET_GARDEN_USER_LOCK
+        );
+        userLock[_contributor] = _userLock;
     }
 
     /**
@@ -718,6 +748,27 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     function getFinalizedStrategies() external view override returns (address[] memory) {
         return finalizedStrategies;
+    }
+
+    /**
+     * Returns the heart voting power of a specific user
+     * @param _contributor      Address of the contributor
+     * @return uint256          Voting power of the contributor
+     */
+    function getVotingPower(address _contributor) public view override returns (uint256) {
+        address heartGarden = address(IHeart(controller.heart()).heartGarden());
+        uint256 balance = balanceOf(_contributor);
+        if (address(this) != heartGarden) {
+            return balance;
+        }
+        uint256 lock = userLock[_contributor];
+        if (lock == 0) {
+            return balance.div(8);
+        }
+        if (lock >= MAX_HEART_LOCK_VALUE) {
+            return balance;
+        }
+        return balance.preciseMul(lock.preciseDiv(MAX_HEART_LOCK_VALUE));
     }
 
     /**
@@ -802,7 +853,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         uint256 prevBalance = balanceOf(_to);
         _require(prevBalance > 0, Errors.ONLY_CONTRIBUTOR);
         // Flashloan protection
-        _require(block.timestamp.sub(_getLastDepositAt(_to)) >= depositHardlock, Errors.DEPOSIT_HARDLOCK);
+        _require(block.timestamp.sub(_getLastDepositAt(_to)) >= _getDepositHardlock(_to), Errors.DEPOSIT_HARDLOCK);
 
         // Strategists cannot withdraw locked stake while in active strategies
         // Withdrawal amount has to be equal or less than msg.sender balance minus the locked balance
@@ -1100,6 +1151,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             contributor.initialDepositAt = 0;
             contributor.withdrawnSince = 0;
             contributor.totalDeposits = 0;
+            userLock[_contributor] = 0;
             totalContributors = totalContributors.sub(1);
         } else {
             contributor.withdrawnSince = contributor.withdrawnSince.add(_amountOut);
@@ -1175,6 +1227,15 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      */
     function _getLastDepositAt(address _to) private view returns (uint256) {
         return hardlockStartsAt > contributors[_to].lastDepositAt ? hardlockStartsAt : contributors[_to].lastDepositAt;
+    }
+
+    /**
+     * @notice     Returns the hardlock in seconds for this user
+     * @param _to  Contributor address
+     * @return     Time that the principal is locked since last deposit
+     */
+    function _getDepositHardlock(address _to) private view returns (uint256) {
+        return userLock[_to] > 0 ? userLock[_to] : depositHardlock;
     }
 }
 

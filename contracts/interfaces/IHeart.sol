@@ -40,7 +40,7 @@ interface IHeart {
 
     function getFeeDistributionWeights() external view returns (uint256[] memory);
 
-    function getTotalStats() external view returns (uint256[7] memory);
+    function getTotalStats() external view returns (uint256[] memory);
 
     function votedGardens(uint256 _index) external view returns (address);
 
@@ -109,7 +109,8 @@ interface IHeart {
         address _assetToBond,
         uint256 _amountToBond,
         uint256 _minAmountOut,
-        address _referrer
+        address _referrer,
+        uint256 _userLock
     ) external;
 
     function bondAssetBySig(
@@ -121,7 +122,7 @@ interface IHeart {
         uint256 _maxFee,
         uint256 _priceInBABL,
         uint256 _pricePerShare,
-        uint256 _fee,
+        uint256[2] calldata _feeAndLock,
         address _contributor,
         address _referrer,
         bytes memory _signature

@@ -145,6 +145,8 @@ contract BaseGardenModule is ERC20Upgradeable, ReentrancyGuard {
     uint256 internal canMintNftAfter;
     // Variable that controls whether this garden has custom integrations enabled
     bool internal customIntegrationsEnabled;
+    // Variable that controls the user locks (only used by heart for now)
+    mapping(address => uint256) internal userLock;
 
     /* ============ Modifiers ============ */
 

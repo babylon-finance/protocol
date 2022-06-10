@@ -58,7 +58,7 @@ interface IGardenViewer {
             bool[4] memory actors,
             address[] memory strategies,
             address[] memory finalizedStrategies,
-            uint256[15] memory params,
+            uint256[16] memory params,
             uint256[10] memory stats,
             uint256[3] memory profits
         );
@@ -89,7 +89,7 @@ interface IGardenViewer {
         external
         view
         returns (
-            uint256[10] memory,
+            uint256[12] memory,
             uint256[] memory,
             uint256[] memory
         );
@@ -107,7 +107,7 @@ interface IHeartViewer {
         view
         returns (
             address[2] memory, // address of the heart garden
-            uint256[7] memory, // total stats
+            uint256[] memory, // total stats
             uint256[] memory, // fee weights
             address[] memory, // voted gardens
             uint256[] memory, // garden weights

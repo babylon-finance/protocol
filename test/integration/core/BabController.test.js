@@ -168,7 +168,7 @@ describe('BabController', function () {
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
       await fund([babController.address], { tokens: [addresses.tokens.BABL] });
 
-      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, overrideHardlock: 86400 * 21 });
 
       await babController.connect(owner).updateGardenAffiliateRate(garden.address, eth());
 

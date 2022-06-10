@@ -57,6 +57,18 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         _require(controller.isValidKeeper(msg.sender), Errors.ONLY_KEEPER);
     }
 
+    function _onlyValidBond(
+        address _assetToBond,
+        uint256 _amountToBond,
+        uint256 _userLock
+    ) private view {
+        _require(
+            (_assetToBond == address(BABL) || bondAssets[_assetToBond] > 0) && _amountToBond > 0,
+            Errors.AMOUNT_TOO_LOW
+        );
+        _require(_userLock >= MIN_HEART_LOCK_VALUE && _userLock <= MAX_HEART_LOCK_VALUE, Errors.SET_GARDEN_USER_LOCK);
+    }
+
     /* ============ Events ============ */
 
     event FeesCollected(uint256 _timestamp, uint256 _amount);
@@ -67,6 +79,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     event BABLRewardSent(uint256 _timestamp, uint256 _bablSent);
     event ProposalVote(uint256 _timestamp, uint256 _proposalId, bool _isApprove);
     event UpdatedGardenWeights(uint256 _timestamp);
+    event ShieldAmountIncreased(uint256 _timestamp, uint256 _wethAmount);
 
     /* ============ Constants ============ */
 
@@ -99,6 +112,11 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
     // Value Amount for protect purchases in DAI
     uint256 private constant PROTECT_BUY_AMOUNT_DAI = 2e21;
+
+    uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
+    // Min & max value for the heart lock
+    uint256 private constant MIN_HEART_LOCK_VALUE = 183 days;
+    uint256 private constant MAX_HEART_LOCK_VALUE = 4 * 365 days;
 
     /* ============ Immutables ============ */
 
@@ -142,6 +160,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     // 2: Liquidity BABL-ETH
     // 3: Garden Seed Investments
     // 4: Fuse Pool
+    // 5: Shield
     uint256[] public override feeDistributionWeights;
 
     // Metric Totals
@@ -166,7 +185,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     // EIP-1271 signer
     address private signer;
 
-    uint256 private constant MIN_PUMP_WETH = 15e17; // 1.5 ETH
+    uint256 private shieldStats;
 
     /* ============ Initializer ============ */
 
@@ -227,17 +246,19 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             }
         }
         _require(wethBalance >= 15e17, Errors.HEART_MINIMUM_FEES);
-        // Send 10% to the treasury
+        // Send 45% to the treasury
         IERC20(WETH).safeTransferFrom(address(this), treasury, wethBalance.preciseMul(feeDistributionWeights[0]));
         totalStats[1] = totalStats[1].add(wethBalance.preciseMul(feeDistributionWeights[0]));
-        // 30% for buybacks
+        // 10% for buybacks
         _buyback(wethBalance.preciseMul(feeDistributionWeights[1]), _bablMinAmountOut);
-        // 25% to BABL-ETH pair
+        // 10% to BABL-ETH pair
         _addLiquidity(wethBalance.preciseMul(feeDistributionWeights[2]));
-        // 15% to Garden Investments
+        // 20% to Garden Investments
         _investInGardens(wethBalance.preciseMul(feeDistributionWeights[3]));
-        // 20% lend in fuse pool
+        // 10% lend in fuse pool
         _lendFusePool(address(WETH), wethBalance.preciseMul(feeDistributionWeights[4]), address(assetToLend));
+        // 5% to reserve pool
+        _shield(wethBalance.preciseMul(feeDistributionWeights[5]));
         // Add BABL reward to stakers (if any)
         _sendWeeklyReward();
         lastPumpAt = block.timestamp;
@@ -492,29 +513,40 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _assetToBond                  Asset that the user wants to bond
      * @param _amountToBond                 Amount to be bonded
      * @param _minAmountOut                 Min amount of Heart garden shares to recieve
+     * @param _userLock                     Amount of time to lock the principal in the heart garden
      */
     function bondAsset(
         address _assetToBond,
         uint256 _amountToBond,
         uint256 _minAmountOut,
-        address _referrer
+        address _referrer,
+        uint256 _userLock
     ) external override {
-        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-        // Total value adding the premium
+        _onlyValidBond(_assetToBond, _amountToBond, _userLock);
+        // Total value adding the premium and the lock premium
         uint256 bondValueInBABL =
             _bondToBABL(
                 _assetToBond,
                 _amountToBond,
-                IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL))
+                IPriceOracle(controller.priceOracle()).getPrice(_assetToBond, address(BABL)),
+                _userLock
             );
         // Get asset to bond from sender
-        IERC20(_assetToBond).safeTransferFrom(msg.sender, address(this), _amountToBond);
+        IERC20(_assetToBond).safeTransferFrom(
+            msg.sender,
+            _assetToBond == address(DAI) ? treasury : address(this),
+            _amountToBond
+        );
+
         // Deposit on behalf of the user
         _require(BABL.balanceOf(address(this)) >= bondValueInBABL, Errors.AMOUNT_TOO_LOW);
 
         BABL.safeApprove(address(heartGarden), bondValueInBABL);
 
         heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender, _referrer);
+
+        // Updates the lock
+        heartGarden.updateUserLock(msg.sender, _userLock);
     }
 
     /**
@@ -534,30 +566,33 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _maxFee,
         uint256 _priceInBABL,
         uint256 _pricePerShare,
-        uint256 _fee,
+        uint256[2] calldata _feeAndLock,
         address _contributor,
         address _referrer,
         bytes memory _signature
     ) external override {
         _onlyKeeper();
-        _require(_fee <= _maxFee, Errors.FEE_TOO_HIGH);
-        _require(bondAssets[_assetToBond] > 0 && _amountToBond > 0, Errors.AMOUNT_TOO_LOW);
-
+        _onlyValidBond(_assetToBond, _amountToBond, _feeAndLock[1]);
+        _require(_feeAndLock[0] <= _maxFee, Errors.FEE_TOO_HIGH);
         // Get asset to bond from contributor
-        IERC20(_assetToBond).safeTransferFrom(_contributor, address(this), _amountToBond);
+        IERC20(_assetToBond).safeTransferFrom(
+            _contributor,
+            _assetToBond == address(DAI) ? treasury : address(this),
+            _amountToBond
+        );
         // Deposit on behalf of the user
         _require(BABL.balanceOf(address(this)) >= _amountIn, Errors.AMOUNT_TOO_LOW);
 
         // verify that _amountIn is correct compare to _amountToBond
-        uint256 val = _bondToBABL(_assetToBond, _amountToBond, _priceInBABL);
-        uint256 diff = val > _amountIn ? val.sub(_amountIn) : _amountIn.sub(val);
+        uint256 val = _bondToBABL(_assetToBond, _amountToBond, _priceInBABL, _feeAndLock[1]);
+        val = val > _amountIn ? val.sub(_amountIn) : _amountIn.sub(val);
         // allow 0.1% deviation
-        _require(diff < _amountIn.div(1000), Errors.INVALID_AMOUNT);
+        _require(val < _amountIn.div(1000), Errors.INVALID_AMOUNT);
 
         BABL.safeApprove(address(heartGarden), _amountIn);
 
         // Pay the fee to the Keeper
-        IERC20(BABL).safeTransfer(msg.sender, _fee);
+        IERC20(BABL).safeTransfer(msg.sender, _feeAndLock[0]);
 
         // grant permission to deposit
         signer = _contributor;
@@ -573,6 +608,8 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             _referrer,
             _signature
         );
+        // Update user lock
+        heartGarden.updateUserLock(_contributor, _feeAndLock[1]);
         // revoke permission to deposit
         signer = address(0);
     }
@@ -665,8 +702,13 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      *
      * @return            The array of stats for the fees
      */
-    function getTotalStats() external view override returns (uint256[7] memory) {
-        return totalStats;
+    function getTotalStats() external view override returns (uint256[] memory) {
+        uint256[] memory stats = new uint256[](totalStats.length + 1);
+        for (uint8 i = 0; i < totalStats.length; i++) {
+            stats[i] = totalStats[i];
+        }
+        stats[totalStats.length] = shieldStats;
+        return stats;
     }
 
     /**
@@ -682,11 +724,25 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     function _bondToBABL(
         address _assetToBond,
         uint256 _amountToBond,
-        uint256 _priceInBABL
+        uint256 _priceInBABL,
+        uint256 _userLock
     ) private view returns (uint256) {
+        uint256 bondPremium = bondAssets[_assetToBond];
+
+        // Check time premium
+        if (_userLock >= 365 days && _userLock < 730 days) {
+            bondPremium = bondPremium.add(2e16); //2%
+        }
+        if (_userLock >= 730 days && _userLock < MAX_HEART_LOCK_VALUE) {
+            bondPremium = bondPremium.add(45e15); //4.5%
+        }
+        if (_userLock >= MAX_HEART_LOCK_VALUE) {
+            bondPremium = bondPremium.add(1e17); //10%
+        }
+
         return
             SafeDecimalMath.normalizeAmountTokens(_assetToBond, address(BABL), _amountToBond).preciseMul(
-                _priceInBABL.preciseMul(uint256(1e18).add(bondAssets[_assetToBond]))
+                _priceInBABL.preciseMul(uint256(1e18).add(bondPremium))
             );
     }
 
@@ -801,6 +857,18 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 assettoLendBalanceInWeth = assetToLendBalance.preciseMul(assetToLendWethPrice);
         totalStats[5] = totalStats[5].add(assettoLendBalanceInWeth);
         emit FuseLentAsset(block.timestamp, _lendAsset, assettoLendBalanceInWeth);
+    }
+
+    /**
+     * Sends 5% to the reserve pool to buy coverage and create an incidentals reserve
+     *
+     * @param _amount             Total amount of weth to allocate to the shield
+     */
+    function _shield(uint256 _amount) private {
+        // Convert to ETH
+        WETH.withdraw(_amount);
+        shieldStats = shieldStats.add(_amount);
+        emit ShieldAmountIncreased(block.timestamp, _amount);
     }
 
     /**

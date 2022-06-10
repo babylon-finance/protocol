@@ -390,7 +390,7 @@ contract BabController is OwnableUpgradeable, IBabController {
      */
     function updateGardenAffiliateRate(address _garden, uint256 _affiliateRate) external override {
         _onlyGovernanceOrEmergency();
-        require(isGarden[_garden], 'Garden is not valid');
+        require(isGarden[_garden] && IGarden(_garden).depositHardlock() >= 3 weeks, 'Garden is not valid');
         require(gardenAffiliateRates[_garden] != _affiliateRate, 'Rate already set');
         gardenAffiliateRates[_garden] = _affiliateRate;
         emit GardenAffiliateRateUpdated(_garden, _affiliateRate);

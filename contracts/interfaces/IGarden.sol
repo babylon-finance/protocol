@@ -165,6 +165,8 @@ interface ICoreGarden {
 
     function getFinalizedStrategies() external view returns (address[] memory);
 
+    function getVotingPower(address _contributor) external view returns (uint256);
+
     function strategyMapping(address _strategy) external view returns (bool);
 
     function keeperDebt() external view returns (uint256);
@@ -178,6 +180,8 @@ interface ICoreGarden {
     function pricePerShareDecayRate() external view returns (uint256);
 
     function pricePerShareDelta() external view returns (uint256);
+
+    function userLock(address _contributor) external view returns (uint256);
 
     /* ============ Write ============ */
 
@@ -264,6 +268,8 @@ interface ICoreGarden {
     ) external;
 
     function claimNFT() external;
+
+    function updateUserLock(address _contributor, uint256 _userLock) external;
 }
 
 interface IERC20Metadata {

@@ -328,6 +328,11 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
             Errors.MIN_LIQUIDITY
         );
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
+        // If rewards are enabled, hardlock cannot be changed below 3 weeks
+        _require(
+            controller.gardenAffiliateRates(address(this)) == 0 || _depositHardlock >= 3 weeks,
+            Errors.DEPOSIT_HARDLOCK
+        );
         _require(
             _strategyCooldownPeriod <= MAX_COOLDOWN_PERIOD && _strategyCooldownPeriod >= MIN_COOLDOWN_PERIOD,
             Errors.NOT_IN_RANGE

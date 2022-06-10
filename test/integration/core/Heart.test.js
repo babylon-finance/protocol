@@ -143,15 +143,18 @@ describe('Heart', function () {
       const fees = await heart.connect(owner).getFeeDistributionWeights();
       expect(fees[0]).to.equal(eth(0.1));
       expect(fees[1]).to.equal(eth(0.3));
-      expect(fees[2]).to.equal(eth(0.25));
+      expect(fees[2]).to.equal(eth(0.2));
       expect(fees[3]).to.equal(eth(0.15));
       expect(fees[4]).to.equal(eth(0.2));
+      expect(fees[5]).to.equal(eth(0.05));
       const stats = await heart.connect(owner).getTotalStats();
       expect(stats[0]).to.equal(0);
       expect(stats[1]).to.equal(0);
       expect(stats[2]).to.equal(0);
       expect(stats[3]).to.equal(0);
       expect(stats[4]).to.equal(0);
+      expect(stats[5]).to.equal(0);
+      expect(stats[6]).to.equal(0);
     });
   });
 
@@ -204,6 +207,12 @@ describe('Heart', function () {
     });
     it('can update the markets', async function () {
       await expect(heart.connect(owner).updateMarkets()).to.not.be.reverted;
+    });
+
+    it('can get all the stats', async function () {
+      const stats = await heart.getTotalStats();
+      expect(stats.length).to.equal(8);
+      expect(stats[7]).to.equal(0);
     });
   });
 
@@ -305,7 +314,7 @@ describe('Heart', function () {
   });
 
   describe('bond asset by sig', async function () {
-    it('can bond asset by sig', async function () {
+    it('can bond asset by sig for a year', async function () {
       // make heart a keeper
       await babController.connect(owner).addKeeper(heart.address);
 
@@ -314,7 +323,7 @@ describe('Heart', function () {
       const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
       const amountToBond = eth(1000);
       const priceInBABL = eth(0.1);
-      const amountIn = amountToBond.mul(priceInBABL).mul(eth(1.05)).div(eth()).div(eth());
+      const amountIn = amountToBond.mul(priceInBABL).mul(eth(1.07)).div(eth()).div(eth());
       const minAmountOut = amountIn;
       const nonce = 0;
       const maxFee = from(0);
@@ -350,7 +359,7 @@ describe('Heart', function () {
           maxFee,
           priceInBABL,
           eth(),
-          fee,
+          [fee, 86400 * 365],
           signer3.address,
           ADDRESS_ZERO,
           sig,
@@ -381,8 +390,9 @@ describe('Heart', function () {
     });
 
     it('user cannot bond asset that is not added', async function () {
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
-        .reverted;
+      await expect(
+        heart.connect(signer1).bondAsset(addresses.tokens.BABL, 1, 1, ADDRESS_ZERO, 365 * 86400, { gasPrice: 0 }),
+      ).to.be.reverted;
     });
 
     it('user cannot bond a small amount', async function () {
@@ -392,8 +402,9 @@ describe('Heart', function () {
       await cDAI.connect(signer1).approve(heart.address, 1, { gasPrice: 0 });
       // Add fuse assets to token identifier
       await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
-      await expect(heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, { gasPrice: 0 })).to.be
-        .reverted;
+      await expect(
+        heart.connect(signer1).bondAsset(addresses.tokens.cDAI, 1, 1, ADDRESS_ZERO, 183 * 86400, { gasPrice: 0 }),
+      ).to.be.reverted;
     });
 
     it('user can bond an appropriate amount and receive the discount', async function () {
@@ -412,7 +423,68 @@ describe('Heart', function () {
       // Bond the asset
       await heart
         .connect(signer3)
-        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, { gasPrice: 0 });
+        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 183, { gasPrice: 0 });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
+    });
+
+    it('user can bond DAI and the treasury will receive it', async function () {
+      await heart.connect(owner).updateBond(DAI.address, eth('0.1'), { gasPrice: 0 });
+      const whaledaiSigner = await impersonateAddress('0x5d3a536e4d6dbd6114cc1ead35777bab948e3643');
+      const amount = eth(50000);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
+      const price = await priceOracle.getPrice(DAI.address, addresses.tokens.BABL);
+      const minAmountOut = amount.mul(price).mul(eth(1.1)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
+
+      await DAI.connect(whaledaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      // User approves the heart
+      await DAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      // Bond the asset
+      const treasuryBalanceBefore = await DAI.balanceOf(treasury.address);
+      await heart
+        .connect(signer3)
+        .bondAsset(DAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 183, { gasPrice: 0 });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
+      const treasuryBalanceAfter = await DAI.balanceOf(treasury.address);
+      expect(treasuryBalanceAfter.sub(treasuryBalanceBefore)).to.be.closeTo(amount, amount.div(100));
+    });
+
+    it('user can bond BABL and receive no discount', async function () {
+      const bablWhale = await impersonateAddress('0x40154ad8014df019a53440a60ed351dfba47574e');
+      const amount = eth(50);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
+      const price = eth();
+      const minAmountOut = amount.mul(price).mul(eth(1)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
+
+      await BABL.connect(bablWhale).transfer(signer3.address, amount, { gasPrice: 0 });
+      // User approves the heart
+      await BABL.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      // Bond the asset
+      await heart
+        .connect(signer3)
+        .bondAsset(BABL.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 183, { gasPrice: 0 });
+
+      expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
+    });
+
+    it('user can bond an appropriate amount for a year and receive the extra 2%', async function () {
+      await heart.connect(owner).updateBond(cDAI.address, eth('0.05'), { gasPrice: 0 });
+      const whalecdaiSigner = await impersonateAddress('0x2d160210011a992966221f428f63326f76066ba9');
+      const amount = eth(20000);
+      const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
+      // Add fuse assets to token identifier
+      await tokenIdentifier.connect(owner).updateCompoundPair([cDAI.address], [DAI.address], { gasPrice: 0 });
+      const price = await priceOracle.getPrice(cDAI.address, addresses.tokens.BABL);
+      const minAmountOut = amount.mul(price).mul(eth(1.07)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
+
+      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      // User approves the heart
+      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      // Bond the asset
+      await heart
+        .connect(signer3)
+        .bondAsset(cDAI.address, amount, minAmountOut.mul(99).div(100), ADDRESS_ZERO, 86400 * 365, { gasPrice: 0 });
 
       expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
     });
@@ -554,6 +626,11 @@ describe('Heart', function () {
       expect(await BABL.balanceOf(heartGarden.address)).to.be.equal(
         heartBABLBalanceBeforePump.add(bablBought.div(2)).add(await heart.weeklyRewardAmount()),
       );
+
+      // Checks Shield
+      const shieldAmount = amountInFees.mul(feeDistributionWeights[5]).div(1e9).div(1e9);
+      expect(statsAfterPump[7]).to.be.closeTo(shieldAmount, shieldAmount.div(100));
+      expect(await ethers.provider.getBalance(heart.address)).to.be.closeTo(shieldAmount, shieldAmount.div(100));
     }
     it('will revert if garden address has not been set', async function () {
       const wethPerBabl = await priceOracle.connect(owner).getPrice(BABL.address, WETH.address);

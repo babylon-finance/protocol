@@ -5,30 +5,17 @@ const addresses = require('lib/addresses');
 const { fund } = require('lib/whale');
 const {
   GARDENS,
-  NOW,
   PROFIT_STRATEGIST_SHARE,
   PROFIT_STEWARD_SHARE,
   PROFIT_LP_SHARE,
   ONE_DAY_IN_SECONDS,
   PROTOCOL_FEE,
-  PROFIT_PROTOCOL_FEE,
-  GARDEN_PARAMS_STABLE,
   GARDEN_PARAMS,
   ADDRESS_ZERO,
   ONE_YEAR_IN_SECONDS,
   WETH_STRATEGY_PARAMS,
 } = require('lib/constants.js');
-const {
-  pick,
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-  getTimestamp,
-} = require('utils/test-helpers');
+const { pick, increaseTime, getERC20, from, eth, getTimestamp } = require('utils/test-helpers');
 const { impersonateAddress } = require('lib/rpc');
 
 const {
@@ -43,14 +30,7 @@ const {
   substractFakeProfits,
 } = require('fixtures/StrategyHelper');
 
-const {
-  createGarden,
-  getDepositSig,
-  getWithdrawSig,
-  getWithdrawSigHash,
-  transferFunds,
-  depositFunds,
-} = require('fixtures/GardenHelper');
+const { createGarden, getDepositSig, getWithdrawSig, transferFunds, depositFunds } = require('fixtures/GardenHelper');
 
 const { setupTests } = require('fixtures/GardenFixture');
 
@@ -69,8 +49,6 @@ describe('Garden', function () {
   let garden1;
   let mardukGate;
   let uniswapV3TradeIntegration;
-  let daiGarden;
-  let usdcGarden;
   let heartGarden;
   let gardenNFT;
   let gardenValuer;
@@ -80,7 +58,7 @@ describe('Garden', function () {
   let usdc;
   let weth;
   let dai;
-  let wbtc;
+  let babl;
 
   beforeEach(async () => {
     ({
@@ -103,9 +81,9 @@ describe('Garden', function () {
       bablToken,
 
       dai,
+      babl,
       usdc,
       weth,
-      wbtc,
     } = await setupTests()());
     emergency = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
     gov = await impersonateAddress(timelockController.address);
@@ -219,7 +197,7 @@ describe('Garden', function () {
       });
       await babController.connect(owner).enableGardenTokensTransfers();
 
-      const strategy = await getStrategy({ garden: garden });
+      await getStrategy({ garden: garden });
 
       const amount = await garden.balanceOf(signer1.address);
       await expect(garden.connect(signer1).transfer(signer2.address, amount)).to.be.revertedWith('BAB#007');
@@ -771,9 +749,6 @@ describe('Garden', function () {
         gasPrice: 0,
       });
 
-      const gardenBalance = await usdc.balanceOf(garden.address);
-      const supplyBefore = await garden.totalSupply();
-
       await garden.connect(signer3).deposit(amountIn, minAmountOut, signer3.getAddress(), ADDRESS_ZERO);
 
       amountIn = eth(1000);
@@ -1050,7 +1025,7 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
-      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      const { active } = await getStrategyState(strategyContract);
       expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
@@ -1082,7 +1057,7 @@ describe('Garden', function () {
 
       // It is executed
       await executeStrategy(strategyContract, eth(), 42);
-      const { active, finalized, executedAt, exitedAt, updatedAt } = await getStrategyState(strategyContract);
+      const { active } = await getStrategyState(strategyContract);
       expect(active).to.equal(true);
 
       expect(await strategyContract.strategist()).to.equal(signer1.address);
@@ -1553,7 +1528,7 @@ describe('Garden', function () {
 
       await fund([signer1.address, signer3.address], { tokens: [addresses.tokens.DAI] });
 
-      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI, overrideHardlock: 86400 * 21 });
 
       await babController.connect(owner).updateGardenAffiliateRate(garden.address, eth());
 
@@ -2411,6 +2386,125 @@ describe('Garden', function () {
           user2Avg,
         );
       });
+    });
+  });
+
+  describe('updates user lock', async function () {
+    it(`can update the lock in the heart garden`, async function () {
+      const garden = await createGarden({ reserveAsset: addresses.tokens.DAI });
+      await depositFunds(addresses.tokens.DAI, garden);
+      // Reverts if calling it on a normal garden
+      await expect(garden.updateUserLock(signer1.address, 86400 * 365)).to.be.reverted;
+      expect(await heartGarden.userLock(signer1.address)).to.equal(0);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365);
+      expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
+      const balance = await heartGarden.balanceOf(signer1.address);
+      expect(await heartGarden.getVotingPower(signer1.address)).to.equal(balance.div(4));
+      // Can't change it to a lower amount
+      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1)).to.be.reverted;
+      // Can change it after it expired
+      ethers.provider.send('evm_increaseTime', [86400 * 365]);
+      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365 * 4)).not.to.be.reverted;
+      expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 4);
+      expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(balance, balance.div(100));
+    });
+    [
+      { name: '< min of 6 months', amount: ONE_DAY_IN_SECONDS * 183 - 1 },
+      { name: '> max of 4 years', amount: ONE_DAY_IN_SECONDS * 365 * 4 + 1 },
+    ].forEach(({ name, amount }) => {
+      it(`can NOT update the lock if out of bounds using a lock ${name}`, async function () {
+        await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, amount)).to.be.revertedWith(
+          'BAB#134',
+        );
+      });
+    });
+    it(`can leave after lock period ends and re-join a garden`, async function () {
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      await increaseTime(lockTime);
+      // Leave the garden completely
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).not.reverted;
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(signer1lock1).to.eq(signer1lock3).to.eq(0);
+      expect(signer1lock2).to.eq(lockTime);
+      // Re join the garden after leaving completely
+      await babl.connect(signer1).approve(heartGarden.address, eth(30), {
+        gasPrice: 0,
+      });
+      await heartGarden.connect(signer1).deposit(eth(30), 1, signer1.getAddress(), ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+      const signer1lock4 = await heartGarden.userLock(signer1.address);
+      await expect(signer1lock4).to.eq(0);
+    });
+    it(`can NOT withdraw before lock period ends`, async function () {
+      const [lastDepositAt, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      const block = await ethers.provider.getBlock();
+      const timeDiff = lockTime - (block.timestamp - lastDepositAt);
+      await increaseTime(timeDiff - 2); // previous block to unblock
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#003');
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(signer1lock1).to.eq(0);
+      expect(signer1lock2).to.eq(signer1lock3);
+    });
+    it(`new deposits move unlock time forward`, async function () {
+      const [lastDepositAt, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+      const lockTime = ONE_DAY_IN_SECONDS * 183;
+      const signer1lock1 = await heartGarden.userLock(signer1.address);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime);
+      const signer1lock2 = await heartGarden.userLock(signer1.address);
+      const block = await ethers.provider.getBlock();
+      // New deposit
+      await increaseTime(ONE_DAY_IN_SECONDS * 20);
+      await babl.connect(signer1).approve(heartGarden.address, eth(30), {
+        gasPrice: 0,
+      });
+      await heartGarden.connect(signer1).deposit(eth(30), 1, signer1.getAddress(), ADDRESS_ZERO, {
+        gasPrice: 0,
+      });
+      const [lastDepositAt2, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
+
+      const timeDiff1 = lockTime - (block.timestamp - lastDepositAt);
+      const timeDiff2 = lockTime - (block.timestamp - lastDepositAt2);
+
+      await increaseTime(timeDiff1);
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.be.revertedWith('BAB#003');
+      await increaseTime(timeDiff2 - timeDiff1 - 1);
+      await expect(
+        heartGarden
+          .connect(signer1)
+          .withdraw(await heartGarden.balanceOf(signer1.address), eth(1), signer1.getAddress(), false, ADDRESS_ZERO, {
+            gasPrice: 0,
+          }),
+      ).to.not.be.reverted;
+      const signer1lock3 = await heartGarden.userLock(signer1.address);
+      expect(await heartGarden.balanceOf(signer1.address)).to.eq(0);
+      expect(signer1lock1).to.eq(signer1lock3).to.eq(0);
+      expect(signer1lock2).to.eq(lockTime);
     });
   });
 
