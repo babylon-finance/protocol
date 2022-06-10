@@ -427,15 +427,15 @@ describe('Heart', function () {
 
     it('user can bond DAI and the treasury will receive it', async function () {
       await heart.connect(owner).updateBond(DAI.address, eth('0.1'), { gasPrice: 0 });
-      const whalecdaiSigner = await impersonateAddress('0x5d3a536e4d6dbd6114cc1ead35777bab948e3643');
+      const whaledaiSigner = await impersonateAddress('0x5d3a536e4d6dbd6114cc1ead35777bab948e3643');
       const amount = eth(50000);
       const pricePerShare = await gardenValuer.calculateGardenValuation(heartGarden.address, addresses.tokens.BABL);
       const price = await priceOracle.getPrice(DAI.address, addresses.tokens.BABL);
       const minAmountOut = amount.mul(price).mul(eth(1.1)).div(eth()).div(eth()).mul(pricePerShare).div(eth());
 
-      await cDAI.connect(whalecdaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
+      await DAI.connect(whaledaiSigner).transfer(signer3.address, amount, { gasPrice: 0 });
       // User approves the heart
-      await cDAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
+      await DAI.connect(signer3).approve(heart.address, amount, { gasPrice: 0 });
       // Bond the asset
       const treasuryBalanceBefore = await DAI.balanceOf(treasury.address);
       await heart
@@ -444,7 +444,7 @@ describe('Heart', function () {
 
       expect(await hBABL.balanceOf(signer3.address)).to.be.closeTo(minAmountOut, minAmountOut.div(100));
       const treasuryBalanceAfter = await DAI.balanceOf(treasury.address);
-      expect(treasuryBalanceAfter.sub(treasuryBalanceBefore)).to.be.closeTo(amount);
+      expect(treasuryBalanceAfter.sub(treasuryBalanceBefore)).to.be.closeTo(amount, amount.div(100));
     });
 
     it('user can bond BABL and receive no discount', async function () {
