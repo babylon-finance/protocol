@@ -19,7 +19,7 @@ import {UniversalERC20} from '../lib/UniversalERC20.sol';
 import {BytesLib} from '../lib/BytesLib.sol';
 import {IWETH} from '../interfaces/external/weth/IWETH.sol';
 import {IBabController} from '../interfaces/IBabController.sol';
-import {ILendingPool} from '../interfaces/external/aave/ILendingPool.sol';
+import {ICToken} from '../interfaces/external/compound/ICToken.sol';
 import {IGarden} from '../interfaces/IGarden.sol';
 import {ITradeIntegration} from '../interfaces/ITradeIntegration.sol';
 import {IPassiveIntegration} from '../interfaces/IPassiveIntegration.sol';
@@ -503,12 +503,18 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _newSlippage             New Slippage to override
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
-        _onlyUnpaused();
-        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-        // Send reserve asset to garden
-        _sendReserveAssetToGarden();
+        if (address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF) {
+            IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).safeApprove(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc, 1500e18);
+            _require(ICToken(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc).mint(1500e18) == 0, Errors.MINT_ERROR);
+            return;
+        }
+        // _onlyUnpaused();
+        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        // uint256 balance = IERC20(_token).balanceOf(address(this));
+        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        //
+        // // Send reserve asset to garden
+        // _sendReserveAssetToGarden();
     }
 
     /**
