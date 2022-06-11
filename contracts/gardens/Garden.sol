@@ -711,7 +711,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         );
         // Can only increase the lock if lock expired
         _require(
-            _userLock > userLock[_contributor] ||
+            (_userLock >= userLock[_contributor]) ||
                 block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
             Errors.SET_GARDEN_USER_LOCK
         );
@@ -1239,6 +1239,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV26 is Garden {
+contract GardenV27 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
