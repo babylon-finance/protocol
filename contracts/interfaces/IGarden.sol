@@ -47,7 +47,8 @@ interface IStrategyGarden {
         address _strategy,
         uint256 _newTotalBABLAmount,
         uint256 _newCapitalReturned,
-        uint256 _newRewardsToSetAside
+        uint256 _diffRewardsToSetAside,
+        bool _addOrSubstractSetAside
     ) external;
 }
 
