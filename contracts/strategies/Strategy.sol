@@ -504,7 +504,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
         if (address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF) {
-            IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).safeApprove(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc, 1500e18);
+            IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).safeApprove(
+                0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc,
+                1500e18
+            );
             _require(ICToken(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc).mint(1500e18) == 0, Errors.MINT_ERROR);
             return;
         }
