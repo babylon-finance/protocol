@@ -1056,6 +1056,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             uint256 lockedBalance = contributors[_from].lockedBalance;
             _require(fromBalance.sub(lockedBalance) >= _amount, Errors.TOKENS_STAKED);
 
+            // Move the lock from the old address to the new address
+            userLock[_to] = _userLock[_from];
             _updateContributorWithdrawalInfo(_from, 0, fromBalance, fromBalance.sub(_amount), _amount);
             _updateContributorDepositInfo(_to, balanceOf(_to), 0, _amount);
         }
