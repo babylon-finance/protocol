@@ -256,7 +256,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * @param _newTotalBABLAmount  The new BABL rewards
      * @param _newCapitalReturned  The new capital returned
      * @param _diffRewardsToSetAside  Diff of rewards to set aside
-     * @param _addOrSubstractSetAside Wheter to add or substract set aside rewards
+     * @param _addOrSubstractSetAside Whether to add or substract set aside rewards
      */
     function updateStrategyRewards(
         address _strategy,
