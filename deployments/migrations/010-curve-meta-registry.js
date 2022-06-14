@@ -15,7 +15,6 @@ module.exports = async ({
   const { deployer } = await getNamedAccounts();
   const signer = await getSigner(deployer);
   const controller = await getController();
-
   const contract = 'CurveMetaRegistry';
   const deployment = await deploy(contract, {
     from: deployer,

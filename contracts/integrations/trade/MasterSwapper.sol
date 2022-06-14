@@ -276,7 +276,7 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         }
 
         // Try Univ3 through DAI, USDC, WBTC, USDT
-        address[4] memory reserves = [DAI, USDC, WBTC, USDT];
+        address[5] memory reserves = [DAI, USDC, WBTC, USDT, 0x853d955aCEf822Db058eb8505911ED77F175b99e];
         for (uint256 i = 0; i < reserves.length; i++) {
             try
                 ITradeIntegration(univ3).trade(

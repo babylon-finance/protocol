@@ -84,6 +84,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     address private constant AAVE = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
     address private constant palStkAAVE = 0x24E79e946dEa5482212c38aaB2D0782F04cdB0E0;
     address private constant curvePalStkAave = 0x48536EC5233297C367fd0b6979B75d9270bB6B15;
+    address private constant FXS = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address private constant cvxFXS = 0xF3A43307DcAFa93275993862Aae628fCB50dC768;
+    address private constant curveCVXFXS = 0xd658A338613198204DCa1143Ac3F01A722b5d94A;
     IAladdinCRV private constant aCRV = IAladdinCRV(0x2b95A1Dcc3D405535f9ed33c219ab38E8d7e0884);
     address private constant cvxCRV = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
@@ -120,7 +123,7 @@ contract PriceOracle is Ownable, IPriceOracle {
         curveMetaRegistry = _tokenIdentifier.curveMetaRegistry();
         convexRegistry = _tokenIdentifier.convexRegistry();
         pickleRegistry = _tokenIdentifier.jarRegistry();
-        _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC));
+        _updateReserves(AddressArrayUtils.toDynamic(WETH, DAI, USDC, WBTC, 0x853d955aCEf822Db058eb8505911ED77F175b99e));
     }
 
     /* ============ External Functions ============ */
@@ -379,6 +382,20 @@ contract PriceOracle is Ownable, IPriceOracle {
             uint256 tokenOutPrice = _getCurvePriceAtPool(curvePalStkAave, AAVE, palStkAAVE);
             if (tokenOutPrice != 0) {
                 return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, AAVE));
+            }
+        }
+        // cvxfxs
+        if (_tokenIn == cvxFXS) {
+            uint256 tokenInPrice = _getCurvePriceAtPool(curveCVXFXS, cvxFXS, FXS);
+            if (tokenInPrice != 0) {
+                return tokenInPrice.preciseMul(_getBestPriceUniV3(FXS, _tokenOut));
+            }
+        }
+
+        if (_tokenOut == cvxFXS) {
+            uint256 tokenOutPrice = _getCurvePriceAtPool(curveCVXFXS, FXS, cvxFXS);
+            if (tokenOutPrice != 0) {
+                return tokenOutPrice.preciseMul(_getBestPriceUniV3(_tokenIn, FXS));
             }
         }
 

@@ -14,6 +14,7 @@ import {ICryptoRegistry} from '../interfaces/external/curve/ICryptoRegistry.sol'
 import {ICryptoFactoryRegistry} from '../interfaces/external/curve/ICryptoFactoryRegistry.sol';
 import {ControllerLib} from '../lib/ControllerLib.sol';
 import {UniversalERC20} from '../lib/UniversalERC20.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title CurveMetaRegistry
@@ -73,7 +74,7 @@ contract CurveMetaRegistry is ICurveMetaRegistry {
         factoryRegistry = IFactoryRegistry(curveAddressProvider.get_address(3));
         cryptoRegistry = ICryptoRegistry(curveAddressProvider.get_address(5));
         cryptoRegistryF = ICryptoFactoryRegistry(curveAddressProvider.get_address(6));
-
+        console.log('in curve meta');
         _updateMapping(4, ICurveRegistry(address(cryptoRegistryF)));
         _updateMapping(2, ICurveRegistry(address(factoryRegistry)));
         _updateMapping(3, ICurveRegistry(address(cryptoRegistry)));
