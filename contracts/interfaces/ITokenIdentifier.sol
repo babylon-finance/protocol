@@ -52,6 +52,14 @@ interface ITokenIdentifier {
 
     function updateVisor(address[] calldata _vaults, bool[] calldata _values) external;
 
+    function updateCurveMetaRegistry(ICurveMetaRegistry _newCurveMetaRegistry) external;
+
+    function updateConvexRegistry(IConvexRegistry _newConvexRegistry) external;
+
+    function updatePickleRegistry(IPickleJarRegistry _newJarRegistry) external;
+
+    function updateYearnVaultRegistry(IYearnVaultRegistry _newYearnVaultRegistry) external;
+
     function refreshAAveReserves() external;
 
     function refreshCompoundTokens() external;
