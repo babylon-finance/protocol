@@ -255,13 +255,15 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * @param _strategy   Address of the strategy to patch
      * @param _newTotalBABLAmount  The new BABL rewards
      * @param _newCapitalReturned  The new capital returned
-     * @param _newRewardsToSetAside  The new rewards to set aside
+     * @param _diffRewardsToSetAside  Diff of rewards to set aside
+     * @param _addOrSubstractSetAside Whether to add or substract set aside rewards
      */
     function updateStrategyRewards(
         address _strategy,
         uint256 _newTotalBABLAmount,
         uint256 _newCapitalReturned,
-        uint256 _newRewardsToSetAside
+        uint256 _diffRewardsToSetAside,
+        bool _addOrSubstractSetAside
     ) external override {
         controller.onlyGovernanceOrEmergency();
         _require(isGardenStrategy[_strategy] && !strategyMapping[_strategy], Errors.STRATEGY_GARDEN_MISMATCH);
@@ -273,8 +275,15 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         absoluteReturns = absoluteReturns.add(profitDiff);
         // update rewardsToSetAside
         // heart garden safety control (it should not setAside as it is auto-compounded)
-        reserveAssetRewardsSetAside = address(this) == heartGarden ? 0 : _newRewardsToSetAside;
-
+        if (_diffRewardsToSetAside != 0) {
+            reserveAssetRewardsSetAside = address(this) == heartGarden
+                ? 0
+                : (
+                    _addOrSubstractSetAside
+                        ? reserveAssetRewardsSetAside.add(_diffRewardsToSetAside)
+                        : reserveAssetRewardsSetAside.sub(_diffRewardsToSetAside)
+                );
+        }
         if (profitDiff != 0 || bablDiff) {
             // Update strategy rewards if needed
             // save gas instead

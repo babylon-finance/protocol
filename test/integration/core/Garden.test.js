@@ -2282,7 +2282,7 @@ describe('Garden', function () {
       const capitalReturned = await strategyContract.capitalReturned();
       const rewardsSetAside = await garden1.reserveAssetRewardsSetAside();
       const bablBalanceBefore = await bablToken.balanceOf(heartGarden.address);
-      await garden1.connect(gov).updateStrategyRewards(strategyContract.address, eth(), eth(), eth());
+      await garden1.connect(gov).updateStrategyRewards(strategyContract.address, eth(), eth(), eth(), true);
       expect(await strategyContract.strategyRewards())
         .to.eq(eth())
         .to.not.eq(rewards);
@@ -2335,7 +2335,7 @@ describe('Garden', function () {
       const bablBalanceBefore = await bablToken.balanceOf(heartGarden.address);
       await heartGarden
         .connect(gov)
-        .updateStrategyRewards(strategyContract.address, rewards.mul(2), capitalReturned, rewardsSetAside);
+        .updateStrategyRewards(strategyContract.address, rewards.mul(2), capitalReturned, rewardsSetAside, true);
       const bablBalanceAfter = await bablToken.balanceOf(heartGarden.address);
       expect(await strategyContract.strategyRewards()).to.eq(rewards.mul(2));
       expect(await strategyContract.capitalReturned()).to.eq(capitalReturned);
@@ -2343,7 +2343,7 @@ describe('Garden', function () {
       expect(bablBalanceAfter).to.eq(bablBalanceBefore.mul(2));
       await heartGarden
         .connect(gov)
-        .updateStrategyRewards(strategyContract.address, rewards, capitalReturned, rewardsSetAside);
+        .updateStrategyRewards(strategyContract.address, rewards, capitalReturned, rewardsSetAside, true);
       expect(await bablToken.balanceOf(heartGarden.address)).to.eq(bablBalanceBefore);
     });
     it('anyone can NOT update strategy rewards', async function () {
@@ -2360,7 +2360,7 @@ describe('Garden', function () {
       const capitalReturned = await strategyContract.capitalReturned();
       const rewardsSetAside = await garden1.reserveAssetRewardsSetAside();
       await expect(
-        garden1.connect(signer1).updateStrategyRewards(strategyContract.address, eth(), eth(), eth()),
+        garden1.connect(signer1).updateStrategyRewards(strategyContract.address, eth(), eth(), eth(), true),
       ).to.be.revertedWith('Only governance or emergency can call this');
     });
   });
