@@ -189,10 +189,6 @@ describe('Heart', function () {
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.FEI);
     });
 
-    it('cannot update the asset to purchase to an invalid asset', async function () {
-      await expect(heart.connect(owner).updateAssetToPurchase(ADDRESS_ZERO)).to.be.reverted;
-    });
-
     it('can update the asset to purchase to a valid asset', async function () {
       await heart.connect(owner).updateAssetToPurchase(addresses.tokens.FRAX);
       expect(await heart.connect(owner).assetForPurchases()).to.equal(addresses.tokens.FRAX);
