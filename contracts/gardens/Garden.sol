@@ -710,7 +710,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         _require(_userLock <= MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
         // Only the heart or the user can update the lock
         _require(
-            balanceOf(_contributor) >= minContribution && msg.sender == controller.heart()),
+            balanceOf(_contributor) >= minContribution && msg.sender == controller.heart(),
             Errors.ONLY_CONTRIBUTOR
         );
         // Can only increase the lock if lock expired
