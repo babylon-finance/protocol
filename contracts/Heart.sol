@@ -174,7 +174,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     uint256[7] public override totalStats;
 
     // Trade slippage to apply in trades
-    uint256 public override tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
+    uint256 public override tradeSlippage;
 
     // Asset to use to buy protocol wanted assets
     address public override assetForPurchases;
