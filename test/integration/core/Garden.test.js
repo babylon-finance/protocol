@@ -2399,15 +2399,17 @@ describe('Garden', function () {
 
       expect(await heartGarden.userLock(signer1.address)).to.equal(0);
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365, 0);
+      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365, 0, { gasPrice: 0 });
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
       expect(await heartGarden.getVotingPower(signer1.address)).to.equal(balance.div(4));
       // Can't change it to a lower amount
-      await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, 1, balance)).to.be.reverted;
+      await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, 1, balance, { gasPrice: 0 })).to.be
+        .reverted;
       // Can change it after it expired
       ethers.provider.send('evm_increaseTime', [86400 * 365]);
-      await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365 * 4, balance)).not.to.be
-        .reverted;
+      await expect(
+        heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365 * 4, balance, { gasPrice: 0 }),
+      ).not.to.be.reverted;
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 2.5);
       expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(
         balance.div(40).mul(25),
@@ -2421,9 +2423,9 @@ describe('Garden', function () {
       it(`can NOT update the lock if out of bounds using a lock ${name}`, async function () {
         const heartSigner = await impersonateAddress(await babController.heart());
 
-        await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, amount, 0)).to.be.revertedWith(
-          'BAB#134',
-        );
+        await expect(
+          heartGarden.connect(heartSigner).updateUserLock(signer1.address, amount, 0, { gasPrice: 0 }),
+        ).to.be.revertedWith('BAB#134');
       });
     });
     it(`can leave after lock period ends and re-join a garden`, async function () {
@@ -2431,7 +2433,7 @@ describe('Garden', function () {
       const signer1lock1 = await heartGarden.userLock(signer1.address);
       const heartSigner = await impersonateAddress(await babController.heart());
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, lockTime, balance);
+      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, lockTime, balance, { gasPrice: 0 });
       await increaseTime(lockTime);
       // Leave the garden completely
       await expect(
@@ -2457,7 +2459,9 @@ describe('Garden', function () {
     it(`can NOT withdraw before lock period ends`, async function () {
       const balance = await heartGarden.balanceOf(signer1.address);
       const heartSigner = await impersonateAddress(await babController.heart());
-      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, ONE_DAY_IN_SECONDS * 183, balance);
+      await heartGarden
+        .connect(heartSigner)
+        .updateUserLock(signer1.address, ONE_DAY_IN_SECONDS * 183, balance, { gasPrice: 0 });
       const signer1lock2 = await heartGarden.userLock(signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await expect(
