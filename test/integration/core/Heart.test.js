@@ -184,10 +184,6 @@ describe('Heart', function () {
       expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(100));
     });
 
-    it('cannot update the asset to lend to an invalid asset', async function () {
-      await expect(heart.connect(owner).updateAssetToLend(addresses.tokens.USDC)).to.be.reverted;
-    });
-
     it('can update the asset to lend to a valid fuse asset', async function () {
       await heart.connect(owner).updateAssetToLend(addresses.tokens.FEI);
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.FEI);

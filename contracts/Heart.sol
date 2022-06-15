@@ -196,8 +196,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _governor               Address of governor contract
      */
     constructor(IBabController _controller, IGovernor _governor) initializer {
-        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
-        _require(address(_governor) != address(0), Errors.ADDRESS_IS_ZERO);
+        _require(address(_controller) != address(0) && address(_governor) != address(0), Errors.ADDRESS_IS_ZERO);
 
         controller = _controller;
         treasury = _controller.treasury();
@@ -218,6 +217,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         minAmounts[address(USDC)] = 500e6;
         minAmounts[address(WETH)] = 5e17;
         minAmounts[address(WBTC)] = 3e6;
+        tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
         // Self-delegation to be able to use BABL balance as voting power
         IVoteToken(address(BABL)).delegate(address(this));
     }
@@ -353,7 +353,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      */
     function updateAssetToPurchase(address _purchaseAsset) external override {
         controller.onlyGovernanceOrEmergency();
-        _require(_purchaseAsset != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
         assetForPurchases = _purchaseAsset;
     }
 

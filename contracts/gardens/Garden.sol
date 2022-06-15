@@ -720,7 +720,7 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
             Errors.SET_GARDEN_USER_LOCK
         );
-        if (userLock[_contributor] != _userLock) {
+        if (userLock[_contributor] > _userLock) {
             uint256 balance = balanceOf(_contributor);
             userLock[_contributor] = (userLock[_contributor].mul(_balanceBefore)).add(balance.mul(_userLock)).div(
                 balance.add(_balanceBefore)
