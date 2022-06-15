@@ -101,9 +101,11 @@ interface IHeart {
 
     function addReward(uint256 _bablAmount, uint256 _weeklyRate) external;
 
-    function setMinTradeAmount(address _asset, uint256 _minAmount) external;
-
-    function setTradeSlippage(uint256 _tradeSlippage) external;
+    function setHeartConfigParam(
+        uint8 _index,
+        uint256 _param,
+        address _addressParam
+    ) external;
 
     function bondAsset(
         address _assetToBond,

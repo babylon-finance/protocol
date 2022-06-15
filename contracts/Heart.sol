@@ -174,7 +174,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     uint256[7] public override totalStats;
 
     // Trade slippage to apply in trades
-    uint256 public override tradeSlippage;
+    uint256 public override tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
 
     // Asset to use to buy protocol wanted assets
     address public override assetForPurchases;
@@ -220,7 +220,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         minAmounts[address(WBTC)] = 3e6;
         // Self-delegation to be able to use BABL balance as voting power
         IVoteToken(address(BABL)).delegate(address(this));
-        tradeSlippage = DEFAULT_TRADE_SLIPPAGE;
     }
 
     /* ============ External Functions ============ */
@@ -231,9 +230,12 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * Note: Anyone can call this. Keeper in Defender will be set up to do it for convenience.
      */
     function pump(uint256 _bablMinAmountOut) public override {
-        _require(address(heartGarden) != address(0), Errors.HEART_GARDEN_NOT_SET);
-        _require(block.timestamp.sub(lastPumpAt) >= 1 weeks, Errors.HEART_ALREADY_PUMPED);
-        _require(block.timestamp.sub(lastVotesAt) < 1 weeks, Errors.HEART_VOTES_MISSING);
+        _require(
+            address(heartGarden) != address(0) &&
+                block.timestamp.sub(lastPumpAt) >= 1 weeks &&
+                block.timestamp.sub(lastVotesAt) < 1 weeks,
+            Errors.HEART_ALREADY_PUMPED
+        );
         // Consolidate all fees
         _consolidateFeesToWeth();
         uint256 wethBalance = WETH.balanceOf(address(this));
@@ -341,8 +343,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      */
     function updateAssetToLend(address _assetToLend) public override {
         controller.onlyGovernanceOrEmergency();
-        _require(assetToLend != _assetToLend, Errors.HEART_ASSET_LEND_SAME);
-        _require(assetToCToken[_assetToLend] != address(0), Errors.HEART_ASSET_LEND_INVALID);
         assetToLend = _assetToLend;
     }
 
@@ -353,10 +353,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      */
     function updateAssetToPurchase(address _purchaseAsset) external override {
         controller.onlyGovernanceOrEmergency();
-        _require(
-            _purchaseAsset != assetForPurchases && _purchaseAsset != address(0),
-            Errors.HEART_ASSET_PURCHASE_INVALID
-        );
+        _require(_purchaseAsset != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
         assetForPurchases = _purchaseAsset;
     }
 
@@ -386,17 +383,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     }
 
     /**
-     * Updates the min amount to trade a specific asset
-     *
-     * @param _asset                Asset to edit the min amount
-     * @param _minAmountOut            New min amount
-     */
-    function setMinTradeAmount(address _asset, uint256 _minAmountOut) external override {
-        controller.onlyGovernanceOrEmergency();
-        minAmounts[_asset] = _minAmountOut;
-    }
-
-    /**
      * Updates the heart garden address
      *
      * @param _heartGarden                New heart garden address
@@ -407,13 +393,21 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     }
 
     /**
-     * Updates the tradeSlippage
+     * Sets heart config param
      *
-     * @param _tradeSlippage                Trade slippage
+     * @param _index                Specify which param to update
+     * @param _param                New param
      */
-    function setTradeSlippage(uint256 _tradeSlippage) external override {
+    function setHeartConfigParam(
+        uint8 _index,
+        uint256 _param,
+        address _addressParam
+    ) external override {
         controller.onlyGovernanceOrEmergency();
-        tradeSlippage = _tradeSlippage;
+        if (_index == 0) {
+            tradeSlippage = _param;
+        }
+        minAmounts[_addressParam] = _param;
     }
 
     /**
@@ -437,9 +431,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      */
     function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
         controller.onlyGovernanceOrEmergency();
-        address cToken = assetToCToken[_assetToBorrow];
-        _require(cToken != address(0), Errors.HEART_INVALID_CTOKEN);
-        _require(ICToken(cToken).borrow(_borrowAmount) == 0, Errors.NOT_ENOUGH_COLLATERAL);
+        _require(ICToken(assetToCToken[_assetToBorrow]).borrow(_borrowAmount) == 0, Errors.NOT_ENOUGH_COLLATERAL);
     }
 
     /**
@@ -472,7 +464,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         uint256 _minAmountOut
     ) external override {
         controller.onlyGovernanceOrEmergency();
-        _require(IERC20(_fromAsset).balanceOf(address(this)) >= _fromAmount, Errors.AMOUNT_TOO_LOW);
         uint256 boughtAmount = _trade(_fromAsset, _toAsset, _fromAmount);
         _require(boughtAmount >= _minAmountOut, Errors.SLIPPAGE_TOO_HIH);
     }
@@ -487,9 +478,10 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _amountToSell                 Amount of asset to sell
      */
     function sellWantedAssetToHeart(address _assetToSell, uint256 _amountToSell) external override {
-        _require(controller.isSystemContract(msg.sender), Errors.NOT_A_SYSTEM_CONTRACT);
-        _require(controller.protocolWantedAssets(_assetToSell), Errors.HEART_ASSET_PURCHASE_INVALID);
-        _require(assetForPurchases != address(0), Errors.INVALID_ADDRESS);
+        _require(
+            controller.isSystemContract(msg.sender) && controller.protocolWantedAssets(_assetToSell),
+            Errors.HEART_ASSET_PURCHASE_INVALID
+        );
         // Uses on chain oracle to fetch prices
         uint256 pricePerTokenUnit = IPriceOracle(controller.priceOracle()).getPrice(_assetToSell, assetForPurchases);
         _require(pricePerTokenUnit != 0, Errors.NO_PRICE_FOR_TRADE);
@@ -543,10 +535,11 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         BABL.safeApprove(address(heartGarden), bondValueInBABL);
 
+        uint256 balanceBefore = heartGarden.balanceOf(address(heartGarden));
         heartGarden.deposit(bondValueInBABL, _minAmountOut, msg.sender, _referrer);
 
         // Updates the lock
-        heartGarden.updateUserLock(msg.sender, _userLock);
+        heartGarden.updateUserLock(msg.sender, _userLock, balanceBefore);
     }
 
     /**
@@ -596,6 +589,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
 
         // grant permission to deposit
         signer = _contributor;
+        uint256 balanceBefore = heartGarden.balanceOf(address(heartGarden));
         heartGarden.depositBySig(
             _amountIn,
             _minAmountOut,
@@ -609,7 +603,7 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
             _signature
         );
         // Update user lock
-        heartGarden.updateUserLock(_contributor, _feeAndLock[1]);
+        heartGarden.updateUserLock(_contributor, _feeAndLock[1], balanceBefore);
         // revoke permission to deposit
         signer = address(0);
     }
@@ -632,7 +626,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
         address _hopToken
     ) external override {
         _onlyKeeper();
-        _require(assetForPurchases != address(0), Errors.HEART_ASSET_PURCHASE_INVALID);
         _require(_bablPriceProtectionAt > 0 && _bablPrice <= _bablPriceProtectionAt, Errors.AMOUNT_TOO_HIGH);
 
         _require(

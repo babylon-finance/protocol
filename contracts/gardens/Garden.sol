@@ -698,8 +698,13 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Update user hardlock for this garden
      * @param _contributor        Address of the contributor
      * @param _userLock           Amount in seconds tht the user principal will be locked since deposit
+     * @param _balanceBefore      Balance of garden token before the deposit
      */
-    function updateUserLock(address _contributor, uint256 _userLock) external override {
+    function updateUserLock(
+        address _contributor,
+        uint256 _userLock,
+        uint256 _balanceBefore
+    ) external override {
         _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
         _require(_userLock <= MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
@@ -715,7 +720,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
             Errors.SET_GARDEN_USER_LOCK
         );
-        userLock[_contributor] = _userLock;
+        if (userLock[_contributor] != _userLock) {
+            uint256 balance = balanceOf(_contributor);
+            userLock[_contributor] = (userLock[_contributor].mul(_balanceBefore)).add(balance.mul(_userLock)).div(
+                balance.add(_balanceBefore)
+            );
+        }
     }
 
     /**
@@ -1057,8 +1067,12 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             _require(fromBalance.sub(lockedBalance) >= _amount, Errors.TOKENS_STAKED);
 
             // Move the lock from the old address to the new address
+
             if (userLock[_from] > userLock[_to]) {
-                userLock[_to] = userLock[_from];
+                uint256 toBalance = balanceOf(_to);
+                userLock[_to] = ((userLock[_from].mul(fromBalance)).add(toBalance.mul(userLock[_to]))).div(
+                    fromBalance.add(toBalance)
+                );
             }
             _updateContributorWithdrawalInfo(_from, 0, fromBalance, fromBalance.sub(_amount), _amount);
             _updateContributorDepositInfo(_to, balanceOf(_to), 0, _amount);
