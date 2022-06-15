@@ -2396,9 +2396,9 @@ describe('Garden', function () {
       // Reverts if calling it on a normal garden
       await expect(garden.updateUserLock(signer1.address, 86400 * 365, 0)).to.be.reverted;
       expect(await heartGarden.userLock(signer1.address)).to.equal(0);
+      const balance = await heartGarden.balanceOf(signer1.address);
       await heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365, 0);
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
-      const balance = await heartGarden.balanceOf(signer1.address);
       expect(await heartGarden.getVotingPower(signer1.address)).to.equal(balance.div(4));
       // Can't change it to a lower amount
       await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1, balance)).to.be.reverted;
@@ -2450,14 +2450,10 @@ describe('Garden', function () {
       await expect(await heartGarden.userLock(signer1.address)).to.eq(0);
     });
     it(`can NOT withdraw before lock period ends`, async function () {
-      const [lastDepositAt, , , , , , , , ,] = await heartGarden.getContributor(signer1.address);
-      const lockTime = ONE_DAY_IN_SECONDS * 183;
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime, balance);
+      await heartGarden.connect(signer1).updateUserLock(signer1.address, ONE_DAY_IN_SECONDS * 183, balance);
       const signer1lock2 = await heartGarden.userLock(signer1.address);
-      const block = await ethers.provider.getBlock();
-      const timeDiff = signer1lock2 - (block.timestamp - lastDepositAt);
-      await increaseTime(timeDiff - 2); // previous block to unblock
+      await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await expect(
         heartGarden
           .connect(signer1)
