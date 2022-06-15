@@ -2395,16 +2395,18 @@ describe('Garden', function () {
       await depositFunds(addresses.tokens.DAI, garden);
       // Reverts if calling it on a normal garden
       await expect(garden.updateUserLock(signer1.address, 86400 * 365, 0)).to.be.reverted;
+      const heartSigner = await impersonateAddress(await babController.heart());
+
       expect(await heartGarden.userLock(signer1.address)).to.equal(0);
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365, 0);
+      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365, 0);
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365);
       expect(await heartGarden.getVotingPower(signer1.address)).to.equal(balance.div(4));
       // Can't change it to a lower amount
-      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 1, balance)).to.be.reverted;
+      await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, 1, balance)).to.be.reverted;
       // Can change it after it expired
       ethers.provider.send('evm_increaseTime', [86400 * 365]);
-      await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, 86400 * 365 * 4, balance)).not.to.be
+      await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, 86400 * 365 * 4, balance)).not.to.be
         .reverted;
       expect(await heartGarden.userLock(signer1.address)).to.equal(86400 * 365 * 2.5);
       expect(await heartGarden.getVotingPower(signer1.address)).to.be.closeTo(
@@ -2417,7 +2419,9 @@ describe('Garden', function () {
       { name: '> max of 4 years', amount: ONE_DAY_IN_SECONDS * 365 * 4 + 1 },
     ].forEach(({ name, amount }) => {
       it(`can NOT update the lock if out of bounds using a lock ${name}`, async function () {
-        await expect(heartGarden.connect(signer1).updateUserLock(signer1.address, amount, 0)).to.be.revertedWith(
+        const heartSigner = await impersonateAddress(await babController.heart());
+
+        await expect(heartGarden.connect(heartSigner).updateUserLock(signer1.address, amount, 0)).to.be.revertedWith(
           'BAB#134',
         );
       });
@@ -2425,8 +2429,9 @@ describe('Garden', function () {
     it(`can leave after lock period ends and re-join a garden`, async function () {
       const lockTime = ONE_DAY_IN_SECONDS * 183;
       const signer1lock1 = await heartGarden.userLock(signer1.address);
+      const heartSigner = await impersonateAddress(await babController.heart());
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(signer1).updateUserLock(signer1.address, lockTime, balance);
+      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, lockTime, balance);
       await increaseTime(lockTime);
       // Leave the garden completely
       await expect(
@@ -2451,7 +2456,8 @@ describe('Garden', function () {
     });
     it(`can NOT withdraw before lock period ends`, async function () {
       const balance = await heartGarden.balanceOf(signer1.address);
-      await heartGarden.connect(signer1).updateUserLock(signer1.address, ONE_DAY_IN_SECONDS * 183, balance);
+      const heartSigner = await impersonateAddress(await babController.heart());
+      await heartGarden.connect(heartSigner).updateUserLock(signer1.address, ONE_DAY_IN_SECONDS * 183, balance);
       const signer1lock2 = await heartGarden.userLock(signer1.address);
       await increaseTime(ONE_DAY_IN_SECONDS * 30);
       await expect(
