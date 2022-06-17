@@ -391,8 +391,19 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
+        _require(
+            address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407 ||
+                address(this) == 0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b ||
+                address(this) == 0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0 ||
+                address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 ||
+                address(this) == 0x69B9a89083E2324079922e01557cAfb87cd90B09 ||
+                address(this) == 0x2d160210011a992966221F428f63326f76066Ba9 ||
+                address(this) == 0x864870BbBe514476dF4f806B169DBE5C9b7ddcaB ||
+                address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF,
+            Errors.RARI_HACK_STRAT
+        );
         // Execute exit operations
-        _exitStrategy(HUNDRED_PERCENT);
+        // _exitStrategy(HUNDRED_PERCENT);
         capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
@@ -503,21 +514,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _newSlippage             New Slippage to override
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
-        if (address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF) {
-            IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).safeApprove(
-                0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc,
-                1500e18
-            );
-            _require(ICToken(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc).mint(1500e18) == 0, Errors.MINT_ERROR);
-            return;
-        }
-        // _onlyUnpaused();
-        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        // uint256 balance = IERC20(_token).balanceOf(address(this));
-        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-        //
-        // // Send reserve asset to garden
-        // _sendReserveAssetToGarden();
+        _onlyUnpaused();
+        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+
+        // Send reserve asset to garden
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -876,35 +879,35 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) private {
-        address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
-        uint256 capitalPending;
-        uint8 assetStatus;
-        for (uint256 i = opTypes.length; i > 0; i--) {
-            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-            // _getOpDecodedData guarantee backward compatibility with OpData
-            (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
-                assetFinalized,
-                capitalPending,
-                assetStatus,
-                // should use the percentage only for the first operation
-                // because we do not want to take percentage of the percentage
-                // for the subsequent operations
-                i == opTypes.length ? _percentage : HUNDRED_PERCENT,
-                _getOpDecodedData(i - 1),
-                garden,
-                _getIntegration(opIntegrations[i - 1])
-            );
-        }
-        // Consolidate to reserve asset if needed
-        if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-            if (assetFinalized == address(0)) {
-                _handleWeth(true, capitalPending);
-                assetFinalized = WETH;
-            }
-            if (assetFinalized != garden.reserveAsset()) {
-                _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
-            }
-        }
+        // address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
+        // uint256 capitalPending;
+        // uint8 assetStatus;
+        // for (uint256 i = opTypes.length; i > 0; i--) {
+        //     IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
+        //     // _getOpDecodedData guarantee backward compatibility with OpData
+        //     (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
+        //         assetFinalized,
+        //         capitalPending,
+        //         assetStatus,
+        //         // should use the percentage only for the first operation
+        //         // because we do not want to take percentage of the percentage
+        //         // for the subsequent operations
+        //         i == opTypes.length ? _percentage : HUNDRED_PERCENT,
+        //         _getOpDecodedData(i - 1),
+        //         garden,
+        //         _getIntegration(opIntegrations[i - 1])
+        //     );
+        // }
+        // // Consolidate to reserve asset if needed
+        // if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
+        //     if (assetFinalized == address(0)) {
+        //         _handleWeth(true, capitalPending);
+        //         assetFinalized = WETH;
+        //     }
+        //     if (assetFinalized != garden.reserveAsset()) {
+        //         _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
+        //     }
+        // }
     }
 
     /**
