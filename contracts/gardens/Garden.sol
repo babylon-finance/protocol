@@ -1069,9 +1069,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             uint256 lockedBalance = contributors[_from].lockedBalance;
             _require(fromBalance.sub(lockedBalance) >= _amount, Errors.TOKENS_STAKED);
 
+            // Prevent freezing receiver funds
+            _require(userLock[_to] >= userLock[_from], Errros.SET_GARDEN_USER_LOCK);
             // Move the lock from the old address to the new address
-
-            if (userLock[_from] > userLock[_to]) {
+            if (userLock[_from] < userLock[_to]) {
                 uint256 toBalance = balanceOf(_to);
                 userLock[_to] = ((userLock[_from].mul(fromBalance)).add(toBalance.mul(userLock[_to]))).div(
                     fromBalance.add(toBalance)
