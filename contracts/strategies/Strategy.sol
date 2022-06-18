@@ -32,6 +32,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
+import {IYearnVault} from '../interfaces/external/yearn/IYearnVault.sol';
 
 /**
  * @title Strategy
@@ -529,6 +530,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407 &&
             _token == 0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e
         ) {
+            // Note: Stable Peeble Garden withdraw and unwrap and send to multisig
             // target 0xb900ef131301b307db5efcbed9dbb50a3e209b2e
             // value 0
             // returned 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B
@@ -539,6 +541,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
                 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
                 returned
             );
+        } else if (
+            address(this) == 0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b &&
+            _token == 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
+        ) {
+            // Note: Waterfall2 "Espria" user un-stake from yVault and trade back into USDC to the garden
+            // target 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
+            // value 0
+            // returned DAI
+            bytes memory methodData = abi.encodeWithSelector(IYearnVault.withdraw.selector, balance);
+            _invoke(_token, 0, methodData);
+            uint256 returned = IERC20(DAI).balanceOf(address(this));
+            _trade(DAI, returned, garden.reserveAsset(), _newSlippage);
+            // Send reserve asset to garden
+            _sendReserveAssetToGarden();
         } else {
             _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 
