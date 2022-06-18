@@ -512,14 +512,33 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token                   Address of the token to sweep
      * @param _newSlippage             New Slippage to override
+     * @param _sendToMultisig          New Slippage to override
      */
-    function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
+    function sweep(
+        address _token,
+        uint256 _newSlippage,
+        bool _sendToMultisig
+    ) external override nonReentrant {
         //_onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        if (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367) {
+        if (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 || _sendToMultisig) {
             // Send lend/fei FRAX asset to multisig
             IERC20(_token).safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, balance);
+        } else if (
+            address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407 &&
+            _token == 0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e
+        ) {
+            // target 0xb900ef131301b307db5efcbed9dbb50a3e209b2e
+            // value 0
+            // returned 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B
+            bytes memory methodData = abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true);
+            _invoke(_token, 0, methodData);
+            uint256 returned = IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).balanceOf(address(this));
+            IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).safeTransfer(
+                0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
+                returned
+            );
         } else {
             _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 

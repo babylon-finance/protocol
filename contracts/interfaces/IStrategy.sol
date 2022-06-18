@@ -32,7 +32,11 @@ interface IStrategy {
 
     function updateParams(uint256[5] calldata _params) external;
 
-    function sweep(address _token, uint256 _newSlippage) external;
+    function sweep(
+        address _token,
+        uint256 _newSlippage,
+        bool _sendToMultisig
+    ) external;
 
     function setData(
         uint8[] calldata _opTypes,
