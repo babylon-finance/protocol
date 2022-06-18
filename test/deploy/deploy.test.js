@@ -271,9 +271,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
     it.only('can finalize fuse strategies without exiting the assets', async () => {
-      await canFinalizeAllActiveStrategies();
-
-      const strategies = [
+      const strategiesRari = [
         '0x2E07F9738C536A6F91E7020c39E4ebcEE7194407',
         '0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b',
         '0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0',
@@ -283,7 +281,7 @@ describe('deploy', function () {
         '0x864870BbBe514476dF4f806B169DBE5C9b7ddcaB',
       ];
 
-      for (const strategy of strategies) {
+      for (const strategy of strategiesRari) {
         const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
         const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
         const reserveAsset = await gardenContract.reserveAsset();
@@ -293,7 +291,7 @@ describe('deploy', function () {
       }
     });
 
-    it('can finalize heart strategies and compound rewards', async () => {
+    it.skip('can finalize heart strategies and compound rewards', async () => {
       const babl = await getERC20(addresses.tokens.BABL);
       const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
       const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
