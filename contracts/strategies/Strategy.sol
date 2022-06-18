@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -523,38 +522,50 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         //_onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        if (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 || _sendToMultisig) {
+        if (_sendToMultisig) {
             // Send lend/fei FRAX asset to multisig
             IERC20(_token).safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, balance);
         } else if (
-            address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407 &&
+            (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 ||
+                address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407) &&
             _token == 0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e
         ) {
-            // Note: Stable Peeble Garden withdraw and unwrap and send to multisig
+            // Stable Garden & Stable Peeble Garden
+            // Note: Must withdraw and unwrap as there is no transfer available - check claim rewards
+            // Withdraw and unwrap and send to multisig
             // target 0xb900ef131301b307db5efcbed9dbb50a3e209b2e
             // value 0
             // returned 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B
-            bytes memory methodData = abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true);
-            _invoke(_token, 0, methodData);
-            uint256 returned = IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).balanceOf(address(this));
+            _invoke(_token, 0, abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true));
             IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).safeTransfer(
                 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
-                returned
+                IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).balanceOf(address(this))
             );
         } else if (
             address(this) == 0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b &&
             _token == 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
         ) {
-            // Note: Waterfall2 "Espria" user un-stake from yVault and trade back into USDC to the garden
+            // Waterfall2 "Espria" user un-stake from yVault and trade back into USDC to the garden
+            // Note: check if we need to leave USDC in the strategy  - check claim rewards
             // target 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
             // value 0
             // returned DAI
-            bytes memory methodData = abi.encodeWithSelector(IYearnVault.withdraw.selector, balance);
-            _invoke(_token, 0, methodData);
-            uint256 returned = IERC20(DAI).balanceOf(address(this));
-            _trade(DAI, returned, garden.reserveAsset(), _newSlippage);
+            _invoke(_token, 0, abi.encodeWithSelector(IYearnVault.withdraw.selector, balance));
+            _trade(DAI, IERC20(DAI).balanceOf(address(this)), garden.reserveAsset(), _newSlippage);
             // Send reserve asset to garden
             _sendReserveAssetToGarden();
+        } else if (
+            address(this) == 0x69B9a89083E2324079922e01557cAfb87cd90B09 &&
+            _token == 0x84E13785B5a27879921D6F685f041421C7F482dA
+        ) {
+            // Stable Garden str 2 withdraw from yVault 3pool and send 3CRV tokens to multisig
+            // Note: Check if we need to remove liquidity etc  - check claim rewards
+            _invoke(_token, 0, abi.encodeWithSelector(IYearnVault.withdraw.selector, balance));
+            // 3CRV after yv withdrawal sent to Multisig
+            IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).safeTransfer(
+                0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
+                IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).balanceOf(address(this))
+            );
         } else {
             _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 

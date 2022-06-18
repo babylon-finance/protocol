@@ -2,17 +2,20 @@ const { expect } = require('chai');
 // const { deployments } = require('hardhat');
 const { getERC20, increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
-const { ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
+const { getUsers } = require('lib/web3');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
+const { ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
 
 const STUCK = [
   // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
   // '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
   '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237', // aladdin
+  '0x45d5daecb6e96c87fa04105ee205379ddfe8f555', // Stable to increase rewards
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -29,6 +32,7 @@ describe('deploy', function () {
   let snapshotId;
   let distributor;
   let gnosis;
+  let heart;
 
   const getStrategyFuseRewards = async (_strategy) => {
     const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
@@ -227,7 +231,19 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
+      ({
+        owner,
+        gov,
+        keeper,
+        gardens,
+        gardensNAV,
+        strategyNft,
+        valuer,
+        distributor,
+        gnosis,
+        priceOracle,
+        heart,
+      } = await deployFixture());
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
@@ -270,7 +286,7 @@ describe('deploy', function () {
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
-    it.only('can finalize fuse strategies without exiting the assets', async () => {
+    it.skip('can finalize fuse strategies without exiting the assets', async () => {
       const strategiesRari = [
         '0x2E07F9738C536A6F91E7020c39E4ebcEE7194407',
         '0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b',
@@ -288,6 +304,60 @@ describe('deploy', function () {
         const name = await strategyNft.getStrategyName(strategy);
         await finalizeStrategy(strategyContract, name, reserveAsset);
       }
+    });
+    [
+      {
+        strategiesRari: ['0x2E07F9738C536A6F91E7020c39E4ebcEE7194407'],
+        assetsToRecover: ['0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e'],
+        garden: 'Stable Peeble',
+      },
+      {
+        strategiesRari: ['0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b'],
+        assetsToRecover: ['0xdA816459F1AB5631232FE5e97a05BBBb94970c95'],
+        garden: 'Waterfall2',
+      },
+      {
+        strategiesRari: ['0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0'],
+        assetsToRecover: [],
+        garden: 'Fountain of ETH',
+      },
+      {
+        strategiesRari: ['0x11b1f3C622B129212D257d603D312244820cC367'],
+        assetsToRecover: ['0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e'],
+        garden: 'Stable Garden str 1',
+      },
+      {
+        strategiesRari: ['0x69B9a89083E2324079922e01557cAfb87cd90B09'],
+        assetsToRecover: ['0x84E13785B5a27879921D6F685f041421C7F482dA'],
+        garden: 'Stable Garden str 2',
+      },
+      {
+        strategiesRari: ['0x2d160210011a992966221F428f63326f76066Ba9'],
+        assetsToRecover: [],
+        garden: 'Stable Garden str 3',
+      },
+      { strategiesRari: ['0x864870BbBe514476dF4f806B169DBE5C9b7ddcaB'], assetsToRecover: [], garden: 'Amplify Stable' },
+    ].forEach(({ strategiesRari, assetsToRecover, garden }) => {
+      it.only(`can recover assets from ${garden} garden`, async () => {
+        // Note: check whether more assets need to be recovered or not or where they are being sent
+
+        const slippage = eth(0.5); // 5%
+        for (const strategy of strategiesRari) {
+          const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+          const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
+          const reserveAsset = await gardenContract.reserveAsset();
+          const name = await strategyNft.getStrategyName(strategy);
+          await finalizeStrategy(strategyContract, name, reserveAsset);
+          // Recover assets
+          for (const asset of assetsToRecover) {
+            const assetContract = await getERC20(asset);
+            const assetStrBalanceBefore = await assetContract.balanceOf(strategy);
+            if (assetStrBalanceBefore.gt(0)) {
+              await strategyContract.sweep(asset, slippage, false, { gasPrice: 0 });
+            }
+          }
+        }
+      });
     });
 
     it.skip('can finalize heart strategies and compound rewards', async () => {
@@ -337,7 +407,7 @@ describe('deploy', function () {
       expect(getRewardsStrategistBABL2[6]).to.eq(getRewardsStrategistBABL1[6]).to.eq(0);
     });
 
-    it.skip('can finalize stuck strategies', async () => {
+    it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
     });
   });
