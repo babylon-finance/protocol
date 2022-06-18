@@ -388,7 +388,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override nonReentrant {
         _onlyUnpaused();
         _onlyKeeper();
-        _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
+        // _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
         _require(

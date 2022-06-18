@@ -270,6 +270,28 @@ describe('deploy', function () {
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
+    it('can finalize fuse strategies strategies', async () => {
+      await canFinalizeAllActiveStrategies();
+
+      const strategies = [
+        '0x2E07F9738C536A6F91E7020c39E4ebcEE7194407',
+        '0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b',
+        '0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0',
+        '0x11b1f3C622B129212D257d603D312244820cC367',
+        '0x69B9a89083E2324079922e01557cAfb87cd90B09',
+        '0x2d160210011a992966221F428f63326f76066Ba9',
+        '0x864870BbBe514476dF4f806B169DBE5C9b7ddcaB',
+      ];
+
+      for (const strategy of strategies) {
+        const strategyContract = await ethers.getContractAt('IStrategy', strategy, owner);
+        const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
+        const reserveAsset = await gardenContract.reserveAsset();
+        const name = await strategyNft.getStrategyName(strategy);
+        console.log('Finalizing fuse strategy', name);
+        await finalizeStrategy(strategyContract, name, reserveAsset);
+      }
+    });
 
     it('can finalize heart strategies and compound rewards', async () => {
       const babl = await getERC20(addresses.tokens.BABL);
