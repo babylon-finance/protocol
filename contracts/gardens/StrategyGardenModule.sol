@@ -108,7 +108,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
         int256 _returns,
         uint256 _burningAmount
     ) external override nonReentrant {
-        _onlyUnpaused();
+        // _onlyUnpaused();
         _onlyStrategy();
 
         // burn stategist stake
@@ -148,7 +148,7 @@ contract StrategyGardenModule is BaseGardenModule, IStrategyGarden {
      * @param _fee     The fee paid to keeper to compensate the gas cost
      */
     function payKeeper(address payable _keeper, uint256 _fee) public override nonReentrant {
-        _onlyUnpaused();
+        // _onlyUnpaused();
         _require(msg.sender == address(this) || strategyMapping[msg.sender], Errors.ONLY_STRATEGY);
         _require(controller.isValidKeeper(_keeper), Errors.ONLY_KEEPER);
 

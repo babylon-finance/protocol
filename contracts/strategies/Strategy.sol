@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
+import 'hardhat/console.sol';
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
@@ -386,7 +387,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         string memory _tokenURI,
         uint256 _minReserveOut
     ) external override nonReentrant {
-        _onlyUnpaused();
+        //_onlyUnpaused();
         _onlyKeeper();
         // _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
@@ -494,8 +495,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function updateParams(uint256[5] calldata _params) external override {
         _onlyStrategistOrGovernor();
-        _onlyUnpaused();
-
+        //_onlyUnpaused();
         _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
         _setDuration(_params[0]);
@@ -514,7 +514,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _newSlippage             New Slippage to override
      */
     function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
-        _onlyUnpaused();
+        //_onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
         if (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367) {
