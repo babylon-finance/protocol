@@ -259,7 +259,7 @@ describe('deploy', function () {
       await checkNAVStrategies();
     });
 
-    it.only('can execute stuck strategies', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
@@ -270,7 +270,7 @@ describe('deploy', function () {
     it('can finalize all active strategies', async () => {
       await canFinalizeAllActiveStrategies();
     });
-    it('can finalize fuse strategies strategies', async () => {
+    it.only('can finalize fuse strategies without exiting the assets', async () => {
       await canFinalizeAllActiveStrategies();
 
       const strategies = [
