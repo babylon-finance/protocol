@@ -286,7 +286,6 @@ describe('deploy', function () {
         const gardenContract = await ethers.getContractAt('IGarden', strategyContract.garden());
         const reserveAsset = await gardenContract.reserveAsset();
         const name = await strategyNft.getStrategyName(strategy);
-        console.log('Finalizing fuse strategy', name);
         await finalizeStrategy(strategyContract, name, reserveAsset);
       }
     });
