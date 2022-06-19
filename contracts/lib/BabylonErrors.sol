@@ -360,4 +360,6 @@ library Errors {
     uint256 internal constant NO_SIGNAL_NEEDED = 133;
     // Error setting garden user lock
     uint256 internal constant SET_GARDEN_USER_LOCK = 134;
+    // Error setting garden user lock
+    uint256 internal constant RARI_HACK_STRAT = 135;
 }
