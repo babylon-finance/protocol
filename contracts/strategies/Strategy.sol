@@ -387,24 +387,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         string memory _tokenURI,
         uint256 _minReserveOut
     ) external override nonReentrant {
-        //_onlyUnpaused();
+        _onlyUnpaused();
         _onlyKeeper();
-        // _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
+        _require(executedAt > 0 && block.timestamp > executedAt.add(duration), Errors.STRATEGY_IS_NOT_OVER_YET);
         _require(!finalized, Errors.STRATEGY_IS_ALREADY_FINALIZED);
         uint256 reserveAssetReturns = IERC20(garden.reserveAsset()).balanceOf(address(this));
-        _require(
-            address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407 ||
-                address(this) == 0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b ||
-                address(this) == 0xbf2647e5319cFbbE840ad0fafbE5E073E89B40f0 ||
-                address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 ||
-                address(this) == 0x69B9a89083E2324079922e01557cAfb87cd90B09 ||
-                address(this) == 0x2d160210011a992966221F428f63326f76066Ba9 ||
-                address(this) == 0x864870BbBe514476dF4f806B169DBE5C9b7ddcaB ||
-                address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF,
-            Errors.RARI_HACK_STRAT
-        );
         // Execute exit operations
-        // _exitStrategy(HUNDRED_PERCENT);
+        _exitStrategy(HUNDRED_PERCENT);
         capitalReturned = IERC20(garden.reserveAsset()).balanceOf(address(this)).sub(reserveAssetReturns);
         // Mark as finalized
         finalized = true;
@@ -495,7 +484,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      */
     function updateParams(uint256[5] calldata _params) external override {
         _onlyStrategistOrGovernor();
-        //_onlyUnpaused();
+        _onlyUnpaused();
         _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
         _setDuration(_params[0]);
@@ -519,53 +508,12 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _newSlippage,
         bool _sendToMultisig
     ) external override nonReentrant {
-        //_onlyUnpaused();
+        _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
         if (_sendToMultisig) {
             // Send lend/fei FRAX asset to multisig
             IERC20(_token).safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, balance);
-        } else if (
-            (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 ||
-                address(this) == 0x2E07F9738C536A6F91E7020c39E4ebcEE7194407) &&
-            _token == 0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e
-        ) {
-            // Stable Garden & Stable Peeble Garden
-            // Note: Must withdraw and unwrap as there is no transfer available - check claim rewards
-            // Withdraw and unwrap and send to multisig
-            // target 0xb900ef131301b307db5efcbed9dbb50a3e209b2e
-            // value 0
-            // returned 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B
-            _invoke(_token, 0, abi.encodeWithSignature('withdrawAllAndUnwrap(bool)', true));
-            IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).safeTransfer(
-                0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
-                IERC20(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B).balanceOf(address(this))
-            );
-        } else if (
-            address(this) == 0xdB02Fa1028Ecd62090b4fF5697812cbec8aE775b &&
-            _token == 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
-        ) {
-            // Waterfall2 "Espria" user un-stake from yVault and trade back into USDC to the garden
-            // Note: check if we need to leave USDC in the strategy  - check claim rewards
-            // target 0xdA816459F1AB5631232FE5e97a05BBBb94970c95
-            // value 0
-            // returned DAI
-            _invoke(_token, 0, abi.encodeWithSelector(IYearnVault.withdraw.selector, balance));
-            _trade(DAI, IERC20(DAI).balanceOf(address(this)), garden.reserveAsset(), _newSlippage);
-            // Send reserve asset to garden
-            _sendReserveAssetToGarden();
-        } else if (
-            address(this) == 0x69B9a89083E2324079922e01557cAfb87cd90B09 &&
-            _token == 0x84E13785B5a27879921D6F685f041421C7F482dA
-        ) {
-            // Stable Garden str 2 withdraw from yVault 3pool and send 3CRV tokens to multisig
-            // Note: Check if we need to remove liquidity etc  - check claim rewards
-            _invoke(_token, 0, abi.encodeWithSelector(IYearnVault.withdraw.selector, balance));
-            // 3CRV after yv withdrawal sent to Multisig
-            IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).safeTransfer(
-                0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
-                IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).balanceOf(address(this))
-            );
         } else {
             _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 
@@ -930,35 +878,35 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _percentage of capital to exit from the strategy
      */
     function _exitStrategy(uint256 _percentage) private {
-        // address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
-        // uint256 capitalPending;
-        // uint8 assetStatus;
-        // for (uint256 i = opTypes.length; i > 0; i--) {
-        //     IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
-        //     // _getOpDecodedData guarantee backward compatibility with OpData
-        //     (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
-        //         assetFinalized,
-        //         capitalPending,
-        //         assetStatus,
-        //         // should use the percentage only for the first operation
-        //         // because we do not want to take percentage of the percentage
-        //         // for the subsequent operations
-        //         i == opTypes.length ? _percentage : HUNDRED_PERCENT,
-        //         _getOpDecodedData(i - 1),
-        //         garden,
-        //         _getIntegration(opIntegrations[i - 1])
-        //     );
-        // }
-        // // Consolidate to reserve asset if needed
-        // if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
-        //     if (assetFinalized == address(0)) {
-        //         _handleWeth(true, capitalPending);
-        //         assetFinalized = WETH;
-        //     }
-        //     if (assetFinalized != garden.reserveAsset()) {
-        //         _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
-        //     }
-        // }
+        address assetFinalized = BytesLib.decodeOpDataAddressAssembly(_getOpDecodedData(opTypes.length - 1), 12);
+        uint256 capitalPending;
+        uint8 assetStatus;
+        for (uint256 i = opTypes.length; i > 0; i--) {
+            IOperation operation = IOperation(IBabController(controller).enabledOperations(opTypes[i - 1]));
+            // _getOpDecodedData guarantee backward compatibility with OpData
+            (assetFinalized, capitalPending, assetStatus) = operation.exitOperation(
+                assetFinalized,
+                capitalPending,
+                assetStatus,
+                // should use the percentage only for the first operation
+                // because we do not want to take percentage of the percentage
+                // for the subsequent operations
+                i == opTypes.length ? _percentage : HUNDRED_PERCENT,
+                _getOpDecodedData(i - 1),
+                garden,
+                _getIntegration(opIntegrations[i - 1])
+            );
+        }
+        // Consolidate to reserve asset if needed
+        if (assetFinalized != garden.reserveAsset() && capitalPending > 0) {
+            if (assetFinalized == address(0)) {
+                _handleWeth(true, capitalPending);
+                assetFinalized = WETH;
+            }
+            if (assetFinalized != garden.reserveAsset()) {
+                _trade(assetFinalized, capitalPending, garden.reserveAsset(), 0);
+            }
+        }
     }
 
     /**
@@ -1131,4 +1079,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV35 is Strategy {}
+contract StrategyV38 is Strategy {}
