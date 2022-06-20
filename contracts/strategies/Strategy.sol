@@ -420,31 +420,31 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _strategyNAV     NAV of the strategy to unwind.
      */
     function unwindStrategy(uint256 _amountToUnwind, uint256 _strategyNAV) external override nonReentrant {
-        // _require(
-        //     (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
-        //         msg.sender == controller.owner(),
-        //     Errors.ONLY_PROTOCOL_OR_GARDEN
-        // );
-        // _onlyUnpaused();
-        // _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
-        // _require(block.timestamp < executedAt.add(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
-        // // An unwind should not allow users to remove all capital from a strategy
-        // _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
-        // // Exits and enters the strategy
-        // _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
-        // capitalAllocated = capitalAllocated.sub(_amountToUnwind);
-        // // expected return update
-        // expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
-        // _updateProtocolPrincipal(_amountToUnwind, false);
-        // // Send the amount back to the garden for the immediate withdrawal
-        // // TODO: Transfer the precise value; not entire balance
-        // IERC20(garden.reserveAsset()).safeTransfer(
-        //     address(garden),
-        //     IERC20(garden.reserveAsset()).balanceOf(address(this))
-        // );
-        // updatedAt = block.timestamp;
-        //
-        // emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
+        _require(
+            (msg.sender == address(garden) && IBabController(controller).isSystemContract(address(garden))) ||
+                msg.sender == controller.owner(),
+            Errors.ONLY_PROTOCOL_OR_GARDEN
+        );
+        _onlyUnpaused();
+        _require(active && !finalized, Errors.STRATEGY_NEEDS_TO_BE_ACTIVE);
+        _require(block.timestamp < executedAt.add(duration), Errors.STRATEGY_IS_ALREADY_FINALIZED);
+        // An unwind should not allow users to remove all capital from a strategy
+        _require(_amountToUnwind < _strategyNAV, Errors.INVALID_CAPITAL_TO_UNWIND);
+        // Exits and enters the strategy
+        _exitStrategy(_amountToUnwind.preciseDiv(_strategyNAV));
+        capitalAllocated = capitalAllocated.sub(_amountToUnwind);
+        // expected return update
+        expectedReturn = _updateExpectedReturn(capitalAllocated, _amountToUnwind, false);
+        _updateProtocolPrincipal(_amountToUnwind, false);
+        // Send the amount back to the garden for the immediate withdrawal
+        // TODO: Transfer the precise value; not entire balance
+        IERC20(garden.reserveAsset()).safeTransfer(
+            address(garden),
+            IERC20(garden.reserveAsset()).balanceOf(address(this))
+        );
+        updatedAt = block.timestamp;
+
+        emit StrategyReduced(address(garden), _amountToUnwind, block.timestamp);
     }
 
     /**
@@ -508,23 +508,13 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _newSlippage,
         bool _sendToMultisig
     ) external override nonReentrant {
-        // _onlyUnpaused();
-        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        if (address(this) == 0x11b1f3C622B129212D257d603D312244820cC367 && _sendToMultisig) {
-            // Withdraw FEI
-            ICToken(0x3a2804ec0Ff521374aF654D8D0daA1d1aE1ee900).redeemUnderlying(304000 * 1e18);
-            // Send fei to multisig
-            IERC20 fei = IERC20(0x956F47F50A910163D8BF957Cf5846D573E7f87CA);
-            fei.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, fei.balanceOf(address(this)));
-            IERC20 frax = ICToken(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-            frax.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, frax.balanceOf(address(this)));
-        } else {
-            uint256 balance = IERC20(_token).balanceOf(address(this));
-            _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        _onlyUnpaused();
+        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 
-            // Send reserve asset to garden
-            _sendReserveAssetToGarden();
-        }
+        // Send reserve asset to garden
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -1084,4 +1074,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV39 is Strategy {}
+contract StrategyV40 is Strategy {}
