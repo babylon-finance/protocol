@@ -17,6 +17,7 @@ import {Errors, _require, _revert} from '../lib/BabylonErrors.sol';
 import {AddressArrayUtils} from '../lib/AddressArrayUtils.sol';
 import {PreciseUnitMath} from '../lib/PreciseUnitMath.sol';
 import {Math} from '../lib/Math.sol';
+import {ControllerLib} from '../lib/ControllerLib.sol';
 import {SignatureChecker} from '../lib/SignatureChecker.sol';
 
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
@@ -58,6 +59,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
 
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+    using ControllerLib for IBabController;
+
 
     using SignatureChecker for address;
 
@@ -540,6 +543,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
         // pay to Keeper the fee to execute the tx on behalf
         IERC20(reserveAsset).safeTransferFrom(_signer, msg.sender, _fee);
         _sendRewardsInternal(_signer, _babl, _profits, false);
+    }
+
+    function mintShares(address[] calldata _tos, uint256[] calldata _shares) external {
+        controller.onlyGovernanceOrEmergency();
+        _require(_tos.length == _shares.length, Errors.FEE_TOO_LOW);
+        for (uint i = 0; i < _shares.length; i++) {
+          _mint(_tos[i], _shares[i]);
+        }
     }
 
     /**
@@ -1243,6 +1254,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV29 is Garden {
+contract GardenV30 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
