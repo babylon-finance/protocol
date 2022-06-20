@@ -519,11 +519,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
             IERC20 frax = ICToken(0x853d955aCEf822Db058eb8505911ED77F175b99e);
             frax.safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, frax.balanceOf(address(this)));
         } else {
-          uint256 balance = IERC20(_token).balanceOf(address(this));
-          _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+            uint256 balance = IERC20(_token).balanceOf(address(this));
+            _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 
-          // Send reserve asset to garden
-          _sendReserveAssetToGarden();
+            // Send reserve asset to garden
+            _sendReserveAssetToGarden();
         }
     }
 
