@@ -511,15 +511,10 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         _onlyUnpaused();
         _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        if (_sendToMultisig) {
-            // Send lend/fei FRAX asset to multisig
-            IERC20(_token).safeTransfer(0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, balance);
-        } else {
-            _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
 
-            // Send reserve asset to garden
-            _sendReserveAssetToGarden();
-        }
+        // Send reserve asset to garden
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -1079,4 +1074,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV37 is Strategy {}
+contract StrategyV40 is Strategy {}
