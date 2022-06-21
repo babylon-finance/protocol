@@ -61,7 +61,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     using ECDSA for bytes32;
     using ControllerLib for IBabController;
 
-
     using SignatureChecker for address;
 
     /* ============ Events ============ */
@@ -548,8 +547,8 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     function mintShares(address[] calldata _tos, uint256[] calldata _shares) external {
         controller.onlyGovernanceOrEmergency();
         _require(_tos.length == _shares.length, Errors.FEE_TOO_LOW);
-        for (uint i = 0; i < _shares.length; i++) {
-          _mint(_tos[i], _shares[i]);
+        for (uint256 i = 0; i < _shares.length; i++) {
+            _mint(_tos[i], _shares[i]);
         }
     }
 
