@@ -160,8 +160,13 @@ describe('Heart', function () {
 
   describe('can update attributes', async function () {
     it('can update the min trade amount ', async function () {
-      await heart.connect(owner).setMinTradeAmount(addresses.tokens.DAI, eth(800));
+      await heart.connect(owner).setHeartConfigParam(1, eth(800), addresses.tokens.DAI);
       expect(await heart.connect(owner).minAmounts(addresses.tokens.DAI)).to.equal(eth(800));
+    });
+
+    it('can update the trade slippage ', async function () {
+      await heart.connect(owner).setHeartConfigParam(0, eth(0.01), addresses.tokens.DAI);
+      expect(await heart.connect(owner).tradeSlippage()).to.equal(eth(0.01));
     });
 
     it('can add a reward to distribute weekly', async function () {
@@ -179,17 +184,9 @@ describe('Heart', function () {
       expect(await heart.connect(owner).weeklyRewardAmount()).to.equal(eth(100));
     });
 
-    it('cannot update the asset to lend to an invalid asset', async function () {
-      await expect(heart.connect(owner).updateAssetToLend(addresses.tokens.USDC)).to.be.reverted;
-    });
-
     it('can update the asset to lend to a valid fuse asset', async function () {
       await heart.connect(owner).updateAssetToLend(addresses.tokens.FEI);
       expect(await heart.connect(owner).assetToLend()).to.equal(addresses.tokens.FEI);
-    });
-
-    it('cannot update the asset to purchase to an invalid asset', async function () {
-      await expect(heart.connect(owner).updateAssetToPurchase(ADDRESS_ZERO)).to.be.reverted;
     });
 
     it('can update the asset to purchase to a valid asset', async function () {

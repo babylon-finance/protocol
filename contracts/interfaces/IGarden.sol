@@ -270,7 +270,11 @@ interface ICoreGarden {
 
     function claimNFT() external;
 
-    function updateUserLock(address _contributor, uint256 _userLock) external;
+    function updateUserLock(
+        address _contributor,
+        uint256 _userLock,
+        uint256 _balanceBefore
+    ) external;
 }
 
 interface IERC20Metadata {

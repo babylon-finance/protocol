@@ -708,15 +708,19 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * Update user hardlock for this garden
      * @param _contributor        Address of the contributor
      * @param _userLock           Amount in seconds tht the user principal will be locked since deposit
+     * @param _balanceBefore      Balance of garden token before the deposit
      */
-    function updateUserLock(address _contributor, uint256 _userLock) external override {
+    function updateUserLock(
+        address _contributor,
+        uint256 _userLock,
+        uint256 _balanceBefore
+    ) external override {
         _require(controller.isGarden(address(this)), Errors.ONLY_ACTIVE_GARDEN);
         _require(address(this) == address(IHeart(controller.heart()).heartGarden()), Errors.ONLY_HEART_GARDEN);
         _require(_userLock <= MAX_HEART_LOCK_VALUE && _userLock >= 183 days, Errors.SET_GARDEN_USER_LOCK);
         // Only the heart or the user can update the lock
         _require(
-            balanceOf(_contributor) >= minContribution &&
-                (msg.sender == controller.heart() || msg.sender == _contributor),
+            balanceOf(_contributor) >= minContribution && msg.sender == controller.heart(),
             Errors.ONLY_CONTRIBUTOR
         );
         // Can only increase the lock if lock expired
@@ -725,7 +729,16 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
                 block.timestamp.sub(_getLastDepositAt(_contributor)) >= _getDepositHardlock(_contributor),
             Errors.SET_GARDEN_USER_LOCK
         );
-        userLock[_contributor] = _userLock;
+        if (_userLock > userLock[_contributor]) {
+            if (userLock[_contributor] == 0) {
+                userLock[_contributor] = _userLock;
+            } else {
+                uint256 balance = balanceOf(_contributor);
+                userLock[_contributor] = (userLock[_contributor].mul(_balanceBefore)).add(balance.mul(_userLock)).div(
+                    balance.add(_balanceBefore)
+                );
+            }
+        }
     }
 
     /**
@@ -1066,9 +1079,14 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
             uint256 lockedBalance = contributors[_from].lockedBalance;
             _require(fromBalance.sub(lockedBalance) >= _amount, Errors.TOKENS_STAKED);
 
+            // Prevent freezing receiver funds
+            _require(userLock[_to] >= userLock[_from], Errors.SET_GARDEN_USER_LOCK);
             // Move the lock from the old address to the new address
-            if (userLock[_from] > userLock[_to]) {
-                userLock[_to] = userLock[_from];
+            if (userLock[_from] < userLock[_to]) {
+                uint256 toBalance = balanceOf(_to);
+                userLock[_to] = ((userLock[_from].mul(fromBalance)).add(toBalance.mul(userLock[_to]))).div(
+                    fromBalance.add(toBalance)
+                );
             }
             _updateContributorWithdrawalInfo(_from, 0, fromBalance, fromBalance.sub(_amount), _amount);
             _updateContributorDepositInfo(_to, balanceOf(_to), 0, _amount);
@@ -1253,6 +1271,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV31 is Garden {
+contract GardenV32 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
