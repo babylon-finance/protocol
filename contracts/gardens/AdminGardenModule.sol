@@ -250,11 +250,14 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
 
     /**
      * Updates Garden Params
-     * Can only be called by the creator
+     * Can only be called by the creator or the governance / emergency
      * @param _newParams  New params
      */
     function updateGardenParams(uint256[13] memory _newParams) external override {
-        _onlyCreator(msg.sender);
+        _require(
+            _isCreator(msg.sender) || msg.sender == controller.EMERGENCY_OWNER() || msg.sender == controller.owner(),
+            Errors.ONLY_CREATOR
+        );
         _updateGardenParams(
             _newParams[0], // uint256 _maxDepositLimit
             _newParams[1], // uint256 _minLiquidityAsset,
@@ -330,7 +333,7 @@ contract AdminGardenModule is BaseGardenModule, IAdminGarden {
         _require(_depositHardlock > 0, Errors.DEPOSIT_HARDLOCK);
         // If rewards are enabled, hardlock cannot be changed below 3 weeks
         _require(
-            controller.gardenAffiliateRates(address(this)) == 0 || _depositHardlock >= 3 weeks,
+            controller.gardenAffiliateRates(address(this)) == 0 || _depositHardlock >= 3 days,
             Errors.DEPOSIT_HARDLOCK
         );
         _require(

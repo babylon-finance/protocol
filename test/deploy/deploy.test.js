@@ -2,17 +2,20 @@ const { expect } = require('chai');
 // const { deployments } = require('hardhat');
 const { getERC20, increaseTime } = require('utils/test-helpers');
 // const { deploy } = deployments;
-const { ONE_DAY_IN_SECONDS } = require('lib/constants');
+const { ONE_DAY_IN_SECONDS, ADDRESS_ZERO } = require('lib/constants');
 const addresses = require('lib/addresses');
 const { impersonateAddress } = require('lib/rpc');
 const { takeSnapshot, restoreSnapshot } = require('lib/rpc');
+const { getUsers } = require('lib/web3');
 const { eth } = require('lib/helpers');
 const { getContracts, deployFixture } = require('lib/deploy');
+const { ONE_YEAR_IN_SECONDS } = require('../../lib/constants');
 
 const STUCK = [
   // '0xb8392344ddad3d71d3Dc503c7A3A19aa70D05ccA', // 3xsETH
   // '0x2d160210011a992966221F428f63326f76066Ba9', // lend DAI
   '0x7a81af63b3ec25e8498d58ff129f9a2c1f795237', // aladdin
+  '0x45d5daecb6e96c87fa04105ee205379ddfe8f555', // Stable to increase rewards
 ];
 
 const HEART_STRATEGIES = ['0xE4F0d5799F51D55f5dBC8b6bDA6b4d6956D6E8e0', '0x73C7c6ec73d2244C04B87eC0E3e64c0bc04580e4'];
@@ -29,6 +32,7 @@ describe('deploy', function () {
   let snapshotId;
   let distributor;
   let gnosis;
+  let heart;
 
   const getStrategyFuseRewards = async (_strategy) => {
     const lensPool = await ethers.getContractAt('ILensPool', '0xc76190E04012f26A364228Cfc41690429C44165d');
@@ -227,7 +231,19 @@ describe('deploy', function () {
   // TODO: Check that gardens can start new strategies with all integrations
   describe('after deployment', function () {
     beforeEach(async () => {
-      ({ owner, gov, keeper, gardens, gardensNAV, strategyNft, valuer, distributor, gnosis } = await deployFixture());
+      ({
+        owner,
+        gov,
+        keeper,
+        gardens,
+        gardensNAV,
+        strategyNft,
+        valuer,
+        distributor,
+        gnosis,
+        priceOracle,
+        heart,
+      } = await deployFixture());
     });
 
     it('NAV has NOT changed for gardens after deploy', async () => {
@@ -259,7 +275,7 @@ describe('deploy', function () {
       await checkNAVStrategies();
     });
 
-    it.only('can execute stuck strategies', async () => {
+    it('can execute stuck strategies', async () => {
       await executeStuckStrategies();
     });
 
@@ -271,7 +287,7 @@ describe('deploy', function () {
       await canFinalizeAllActiveStrategies();
     });
 
-    it('can finalize heart strategies and compound rewards', async () => {
+    it.skip('can finalize heart strategies and compound rewards', async () => {
       const babl = await getERC20(addresses.tokens.BABL);
       const firstStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[0]);
       const secondStrategy = await ethers.getContractAt('IStrategy', HEART_STRATEGIES[1]);
@@ -318,7 +334,7 @@ describe('deploy', function () {
       expect(getRewardsStrategistBABL2[6]).to.eq(getRewardsStrategistBABL1[6]).to.eq(0);
     });
 
-    it.skip('can finalize stuck strategies', async () => {
+    it('can finalize stuck strategies', async () => {
       await finalizeStuckStrategies();
     });
   });

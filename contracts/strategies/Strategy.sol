@@ -31,6 +31,7 @@ import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
 import {IRewardsDistributor} from '../interfaces/IRewardsDistributor.sol';
 import {IHeart} from '../interfaces/IHeart.sol';
+import {IYearnVault} from '../interfaces/external/yearn/IYearnVault.sol';
 
 /**
  * @title Strategy
@@ -484,7 +485,6 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     function updateParams(uint256[5] calldata _params) external override {
         _onlyStrategistOrGovernor();
         _onlyUnpaused();
-
         _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
         _setDuration(_params[0]);
@@ -501,23 +501,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Converts it to the reserve asset and sends it to the garden.
      * @param _token                   Address of the token to sweep
      * @param _newSlippage             New Slippage to override
+     * @param _sendToMultisig          New Slippage to override
      */
-    function sweep(address _token, uint256 _newSlippage) external override nonReentrant {
-        if (address(this) == 0x7087Ea2702DC2932329BE4ef96CE4d5ed67102FF) {
-            IERC20(0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74).safeApprove(
-                0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc,
-                1500e18
-            );
-            _require(ICToken(0x812EeDC9Eba9C428434fD3ce56156b4E23012Ebc).mint(1500e18) == 0, Errors.MINT_ERROR);
-            return;
-        }
-        // _onlyUnpaused();
-        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        // uint256 balance = IERC20(_token).balanceOf(address(this));
-        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-        //
-        // // Send reserve asset to garden
-        // _sendReserveAssetToGarden();
+    function sweep(
+        address _token,
+        uint256 _newSlippage,
+        bool _sendToMultisig
+    ) external override nonReentrant {
+        _onlyUnpaused();
+        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+
+        // Send reserve asset to garden
+        _sendReserveAssetToGarden();
     }
 
     /**
@@ -1077,4 +1074,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV34 is Strategy {}
+contract StrategyV40 is Strategy {}
