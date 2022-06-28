@@ -1271,6 +1271,6 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
     }
 }
 
-contract GardenV32 is Garden {
+contract GardenV33 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
