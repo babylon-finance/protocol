@@ -410,42 +410,54 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     }
 
     /**
-     * Tell the heart to lend an asset on Fuse
+     * Transfer heart assets
      *
-     * @param _assetToLend                  Address of the asset to lend
-     * @param _lendAmount                   Amount of the asset to lend
+     * @param _token                Token address to transfer
+     * @param _to                   Receiver address
+     * @param _amount               Amount to send
      */
-    function lendFusePool(address _assetToLend, uint256 _lendAmount) external override {
+    function transferToken(address _token, address _to, uint256 _amount) external override {
         controller.onlyGovernanceOrEmergency();
-        // Lend into fuse
-        _lendFusePool(_assetToLend, _lendAmount, _assetToLend);
+        IERC20(_token).safeTransfer(_to, _amount);
     }
 
-    /**
-     * Heart borrows using its liquidity
-     * Note: Heart must have enough liquidity
-     *
-     * @param _assetToBorrow              Asset that the heart is receiving from sender
-     * @param _borrowAmount               Amount of asset to transfet
-     */
-    function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
-        controller.onlyGovernanceOrEmergency();
-        _require(ICToken(assetToCToken[_assetToBorrow]).borrow(_borrowAmount) == 0, Errors.NOT_ENOUGH_COLLATERAL);
-    }
-
-    /**
-     * Repays Heart fuse pool position
-     * Note: We must have the asset in the heart
-     *
-     * @param _borrowedAsset              Borrowed asset that we want to pay
-     * @param _amountToRepay              Amount of asset to transfer
-     */
-    function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external override {
-        controller.onlyGovernanceOrEmergency();
-        address cToken = assetToCToken[_borrowedAsset];
-        IERC20(_borrowedAsset).safeApprove(cToken, _amountToRepay);
-        _require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, Errors.AMOUNT_TOO_LOW);
-    }
+    // /**
+    //  * Tell the heart to lend an asset on Fuse
+    //  *
+    //  * @param _assetToLend                  Address of the asset to lend
+    //  * @param _lendAmount                   Amount of the asset to lend
+    //  */
+    // function lendFusePool(address _assetToLend, uint256 _lendAmount) external override {
+    //     controller.onlyGovernanceOrEmergency();
+    //     // Lend into fuse
+    //     _lendFusePool(_assetToLend, _lendAmount, _assetToLend);
+    // }
+    //
+    // /**
+    //  * Heart borrows using its liquidity
+    //  * Note: Heart must have enough liquidity
+    //  *
+    //  * @param _assetToBorrow              Asset that the heart is receiving from sender
+    //  * @param _borrowAmount               Amount of asset to transfet
+    //  */
+    // function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external override {
+    //     controller.onlyGovernanceOrEmergency();
+    //     _require(ICToken(assetToCToken[_assetToBorrow]).borrow(_borrowAmount) == 0, Errors.NOT_ENOUGH_COLLATERAL);
+    // }
+    //
+    // /**
+    //  * Repays Heart fuse pool position
+    //  * Note: We must have the asset in the heart
+    //  *
+    //  * @param _borrowedAsset              Borrowed asset that we want to pay
+    //  * @param _amountToRepay              Amount of asset to transfer
+    //  */
+    // function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external override {
+    //     controller.onlyGovernanceOrEmergency();
+    //     address cToken = assetToCToken[_borrowedAsset];
+    //     IERC20(_borrowedAsset).safeApprove(cToken, _amountToRepay);
+    //     _require(ICToken(cToken).repayBorrow(_amountToRepay) == 0, Errors.AMOUNT_TOO_LOW);
+    // }
 
     /**
     * Trades one asset for another in the heart
@@ -992,6 +1004,6 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
     }
 }
 
-contract HeartV7 is Heart {
+contract HeartV8 is Heart {
     constructor(IBabController _controller, IGovernor _governor) Heart(_controller, _governor) {}
 }

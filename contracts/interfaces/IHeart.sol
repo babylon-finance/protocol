@@ -76,11 +76,13 @@ interface IHeart {
 
     function updateBond(address _assetToBond, uint256 _bondDiscount) external;
 
-    function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
+    function transferToken(address _token, address _to, uint256 _amount) external;
 
-    function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
-
-    function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external;
+    // function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
+    //
+    // function borrowFusePool(address _assetToBorrow, uint256 _borrowAmount) external;
+    //
+    // function repayFusePool(address _borrowedAsset, uint256 _amountToRepay) external;
 
     function protectBABL(
         uint256 _bablPriceProtectionAt,
