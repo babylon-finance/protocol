@@ -416,7 +416,11 @@ contract Heart is OwnableUpgradeable, IHeart, IERC1271 {
      * @param _to                   Receiver address
      * @param _amount               Amount to send
      */
-    function transferToken(address _token, address _to, uint256 _amount) external override {
+    function transferToken(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) external override {
         controller.onlyGovernanceOrEmergency();
         IERC20(_token).safeTransfer(_to, _amount);
     }
