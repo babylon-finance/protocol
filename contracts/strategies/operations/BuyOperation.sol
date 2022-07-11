@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {Operation} from './Operation.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -109,6 +108,9 @@ contract BuyOperation is Operation {
         )
     {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
+        if (_asset == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
+            _asset = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
         uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
         return (_asset, balance, 0);
     }
