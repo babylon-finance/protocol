@@ -76,7 +76,11 @@ interface IHeart {
 
     function updateBond(address _assetToBond, uint256 _bondDiscount) external;
 
-    function transferToken(address _token, address _to, uint256 _amount) external;
+    function transferToken(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) external;
 
     // function lendFusePool(address _assetToLend, uint256 _lendAmount) external;
     //
