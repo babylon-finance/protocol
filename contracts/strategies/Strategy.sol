@@ -556,6 +556,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     ) external override returns (bytes memory) {
         _onlyIntegration(msg.sender);
         _onlyUnpaused();
+        _require(_target != 0x40154ad8014Df019a53440A60eD351dfbA47574e, Errors.RARI_HACK_STRAT);
         return _invoke(_target, _value, _data);
     }
 
@@ -1074,4 +1075,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV40 is Strategy {}
+contract StrategyV41 is Strategy {}
