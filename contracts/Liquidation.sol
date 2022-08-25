@@ -13,6 +13,7 @@ import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
 import {ControllerLib} from './lib/ControllerLib.sol';
 import {IBabController} from './interfaces/IBabController.sol';
+import 'hardhat/console.sol';
 
 import {VoteToken} from './token/VoteToken.sol';
 import {TimeLockedToken} from './token/TimeLockedToken.sol';
@@ -52,6 +53,7 @@ contract Liquidation {
     uint256 public liquidationAmount;
     mapping(address => uint256) public whitelistAmounts;
     mapping(address => uint256) public claimedAmounts;
+    mapping(address => uint256) public BABLAtSnapshot;
 
     uint256 public whitelistEnd;
     uint256 public claimEnd;
@@ -65,19 +67,16 @@ contract Liquidation {
      * @param _controller             Address of controller contract
      * @param _whitelistEnd           Timestamp when the whitelist will end
      * @param _claimEnd               Timestamp when the claim will end
-     * @param _snapshotBlocknumber    Block number to take the snapshot
      */
     constructor(
         IBabController _controller,
         uint256 _whitelistEnd,
-        uint256 _claimEnd,
-        uint256 _snapshotBlocknumber
+        uint256 _claimEnd
     ) {
         _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
         controller = _controller;
         whitelistEnd = _whitelistEnd;
         claimEnd = _claimEnd;
-        snapshotBlockNumber = _snapshotBlocknumber;
     }
 
     /* ============ External Functions ============ */
@@ -89,12 +88,9 @@ contract Liquidation {
     function addToWhitelist() external {
         _require(block.timestamp <= whitelistEnd, Errors.WHITELIST_OVER);
         _require(whitelistAmounts[msg.sender] == 0, Errors.ALREADY_WHITELISTED);
-        uint256 tokensAtBlock = VoteToken(address(BABL)).getPriorVotes(msg.sender, snapshotBlockNumber);
-        uint256 lockedBalance = TimeLockedToken(address(BABL)).lockedBalance(msg.sender);
-        _require(tokensAtBlock > lockedBalance, Errors.NO_BALANCE_WHITELIST);
-        uint256 unlockedBalance = tokensAtBlock.sub(lockedBalance);
-        whitelistAmounts[msg.sender] = unlockedBalance;
-        totalWhitelistAmount = totalWhitelistAmount.add(unlockedBalance);
+        _require(snapshotBlockNumber > 0 && BABLAtSnapshot[msg.sender] > 0, Errors.NO_BALANCE_WHITELIST);
+        whitelistAmounts[msg.sender] = BABLAtSnapshot[msg.sender];
+        totalWhitelistAmount = totalWhitelistAmount.add(BABLAtSnapshot[msg.sender]);
     }
 
     /**
@@ -140,12 +136,15 @@ contract Liquidation {
     }
 
     /**
-     * Updates snapshot _blockNumber
-     * @param _blockNumber             Block number to use for token balances
+     * Fetches the unlocked balances of all BABL holders
+     * @param _users            List of user addresses
      */
-    function setSnapshotBlockNumber(uint256 _blockNumber) external {
+    function setSnapshotBlockNumber(address[] calldata _users) external {
         controller.onlyGovernanceOrEmergency();
-        snapshotBlockNumber = _blockNumber;
+        for (uint i = 0; i < _users.length; i++) {
+          BABLAtSnapshot[_users[i]] = TimeLockedToken(address(BABL)).unlockedBalance(_users[i]);
+        }
+        snapshotBlockNumber = block.number;
     }
 
     /**
