@@ -1,31 +1,17 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-
-const { ADDRESS_ZERO } = require('lib/constants');
 const { fund } = require('lib/whale');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
-const {
-  pick,
-  skipIfFast,
-  increaseTime,
-  normalizeDecimals,
-  getERC20,
-  getContract,
-  parse,
-  from,
-  eth,
-} = require('utils/test-helpers');
+const { pick, skipIfFast, getERC20, from, eth } = require('utils/test-helpers');
 
 skipIfFast('Treasury', function () {
   let signer1;
   let treasury;
-  let weth;
   let owner;
-  let wethWhaleSigner;
 
   beforeEach(async () => {
-    ({ owner, wethWhaleSigner, signer1, treasury, weth } = await setupTests()());
+    ({ owner, signer1, treasury } = await setupTests()());
 
     await fund([treasury.address]);
   });
