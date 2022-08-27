@@ -102,7 +102,7 @@ contract Liquidation {
         _require(whitelistAmounts[msg.sender] > 0, Errors.NOT_WHITELISTED);
         _require(claimedAmounts[msg.sender] == 0, Errors.ALREADY_CLAIMED);
         _require(liquidationAmount > 0, Errors.LIQUIDATION_AMOUNT_NOT_SET);
-        uint256 userAmount = liquidationAmount.div(claimedAmounts[msg.sender]);
+        uint256 userAmount = liquidationAmount.div(whitelistAmounts[msg.sender]);
         claimedAmounts[msg.sender] = whitelistAmounts[msg.sender];
         DAI.safeTransfer(msg.sender, userAmount);
         emit AmountClaimed(msg.sender, block.timestamp, userAmount);
@@ -141,8 +141,8 @@ contract Liquidation {
      */
     function setSnapshotBlockNumber(address[] calldata _users) external {
         controller.onlyGovernanceOrEmergency();
-        for (uint i = 0; i < _users.length; i++) {
-          BABLAtSnapshot[_users[i]] = TimeLockedToken(address(BABL)).unlockedBalance(_users[i]);
+        for (uint256 i = 0; i < _users.length; i++) {
+            BABLAtSnapshot[_users[i]] = TimeLockedToken(address(BABL)).unlockedBalance(_users[i]);
         }
         snapshotBlockNumber = block.number;
     }
@@ -153,6 +153,6 @@ contract Liquidation {
     function retrieveRemaining() external {
         controller.onlyGovernanceOrEmergency();
         _require(block.timestamp > claimEnd, Errors.CLAIM_NOT_OVER);
-        DAI.safeTransfer(controller.EMERGENCY_OWNER(), DAI.balanceOf(address(this)));
+        DAI.safeTransfer(msg.sender, DAI.balanceOf(address(this)));
     }
 }
