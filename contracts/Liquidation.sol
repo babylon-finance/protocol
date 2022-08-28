@@ -102,7 +102,7 @@ contract Liquidation {
         _require(whitelistAmounts[msg.sender] > 0, Errors.NOT_WHITELISTED);
         _require(claimedAmounts[msg.sender] == 0, Errors.ALREADY_CLAIMED);
         _require(liquidationAmount > 0, Errors.LIQUIDATION_AMOUNT_NOT_SET);
-        uint256 userAmount = liquidationAmount.div(totalWhitelistAmount).mul(whitelistAmounts[msg.sender]);
+        uint256 userAmount = liquidationAmount.mul(whitelistAmounts[msg.sender]).div(totalWhitelistAmount);
         claimedAmounts[msg.sender] = whitelistAmounts[msg.sender];
         DAI.safeTransfer(msg.sender, userAmount);
         emit AmountClaimed(msg.sender, block.timestamp, userAmount);
@@ -115,6 +115,7 @@ contract Liquidation {
     function setGlobalLiquidationAmount(uint256 _liquidationAmount) external {
         controller.onlyGovernanceOrEmergency();
         liquidationAmount = _liquidationAmount;
+        require(DAI.balanceOf(address(this)) >= _liquidationAmount, 'Not enough DAI');
     }
 
     /**

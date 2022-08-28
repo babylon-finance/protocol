@@ -118,7 +118,7 @@ describe('Liquidation', function () {
       const balanceBefore = await DAI.balanceOf(signer1.address);
       await liquidation.connect(signer1).claimProceeds();
       const balanceAfter = await DAI.balanceOf(signer1.address);
-      expect(balanceAfter.sub(balanceBefore)).to.eq(1);
+      expect(balanceAfter.sub(balanceBefore)).to.eq(bablBalance);
     });
 
     it(`a user that is in the whitelist cannot claim twice`, async function () {
@@ -138,12 +138,15 @@ describe('Liquidation', function () {
     it(`a user that is in the whitelist cannot claim if global amount is not set`, async function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
       await increaseTime(ONE_DAY_IN_SECONDS * 7 + 2);
-      await liquidation.connect(owner).setGlobalLiquidationAmount(1);
       await expect(liquidation.connect(signer1).claimProceeds()).to.be.revertedWith('BAB#139');
     });
 
     it(`a user that is not in the whitelist cannot claim`, async function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
+      const whaleSigner = await getWhaleSigner(DAI.address);
+      await DAI.connect(whaleSigner).transfer(liquidation.address, 1, {
+        gasPrice: 0,
+      });
       await liquidation.connect(owner).setGlobalLiquidationAmount(1);
       await increaseTime(ONE_DAY_IN_SECONDS * 7 + 2);
       await expect(liquidation.connect(signer1).claimProceeds()).to.be.revertedWith('BAB#139');
@@ -152,6 +155,10 @@ describe('Liquidation', function () {
     it(`a user that is in the whitelist cannot claim until whitelist is over`, async function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
       await liquidation.connect(signer1).addToWhitelist();
+      const whaleSigner = await getWhaleSigner(DAI.address);
+      await DAI.connect(whaleSigner).transfer(liquidation.address, 1, {
+        gasPrice: 0,
+      });
       await liquidation.connect(owner).setGlobalLiquidationAmount(1);
       await increaseTime(ONE_DAY_IN_SECONDS * 3);
       await expect(liquidation.connect(signer1).claimProceeds()).to.be.revertedWith('BAB#138');
@@ -160,6 +167,10 @@ describe('Liquidation', function () {
     it(`a user that is in the whitelist cannot claim once the claim is over`, async function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
       await liquidation.connect(signer1).addToWhitelist();
+      const whaleSigner = await getWhaleSigner(DAI.address);
+      await DAI.connect(whaleSigner).transfer(liquidation.address, 1, {
+        gasPrice: 0,
+      });
       await liquidation.connect(owner).setGlobalLiquidationAmount(1);
       await increaseTime(ONE_DAY_IN_SECONDS * 20 + 1);
       await expect(liquidation.connect(signer1).claimProceeds()).to.be.revertedWith('BAB#138');
@@ -171,24 +182,29 @@ describe('Liquidation', function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
       await liquidation.connect(signer1).addToWhitelist();
       const bablBalance = await BABL.balanceOf(signer1.address);
-      await liquidation.connect(owner).setGlobalLiquidationAmount(bablBalance);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(liquidation.address, bablBalance, {
         gasPrice: 0,
       });
+      await liquidation.connect(owner).setGlobalLiquidationAmount(bablBalance);
       await increaseTime(ONE_DAY_IN_SECONDS * 15);
       const balanceBefore = await DAI.balanceOf(owner.address);
       const allProceeds = await DAI.balanceOf(liquidation.address);
       await liquidation.connect(owner).retrieveRemaining();
       const balanceAfter = await DAI.balanceOf(owner.address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(allProceeds);
+      expect(await DAI.balanceOf(liquidation.address)).to.eq(0);
     });
 
     it(`owner cannot recover proceeds until claim is over`, async function () {
       await liquidation.connect(owner).setSnapshotBlockNumber([signer1.address]);
       await liquidation.connect(signer1).addToWhitelist();
       await increaseTime(ONE_DAY_IN_SECONDS * 5);
+      const whaleSigner = await getWhaleSigner(DAI.address);
       const bablBalance = await BABL.balanceOf(signer1.address);
+      await DAI.connect(whaleSigner).transfer(liquidation.address, bablBalance, {
+        gasPrice: 0,
+      });
       await liquidation.connect(owner).setGlobalLiquidationAmount(bablBalance);
       await expect(liquidation.connect(owner).retrieveRemaining()).to.be.revertedWith('BAB#142');
     });
@@ -198,6 +214,10 @@ describe('Liquidation', function () {
       await liquidation.connect(signer1).addToWhitelist();
       await increaseTime(ONE_DAY_IN_SECONDS * 15);
       const bablBalance = await BABL.balanceOf(signer1.address);
+      const whaleSigner = await getWhaleSigner(DAI.address);
+      await DAI.connect(whaleSigner).transfer(liquidation.address, bablBalance, {
+        gasPrice: 0,
+      });
       await liquidation.connect(owner).setGlobalLiquidationAmount(bablBalance);
       await expect(liquidation.connect(signer1).retrieveRemaining()).to.be.revertedWith(
         'Only governance or emergency can call this',
