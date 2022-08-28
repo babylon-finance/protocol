@@ -102,7 +102,7 @@ contract Liquidation {
         _require(whitelistAmounts[msg.sender] > 0, Errors.NOT_WHITELISTED);
         _require(claimedAmounts[msg.sender] == 0, Errors.ALREADY_CLAIMED);
         _require(liquidationAmount > 0, Errors.LIQUIDATION_AMOUNT_NOT_SET);
-        uint256 userAmount = liquidationAmount.div(whitelistAmounts[msg.sender]);
+        uint256 userAmount = liquidationAmount.div(totalWhitelistAmount).mul(whitelistAmounts[msg.sender]);
         claimedAmounts[msg.sender] = whitelistAmounts[msg.sender];
         DAI.safeTransfer(msg.sender, userAmount);
         emit AmountClaimed(msg.sender, block.timestamp, userAmount);
