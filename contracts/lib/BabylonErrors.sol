@@ -362,4 +362,20 @@ library Errors {
     uint256 internal constant SET_GARDEN_USER_LOCK = 134;
     // Error setting garden user lock
     uint256 internal constant RARI_HACK_STRAT = 135;
+    // Error setting whitelist
+    uint256 internal constant ALREADY_WHITELISTED = 136;
+    // Error whitelist over
+    uint256 internal constant WHITELIST_OVER = 137;
+    // Error claim period not started or over
+    uint256 internal constant CLAIM_OVER = 138;
+    // Error users not whitelisted
+    uint256 internal constant NOT_WHITELISTED = 139;
+    // Error users has no balance to be whitelisted
+    uint256 internal constant NO_BALANCE_WHITELIST = 140;
+    // Error liquidation amount not set
+    uint256 internal constant LIQUIDATION_AMOUNT_NOT_SET = 141;
+    // Error claim  not over
+    uint256 internal constant CLAIM_NOT_OVER = 142;
+    // Error refund tokens not set
+    uint256 internal constant REFUND_TOKENS_NOT_SET = 143;
 }
