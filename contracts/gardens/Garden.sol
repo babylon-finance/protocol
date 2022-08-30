@@ -1267,10 +1267,10 @@ contract Garden is ERC20Upgradeable, ReentrancyGuard, VTableBeaconProxy, ICoreGa
      * @return     Time that the principal is locked since last deposit
      */
     function _getDepositHardlock(address _to) private view returns (uint256) {
-        return userLock[_to] > 0 ? userLock[_to] : depositHardlock;
+        return depositHardlock;
     }
 }
 
-contract GardenV33 is Garden {
+contract GardenV34 is Garden {
     constructor(VTableBeacon _beacon, IERC20 _babl) Garden(_beacon, _babl) {}
 }
