@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {SafeCast} from '@openzeppelin/contracts/utils/SafeCast.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
@@ -186,7 +185,6 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
         if (_sendToken == _receiveToken) {
             return;
         }
-
         string memory error;
         bool success;
 
@@ -392,6 +390,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
             if (_sendToken != DAI) {
                 _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
                 reserveBalance = _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance);
+            }
+            if (reserveBalance > _sendQuantity) {
+                reserveBalance = _sendQuantity;
             }
             try ITradeIntegration(synthetix).trade(_strategy, DAI, reserveBalance, _receiveToken, _minReceiveQuantity) {
                 return ('', true);
