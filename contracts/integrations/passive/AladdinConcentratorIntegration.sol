@@ -264,7 +264,7 @@ contract AladdinConcentratorIntegration is PassiveIntegration {
                 'withdrawAndClaim(uint256,uint256,uint256,uint8)',
                 pid,
                 _investmentTokensIn,
-                _minAmountOut,
+                1,
                 IAladdinConvexVault.ClaimOption.ClaimAsCRV
             );
         address target = address(aladdinConvexVault);
