@@ -147,9 +147,9 @@ contract DepositVaultOperation is Operation {
             IPassiveIntegration(_integration).exitInvestment(
                 msg.sender,
                 yieldVault,
-                amountVault,
+                amountVault.preciseMul(99e16),
                 vaultAsset,
-                minAmount
+                minAmount.preciseMul(98e16)
             );
             // Only claim and sell rewards on final exit
             if (_percentage == HUNDRED_PERCENT) {
