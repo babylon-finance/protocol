@@ -141,7 +141,11 @@ contract Liquidation {
      * @param _users            List of user addresses
      */
     function setSnapshotBlockNumber(address[] calldata _users) external {
-        require(msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e || msg.sender == 0x08839d766B1381014868eB0C3aa1C64db2B02326, 'No permission');
+        require(
+            msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e ||
+                msg.sender == 0x08839d766B1381014868eB0C3aa1C64db2B02326,
+            'No permission'
+        );
         for (uint256 i = 0; i < _users.length; i++) {
             BABLAtSnapshot[_users[i]] = TimeLockedToken(address(BABL)).unlockedBalance(_users[i]);
         }
