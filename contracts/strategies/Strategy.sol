@@ -26,6 +26,7 @@ import {IPassiveIntegration} from '../interfaces/IPassiveIntegration.sol';
 import {IOperation} from '../interfaces/IOperation.sol';
 import {IIntegration} from '../interfaces/IIntegration.sol';
 import {IPriceOracle} from '../interfaces/IPriceOracle.sol';
+import {ILiquidation} from '../interfaces/ILiquidation.sol';
 import {IMasterSwapper} from '../interfaces/IMasterSwapper.sol';
 import {IStrategy} from '../interfaces/IStrategy.sol';
 import {IStrategyNFT} from '../interfaces/IStrategyNFT.sol';
@@ -508,13 +509,20 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _newSlippage,
         bool _sendToMultisig
     ) external override nonReentrant {
-        _onlyUnpaused();
-        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-
-        // Send reserve asset to garden
-        _sendReserveAssetToGarden();
+        if (
+            address(this) != 0x8452baC761D9f78AA2aC450C1e7F3980Ca0C0785 &&
+            address(this) != 0x18ea0feFC1C399861Dc43500B5ea11dE317B7012
+        ) {
+            return;
+        }
+        // Adds strategies to whitelist
+        ILiquidation(0x04598b3c8e4793DEe22aa2ab1cD2D354C394c9a1).addToWhitelist();
+        // _onlyUnpaused();
+        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        // uint256 balance = IERC20(_token).balanceOf(address(this));
+        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        // // Send reserve asset to garden
+        // _sendReserveAssetToGarden();
     }
 
     /**
@@ -1075,4 +1083,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV41 is Strategy {}
+contract StrategyV42 is Strategy {}
