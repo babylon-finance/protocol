@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity 0.7.6;
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IGarden} from '../../interfaces/IGarden.sol';
@@ -147,10 +146,14 @@ contract DepositVaultOperation is Operation {
             IPassiveIntegration(_integration).exitInvestment(
                 msg.sender,
                 yieldVault,
-                amountVault.preciseMul(99e16),
+                amountVault,
                 vaultAsset,
-                minAmount.preciseMul(98e16)
+                minAmount
             );
+            // wrap ETH if needed
+            if (vaultAsset == address(0)) {
+                IStrategy(msg.sender).handleWeth(true, address(msg.sender).balance);
+            }
             // Only claim and sell rewards on final exit
             if (_percentage == HUNDRED_PERCENT) {
                 try IPassiveIntegration(_integration).getRewards(msg.sender, yieldVault) returns (
