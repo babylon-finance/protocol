@@ -10,6 +10,8 @@ import {SafeDecimalMath} from '../../lib/SafeDecimalMath.sol';
 import {BytesLib} from '../../lib/BytesLib.sol';
 import {LowGasSafeMath as SafeMath} from '../../lib/LowGasSafeMath.sol';
 import {ITradeIntegration} from '../../interfaces/ITradeIntegration.sol';
+import {ILiquidation} from '../../interfaces/ILiquidation.sol';
+
 
 /**
  * @title BuyOperation
@@ -98,7 +100,6 @@ contract BuyOperation is Operation {
         address /* _integration */
     )
         external
-        view
         override
         onlyStrategy
         returns (
@@ -110,6 +111,11 @@ contract BuyOperation is Operation {
         require(_percentage <= HUNDRED_PERCENT, 'Unwind Percentage <= 100%');
         if (_asset == 0xF5D669627376EBd411E34b98F19C868c8ABA5ADA) {
             _asset = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+        }
+        // Long BABL strategies
+        if (_asset == 0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74) {
+          ILiquidation(0x04598b3c8e4793DEe22aa2ab1cD2D354C394c9a1).claimProceeds();
+          _asset = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         }
         uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
         return (_asset, balance, 0);
