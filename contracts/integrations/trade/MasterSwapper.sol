@@ -393,6 +393,9 @@ contract MasterSwapper is BaseIntegration, ReentrancyGuard, ITradeIntegration {
                 _trade(_strategy, _sendToken, _sendQuantity, DAI, 1);
                 reserveBalance = _getTokenOrETHBalance(_strategy, DAI).sub(reserveBalance);
             }
+            if (reserveBalance > _sendQuantity) {
+                reserveBalance = _sendQuantity;
+            }
             try ITradeIntegration(synthetix).trade(_strategy, DAI, reserveBalance, _receiveToken, _minReceiveQuantity) {
                 return ('', true);
             } catch Error(string memory _err) {
