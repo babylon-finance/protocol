@@ -183,6 +183,7 @@ contract BabController is OwnableUpgradeable, IBabController {
     uint8 public constant MAX_OPERATIONS = 20;
 
     /* ============ Constructor ============ */
+    constructor() initializer {}
 
     /**
      * Initializes the initial fee recipient on deployment.
