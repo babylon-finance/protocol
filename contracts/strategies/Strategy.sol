@@ -75,8 +75,11 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
 
     /* ============ Modifiers ============ */
 
-    function _onlyStrategistOrGovernor() private view {
-        _require(msg.sender == strategist || msg.sender == controller.owner(), Errors.ONLY_STRATEGIST);
+    function _onlyStrategistOrEmergency() private view {
+        _require(
+            msg.sender == strategist || msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e,
+            Errors.ONLY_STRATEGIST
+        );
     }
 
     function _onlyStrategistOrGovernorOrKeeper() private view {
@@ -468,7 +471,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * Delete a candidate strategy by the strategist
      */
     function deleteCandidateStrategy() external {
-        _onlyStrategistOrGovernor();
+        _onlyStrategistOrEmergency();
         _deleteCandidateStrategy();
         emit StrategyDeleted(address(garden), block.timestamp);
     }
@@ -484,7 +487,7 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
      * @param _params  New params
      */
     function updateParams(uint256[5] calldata _params) external override {
-        _onlyStrategistOrGovernor();
+        _onlyStrategistOrEmergency();
         _onlyUnpaused();
         _require(_params[0] <= duration, Errors.STRATEGY_IS_ALREADY_FINALIZED);
 
