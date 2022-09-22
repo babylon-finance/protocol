@@ -5,7 +5,7 @@ const { fund, getWhaleSigner } = require('lib/whale');
 const addresses = require('lib/addresses');
 const { setupTests } = require('fixtures/GardenFixture');
 const { getERC20 } = require('utils/test-helpers');
-// const { impersonateAddress } = require('lib/rpc');
+const { impersonateAddress } = require('lib/rpc');
 
 const allUsers = [
   '0x26fcbd3afebbe28d0a8684f790c48368d21665b5',
@@ -848,7 +848,7 @@ async function logUserTokenBalances() {
   // });
   let i = 1;
   const res = await Promise.all(
-    uniqueUsers.slice(520, 650).map(async (user) => {
+    uniqueUsers.slice(780).map(async (user) => {
       const userInfo = {};
       let userTotal = ethers.BigNumber.from(0);
       await Promise.all(
@@ -888,35 +888,34 @@ describe('Rari Hack Refund', function () {
   let signer1;
   let signer2;
   let DAI;
-  let owner;
-  let babController;
+  let emergency;
   let refund;
 
   beforeEach(async () => {
-    ({ babController, owner, signer1, signer2 } = await setupTests()());
+    ({ signer1, signer2 } = await setupTests()());
     await fund([signer1.address, signer2.address]);
     DAI = await getERC20(addresses.tokens.DAI);
     const deployment = await deploy('RariRefund', {
       from: signer1.address,
-      args: [babController.address],
+      args: [],
     });
+    emergency = await impersonateAddress('0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e');
     refund = await ethers.getContractAt('RariRefund', deployment.address);
     // await logUserTokenBalances();
   });
 
   describe('deployment', async function () {
-    it.only(`gets deployed with the right attributes`, async function () {
+    it(`gets deployed with the right attributes`, async function () {
       const claimOpen = await refund.claimOpen();
       const totalDai = await refund.totalDai();
       expect(claimOpen).to.equal(false);
       expect(totalDai).to.equal(0);
-      await logUserTokenBalances();
     });
   });
 
   describe('setters', async function () {
     it(`emergency owner can set the variables`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1, 1]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1, 1]);
       expect(await refund.daiReimbursementAmount(signer1.address)).to.equal(1);
       expect(await refund.daiReimbursementAmount(signer2.address)).to.equal(1);
     });
@@ -924,50 +923,48 @@ describe('Rari Hack Refund', function () {
     it(`other account cannot set the variables`, async function () {
       await expect(
         refund.connect(signer1).setUserReimbursement([signer1.address, signer2.address], [1, 1]),
-      ).to.be.revertedWith('Only governance or emergency can call this');
+      ).to.be.revertedWith('Only emergency owner');
     });
   });
 
   describe('start refund', async function () {
     it(`emergency owner can start the refund`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
       });
-      await refund.connect(owner).startRefund();
+      await refund.connect(emergency).startRefund();
       expect(await refund.claimOpen()).to.equal(true);
     });
 
     it(`emergency owner cannot start the refund without sending enough DAI`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 1000, {
         gasPrice: 0,
       });
-      await expect(refund.connect(owner).startRefund()).to.be.revertedWith('BAB#139');
+      await expect(refund.connect(emergency).startRefund()).to.be.revertedWith('BAB#143');
     });
 
     it(`a normal user cannot start the refund`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
       });
-      await expect(refund.connect(signer1).startRefund()).to.be.revertedWith(
-        'Only governance or emergency can call this',
-      );
+      await expect(refund.connect(signer1).startRefund()).to.be.revertedWith('Only emergency owner');
     });
   });
 
   describe('claim proceeds', async function () {
     it(`a user that is in the list can claim`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
       });
-      await refund.connect(owner).startRefund();
+      await refund.connect(emergency).startRefund();
       const balanceBefore = await DAI.balanceOf(signer1.address);
       await refund.connect(signer1).claimReimbursement();
       const balanceAfter = await DAI.balanceOf(signer1.address);
@@ -975,12 +972,12 @@ describe('Rari Hack Refund', function () {
     });
 
     it(`a user that is in the whitelist cannot claim twice`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
       });
-      await refund.connect(owner).startRefund();
+      await refund.connect(emergency).startRefund();
       const balanceBefore = await DAI.balanceOf(signer1.address);
       await refund.connect(signer1).claimReimbursement();
       const balanceAfter = await DAI.balanceOf(signer1.address);
@@ -989,7 +986,7 @@ describe('Rari Hack Refund', function () {
     });
 
     it(`a user that is in the whitelist cannot claim if is not open`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address, signer2.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
@@ -998,12 +995,12 @@ describe('Rari Hack Refund', function () {
     });
 
     it(`a user that is not in the whitelist cannot claim`, async function () {
-      await refund.connect(owner).setUserReimbursement([signer1.address], [1000, 1000]);
+      await refund.connect(emergency).setUserReimbursement([signer1.address], [1000, 1000]);
       const whaleSigner = await getWhaleSigner(DAI.address);
       await DAI.connect(whaleSigner).transfer(refund.address, 2000, {
         gasPrice: 0,
       });
-      await refund.connect(owner).startRefund();
+      await refund.connect(emergency).startRefund();
       await expect(refund.connect(signer2).claimReimbursement()).to.be.revertedWith('BAB#012');
     });
   });

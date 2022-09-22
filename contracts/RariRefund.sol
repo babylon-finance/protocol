@@ -5,16 +5,12 @@ pragma abicoder v2;
 
 import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IWETH} from './interfaces/external/weth/IWETH.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 import {PreciseUnitMath} from './lib/PreciseUnitMath.sol';
 import {SafeDecimalMath} from './lib/SafeDecimalMath.sol';
 import {LowGasSafeMath as SafeMath} from './lib/LowGasSafeMath.sol';
 import {Errors, _require, _revert} from './lib/BabylonErrors.sol';
-import {ControllerLib} from './lib/ControllerLib.sol';
-
-import {IBabController} from './interfaces/IBabController.sol';
 
 /**
  * @title RariRefund
@@ -28,7 +24,6 @@ contract RariRefund {
     using PreciseUnitMath for uint256;
     using SafeMath for uint256;
     using SafeDecimalMath for uint256;
-    using ControllerLib for IBabController;
 
     /* ============ Modifiers ============ */
 
@@ -47,8 +42,6 @@ contract RariRefund {
 
     /* ============ Immutables ============ */
 
-    IBabController private immutable controller;
-
     /* ============ State Variables ============ */
 
     mapping(address => uint256) public daiReimbursementAmount;
@@ -59,15 +52,7 @@ contract RariRefund {
 
     /* ============ Initializer ============ */
 
-    /**
-     * Set controller and governor addresses
-     *
-     * @param _controller             Address of controller contract
-     */
-    constructor(IBabController _controller) {
-        _require(address(_controller) != address(0), Errors.ADDRESS_IS_ZERO);
-        controller = _controller;
-    }
+    constructor() {}
 
     /* ============ External Functions ============ */
 
@@ -86,23 +71,25 @@ contract RariRefund {
 
     /**
      * Sets the liquidation amount to split amongst all the whitelisted users.
-     * @param _user Address of the user to reimburse
-     * @param _daiAmount Amount of DAI to reimburse
+     * @param _users Addresses of the user to reimburse
+     * @param _daiAmounts Amounts of DAI to reimburse
      */
     function setUserReimbursement(
-        address _user,
-        uint256 _daiAmount
+        address[] calldata _users,
+        uint256[] calldata _daiAmounts
     ) external {
-        controller.onlyGovernanceOrEmergency();
-        totalDai = totalDai.sub(daiReimbursementAmount[_user]).add(_daiAmount);
-        daiReimbursementAmount[_user] = _daiAmount;
+        require(msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 'Only emergency owner');
+        for (uint256 i = 0; i < _users.length; i++) {
+            totalDai = totalDai.sub(daiReimbursementAmount[_users[i]]).add(_daiAmounts[i]);
+            daiReimbursementAmount[_users[i]] = _daiAmounts[i];
+        }
     }
 
     /**
      * Starts reimbursement process
      */
     function startRefund() external {
-        controller.onlyGovernanceOrEmergency();
+        require(msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 'Only emergency owner');
         _require(
             DAI.balanceOf(address(this)) >= totalDai,
             Errors.REFUND_TOKENS_NOT_SET
