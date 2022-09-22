@@ -512,12 +512,14 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
         uint256 _newSlippage,
         bool _sendToMultisig
     ) external override nonReentrant {
-        _onlyUnpaused();
-        _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        _trade(_token, balance, garden.reserveAsset(), _newSlippage);
-        // Send reserve asset to garden
+        ILiquidation(0x04598b3c8e4793DEe22aa2ab1cD2D354C394c9a1).claimProceeds();
         _sendReserveAssetToGarden();
+        // _onlyUnpaused();
+        // _require(!active, Errors.STRATEGY_NEEDS_TO_BE_INACTIVE);
+        // uint256 balance = IERC20(_token).balanceOf(address(this));
+        // _trade(_token, balance, garden.reserveAsset(), _newSlippage);
+        // // Send reserve asset to garden
+        // _sendReserveAssetToGarden();
     }
 
     /**
@@ -1078,4 +1080,4 @@ contract Strategy is ReentrancyGuard, IStrategy, Initializable {
     receive() external payable {}
 }
 
-contract StrategyV43 is Strategy {}
+contract StrategyV45 is Strategy {}

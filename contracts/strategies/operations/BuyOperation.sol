@@ -114,7 +114,7 @@ contract BuyOperation is Operation {
         }
         // Long BABL strategies
         if (_asset == 0xF4Dc48D260C93ad6a96c5Ce563E70CA578987c74) {
-          ILiquidation(0x04598b3c8e4793DEe22aa2ab1cD2D354C394c9a1).claimProceeds();
+          // ILiquidation(0x04598b3c8e4793DEe22aa2ab1cD2D354C394c9a1).claimProceeds();
           _asset = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         }
         uint256 balance = ERC20(_asset).balanceOf(address(msg.sender)).preciseMul(_percentage);
