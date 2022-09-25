@@ -37,6 +37,7 @@ contract RariRefund {
 
     /* ============ Constants ============ */
 
+    address private constant SAFE = 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e;
     // Tokens
     IERC20 private constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
@@ -78,8 +79,10 @@ contract RariRefund {
         address[] calldata _users,
         uint256[] calldata _daiAmounts
     ) external {
-        require(msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 'Only emergency owner');
+        require(msg.sender == SAFE ||
+          (!claimOpen && msg.sender == 0x08839d766B1381014868eB0C3aa1C64db2B02326), 'Only emergency owner');
         for (uint256 i = 0; i < _users.length; i++) {
+            require(!claimed[_users[i]], 'Already claimed');
             totalDai = totalDai.sub(daiReimbursementAmount[_users[i]]).add(_daiAmounts[i]);
             daiReimbursementAmount[_users[i]] = _daiAmounts[i];
         }
@@ -89,11 +92,19 @@ contract RariRefund {
      * Starts reimbursement process
      */
     function startRefund() external {
-        require(msg.sender == 0x97FcC2Ae862D03143b393e9fA73A32b563d57A6e, 'Only emergency owner');
+        require(msg.sender == SAFE, 'Only emergency owner');
         _require(
             DAI.balanceOf(address(this)) >= totalDai,
             Errors.REFUND_TOKENS_NOT_SET
         );
         claimOpen = true;
+    }
+
+    /**
+     * Recover all proceeds in case of emergency
+     */
+    function retrieveRemaining() external {
+        require(msg.sender == SAFE, 'Only emergency owner');
+        DAI.safeTransfer(SAFE, DAI.balanceOf(address(this)));
     }
 }
